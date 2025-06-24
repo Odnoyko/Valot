@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=valot
+Exec=com.odnoyko.com
+Icon=com.odnoyko.com
+Terminal=false
+Type=Application
+Categories=Utility;
+Keywords=GTK;
+StartupNotify=true
+DBusActivatable=true
