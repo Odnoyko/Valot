@@ -1,0 +1,257 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $ValotWindow: Adw.ApplicationWindow {
+  title: _("Valot");
+  default-width: 1200;
+  default-height: 800;
+  resizable: true;
+
+  Adw.NavigationSplitView {
+    content: Adw.NavigationPage {
+      Box {
+        baseline-child: 0;
+        height-request: 0;
+        orientation: vertical;
+
+        Adw.HeaderBar {
+          css-classes: [
+            "header",
+          ];
+
+          halign: fill;
+          valign: start;
+
+          [start]
+          Adw.ButtonRow {
+            end-icon-name: "sidebar-collapse";
+            halign: start;
+            visible: false;
+          }
+
+          [center]
+          Box {
+            halign: fill;
+            valign: center;
+
+            css-classes: [
+              "toptracker",
+            ];
+
+            Entry task_name {
+              css-classes: [
+                "headernameinput",
+              ];
+              hexpand: true;
+              placeholder-text: "Write your task name";
+              valign: center;
+            }
+
+            DropDown demo_dd {
+              name: "Project";
+              valign: center;
+
+              css-classes: [
+                "headerbtn",
+              ];
+            }
+
+            Label actual_time {
+              label: "00:00:00";
+              valign: center;
+              halign: end;
+
+              css-classes: [
+                "headertimeinput",
+              ];
+            }
+
+            Gtk.Button track_button{
+              css-classes: ["trackbutton"];
+              valign: center;
+              child: Gtk.Image { icon-name: "media-playback-start-symbolic"; };
+            }
+          }
+
+          [end]
+          WindowControls {}
+        }
+
+        LevelBar {
+          margin-bottom: 4;
+          margin-end: 10;
+          margin-start: 10;
+          margin-top: 4;
+          max-value: 100;
+          min-value: 1;
+          valign: start;
+          value: 20;
+        }
+
+        Box {
+          margin-bottom: 10;
+          margin-end: 10;
+          margin-start: 10;
+          margin-top: 10;
+          valign: start;
+
+          SearchEntry {
+            hexpand: true;
+            hexpand-set: true;
+            valign: start;
+          }
+
+          DropDown {
+            margin-end: 10;
+            margin-start: 10;
+          }
+
+          DropDown {}
+        }
+
+        ScrolledWindow {
+          vexpand: true;
+
+          Viewport {
+            valign: fill;
+
+            ListBox {
+              margin-bottom: 10;
+
+              css-classes: [
+                "itemsContainer",
+              ];
+
+              ListBoxRow {
+                css-classes: [
+                  "trackItem",
+                ];
+
+                child: Box {
+                  valign: center;
+
+                  Box {
+                    orientation: horizontal;
+                    halign: fill;
+
+                    Image {
+                      icon-name: "document-open-recent-symbolic";
+                    }
+
+                    Label {
+                      label: "12:32";
+                      margin-end: 10;
+                      margin-start: 10;
+                      selectable: true;
+                      single-line-mode: true;
+                      valign: center;
+                      halign: center;
+                    }
+                  }
+
+                  Box {
+                    Entry {
+                      halign: fill;
+                      hexpand: true;
+                      hexpand-set: true;
+                      valign: fill;
+                      placeholder-text: _("Task name");
+
+                      css-classes: [
+                        "itemNameEntry",
+                      ];
+                    }
+
+                    DropDown {
+                      name: "Project";
+                      margin-start: 10;
+                    }
+                  }
+
+                  Button {
+                    icon-name: "media-playback-start-symbolic";
+                  }
+                };
+              }
+            }
+          }
+        }
+      }
+    };
+
+    sidebar: Adw.NavigationPage {
+      css-classes: [
+        "Sidebar",
+      ];
+
+      Box {
+        orientation: vertical;
+
+        Adw.HeaderBar {
+          css-classes: [
+            "sidebarHeader",
+          ];
+
+          valign: fill;
+          halign: fill;
+
+          [start]
+          Button {
+            icon-name: "sidebar-show-symbolic";
+            valign: center;
+          }
+
+          [end]
+          Button {
+            halign: end;
+            hexpand: true;
+            icon-name: "open-menu-symbolic";
+            valign: center;
+          }
+        }
+
+        Box {
+          margin-end: 10;
+          margin-start: 10;
+          orientation: vertical;
+
+          Button {
+            label: "Track";
+            halign: fill;
+            hexpand: true;
+            hexpand-set: true;
+
+            css-classes: [
+              "Sidebutton",
+              "active",
+            ];
+          }
+
+          Button {
+            label: "Project";
+
+            css-classes: [
+              "Sidebutton",
+            ];
+          }
+
+          Button {
+            label: "Clients";
+
+            css-classes: [
+              "Sidebutton",
+            ];
+          }
+
+          Button {
+            label: "payment";
+
+            css-classes: [
+              "Sidebutton",
+            ];
+          }
+        }
+      }
+    };
+  }
+}

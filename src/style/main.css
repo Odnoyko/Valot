@@ -1,0 +1,101 @@
+/* Top Tracker Design */
+
+.toptracker {
+  background: white;
+  border-radius: 10px;
+  padding: 2px;
+  box-shadow: 0px 0px 5px 2px rgba(0, 0, 0, 0.02);
+  border: 1px solid #ebebeb;
+  color: black;
+  margin: 6px 160px 6px 10px;
+  min-width:;
+}
+
+.headernameinput {
+  font-size: 17px;
+  min-width: 200px;
+}
+entry,.headerNamebtn {
+  background: white;
+}
+.headerbtn {
+  font-size: 14px;
+  background: var(--shade-color);
+  margin-right: 10px;
+}
+entry.headernameinput, entry.itemNameEntry {
+  outline: none;
+  outline-width: 0px;
+}
+
+.trackbutton {
+  background: var(--accent-bg-color);
+  max-height: 40px;
+  max-width: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 10px;
+  color: white;
+  margin-left: 10px;
+  transition: all 0.4s;
+}
+.trackbutton:hover {
+}
+.trackItem {
+  margin: 0px 10px 10px 10px;
+  padding: 10px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #ebebeb;
+  transition: all 0.5s;
+  min-height: 50px;
+  max-height: 50px;
+}
+.trackItem:hover {
+  box-shadow: 0px 0px 5px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid #ebebeb;
+}
+.itemsContainer {
+  background: transparent;
+}
+
+.itemsContainer row:selected {
+  border: 1px solid var(--accent-bg-color);
+}
+
+/* Sidebar */
+.sidebarHeader {
+  min-height: 58px;
+  background: transparent;
+}
+.Sidebutton:nth-child(1) {
+  margin-top: 10px;
+}
+.Sidebutton {
+  margin-top: 4px;
+  font-size: 16px;
+  padding: 10px;
+  background: transparent;
+}
+.Sidebutton Label {
+  text-align: end;
+}
+.Sidebutton:hover {
+  background: #d9d9d9;
+}
+.Sidebutton.active {
+  padding: 10px;
+  background: #d9d9d9;
+}
+.itemNameEntry {
+  min-height: 40px;
+  font-size: 20px;
+  color: black;
+}
+.itemNameEntry.focus {
+  color: black;
+}
+#demo {
+  background: black;
+}
+

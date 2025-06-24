@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/com/odnoyko/valot/js">
+    <!-- Base -->
+    <file>js/test.js</file>
+    <file>main.js</file>
+    <file>js/window.js</file>
+    <!-- dbinit -->
+    <file>js/dbinitialisation.js</file>
+    <!-- Task -->
+    <file>js/global/addtask.js</file>
+    <file>js/global/timetracking.js</file>
+    <!-- Project -->
+  </gresource>
+</gresources>
