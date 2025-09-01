@@ -8,14 +8,20 @@
   border: 1px solid #ebebeb;
   color: black;
   margin: 6px 160px 6px 10px;
-  min-width:;
 }
 
 .headernameinput {
+  padding-left: 20px;
   font-size: 17px;
   min-width: 200px;
 }
-entry,.headerNamebtn {
+.headertimeinput {
+  font-size: 17px;
+  margin: 0px 16px;
+  font-weight: 700;
+}
+entry,
+.headerNamebtn {
   background: white;
 }
 .headerbtn {
@@ -23,17 +29,16 @@ entry,.headerNamebtn {
   background: var(--shade-color);
   margin-right: 10px;
 }
-entry.headernameinput, entry.itemNameEntry {
+entry.headernameinput,
+entry.itemNameEntry {
   outline: none;
   outline-width: 0px;
 }
 
 .trackbutton {
   background: var(--accent-bg-color);
-  max-height: 40px;
-  max-width: 40px;
-  min-width: 40px;
-  min-height: 40px;
+  min-width: 20px;
+  min-height: 30px;
   border-radius: 10px;
   color: white;
   margin-left: 10px;
@@ -48,8 +53,6 @@ entry.headernameinput, entry.itemNameEntry {
   border-radius: 10px;
   border: 1px solid #ebebeb;
   transition: all 0.5s;
-  min-height: 50px;
-  max-height: 50px;
 }
 .trackItem:hover {
   box-shadow: 0px 0px 5px 2px rgba(0, 0, 0, 0.05);
@@ -62,6 +65,30 @@ entry.headernameinput, entry.itemNameEntry {
 .itemsContainer row:selected {
   border: 1px solid var(--accent-bg-color);
 }
+.itemNameEntry {
+  min-height: 40px;
+  font-size: 18px;
+  color: black;
+  font-weight: 500;
+}
+.itemNameEntry.focus {
+  color: black;
+}
+.project_btn,
+.project_info {
+  font-weight: 100;
+  background: transparent;
+}
+.search {
+  background: var(--shade-color);
+}
+.time_item_count {
+  margin: 0px 14px;
+}
+.item_track {
+  min-width: 30px;
+}
+
 
 /* Sidebar */
 .sidebarHeader {
@@ -78,7 +105,7 @@ entry.headernameinput, entry.itemNameEntry {
   background: transparent;
 }
 .Sidebutton Label {
-  text-align: end;
+  /* text-align not supported in GTK CSS, using justify instead */
 }
 .Sidebutton:hover {
   background: #d9d9d9;
@@ -87,15 +114,71 @@ entry.headernameinput, entry.itemNameEntry {
   padding: 10px;
   background: #d9d9d9;
 }
-.itemNameEntry {
-  min-height: 40px;
-  font-size: 20px;
-  color: black;
+
+/* Selection styling */
+.selected-task {
+  background: rgba(53, 132, 228, 0.2);
+  border-left: 3px solid #3584e4;
 }
-.itemNameEntry.focus {
-  color: black;
+
+.selected-task:hover {
+  background: rgba(53, 132, 228, 0.3);
 }
-#demo {
-  background: black;
+
+/* Active tracking task styling */
+.tracking-active {
+  background: rgba(46, 194, 126, 0.1);
+  border-left: 3px solid #2ec27e;
 }
+
+.tracking-active:hover {
+  background: rgba(46, 194, 126, 0.2);
+}
+
+/* Context selection indicators */
+.context-selected {
+  background: rgba(53, 132, 228, 0.1);
+  border: 1px solid rgba(53, 132, 228, 0.3);
+}
+
+.context-selected:hover {
+  background: rgba(53, 132, 228, 0.2);
+}
+
+.selected-project {
+  background: rgba(138, 226, 52, 0.1);
+  border-left: 3px solid #8ae234;
+}
+
+.selected-client {
+  background: rgba(252, 175, 62, 0.1);
+  border-left: 3px solid #fcaf3e;
+}
+
+/* Project icon and color selector styles */
+.icon-selector {
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.icon-selector:hover {
+  background: rgba(53, 132, 228, 0.1);
+  transform: scale(1.05);
+}
+
+.icon-selector.icon-selected {
+  background: rgba(53, 132, 228, 0.2);
+  border: 2px solid #3584e4;
+  transform: scale(1.1);
+}
+
+.project-icon-container {
+  transition: all 0.2s ease;
+}
+
+.project-icon-container:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
 
