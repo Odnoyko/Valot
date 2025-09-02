@@ -3,20 +3,30 @@ console.log("timetracking.js verbunden");
 import Adw from 'gi://Adw';
 import GLib from 'gi://GLib';
 import { saveTask } from 'resource:///com/odnoyko/valot/js/global/addtask.js';
+import { trackingStateManager } from 'resource:///com/odnoyko/valot/js/global/trackingStateManager.js';
 console.log("Adw & GLib importiert");
 
-let isTracking = false;
+// Use trackingStateManager instead of local isTracking variable
+// let isTracking = false; // REMOVED - now using trackingStateManager.getCurrentTracking()
 let startTime = 0;
 let startDateTime = null;
 let intervalId = null;
 
-export function timeTrack(button, input, label) {
+export function timeTrack(button, input, label, taskContext = {}) {
   console.log("Zeitverfolgung initialisiert");
   
+  // Register this button with the tracking state manager (include input for synchronization)
+  trackingStateManager.registerTrackingButton(button, null, input);
+  
+  // Register the time label for real-time updates
+  if (label) {
+    trackingStateManager.registerTimeLabel(label, null);
+  }
+  
   button.connect("clicked", () => {
-    if (isTracking) {
+    const currentTracking = trackingStateManager.getCurrentTracking();
+    if (currentTracking) {
       // STOP tracking
-      isTracking = false;
       console.log("Zeitverfolgung gestoppt");
       
       const endTime = GLib.get_monotonic_time();
@@ -30,9 +40,7 @@ export function timeTrack(button, input, label) {
         intervalId = null;
       }
 
-      // Change button icon back to play
-      button.set_icon_name("media-playback-start-symbolic");
-      button.set_tooltip_text("Start tracking");
+      // Icon will be updated by trackingStateManager
 
       // Get task name
       const taskName = input.get_text().trim();
@@ -43,6 +51,9 @@ export function timeTrack(button, input, label) {
         label.set_label('00:00:00');
         return;
       }
+
+      // Stop tracking in state manager
+      const stoppedTask = trackingStateManager.stopTracking();
 
       // Get current context from window (project, client, currency)
       const window = button.get_root();
@@ -113,20 +124,32 @@ export function timeTrack(button, input, label) {
       }
 
       console.log("✅ Zeitverfolgung gestartet für Aufgabe:", taskName);
-
-      isTracking = true;
       startTime = GLib.get_monotonic_time();
       startDateTime = GLib.DateTime.new_now_local();
       console.log("Zeitverfolgung gestartet");
 
-      // Change button icon to stop
-      button.set_icon_name("media-playback-stop-symbolic");
-      button.set_tooltip_text("Stop tracking");
-      
-      // Add task to list immediately when tracking starts
+      // Get task context info
       const window = button.get_root();
       const currentProjectName = (window && typeof window.getCurrentProjectName === 'function') ? 
                                   window.getCurrentProjectName() : "Default";
+      const currentProjectId = (window && window.currentProjectId) ? window.currentProjectId : 1;
+
+      // Create base name for grouping
+      const baseNameMatch = taskName.match(/^(.+?)\s*(?:\(\d+\))?$/);
+      const baseName = baseNameMatch ? baseNameMatch[1].trim() : taskName;
+
+      // Start tracking in state manager
+      trackingStateManager.startTracking({
+        name: taskName,
+        baseName: baseName,
+        projectId: currentProjectId,
+        projectName: currentProjectName,
+        startTime: startDateTime.format('%Y-%m-%d %H:%M:%S')
+      });
+
+      // Icon will be updated by trackingStateManager
+      
+      // Add task to list immediately when tracking starts
       if (window && typeof window._addTaskToList === 'function') {
         window._addTaskToList({
           name: taskName,
@@ -137,19 +160,8 @@ export function timeTrack(button, input, label) {
         });
       }
 
-      // Start timer update
-      console.log("🕐 Timer-Intervall wird gestartet");
-      intervalId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
-        const now = GLib.get_monotonic_time();
-        const deltaSec = Math.floor((now - startTime) / 1_000_000);
-        const hh = String(Math.floor(deltaSec / 3600)).padStart(2, '0');
-        const mm = String(Math.floor((deltaSec % 3600) / 60)).padStart(2, '0');
-        const ss = String(deltaSec % 60).padStart(2, '0');
-        const timeStr = `${hh}:${mm}:${ss}`;
-        console.log("Timer-Update:", timeStr);
-        label.set_label(timeStr);
-        return GLib.SOURCE_CONTINUE;
-      });
+      // Timer is now handled by trackingStateManager - no need for separate timer here
+      console.log("🕐 Timer will be handled by trackingStateManager");
     }
   });
 
@@ -157,7 +169,8 @@ export function timeTrack(button, input, label) {
   input.connect("changed", () => {
     const text = input.get_text().trim();
     // Enable/disable button based on input
-    button.set_sensitive(text.length > 0 || isTracking);
+    const currentlyTracking = trackingStateManager.getCurrentTracking();
+    button.set_sensitive(text.length > 0 || currentlyTracking);
   });
 
   // Add Enter key functionality to start/stop tracking
@@ -166,7 +179,8 @@ export function timeTrack(button, input, label) {
     if (text.length > 0) {
       // Simulate button click to start/stop tracking
       button.emit('clicked');
-      if (!isTracking) {
+      const trackingAfterClick = trackingStateManager.getCurrentTracking();
+      if (trackingAfterClick) {
         console.log(`✅ Enter gedrückt - Zeitverfolgung gestartet für: ${text}`);
       } else {
         console.log(`⏹️ Enter gedrückt - Zeitverfolgung gestoppt für: ${text}`);

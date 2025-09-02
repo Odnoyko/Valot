@@ -5,6 +5,8 @@ template $ValotWindow: Adw.ApplicationWindow {
   title: _("Valot");
   default-width: 1200;
   default-height: 800;
+  width-request: 800;
+  height-request: 600;
   resizable: true;
 
   Adw.Breakpoint {
@@ -122,7 +124,8 @@ template $ValotWindow: Adw.ApplicationWindow {
 
         Adw.ToolbarView {
           [top]
-          Adw.HeaderBar {
+          Adw.HeaderBar tasks_header {
+            css-classes: ["tasksHeader"];
             [start]
             Button show_sidebar_btn {
               icon-name: "sidebar-show-symbolic";
@@ -131,14 +134,16 @@ template $ValotWindow: Adw.ApplicationWindow {
             }
 
             [title]
-            Box {
+            Box tracking_widget {
               spacing: 8;
-              halign: center;
+              hexpand: true;
+              hexpand-set: true;
+              margin-end: 30;
 
               Entry task_name {
                 placeholder-text: _("Task name");
                 hexpand: true;
-                width-request: 120;
+                hexpand-set: true;
               }
 
               Button project_context_btn {
@@ -235,7 +240,7 @@ template $ValotWindow: Adw.ApplicationWindow {
 
         Adw.ToolbarView {
           [top]
-          Adw.HeaderBar {
+          Adw.HeaderBar projects_header {
             [start]
             Button show_sidebar_btn2 {
               icon-name: "sidebar-show-symbolic";
@@ -244,43 +249,9 @@ template $ValotWindow: Adw.ApplicationWindow {
             }
 
             [title]
-            Box {
-              spacing: 8;
-              halign: center;
-
-              Entry task_name_projects {
-                placeholder-text: _("Task name");
-                hexpand: true;
-                width-request: 120;
-              }
-
-              Button project_context_btn_projects {
-                icon-name: "folder-symbolic";
-                css-classes: ["flat"];
-                tooltip-text: _("Project");
-                width-request: 36;
-                height-request: 36;
-              }
-
-              Button client_context_btn_projects {
-                icon-name: "contact-new-symbolic";
-                css-classes: ["flat"];
-                tooltip-text: _("Client");
-                width-request: 36;
-                height-request: 36;
-              }
-
-              Label actual_time_projects {
-                label: "00:00:00";
-                css-classes: ["title-4"];
-                margin-start: 8;
-              }
-
-              Button track_button_projects {
-                icon-name: "media-playback-start-symbolic";
-                css-classes: ["suggested-action", "circular"];
-                tooltip-text: _("Start tracking");
-              }
+            Label {
+              label: _("Projects");
+              css-classes: ["heading"];
             }
 
             [end]
@@ -364,7 +335,7 @@ template $ValotWindow: Adw.ApplicationWindow {
 
         Adw.ToolbarView {
           [top]
-          Adw.HeaderBar {
+          Adw.HeaderBar clients_header {
             [start]
             Button show_sidebar_btn3 {
               icon-name: "sidebar-show-symbolic";
@@ -373,43 +344,9 @@ template $ValotWindow: Adw.ApplicationWindow {
             }
 
             [title]
-            Box {
-              spacing: 8;
-              halign: center;
-
-              Entry task_name_clients {
-                placeholder-text: _("Task name");
-                hexpand: true;
-                width-request: 120;
-              }
-
-              Button project_context_btn_clients {
-                icon-name: "folder-symbolic";
-                css-classes: ["flat"];
-                tooltip-text: _("Project");
-                width-request: 36;
-                height-request: 36;
-              }
-
-              Button client_context_btn_clients {
-                icon-name: "contact-new-symbolic";
-                css-classes: ["flat"];
-                tooltip-text: _("Client");
-                width-request: 36;
-                height-request: 36;
-              }
-
-              Label actual_time_clients {
-                label: "00:00:00";
-                css-classes: ["title-4"];
-                margin-start: 8;
-              }
-
-              Button track_button_clients {
-                icon-name: "media-playback-start-symbolic";
-                css-classes: ["suggested-action", "circular"];
-                tooltip-text: _("Start tracking");
-              }
+            Label {
+              label: _("Clients");
+              css-classes: ["heading"];
             }
 
             [end]
@@ -494,12 +431,18 @@ template $ValotWindow: Adw.ApplicationWindow {
 
         Adw.ToolbarView {
           [top]
-          Adw.HeaderBar {
+          Adw.HeaderBar reports_header {
             [start]
             Button show_sidebar_btn5 {
               icon-name: "sidebar-show-symbolic";
               tooltip-text: _("Show Sidebar");
               visible: false;
+            }
+
+            [title]
+            Label {
+              label: _("Reports");
+              css-classes: ["heading"];
             }
 
             [end]

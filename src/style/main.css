@@ -1,15 +1,17 @@
 /* Top Tracker Design */
 
 .toptracker {
-  background: white;
+  background: @window_bg_color;
   border-radius: 10px;
   padding: 2px;
-  box-shadow: 0px 0px 5px 2px rgba(0, 0, 0, 0.02);
-  border: 1px solid #ebebeb;
-  color: black;
+  box-shadow: 0px 0px 5px 2px alpha(@shadow_color, 0.02);
+  border: 1px solid @border_color;
+  color: @window_fg_color;
   margin: 6px 160px 6px 10px;
 }
-
+.tasksHeader {
+  background: @secondary_sidebar_bg_color;
+}
 .headernameinput {
   padding-left: 20px;
   font-size: 17px;
@@ -22,11 +24,11 @@
 }
 entry,
 .headerNamebtn {
-  background: white;
+  background: @window_bg_color;
 }
 .headerbtn {
   font-size: 14px;
-  background: var(--shade-color);
+  background: @headerbar_shade_color;
   margin-right: 10px;
 }
 entry.headernameinput,
@@ -36,11 +38,11 @@ entry.itemNameEntry {
 }
 
 .trackbutton {
-  background: var(--accent-bg-color);
+  background: @accent_bg_color;
   min-width: 20px;
   min-height: 30px;
   border-radius: 10px;
-  color: white;
+  color: @accent_fg_color;
   margin-left: 10px;
   transition: all 0.4s;
 }
@@ -49,30 +51,30 @@ entry.itemNameEntry {
 .trackItem {
   margin: 0px 10px 10px 10px;
   padding: 10px;
-  background: white;
+  background: @window_bg_color;
   border-radius: 10px;
-  border: 1px solid #ebebeb;
+  border: 1px solid @border_color;
   transition: all 0.5s;
 }
 .trackItem:hover {
-  box-shadow: 0px 0px 5px 2px rgba(0, 0, 0, 0.05);
-  border: 1px solid #ebebeb;
+  box-shadow: 0px 0px 5px 2px alpha(@shadow_color, 0.05);
+  border: 1px solid @accent_bg_color;
 }
 .itemsContainer {
   background: transparent;
 }
 
 .itemsContainer row:selected {
-  border: 1px solid var(--accent-bg-color);
+  border: 1px solid @accent_bg_color;
 }
 .itemNameEntry {
   min-height: 40px;
   font-size: 18px;
-  color: black;
+  color: @window_fg_color;
   font-weight: 500;
 }
 .itemNameEntry.focus {
-  color: black;
+  color: @window_fg_color;
 }
 .project_btn,
 .project_info {
@@ -80,7 +82,7 @@ entry.itemNameEntry {
   background: transparent;
 }
 .search {
-  background: var(--shade-color);
+  background: @headerbar_shade_color;
 }
 .time_item_count {
   margin: 0px 14px;
@@ -108,51 +110,50 @@ entry.itemNameEntry {
   /* text-align not supported in GTK CSS, using justify instead */
 }
 .Sidebutton:hover {
-  background: #d9d9d9;
+  background: alpha(@accent_bg_color, 0.1);
 }
 .Sidebutton.active {
   padding: 10px;
-  background: #d9d9d9;
+  background: alpha(@accent_bg_color, 0.2);
 }
 
-/* Selection styling */
+/* Use system accent colors for all elements */
 .selected-task {
-  background: rgba(53, 132, 228, 0.2);
-  border-left: 3px solid #3584e4;
+  background: alpha(@accent_bg_color, 0.2);
+  border-left: 3px solid @accent_bg_color;
 }
 
 .selected-task:hover {
-  background: rgba(53, 132, 228, 0.3);
+  background: alpha(@accent_bg_color, 0.3);
 }
 
 /* Active tracking task styling */
 .tracking-active {
-  background: rgba(46, 194, 126, 0.1);
-  border-left: 3px solid #2ec27e;
+  background: alpha(@success_color, 0.1);
+  border-left: 3px solid @success_color;
 }
 
 .tracking-active:hover {
-  background: rgba(46, 194, 126, 0.2);
+  background: alpha(@success_color, 0.2);
 }
 
 /* Context selection indicators */
 .context-selected {
-  background: rgba(53, 132, 228, 0.1);
-  border: 1px solid rgba(53, 132, 228, 0.3);
+  background: alpha(@window_fg_color, 0);
 }
 
 .context-selected:hover {
-  background: rgba(53, 132, 228, 0.2);
+  background: alpha(@window_fg_color, 0.2);
 }
 
 .selected-project {
-  background: rgba(138, 226, 52, 0.1);
-  border-left: 3px solid #8ae234;
+  background: alpha(@success_color, 0.1);
+  border-left: 3px solid @success_color;
 }
 
 .selected-client {
-  background: rgba(252, 175, 62, 0.1);
-  border-left: 3px solid #fcaf3e;
+  background: alpha(@warning_color, 0.1);
+  border-left: 3px solid @warning_color;
 }
 
 /* Project icon and color selector styles */
@@ -162,13 +163,13 @@ entry.itemNameEntry {
 }
 
 .icon-selector:hover {
-  background: rgba(53, 132, 228, 0.1);
+  background: alpha(@accent_bg_color, 0.1);
   transform: scale(1.05);
 }
 
 .icon-selector.icon-selected {
-  background: rgba(53, 132, 228, 0.2);
-  border: 2px solid #3584e4;
+  background: alpha(@accent_bg_color, 0.2);
+  border: 2px solid @accent_bg_color;
   transform: scale(1.1);
 }
 
@@ -178,7 +179,28 @@ entry.itemNameEntry {
 
 .project-icon-container:hover {
   transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 8px alpha(@shadow_color, 0.2);
 }
+
+/* Client context button styling - clean flat appearance */
+#client_context_btn {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  border-radius: 0 !important;
+}
+
+#client_context_btn:hover {
+  background: alpha(@window_fg_color, 0.1) !important;
+  border-radius: 6px !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+#client_context_btn:active {
+  background: alpha(@window_fg_color, 0.15) !important;
+}
+
 
 

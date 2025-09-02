@@ -10,6 +10,7 @@
     <!-- Task -->
     <file>js/global/addtask.js</file>
     <file>js/global/timetracking.js</file>
+    <file>js/global/trackingStateManager.js</file>
     <!-- Utilities -->
     <file>js/utils/timeUtils.js</file>
     <!-- Charts -->
@@ -18,7 +19,10 @@
     <file>js/tasks/taskRenderer.js</file>
     <!-- Reports -->
     <file>js/reports/pdfExporter.js</file>
-    <file>js/reports/pdfPreviewWindow.js</file>
+    <file>js/reports/htmlPdfExporter.js</file>
+    <file>js/reports/themeLoader.js</file>
+    <file>js/reports/templateEngine.js</file>
+    <file>js/reports/htmlTemplatePdfExporter.js</file>
     <!-- Projects -->
     <file>js/projects/projectManager.js</file>
   </gresource>

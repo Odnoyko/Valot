@@ -1,5 +1,6 @@
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
+import { trackingStateManager } from 'resource:///com/odnoyko/valot/js/global/trackingStateManager.js';
 
 // Task rendering functionality
 export class TaskRenderer {
@@ -84,6 +85,19 @@ export class TaskRenderer {
             groupRow.add_row(taskRow);
         });
         
+        // Add stack selection functionality
+        this._addStackRightClickGesture(groupRow, group);
+        
+        // Check if this stack is selected and add visual styling
+        if (this.parentWindow.selectedStacks && this.parentWindow.selectedStacks.has(group.baseName)) {
+            groupRow.add_css_class('selected-task'); // Reuse same CSS class for consistency
+        }
+        
+        // Store stack row mapping for selection management
+        if (this.parentWindow.stackRowMap) {
+            this.parentWindow.stackRowMap.set(groupRow, group.baseName);
+        }
+        
         return groupRow;
     }
 
@@ -106,7 +120,20 @@ export class TaskRenderer {
                 timeLabel.set_label(`${this.timeUtils.formatDuration(task.duration)} • €${cost.toFixed(2)}`);
             }
             
+            // Register for real-time updates if task is being tracked
+            trackingStateManager.registerTimeLabel(timeLabel, task.name);
+            
             suffixBox.append(timeLabel);
+        } else if (task.isActive) {
+            // For active tasks, create a time label that shows current tracking time
+            const activeTimeLabel = new Gtk.Label({
+                label: '00:00:00',
+                css_classes: ['caption'],
+                halign: Gtk.Align.END
+            });
+            
+            trackingStateManager.registerTimeLabel(activeTimeLabel, task.name);
+            suffixBox.append(activeTimeLabel);
         }
         
         // Create button container
@@ -125,14 +152,24 @@ export class TaskRenderer {
         
         // Add tracking button
         const trackBtn = new Gtk.Button({
-            icon_name: task.isActive ? 'media-playback-stop-symbolic' : 'media-playback-start-symbolic',
+            icon_name: 'media-playback-start-symbolic', // Will be updated by state manager
             css_classes: ['flat'],
-            tooltip_text: task.isActive ? 'Stop Tracking' : 'Start Tracking'
+            tooltip_text: 'Start Tracking' // Will be updated by state manager
         });
+        
+        // Register this button with the tracking state manager
+        trackingStateManager.registerTrackingButton(trackBtn, task.name);
+        
         trackBtn.connect('clicked', () => {
-            if (task.isActive) {
+            // Check current state dynamically when clicked
+            console.log(`🎯 Individual task button clicked: "${task.name}"`);
+            const isCurrentlyThisTaskTracking = trackingStateManager.isTaskTracking(task.name);
+            console.log(`🎯 Is "${task.name}" currently tracking? ${isCurrentlyThisTaskTracking}`);
+            if (isCurrentlyThisTaskTracking) {
+                console.log(`🎯 Stopping tracking for individual task: "${task.name}"`);
                 this.parentWindow._stopCurrentTracking();
             } else {
+                console.log(`🎯 Starting tracking for individual task: "${task.name}"`);
                 this.parentWindow._startTrackingFromTask(task);
             }
         });
@@ -162,15 +199,34 @@ export class TaskRenderer {
             css_classes: ['caption', 'dim-label'],
             halign: Gtk.Align.END
         });
+        
+        // Register the group time label with tracking state manager
+        trackingStateManager.registerStackTimeLabel(groupTimeLabel, group.baseName);
+        
         groupSuffixBox.append(groupTimeLabel);
         
         // Add group-level tracking button
         const groupTrackBtn = new Gtk.Button({
-            icon_name: 'media-playback-start-symbolic',
+            icon_name: 'media-playback-start-symbolic', // Will be updated by state manager
             css_classes: ['flat'],
-            tooltip_text: 'Start New Session'
+            tooltip_text: 'Start New Session' // Will be updated by state manager
         });
-        groupTrackBtn.connect('clicked', () => this.parentWindow._startTrackingFromTask(group.latestTask));
+        
+        // Register this button with the tracking state manager as a stack button
+        // This will automatically update the button state when tracking changes
+        trackingStateManager.registerStackButton(groupTrackBtn, group.baseName);
+        
+        groupTrackBtn.connect('clicked', () => {
+            // Check current state dynamically when clicked
+            const isCurrentlyStackTracking = trackingStateManager.isStackTracking(group.baseName);
+            if (isCurrentlyStackTracking) {
+                // Stop the current tracking
+                this.parentWindow._stopCurrentTracking();
+            } else {
+                // Start new session with latest task
+                this.parentWindow._startTrackingFromTask(group.latestTask);
+            }
+        });
         
         // Apply gray color to the icon
         const groupIcon = groupTrackBtn.get_first_child();
@@ -220,8 +276,20 @@ export class TaskRenderer {
             taskRow.add_css_class('tracking-active');
         }
         
-        // Create button container for individual task
-        const taskButtonBox = this._createTaskButtonBox(task);
+        // Create button container for individual task (only edit button, no tracking button in stacks)
+        const taskButtonBox = new Gtk.Box({
+            spacing: 6
+        });
+        
+        // Edit button only for tasks inside stacks
+        const editBtn = new Gtk.Button({
+            icon_name: 'document-edit-symbolic',
+            css_classes: ['flat'],
+            tooltip_text: 'Edit Task'
+        });
+        editBtn.connect('clicked', () => this.parentWindow._editTask(task.id));
+        taskButtonBox.append(editBtn);
+        
         taskSuffixBox.append(taskButtonBox);
         taskRow.add_suffix(taskSuffixBox);
         
@@ -251,14 +319,24 @@ export class TaskRenderer {
         
         // Tracking button
         const trackBtn = new Gtk.Button({
-            icon_name: task.isActive ? 'media-playback-stop-symbolic' : 'media-playback-start-symbolic',
+            icon_name: 'media-playback-start-symbolic', // Will be updated by state manager
             css_classes: ['flat'],
-            tooltip_text: task.isActive ? 'Stop Tracking' : 'Start Tracking'
+            tooltip_text: 'Start Tracking' // Will be updated by state manager
         });
+        
+        // Register this button with the tracking state manager
+        trackingStateManager.registerTrackingButton(trackBtn, task.name);
+        
         trackBtn.connect('clicked', () => {
-            if (task.isActive) {
+            // Check current state dynamically when clicked
+            console.log(`🎯 Individual task button clicked: "${task.name}"`);
+            const isCurrentlyThisTaskTracking = trackingStateManager.isTaskTracking(task.name);
+            console.log(`🎯 Is "${task.name}" currently tracking? ${isCurrentlyThisTaskTracking}`);
+            if (isCurrentlyThisTaskTracking) {
+                console.log(`🎯 Stopping tracking for individual task: "${task.name}"`);
                 this.parentWindow._stopCurrentTracking();
             } else {
+                console.log(`🎯 Starting tracking for individual task: "${task.name}"`);
                 this.parentWindow._startTrackingFromTask(task);
             }
         });
@@ -280,13 +358,73 @@ export class TaskRenderer {
         });
         
         gesture.connect('pressed', (gesture, n_press, x, y) => {
+            console.log(`🎯 Individual task right-clicked: "${task.name}" (ID: ${task.id})`);
+            
+            // Stop event propagation to prevent parent stack selection
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED);
+            
             if (this.parentWindow.selectedTasks) {
                 if (this.parentWindow.selectedTasks.has(task.id)) {
                     this.parentWindow.selectedTasks.delete(task.id);
                     row.remove_css_class('selected-task');
+                    console.log(`🎯 Task deselected: "${task.name}". Total selected tasks: ${this.parentWindow.selectedTasks.size}`);
                 } else {
                     this.parentWindow.selectedTasks.add(task.id);
                     row.add_css_class('selected-task');
+                    console.log(`🎯 Task selected: "${task.name}". Total selected tasks: ${this.parentWindow.selectedTasks.size}`);
+                }
+            }
+        });
+        
+        row.add_controller(gesture);
+    }
+
+    _addStackRightClickGesture(row, group) {
+        const gesture = new Gtk.GestureClick({
+            button: 3
+        });
+        
+        gesture.connect('pressed', (gesture, n_press, x, y) => {
+            // Find all tasks that belong to this stack from the main task list
+            // This ensures we get all tasks even if the stack was never expanded
+            const stackTasks = this.parentWindow.allTasks.filter(task => {
+                const taskBaseName = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+                const baseNameToCheck = taskBaseName ? taskBaseName[1].trim() : task.name;
+                return baseNameToCheck === group.baseName;
+            });
+            
+            console.log(`🎯 Stack right-clicked: "${group.baseName}" (found ${stackTasks.length} tasks in allTasks)`);
+            console.log(`🎯 Group.tasks length: ${group.tasks.length}, allTasks match: ${stackTasks.length}`);
+            
+            // Ensure this is treated as a stack selection event
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED);
+            
+            if (this.parentWindow.selectedStacks && this.parentWindow.selectedTasks) {
+                if (this.parentWindow.selectedStacks.has(group.baseName)) {
+                    // DESELECT stack and all its tasks
+                    this.parentWindow.selectedStacks.delete(group.baseName);
+                    row.remove_css_class('selected-task');
+                    
+                    // Remove all tasks from this stack from selectedTasks using allTasks lookup
+                    stackTasks.forEach(task => {
+                        this.parentWindow.selectedTasks.delete(task.id);
+                    });
+                    
+                    console.log(`🎯 Stack deselected: "${group.baseName}". Removed ${stackTasks.length} tasks from selection`);
+                    console.log(`🎯 Total selected stacks: ${this.parentWindow.selectedStacks.size}, tasks: ${this.parentWindow.selectedTasks.size}`);
+                } else {
+                    // SELECT stack and all its tasks
+                    this.parentWindow.selectedStacks.add(group.baseName);
+                    row.add_css_class('selected-task');
+                    
+                    // Add all tasks from this stack to selectedTasks using allTasks lookup
+                    stackTasks.forEach(task => {
+                        this.parentWindow.selectedTasks.add(task.id);
+                    });
+                    
+                    console.log(`🎯 Stack selected: "${group.baseName}". Added ${stackTasks.length} tasks to selection`);
+                    console.log(`🎯 Task IDs added:`, stackTasks.map(t => t.id));
+                    console.log(`🎯 Total selected stacks: ${this.parentWindow.selectedStacks.size}, tasks: ${this.parentWindow.selectedTasks.size}`);
                 }
             }
         });

@@ -23,13 +23,15 @@ import Gtk from 'gi://Gtk';
 import Gdk from 'gi://Gdk';
 import GLib from 'gi://GLib';
 import { timeTrack } from 'resource:///com/odnoyko/valot/js/global/timetracking.js';
+import { trackingStateManager } from 'resource:///com/odnoyko/valot/js/global/trackingStateManager.js';
 import { setupDatabase, executeQuery, executeNonSelectCommand } from 'resource:///com/odnoyko/valot/js/dbinitialisation.js';
 import { TimeUtils } from 'resource:///com/odnoyko/valot/js/utils/timeUtils.js';
 import { SimpleChart } from 'resource:///com/odnoyko/valot/js/charts/simpleChart.js';
 import { TaskRenderer } from 'resource:///com/odnoyko/valot/js/tasks/taskRenderer.js';
 import { ProjectManager } from 'resource:///com/odnoyko/valot/js/projects/projectManager.js';
 import { PDFExporter } from 'resource:///com/odnoyko/valot/js/reports/pdfExporter.js';
-import { PDFPreviewWindow } from 'resource:///com/odnoyko/valot/js/reports/pdfPreviewWindow.js';
+import { HTMLPDFExporter } from 'resource:///com/odnoyko/valot/js/reports/htmlPdfExporter.js';
+import { HTMLTemplatePDFExporter } from 'resource:///com/odnoyko/valot/js/reports/htmlTemplatePdfExporter.js';
 
 export const ValotWindow = GObject.registerClass({
     GTypeName: 'ValotWindow',
@@ -45,10 +47,7 @@ export const ValotWindow = GObject.registerClass({
         'recent_tasks_list', 'chart_placeholder', 'period_filter', 'project_filter', 'client_filter',
         'add_project_btn', 'project_search', 'project_list',
         'total_projects_row', 'total_time_row',
-        'task_name_projects', 'actual_time_projects', 'track_button_projects',
-        'project_context_btn_projects', 'client_context_btn_projects',
-        'task_name_clients', 'actual_time_clients', 'track_button_clients',
-        'project_context_btn_clients', 'client_context_btn_clients',
+        'tracking_widget', 'tasks_header', 'projects_header', 'clients_header', 'reports_header',
         'add_client_btn', 'client_search', 'client_list', 'total_clients_row', 'total_revenue_row',
         'weekly_time_row', 'today_time_row', 'today_tasks_row', 'week_time_row', 'week_tasks_row',
         'month_time_row', 'month_tasks_row', 'export_pdf_btn',
@@ -65,7 +64,9 @@ export const ValotWindow = GObject.registerClass({
         this.currentProjectId = 1; // Default project ID
         this.dbConnection = null;
         this.selectedTasks = new Set();
+        this.selectedStacks = new Set(); // Selected stack base names
         this.taskRowMap = new Map();
+        this.stackRowMap = new Map(); // Maps stack rows to base names
         this.allClients = [];
         this.currentClientId = 1;
         
@@ -149,6 +150,10 @@ export const ValotWindow = GObject.registerClass({
         
         this._loadProjects();
         this._loadClients();
+        
+        // Initialize task renderer BEFORE loading tasks (needed for rendering)
+        this.taskRenderer = new TaskRenderer(this.timeUtils, this.allProjects, this);
+        
         this._loadTasks();
         this._updateReports();
         this._updateWeeklyTime();
@@ -158,8 +163,8 @@ export const ValotWindow = GObject.registerClass({
         this._setupChartFilters();
         this.simpleChart.createChart(this.allTasks, this.allProjects, this.allClients);
         
-        // Initialize task renderer
-        this.taskRenderer = new TaskRenderer(this.timeUtils, this.allProjects, this);
+        // Setup tracking state manager subscriptions
+        this._setupTrackingStateSubscription();
         
         this._initializeContextButtons();
     }
@@ -229,6 +234,9 @@ export const ValotWindow = GObject.registerClass({
         
         if (pages[pageName]) {
             try {
+                // Move tracking widget to the appropriate header before switching pages
+                this._moveTrackingWidget(pageName);
+                
                 // Use push_by_tag instead of pop_to_page for proper navigation
                 this._main_content.replace([pages[pageName]]);
             } catch (error) {
@@ -243,11 +251,265 @@ export const ValotWindow = GObject.registerClass({
             }
         }
     }
+
+    _moveTrackingWidget(targetPage) {
+        const trackingWidget = this._tracking_widget;
+        if (!trackingWidget) {
+            console.log('Tracking widget not found');
+            return;
+        }
+
+        const headers = {
+            'tasks': this._tasks_header,
+            'projects': this._projects_header,
+            'clients': this._clients_header,
+            'reports': this._reports_header
+        };
+
+        const targetHeader = headers[targetPage];
+        if (!targetHeader) {
+            console.log(`Target header not found for page: ${targetPage}`);
+            return;
+        }
+
+        try {
+            // Check if widget is already in the target header
+            const currentParent = trackingWidget.get_parent();
+            if (currentParent === targetHeader) {
+                console.log(`📍 Tracking widget already in ${targetPage} page`);
+                return;
+            }
+
+            // Simply set the widget as title - GTK should handle reparenting automatically
+            targetHeader.set_title_widget(trackingWidget);
+            
+            console.log(`📍 Tracking widget moved to ${targetPage} page`);
+        } catch (error) {
+            console.error(`Error moving tracking widget to ${targetPage}:`, error);
+        }
+    }
     
     _setupTaskTracking() {
+        // Set up single tracking widget that moves between pages
         timeTrack(this._track_button, this._task_name, this._actual_time);
-        timeTrack(this._track_button_projects, this._task_name_projects, this._actual_time_projects);
-        timeTrack(this._track_button_clients, this._task_name_clients, this._actual_time_clients);
+    }
+    
+    _setupTrackingStateSubscription() {
+        // Subscribe to tracking state changes to update UI elements
+        trackingStateManager.subscribe((event, taskInfo) => {
+            console.log(`📊 Tracking state changed: ${event}`, taskInfo);
+            
+            if (event === 'start') {
+                this._onTrackingStarted(taskInfo);
+            } else if (event === 'stop') {
+                this._onTrackingStopped(taskInfo);
+            } else if (event === 'updateWeeklyTime') {
+                this._updateWeeklyTimeRealTime(taskInfo.additionalTime);
+            } else if (event === 'updateTodayTime') {
+                this._updateTodayTimeRealTime(taskInfo.additionalTime);
+            } else if (event === 'updateProjectTime') {
+                this._updateProjectTimeRealTime(taskInfo.projectId, taskInfo.additionalTime);
+            } else if (event === 'updateTaskList') {
+                this._updateTaskListAfterTrackingChange(taskInfo);
+            } else if (event === 'updateTaskListRealTime') {
+                this._updateTaskListRealTime(taskInfo.taskInfo, taskInfo.elapsedTime);
+            }
+        });
+    }
+    
+    _registerSidebarElements() {
+        // Register sidebar elements for real-time updates
+        if (this._weekly_time_row) {
+            trackingStateManager.registerSidebarElement('weeklyTime', this._weekly_time_row);
+        }
+        if (this._today_time_row) {
+            trackingStateManager.registerSidebarElement('todayTime', this._today_time_row);
+        }
+        if (this._week_time_row) {
+            trackingStateManager.registerSidebarElement('weekTime', this._week_time_row);
+        }
+    }
+    
+    _updateWeeklyTimeRealTime(additionalSeconds) {
+        if (!this._weekly_time_row) return;
+        
+        try {
+            // Calculate current week time from stored data plus additional tracking time
+            const now = new Date();
+            const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+            startOfWeek.setHours(0, 0, 0, 0);
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            endOfWeek.setHours(23, 59, 59, 999);
+            
+            let weekTime = 0;
+            let weekTasks = 0;
+            
+            this.allTasks.forEach(task => {
+                const taskDate = new Date(task.created || task.start);
+                if (taskDate >= startOfWeek && taskDate <= endOfWeek) {
+                    weekTime += task.duration || 0;
+                    weekTasks++;
+                }
+            });
+            
+            // Add current tracking time
+            weekTime += additionalSeconds;
+            
+            const timeText = this._formatDuration(weekTime);
+            const tasksText = weekTasks === 1 ? '1 task' : `${weekTasks} tasks`;
+            this._weekly_time_row.set_subtitle(`${timeText} • ${tasksText}`);
+            
+        } catch (error) {
+            console.error('Error updating weekly time in real-time:', error);
+        }
+    }
+    
+    _updateTodayTimeRealTime(additionalSeconds) {
+        if (!this._today_time_row) return;
+        
+        try {
+            // Calculate today's time from stored data plus additional tracking time
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+            
+            let todayTime = 0;
+            let todayTasks = 0;
+            
+            this.allTasks.forEach(task => {
+                const taskDate = new Date(task.created || task.start);
+                if (taskDate >= today && taskDate < tomorrow) {
+                    todayTime += task.duration || 0;
+                    todayTasks++;
+                }
+            });
+            
+            // Add current tracking time
+            todayTime += additionalSeconds;
+            
+            const timeText = this._formatDuration(todayTime);
+            const tasksText = todayTasks === 1 ? '1 task' : `${todayTasks} tasks`;
+            this._today_time_row.set_subtitle(`${timeText} • ${tasksText}`);
+            
+        } catch (error) {
+            console.error('Error updating today time in real-time:', error);
+        }
+    }
+
+    _updateProjectTimeRealTime(projectId, additionalSeconds) {
+        try {
+            // Update project statistics with additional tracking time
+            const project = this.allProjects.find(p => p.id === projectId);
+            if (!project) return;
+            
+            // Calculate new project time including additional tracking time
+            const projectTasks = this.allTasks.filter(task => task.project_id === projectId);
+            let totalProjectTime = 0;
+            
+            projectTasks.forEach(task => {
+                totalProjectTime += task.duration || 0;
+            });
+            
+            // Add the current tracking time
+            totalProjectTime += additionalSeconds;
+            
+            // Update project object with new total
+            project.total_time = totalProjectTime;
+            
+            // Update the project list display
+            this._updateProjectsList();
+            
+            console.log(`📊 Updated project ${project.name} with additional ${additionalSeconds}s (total: ${totalProjectTime}s)`);
+            
+            // Also update any project time labels that are registered
+            const projectTimeLabel = trackingStateManager.projectTimeLabels?.get?.(projectId);
+            if (projectTimeLabel && typeof projectTimeLabel.set_text === 'function') {
+                projectTimeLabel.set_text(TimeUtils.formatDuration(totalProjectTime));
+            }
+            
+        } catch (error) {
+            console.error('Error updating project time in real-time:', error);
+        }
+    }
+
+    _updateTaskListAfterTrackingChange(taskInfo) {
+        try {
+            // Refresh the task list when tracking starts or stops
+            console.log('🔄 Updating task list after tracking change:', taskInfo.name);
+            this.loadTasks();
+        } catch (error) {
+            console.error('Error updating task list after tracking change:', error);
+        }
+    }
+
+    _updateTaskListRealTime(taskInfo, elapsedTime) {
+        try {
+            // PERFORMANCE FIX: Do NOT reload the entire task list every second
+            // Instead, just update the UI elements that show real-time data
+            
+            // The TrackingStateManager handles updating the time labels
+            // This method should be minimal to avoid performance issues
+            console.log(`📊 Real-time update: ${taskInfo.name} - ${elapsedTime}s (no DB reload)`);
+            
+            // Note: Task list updates are handled by the TrackingStateManager 
+            // through registered time labels. We don't need to reload the entire list.
+            
+        } catch (error) {
+            console.error('Error updating task list in real-time:', error);
+        }
+    }
+
+    _refreshTaskDisplay() {
+        // DEPRECATED: This method should not be used for real-time updates
+        // as it causes performance issues by reloading the entire task list
+        try {
+            console.warn('⚠️ _refreshTaskDisplay called - this should be avoided for real-time updates');
+            
+            // Only use this method when absolutely necessary (e.g., after task save/delete)
+            // For real-time updates, the TrackingStateManager handles UI updates directly
+            
+        } catch (error) {
+            console.error('Error refreshing task display:', error);
+        }
+    }
+    
+    _onTrackingStarted(taskInfo) {
+        console.log('🎯 Tracking started for:', taskInfo.name);
+        
+        // Register sidebar elements with the tracking state manager
+        this._registerSidebarElements();
+        
+        // Update weekly time tracker
+        this._updateWeeklyTime();
+        
+        // Task list will be refreshed by tracking state manager subscription
+        
+        // Update project statistics if needed
+        if (taskInfo.projectId) {
+            this._calculateProjectStats();
+            this._updateProjectsList();
+        }
+    }
+    
+    _onTrackingStopped(taskInfo) {
+        console.log('⏹️ Tracking stopped for:', taskInfo.name);
+        
+        // Update weekly time tracker
+        this._updateWeeklyTime();
+        
+        // Task list will be refreshed by tracking state manager subscription
+        
+        // Update project statistics
+        if (taskInfo.projectId) {
+            this._calculateProjectStats();
+            this._updateProjectsList();
+        }
+        
+        // Update reports if on reports page
+        this._updateReports();
+        this._updateChart();
     }
     
     _setupTaskList() {
@@ -261,38 +523,38 @@ export const ValotWindow = GObject.registerClass({
     }
     
     _setupKeyboardShortcuts() {
+        console.log('🎯 Setting up keyboard shortcuts...');
+        
         const controller = new Gtk.EventControllerKey();
         this.add_controller(controller);
         
+        // Add debug logging for all key presses
         controller.connect('key-pressed', (controller, keyval, keycode, state) => {
-            if (keyval === Gdk.KEY_Delete || keyval === Gdk.KEY_KP_Delete) {
-                this._deleteSelectedTasks();
-                return true;
-            }
-            return false;
+            console.log(`🎯 Key pressed: keyval=${keyval}, keycode=${keycode}, Delete=${Gdk.KEY_Delete}, KP_Delete=${Gdk.KEY_KP_Delete}`);
+            return Gdk.EVENT_PROPAGATE; // Let other handlers process first
         });
+        
+        // Use key-released instead since key-pressed is being consumed
+        controller.connect('key-released', (controller, keyval, keycode, state) => {
+            if (keyval === Gdk.KEY_Delete || keyval === Gdk.KEY_KP_Delete) {
+                console.log(`🗑️ Delete key RELEASED - triggering delete! Selected tasks: ${this.selectedTasks.size}, Selected stacks: ${this.selectedStacks.size}`);
+                this._deleteSelectedTasks();
+                return Gdk.EVENT_STOP;
+            }
+            return Gdk.EVENT_PROPAGATE;
+        });
+        
+        console.log('🎯 Keyboard shortcuts setup complete');
     }
     
     _setupContextButtons() {
-        // Project context buttons
+        // Project context button (single moveable widget)
         this._project_context_btn.connect('clicked', () => {
             this._showProjectSelector();
         });
-        this._project_context_btn_projects.connect('clicked', () => {
-            this._showProjectSelector();
-        });
-        this._project_context_btn_clients.connect('clicked', () => {
-            this._showProjectSelector();
-        });
         
-        // Client context buttons
+        // Client context button (single moveable widget)
         this._client_context_btn.connect('clicked', () => {
-            this._showClientSelector();
-        });
-        this._client_context_btn_projects.connect('clicked', () => {
-            this._showClientSelector();
-        });
-        this._client_context_btn_clients.connect('clicked', () => {
             this._showClientSelector();
         });
     }
@@ -399,23 +661,304 @@ export const ValotWindow = GObject.registerClass({
 
     _exportToPDF() {
         try {
-            // Open PDF preview window instead of direct export
-            const previewWindow = new PDFPreviewWindow(
-                this.get_application(),
-                this.allTasks,
-                this.allProjects,
-                this.allClients
-            );
-            
-            previewWindow.present();
+            this._showExportDialog();
         } catch (error) {
-            console.error('PDF preview error:', error);
+            console.error('PDF export error:', error);
             const errorDialog = new Gtk.AlertDialog({
-                message: 'Preview Failed', 
-                detail: `Could not open PDF preview: ${error.message}`
+                message: 'Export Failed', 
+                detail: `Could not open export dialog: ${error.message}`
             });
             errorDialog.show(this);
         }
+    }
+
+    _showExportDialog() {
+        // Create export dialog
+        const dialog = new Gtk.Dialog({
+            title: 'Export Time Report',
+            modal: true,
+            transient_for: this
+        });
+
+        dialog.add_button('Cancel', Gtk.ResponseType.CANCEL);
+        dialog.add_button('Export PDF', Gtk.ResponseType.OK);
+        dialog.set_default_response(Gtk.ResponseType.OK);
+
+        // Create content area
+        const contentArea = dialog.get_content_area();
+        const box = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 12,
+            margin_start: 24,
+            margin_end: 24,
+            margin_top: 12,
+            margin_bottom: 12
+        });
+        contentArea.append(box);
+
+        // Period filter
+        const periodGroup = new Adw.PreferencesGroup({
+            title: 'Time Period'
+        });
+        
+        const periodRow = new Adw.ComboRow({
+            title: 'Filter by Period',
+            subtitle: 'Select time range for the report'
+        });
+        
+        const periodModel = new Gtk.StringList();
+        periodModel.append('Current Week');
+        periodModel.append('Current Month'); 
+        periodModel.append('Current Year');
+        periodModel.append('All Time');
+        periodModel.append('Custom Range');
+        
+        periodRow.set_model(periodModel);
+        periodRow.set_selected(0); // Default to current week
+        periodGroup.add(periodRow);
+        box.append(periodGroup);
+
+        // Date range inputs (initially hidden)
+        const dateGroup = new Adw.PreferencesGroup({
+            title: 'Custom Date Range',
+            visible: false
+        });
+
+        const fromDateRow = new Adw.ActionRow({
+            title: 'From Date'
+        });
+        const fromDateEntry = new Gtk.Entry({
+            placeholder_text: 'YYYY-MM-DD',
+            text: new Date().toISOString().split('T')[0]
+        });
+        fromDateRow.add_suffix(fromDateEntry);
+        dateGroup.add(fromDateRow);
+
+        const toDateRow = new Adw.ActionRow({
+            title: 'To Date'
+        });
+        const toDateEntry = new Gtk.Entry({
+            placeholder_text: 'YYYY-MM-DD',
+            text: new Date().toISOString().split('T')[0]
+        });
+        toDateRow.add_suffix(toDateEntry);
+        dateGroup.add(toDateRow);
+        box.append(dateGroup);
+
+        // Show/hide date inputs based on period selection
+        periodRow.connect('notify::selected', () => {
+            const isCustom = periodRow.get_selected() === 4; // Custom Range
+            dateGroup.set_visible(isCustom);
+        });
+
+        // Project filter
+        const projectGroup = new Adw.PreferencesGroup({
+            title: 'Project Filter'
+        });
+        
+        const projectRow = new Adw.ComboRow({
+            title: 'Filter by Project',
+            subtitle: 'Select specific project (optional)'
+        });
+        
+        const projectModel = new Gtk.StringList();
+        projectModel.append('All Projects');
+        this.allProjects.forEach(project => {
+            projectModel.append(project.name);
+        });
+        
+        projectRow.set_model(projectModel);
+        projectRow.set_selected(0);
+        projectGroup.add(projectRow);
+        box.append(projectGroup);
+
+        // Client filter
+        const clientGroup = new Adw.PreferencesGroup({
+            title: 'Client Filter'
+        });
+        
+        const clientRow = new Adw.ComboRow({
+            title: 'Filter by Client',
+            subtitle: 'Select specific client (optional)'
+        });
+        
+        const clientModel = new Gtk.StringList();
+        clientModel.append('All Clients');
+        this.allClients.forEach(client => {
+            clientModel.append(client.name);
+        });
+        
+        clientRow.set_model(clientModel);
+        clientRow.set_selected(0);
+        clientGroup.add(clientRow);
+        box.append(clientGroup);
+
+        // Logo selection
+        const logoGroup = new Adw.PreferencesGroup({
+            title: 'Logo &amp; Branding'
+        });
+
+        const logoRow = new Adw.ActionRow({
+            title: 'Select Logo',
+            subtitle: 'Choose logo for report header'
+        });
+        const logoButton = new Gtk.Button({
+            label: 'Browse Logo...',
+            valign: Gtk.Align.CENTER
+        });
+        let selectedLogoPath = null;
+        logoButton.connect('clicked', () => {
+            const logoDialog = new Gtk.FileDialog({
+                title: 'Select Logo Image'
+            });
+            logoDialog.open(this, null, (source, result) => {
+                try {
+                    const file = logoDialog.open_finish(result);
+                    selectedLogoPath = file.get_path();
+                    logoButton.set_label(`Logo: ${file.get_basename()}`);
+                } catch (error) {
+                    // User cancelled
+                }
+            });
+        });
+        logoRow.add_suffix(logoButton);
+        logoGroup.add(logoRow);
+        box.append(logoGroup);
+
+        // Report sections
+        const sectionsGroup = new Adw.PreferencesGroup({
+            title: 'Report Sections'
+        });
+
+        const chartsRow = new Adw.ActionRow({
+            title: 'Include Charts',
+            subtitle: 'Show time distribution and productivity charts'
+        });
+        const chartsSwitch = new Gtk.Switch({
+            active: true,
+            valign: Gtk.Align.CENTER
+        });
+        chartsRow.add_suffix(chartsSwitch);
+        sectionsGroup.add(chartsRow);
+
+        const tasksRow = new Adw.ActionRow({
+            title: 'Include Task Summary',
+            subtitle: 'Show detailed task information'
+        });
+        const tasksSwitch = new Gtk.Switch({
+            active: true,
+            valign: Gtk.Align.CENTER
+        });
+        tasksRow.add_suffix(tasksSwitch);
+        sectionsGroup.add(tasksRow);
+
+        const projectsRow = new Adw.ActionRow({
+            title: 'Include Project Summary',
+            subtitle: 'Show project breakdown and statistics'
+        });
+        const projectsSwitch = new Gtk.Switch({
+            active: true,
+            valign: Gtk.Align.CENTER
+        });
+        projectsRow.add_suffix(projectsSwitch);
+        sectionsGroup.add(projectsRow);
+
+        const billingRow = new Adw.ActionRow({
+            title: 'Include Billing Information',
+            subtitle: 'Show revenue and rate calculations'
+        });
+        const billingSwitch = new Gtk.Switch({
+            active: false,
+            valign: Gtk.Align.CENTER
+        });
+        billingRow.add_suffix(billingSwitch);
+        sectionsGroup.add(billingRow);
+
+        const hourRateRow = new Adw.ActionRow({
+            title: 'Show Hourly Rates',
+            subtitle: 'Display detailed rate breakdown in billing section'
+        });
+        const hourRateSwitch = new Gtk.Switch({
+            active: true,
+            valign: Gtk.Align.CENTER
+        });
+        hourRateRow.add_suffix(hourRateSwitch);
+        sectionsGroup.add(hourRateRow);
+
+        box.append(sectionsGroup);
+
+        // Handle dialog response
+        dialog.connect('response', (dialog, response) => {
+            if (response === Gtk.ResponseType.OK) {
+                try {
+                    // Use HTML Template PDF Exporter only
+                    const pdfExporter = new HTMLTemplatePDFExporter(
+                        this.allTasks,
+                        this.allProjects,
+                        this.allClients
+                    );
+
+                    // Apply period filter
+                    const periodIndex = periodRow.get_selected();
+                    const periods = ['week', 'month', 'year', 'all', 'custom'];
+                    const selectedPeriod = periods[periodIndex];
+                    
+                    if (selectedPeriod === 'custom') {
+                        const fromText = fromDateEntry.get_text();
+                        const toText = toDateEntry.get_text();
+                        if (fromText && toText) {
+                            const fromDate = new Date(fromText);
+                            const toDate = new Date(toText);
+                            toDate.setHours(23, 59, 59, 999); // End of day
+                            pdfExporter.configureDateRange(fromDate, toDate);
+                        }
+                    } else {
+                        pdfExporter.configurePeriod(selectedPeriod);
+                    }
+
+                    // Apply project filter
+                    const projectIndex = projectRow.get_selected();
+                    if (projectIndex > 0) {
+                        const selectedProject = this.allProjects[projectIndex - 1];
+                        pdfExporter.configureProjectFilter(selectedProject.id);
+                    }
+
+                    // Apply client filter
+                    const clientIndex = clientRow.get_selected();
+                    if (clientIndex > 0) {
+                        const selectedClient = this.allClients[clientIndex - 1];
+                        pdfExporter.configureClientFilter(selectedClient.id);
+                    }
+
+                    // Apply billing option
+                    pdfExporter.configureBilling(billingSwitch.get_active());
+
+                    // Configure sections visibility
+                    pdfExporter.configureSections({
+                        showCharts: chartsSwitch.get_active(),
+                        showTasks: tasksSwitch.get_active(),
+                        showProjects: projectsSwitch.get_active(),
+                        showBilling: billingSwitch.get_active(),
+                        showHourlyRates: hourRateSwitch.get_active(),
+                        logoPath: selectedLogoPath
+                    });
+
+                    // Export PDF
+                    pdfExporter.exportToPDF(this);
+
+                } catch (error) {
+                    console.error('Export configuration error:', error);
+                    const errorDialog = new Gtk.AlertDialog({
+                        message: 'Export Failed',
+                        detail: `Could not configure export: ${error.message}`
+                    });
+                    errorDialog.show(this);
+                }
+            }
+            dialog.destroy();
+        });
+
+        dialog.present();
     }
     
     _setupProjects() {
@@ -478,6 +1021,9 @@ export const ValotWindow = GObject.registerClass({
     }
     
     _loadTasks() {
+        // Clear old button registrations before loading new ones
+        trackingStateManager.clearTaskButtons();
+        
         if (!this.dbConnection) {
             console.warn('No database connection available');
             this.allTasks = [];
@@ -528,8 +1074,20 @@ export const ValotWindow = GObject.registerClass({
         }
         
         this._filterTasks();
+        
+        // Update button states after task list is loaded and rendered
+        setTimeout(() => {
+            trackingStateManager._updateAllTrackingButtons();
+            trackingStateManager._updateStackButtons();
+        }, 0);
+        
         this._updateWeeklyTime(); // Update weekly time after loading tasks
         this._updateChart(); // Update chart after loading tasks
+        
+        // Update project statistics with actual task data
+        this._calculateProjectStats();
+        this._updateProjectsList();
+        this._updateProjectStats();
     }
     
     _filterTasks() {
@@ -571,6 +1129,7 @@ export const ValotWindow = GObject.registerClass({
         }
         
         this.taskRowMap.clear();
+        this.stackRowMap.clear();
         
         const start = this.currentPage * this.tasksPerPage;
         const end = Math.min(start + this.tasksPerPage, this.filteredTasks.length);
@@ -632,11 +1191,13 @@ export const ValotWindow = GObject.registerClass({
     _renderTaskGroups(taskGroups) {
         taskGroups.forEach(group => {
             if (group.tasks.length === 1) {
-                // Single task - render normally
-                this._renderSingleTask(group.tasks[0]);
+                // Single task - render using TaskRenderer with real-time updates
+                const row = this.taskRenderer.renderSingleTask(group.tasks[0]);
+                this._task_list.append(row);
             } else {
-                // Multiple tasks - render as expandable group
-                this._renderTaskGroup(group);
+                // Multiple tasks - render as expandable group using TaskRenderer
+                const groupRow = this.taskRenderer.renderTaskGroup(group);
+                this._task_list.append(groupRow);
             }
         });
     }
@@ -709,16 +1270,23 @@ export const ValotWindow = GObject.registerClass({
         
         // Add tracking button (last position, gray color)
         const trackBtn = new Gtk.Button({
-            icon_name: task.isActive ? 'media-playback-stop-symbolic' : 'media-playback-start-symbolic',
+            icon_name: 'media-playback-start-symbolic', // Will be updated by state manager
             css_classes: ['flat'],
-            tooltip_text: task.isActive ? 'Stop Tracking' : 'Start Tracking'
+            tooltip_text: 'Start Tracking' // Will be updated by state manager
         });
+        
+        // Register this button with the tracking state manager
+        trackingStateManager.registerTrackingButton(trackBtn, task.name);
         trackBtn.connect('clicked', () => {
-            if (task.isActive) {
-                // If task is currently active, stop tracking
+            // Check current state dynamically when clicked
+            console.log(`🎯 Individual task button clicked: "${task.name}"`);
+            const isCurrentlyThisTaskTracking = trackingStateManager.isTaskTracking(task.name);
+            console.log(`🎯 Is "${task.name}" currently tracking? ${isCurrentlyThisTaskTracking}`);
+            if (isCurrentlyThisTaskTracking) {
+                console.log(`🎯 Stopping tracking for individual task: "${task.name}"`);
                 this._stopCurrentTracking();
             } else {
-                // If task is not active, start tracking
+                console.log(`🎯 Starting tracking for individual task: "${task.name}"`);
                 this._startTrackingFromTask(task);
             }
         });
@@ -859,12 +1427,17 @@ export const ValotWindow = GObject.registerClass({
             
             // Tracking button
             const trackBtn = new Gtk.Button({
-                icon_name: task.isActive ? 'media-playback-stop-symbolic' : 'media-playback-start-symbolic',
+                icon_name: 'media-playback-start-symbolic', // Will be updated by state manager
                 css_classes: ['flat'],
-                tooltip_text: task.isActive ? 'Stop Tracking' : 'Start Tracking'
+                tooltip_text: 'Start Tracking' // Will be updated by state manager
             });
+            
+            // Register this button with the tracking state manager
+            trackingStateManager.registerTrackingButton(trackBtn, task.name);
             trackBtn.connect('clicked', () => {
-                if (task.isActive) {
+                // Check current state dynamically when clicked
+                const isCurrentlyThisTaskTracking = trackingStateManager.isTaskTracking(task.name);
+                if (isCurrentlyThisTaskTracking) {
                     this._stopCurrentTracking();
                 } else {
                     this._startTrackingFromTask(task);
@@ -1281,8 +1854,10 @@ export const ValotWindow = GObject.registerClass({
         try {
             // First ensure icon column exists
             this._ensureProjectIconColumn();
+            this._ensureDarkIconsColumn();
+            this._ensureIconColorModeColumn();
             
-            const sql = `SELECT id, name, color, total_time, icon FROM Project ORDER BY id`;
+            const sql = `SELECT id, name, color, total_time, icon, dark_icons, icon_color_mode FROM Project ORDER BY id`;
             const result = executeQuery(this.dbConnection, sql);
             this.allProjects = [];
             
@@ -1293,7 +1868,9 @@ export const ValotWindow = GObject.registerClass({
                         name: result.get_value_at(1, i),
                         color: result.get_value_at(2, i) || '#cccccc',
                         totalTime: result.get_value_at(3, i) || 0,
-                        icon: result.get_value_at(4, i) || 'folder-symbolic'
+                        icon: result.get_value_at(4, i) || 'folder-symbolic',
+                        dark_icons: result.get_value_at(5, i) || 0,
+                        icon_color_mode: result.get_value_at(6, i) || 'auto'
                     };
                     this.allProjects.push(project);
                 }
@@ -1360,8 +1937,36 @@ export const ValotWindow = GObject.registerClass({
                 valign: Gtk.Align.CENTER
             });
             
-            // Find color info to determine text color
-            const colorInfo = this.projectColors.find(c => c.value === project.color) || { textColor: 'white' };
+            // Determine icon color based on icon_color_mode setting
+            let iconColor = 'black'; // Default
+            
+            const iconColorMode = project.icon_color_mode || 'auto';
+            
+            if (iconColorMode === 'dark') {
+                // Force dark/black icons
+                iconColor = 'black';
+                console.log(`Project ${project.name}: Using dark icons (manual override)`);
+            } else if (iconColorMode === 'light') {
+                // Force light/white icons
+                iconColor = 'white';
+                console.log(`Project ${project.name}: Using light icons (manual override)`);
+            } else {
+                // Auto mode - use color detection
+                const colorInfo = this.projectColors.find(c => c.value === project.color);
+                if (colorInfo) {
+                    iconColor = colorInfo.textColor;
+                    console.log(`Project ${project.name}: Auto mode - Color ${project.color}, Icon color: ${iconColor}`);
+                } else {
+                    // For colors not in predefined list, determine based on color brightness
+                    console.log(`Unknown color ${project.color} for project ${project.name}, using brightness detection`);
+                    // If color starts with dark values, use white icons
+                    if (project.color && (project.color.startsWith('#1') || project.color.startsWith('#2') || 
+                        project.color.startsWith('#3') || project.color.startsWith('#4') || 
+                        project.color.startsWith('#5') || project.color.toLowerCase().includes('dark'))) {
+                        iconColor = 'white';
+                    }
+                }
+            }
             
             // Apply color styling
             const css = `
@@ -1373,8 +1978,8 @@ export const ValotWindow = GObject.registerClass({
                     margin: 0;
                 }
                 .project-icon-container image {
-                    color: ${colorInfo.textColor};
-                    ${colorInfo.textColor === 'white' ? '-gtk-icon-shadow: 1px 1px 1px rgba(0,0,0,0.3);' : ''}
+                    color: ${iconColor};
+                    ${iconColor === 'white' ? '-gtk-icon-shadow: 1px 1px 1px rgba(0,0,0,0.3);' : ''}
                 }
             `;
             
@@ -1587,25 +2192,61 @@ export const ValotWindow = GObject.registerClass({
     
     _ensureProjectIconColumn() {
         try {
-            // Add icon column if it doesn't exist
             const alterSql = `ALTER TABLE Project ADD COLUMN icon TEXT DEFAULT 'folder-symbolic'`;
             executeNonSelectCommand(this.dbConnection, alterSql);
             console.log('Added icon column to Project table');
         } catch (error) {
-            // Column might already exist, that's fine
-            console.log('Icon column may already exist in Project table');
+            // Column already exists, ignore error
+            if (error.message && error.message.includes('duplicate column name')) {
+                console.log('Icon column already exists in Project table');
+            } else {
+                console.log('Error adding icon column:', error.message);
+            }
+        }
+    }
+
+    _ensureDarkIconsColumn() {
+        try {
+            const alterSql = `ALTER TABLE Project ADD COLUMN dark_icons INTEGER DEFAULT 0`;
+            executeNonSelectCommand(this.dbConnection, alterSql);
+            console.log('Added dark_icons column to Project table');
+        } catch (error) {
+            // Column already exists, ignore error
+            if (error.message && error.message.includes('duplicate column name')) {
+                console.log('dark_icons column already exists in Project table');
+            } else {
+                console.log('Error adding dark_icons column:', error.message);
+            }
+        }
+    }
+
+    _ensureIconColorModeColumn() {
+        try {
+            const alterSql = `ALTER TABLE Project ADD COLUMN icon_color_mode TEXT DEFAULT 'auto'`;
+            executeNonSelectCommand(this.dbConnection, alterSql);
+            console.log('Added icon_color_mode column to Project table');
+        } catch (error) {
+            // Column already exists, ignore error
+            if (error.message && error.message.includes('duplicate column name')) {
+                console.log('icon_color_mode column already exists in Project table');
+            } else {
+                console.log('Error adding icon_color_mode column:', error.message);
+            }
         }
     }
     
     _ensureTaskClientColumn() {
         try {
-            // Add client_id column if it doesn't exist
             const alterSql = `ALTER TABLE Task ADD COLUMN client_id INTEGER DEFAULT 1`;
             executeNonSelectCommand(this.dbConnection, alterSql);
             console.log('Added client_id column to Task table');
         } catch (error) {
-            // Column might already exist, that's fine
-            console.log('client_id column may already exist in Task table');
+            // Column already exists, ignore error
+            if (error.message && error.message.includes('duplicate column name')) {
+                console.log('client_id column already exists in Task table');
+            } else {
+                console.log('Error adding client_id column:', error.message);
+            }
         }
     }
     
@@ -1858,13 +2499,58 @@ export const ValotWindow = GObject.registerClass({
     }
     
     _deleteSelectedTasks() {
-        if (this.selectedTasks.size === 0) {
+        console.log(`🗑️ _deleteSelectedTasks called. Tasks: ${this.selectedTasks.size}, Stacks: ${this.selectedStacks.size}`);
+        console.log(`🗑️ Selected task IDs:`, Array.from(this.selectedTasks));
+        console.log(`🗑️ Selected stack names:`, Array.from(this.selectedStacks));
+        
+        const hasSelectedTasks = this.selectedTasks.size > 0;
+        const hasSelectedStacks = this.selectedStacks.size > 0;
+        
+        console.log(`🗑️ hasSelectedTasks: ${hasSelectedTasks}, hasSelectedStacks: ${hasSelectedStacks}`);
+        
+        if (!hasSelectedTasks && !hasSelectedStacks) {
+            console.log('🗑️ No tasks or stacks selected, returning early');
             return;
+        }
+        
+        console.log('🗑️ Proceeding with delete dialog creation...');
+        
+        // Since selecting a stack now automatically adds all its tasks to selectedTasks,
+        // we can simply use selectedTasks.size for the total count
+        const totalItems = this.selectedTasks.size;
+        
+        // Calculate how many tasks are in selected stacks (for display purposes)
+        let stackTaskCount = 0;
+        if (hasSelectedStacks) {
+            this.selectedStacks.forEach(baseName => {
+                const stackTasks = this.allTasks.filter(task => {
+                    const taskBaseName = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+                    const baseNameToCheck = taskBaseName ? taskBaseName[1].trim() : task.name;
+                    return baseNameToCheck === baseName;
+                });
+                stackTaskCount += stackTasks.length;
+            });
+        }
+        
+        // Create description of what will be deleted
+        let bodyText = '';
+        if (hasSelectedStacks) {
+            if (hasSelectedTasks && this.selectedTasks.size > stackTaskCount) {
+                // Mixed selection: stacks + individual tasks
+                const individualTaskCount = this.selectedTasks.size - stackTaskCount;
+                bodyText = `Are you sure you want to delete the selected items?\n\n• ${this.selectedStacks.size} stack(s) (${stackTaskCount} tasks)\n• ${individualTaskCount} additional individual task(s)\n\nTotal: ${totalItems} tasks will be deleted.`;
+            } else {
+                // Only stacks selected
+                bodyText = `Are you sure you want to delete ${this.selectedStacks.size} selected stack(s)?\n\nThis will delete ${totalItems} tasks in total.`;
+            }
+        } else {
+            // Only individual tasks selected
+            bodyText = `Are you sure you want to delete ${this.selectedTasks.size} selected task(s)?`;
         }
         
         const dialog = new Adw.AlertDialog({
             heading: 'Delete Tasks',
-            body: `Are you sure you want to delete ${this.selectedTasks.size} selected task(s)?`
+            body: bodyText
         });
         
         dialog.add_response('cancel', 'Cancel');
@@ -1888,19 +2574,45 @@ export const ValotWindow = GObject.registerClass({
         }
         
         try {
+            // Since selecting stacks now automatically adds all their tasks to selectedTasks,
+            // we can simply delete all tasks in selectedTasks
+            if (this.selectedTasks.size === 0) {
+                console.log('No tasks to delete');
+                return;
+            }
+            
+            console.log(`🗑️ Deleting ${this.selectedTasks.size} selected task(s)`);
+            if (this.selectedStacks.size > 0) {
+                console.log(`🗑️ This includes ${this.selectedStacks.size} selected stack(s):`, Array.from(this.selectedStacks));
+            }
+            
             const taskIds = Array.from(this.selectedTasks);
-            const placeholders = taskIds.map(() => '?').join(',');
             const sql = `DELETE FROM Task WHERE id IN (${taskIds.join(',')})`;
             
+            console.log(`🗑️ Executing delete SQL: ${sql}`);
             executeNonSelectCommand(this.dbConnection, sql);
             
-            this.allTasks = this.allTasks.filter(task => !this.selectedTasks.has(task.id));
+            // Check if currently tracked task is being deleted
+            const currentlyTracked = trackingStateManager.getCurrentTracking();
+            if (currentlyTracked) {
+                const trackedTask = this.allTasks.find(task => task.name === currentlyTracked.name);
+                if (trackedTask && taskIdsToDelete.has(trackedTask.id)) {
+                    console.log(`🗑️ Stopping tracking for deleted task: "${currentlyTracked.name}"`);
+                    this._stopCurrentTracking();
+                }
+            }
             
+            // Remove deleted tasks from memory
+            this.allTasks = this.allTasks.filter(task => !taskIdsToDelete.has(task.id));
+            
+            // Clear selections
             this.selectedTasks.clear();
+            this.selectedStacks.clear();
             
+            // Refresh task list
             this._filterTasks();
             
-            console.log(`Deleted ${taskIds.length} tasks`);
+            console.log(`🗑️ Successfully deleted ${taskIds.length} tasks`);
         } catch (error) {
             console.error('Error deleting tasks:', error);
         }
@@ -2089,20 +2801,10 @@ export const ValotWindow = GObject.registerClass({
     _startTrackingFromTask(task) {
         console.log('Start tracking from task:', task.name);
         
-        // Stop any currently active tracking first
-        const currentlyTrackingButtons = [
-            this._track_button,
-            this._track_button_projects, 
-            this._track_button_clients
-        ];
-        
-        // Check if any tracking is currently active and stop it
-        currentlyTrackingButtons.forEach(btn => {
-            if (btn && btn.get_icon_name() === 'media-playback-stop-symbolic') {
-                btn.emit('clicked'); // Stop current tracking
-                console.log('Stopped current tracking');
-            }
-        });
+        // Stop any currently active tracking first using the state manager
+        if (trackingStateManager.getCurrentTracking()) {
+            this._stopCurrentTracking();
+        }
         
         // Set the project and client context based on the task
         this.currentProjectId = task.project_id;
@@ -2136,9 +2838,7 @@ export const ValotWindow = GObject.registerClass({
         
         // Set task name in all header input fields 
         const taskInputs = [
-            this._task_name,
-            this._task_name_projects,
-            this._task_name_clients
+            this._task_name
         ];
         
         taskInputs.forEach(input => {
@@ -2162,19 +2862,24 @@ export const ValotWindow = GObject.registerClass({
     _stopCurrentTracking() {
         console.log('Stop current tracking');
         
-        // Find and click the stop button on any active tracking
-        const trackingButtons = [
-            this._track_button,
-            this._track_button_projects,
-            this._track_button_clients
-        ];
+        // Use the state manager to stop tracking, which will update all UI elements
+        const stoppedTask = trackingStateManager.stopTracking();
         
-        trackingButtons.forEach(btn => {
-            if (btn && btn.get_icon_name() === 'media-playback-stop-symbolic') {
-                btn.emit('clicked'); // Stop current tracking
-                console.log('Stopped tracking via button click');
-            }
-        });
+        if (stoppedTask) {
+            console.log('Stopped tracking via state manager for:', stoppedTask.name);
+            
+            // Also trigger the UI buttons to stop (for backward compatibility)
+            const trackingButtons = [
+                this._track_button
+            ];
+            
+            trackingButtons.forEach(btn => {
+                if (btn && btn.get_icon_name() === 'media-playback-stop-symbolic') {
+                    btn.emit('clicked'); // Stop current tracking
+                    console.log('Stopped tracking via button click');
+                }
+            });
+        }
     }
     
     _showProjectSelector() {
@@ -2292,13 +2997,39 @@ export const ValotWindow = GObject.registerClass({
         if (!project) return;
         
         const projectButtons = [
-            this._project_context_btn,
-            this._project_context_btn_projects,
-            this._project_context_btn_clients
+            this._project_context_btn
         ];
         
-        // Find color info to determine text color
-        const colorInfo = this.projectColors.find(c => c.value === project.color) || { textColor: 'white' };
+        // Determine icon color based on icon_color_mode setting
+        let iconColor = 'black'; // Default
+        
+        const iconColorMode = project.icon_color_mode || 'auto';
+        
+        if (iconColorMode === 'dark') {
+            // Force dark/black icons
+            iconColor = 'black';
+            console.log(`Context button - Project ${project.name}: Using dark icons (manual override)`);
+        } else if (iconColorMode === 'light') {
+            // Force light/white icons
+            iconColor = 'white';
+            console.log(`Context button - Project ${project.name}: Using light icons (manual override)`);
+        } else {
+            // Auto mode - use color detection
+            const colorInfo = this.projectColors.find(c => c.value === project.color);
+            if (colorInfo) {
+                iconColor = colorInfo.textColor;
+                console.log(`Context button - Project ${project.name}: Auto mode - Color ${project.color}, Icon color: ${iconColor}`);
+            } else {
+                // For colors not in predefined list, determine based on color brightness
+                console.log(`Context button - Unknown color ${project.color} for project ${project.name}, using brightness detection`);
+                // If color starts with dark values, use white icons
+                if (project.color && (project.color.startsWith('#1') || project.color.startsWith('#2') || 
+                    project.color.startsWith('#3') || project.color.startsWith('#4') || 
+                    project.color.startsWith('#5') || project.color.toLowerCase().includes('dark'))) {
+                    iconColor = 'white';
+                }
+            }
+        }
         
         projectButtons.forEach(btn => {
             if (btn) {
@@ -2320,8 +3051,8 @@ export const ValotWindow = GObject.registerClass({
                         transform: scale(1.05);
                     }
                     .project-context-active image {
-                        color: ${colorInfo.textColor};
-                        ${colorInfo.textColor === 'white' ? '-gtk-icon-shadow: 1px 1px 1px rgba(0,0,0,0.3);' : ''}
+                        color: ${iconColor};
+                        ${iconColor === 'white' ? '-gtk-icon-shadow: 1px 1px 1px rgba(0,0,0,0.3);' : ''}
                     }
                 `;
                 
@@ -2347,12 +3078,11 @@ export const ValotWindow = GObject.registerClass({
             (G<255?G<1?0:G:255)*0x100 + (B<255?B<1?0:B:255))
             .toString(16).slice(1);
     }
+
     
     _updateClientButtonsDisplay(clientName) {
         const clientButtons = [
-            this._client_context_btn,
-            this._client_context_btn_projects,
-            this._client_context_btn_clients
+            this._client_context_btn
         ];
         
         clientButtons.forEach(btn => {
