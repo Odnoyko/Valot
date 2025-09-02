@@ -1,4 +1,4 @@
-application_id = 'com.odnoyko.com'
+application_id = 'com.odnoyko.valot'
 
 scalable_dir = 'hicolor' / 'scalable' / 'apps'
 install_data(

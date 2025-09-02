@@ -1,6 +1,5 @@
 import Gtk from 'gi://Gtk';
 import Gdk from 'gi://Gdk';
-import Cairo from 'gi://cairo';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import { TimeUtils } from 'resource:///com/odnoyko/valot/js/utils/timeUtils.js';
@@ -13,7 +12,7 @@ export class PDFExporter {
         this.currentPeriod = currentPeriod;
         this.selectedProjectId = selectedProjectId;
         this.selectedClientId = selectedClientId;
-        this.timeUtils = new TimeUtils();
+        // TimeUtils has static methods, no need to instantiate
         
         // New options
         this.includeBilling = true;
@@ -22,7 +21,7 @@ export class PDFExporter {
 
     async exportToPDF(parentWindow) {
         const dialog = new Gtk.FileDialog({
-            title: 'Export Time Report'
+            title: 'Export Time Report (Text)'
         });
 
         // Set initial folder to user documents
@@ -63,7 +62,7 @@ export class PDFExporter {
                 
                 // Show success notification
                 const toast = new Gtk.AlertDialog({
-                    message: 'PDF Export Complete',
+                    message: 'Report Export Complete',
                     detail: `Report saved to: ${filepath}`
                 });
                 toast.show(parentWindow);
@@ -82,15 +81,15 @@ export class PDFExporter {
 
     _generateFileName(customName = null) {
         if (customName && customName.trim()) {
-            // Use custom name, ensure it has .pdf extension
+            // Use custom name, ensure it has .txt extension
             const trimmedName = customName.trim();
-            return trimmedName.endsWith('.pdf') ? trimmedName : `${trimmedName}.pdf`;
+            return trimmedName.endsWith('.txt') ? trimmedName : `${trimmedName}.txt`;
         }
         
         const date = new Date();
         const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
         const periodStr = this.currentPeriod.charAt(0).toUpperCase() + this.currentPeriod.slice(1);
-        return `Valot_Time_Report_${periodStr}_${dateStr}.pdf`;
+        return `Valot_Time_Report_${periodStr}_${dateStr}.txt`;
     }
 
     setCustomName(customName) {
@@ -98,197 +97,87 @@ export class PDFExporter {
     }
 
     _createPDF(filepath) {
-        // PDF page dimensions (A4: 595x842 points)
-        const pageWidth = 595;
-        const pageHeight = 842;
-
-        const surface = Cairo.PdfSurface.create(filepath, pageWidth, pageHeight);
-        const ctx = Cairo.Context.create(surface);
-
-        // Set up fonts and colors
-        ctx.selectFontFace('Sans', Cairo.FontSlant.NORMAL, Cairo.FontWeight.NORMAL);
-
-        this._drawHeader(ctx, pageWidth);
-        this._drawReportInfo(ctx, pageWidth, 120);
-        this._drawChart(ctx, pageWidth, 200);
-        this._drawStatistics(ctx, pageWidth, 450);
-        this._drawTaskList(ctx, pageWidth, 600);
-
-        // Finish the PDF
-        ctx.showPage();
-        surface.finish();
+        // Create a simple text-based report instead of using Cairo
+        const reportContent = this._generateTextReport();
         
-        console.log('PDF exported to:', filepath);
+        try {
+            // Write the report content to file
+            const file = Gio.File.new_for_path(filepath);
+            const outputStream = file.replace(null, false, Gio.FileCreateFlags.NONE, null);
+            outputStream.write(reportContent, null);
+            outputStream.close(null);
+            
+            console.log('Report exported to:', filepath);
+        } catch (error) {
+            console.error('Error writing report file:', error);
+            throw error;
+        }
     }
 
-    _drawHeader(ctx, pageWidth) {
-        const headerHeight = 80;
-        
-        // Background
-        ctx.setSourceRgb(0.95, 0.95, 0.95);
-        ctx.rectangle(0, 0, pageWidth, headerHeight);
-        ctx.fill();
-
-        // Try to load user logo (placeholder implementation)
-        const logoSize = 60;
-        const logoX = 20;
-        const logoY = 10;
-        
-        // Draw logo placeholder (circle with "V")
-        ctx.setSourceRgb(0.2, 0.4, 0.8);
-        ctx.arc(logoX + logoSize/2, logoY + logoSize/2, logoSize/2, 0, 2 * Math.PI);
-        ctx.fill();
-        
-        ctx.setSourceRgb(1, 1, 1);
-        ctx.setFontSize(24);
-        ctx.textPath('V');
-        const textExtents = ctx.textExtents('V');
-        ctx.moveTo(logoX + logoSize/2 - (textExtents.width || textExtents.textWidth)/2, 
-                   logoY + logoSize/2 + (textExtents.height || textExtents.textHeight)/2);
-        ctx.showText('V');
-
-        // Title
-        ctx.setSourceRgb(0.1, 0.1, 0.1);
-        ctx.setFontSize(20);
-        ctx.moveTo(logoX + logoSize + 20, 35);
-        ctx.showText('Valot Time Tracking Report');
-
-        // Date and period
-        ctx.setFontSize(12);
+    _generateTextReport() {
+        const stats = this._calculateStatistics();
+        const filteredTasks = this._getFilteredTasks();
         const currentDate = new Date().toLocaleDateString('de-DE');
-        ctx.moveTo(logoX + logoSize + 20, 55);
-        ctx.showText(`Generated on: ${currentDate} • Period: ${this.currentPeriod}`);
-    }
-
-    _drawReportInfo(ctx, pageWidth, y) {
-        ctx.setSourceRgb(0.1, 0.1, 0.1);
-        ctx.setFontSize(14);
-        ctx.moveTo(20, y);
-        ctx.showText('Report Summary');
-
-        ctx.setFontSize(10);
-        let infoY = y + 25;
-
-        // Filter info
+        
+        let report = `VALOT TIME TRACKING REPORT\n`;
+        report += `================================\n\n`;
+        report += `Generated on: ${currentDate}\n`;
+        report += `Period: ${this.currentPeriod}\n`;
+        
+        if (this.currentPeriod === 'week') {
+            const weekNumber = this._getGermanWeekNumber(new Date());
+            report += `German Week (KW): ${weekNumber}\n`;
+        }
+        
+        report += `\n`;
+        
+        // Filter information
         if (this.selectedProjectId) {
             const project = this.projects.find(p => p.id === this.selectedProjectId);
             if (project) {
-                ctx.moveTo(20, infoY);
-                ctx.showText(`Project Filter: ${project.name}`);
-                infoY += 15;
+                report += `Project Filter: ${project.name}\n`;
             }
         }
-
+        
         if (this.selectedClientId) {
             const client = this.clients.find(c => c.id === this.selectedClientId);
             if (client) {
-                ctx.moveTo(20, infoY);
-                ctx.showText(`Client Filter: ${client.name}`);
-                infoY += 15;
+                report += `Client Filter: ${client.name}\n`;
             }
         }
-
-        // German week info for week view
-        if (this.currentPeriod === 'week') {
-            const weekNumber = this._getGermanWeekNumber(new Date());
-            ctx.moveTo(20, infoY);
-            ctx.showText(`German Week (KW): ${weekNumber}`);
-        }
-    }
-
-    _drawChart(ctx, pageWidth, y) {
-        const chartData = this._getChartData();
-        if (chartData.length === 0) return;
-
-        const chartWidth = pageWidth - 40;
-        const chartHeight = 150;
-        const barWidth = Math.min(40, chartWidth / chartData.length - 10);
-        const maxHours = Math.max(...chartData.map(d => d.hours), 1);
-
-        // Chart title
-        ctx.setSourceRgb(0.1, 0.1, 0.1);
-        ctx.setFontSize(14);
-        let titleText = `${this.currentPeriod.charAt(0).toUpperCase() + this.currentPeriod.slice(1)} Activity Chart`;
-        if (this.currentPeriod === 'week') {
-            const weekNumber = this._getGermanWeekNumber(new Date());
-            titleText = `Weekly Activity Chart (KW ${weekNumber})`;
-        }
-        ctx.moveTo(20, y);
-        ctx.showText(titleText);
-
-        // Draw bars
-        const barsY = y + 30;
-        const barsHeight = 100;
-        let barX = 20;
-
-        chartData.forEach((dayData, index) => {
-            const barHeight = Math.max((dayData.hours / maxHours) * barsHeight, 2);
-            
-            // Bar
-            ctx.setSourceRgb(0.2, 0.6, 1.0);
-            ctx.rectangle(barX, barsY + barsHeight - barHeight, barWidth, barHeight);
-            ctx.fill();
-
-            // Label
-            ctx.setSourceRgb(0.1, 0.1, 0.1);
-            ctx.setFontSize(8);
-            const labelText = dayData.label;
-            const textExtents = ctx.textExtents(labelText);
-            ctx.moveTo(barX + barWidth/2 - (textExtents.width || textExtents.textWidth)/2, barsY + barsHeight + 15);
-            ctx.showText(labelText);
-
-            // Hours
-            const hoursText = dayData.hours > 0 ? `${dayData.hours.toFixed(1)}h` : '0h';
-            const hoursExtents = ctx.textExtents(hoursText);
-            ctx.moveTo(barX + barWidth/2 - (hoursExtents.width || hoursExtents.textWidth)/2, barsY + barsHeight + 25);
-            ctx.showText(hoursText);
-
-            barX += barWidth + 10;
-        });
-
-        // Total
-        const totalHours = chartData.reduce((sum, d) => sum + d.hours, 0);
-        ctx.setFontSize(10);
-        ctx.moveTo(20, y + chartHeight - 10);
-        ctx.showText(`Total: ${totalHours.toFixed(1)} hours`);
-    }
-
-    _drawStatistics(ctx, pageWidth, y) {
-        ctx.setSourceRgb(0.1, 0.1, 0.1);
-        ctx.setFontSize(14);
-        ctx.moveTo(20, y);
-        ctx.showText('Statistics');
-
-        const stats = this._calculateStatistics();
-        ctx.setFontSize(10);
-        let statsY = y + 25;
-
-        Object.entries(stats).forEach(([key, value]) => {
-            ctx.moveTo(20, statsY);
-            ctx.showText(`${key}: ${value}`);
-            statsY += 15;
-        });
-    }
-
-    _drawTaskList(ctx, pageWidth, y) {
-        const recentTasks = this._getRecentTasks();
-        if (recentTasks.length === 0) return;
-
-        ctx.setSourceRgb(0.1, 0.1, 0.1);
-        ctx.setFontSize(14);
-        ctx.moveTo(20, y);
-        ctx.showText('Recent Tasks');
-
-        ctx.setFontSize(9);
-        let taskY = y + 25;
         
-        recentTasks.slice(0, 10).forEach(task => {
-            const taskText = `${task.name} - ${this.timeUtils.formatDuration(task.duration)}`;
-            ctx.moveTo(20, taskY);
-            ctx.showText(taskText);
-            taskY += 12;
+        // Statistics
+        report += `\nSTATISTICS\n`;
+        report += `----------\n`;
+        Object.entries(stats).forEach(([key, value]) => {
+            report += `${key}: ${value}\n`;
         });
+        
+        // Task list
+        const recentTasks = this._getRecentTasks().slice(0, 20);
+        if (recentTasks.length > 0) {
+            report += `\nRECENT TASKS\n`;
+            report += `------------\n`;
+            recentTasks.forEach(task => {
+                const project = this.projects.find(p => p.id === task.project_id);
+                const client = this.clients.find(c => c.id === task.client_id);
+                report += `• ${task.name}\n`;
+                report += `  Duration: ${TimeUtils.formatDuration(task.duration)}\n`;
+                if (project) report += `  Project: ${project.name}\n`;
+                if (client) report += `  Client: ${client.name}\n`;
+                if (task.start) {
+                    const startDate = new Date(task.start);
+                    report += `  Date: ${startDate.toLocaleDateString('de-DE')} ${startDate.toLocaleTimeString('de-DE')}\n`;
+                }
+                report += `\n`;
+            });
+        }
+        
+        report += `\nGenerated by Valot Time Tracking\n`;
+        
+        return report;
     }
+
 
     _getChartData() {
         let filteredTasks = this.tasks || [];
@@ -419,9 +308,9 @@ export class PDFExporter {
         const completedTasks = filteredTasks.filter(task => !task.isActive).length;
         
         const stats = {
-            'Total Time': this.timeUtils.formatDuration(totalTime),
+            'Total Time': TimeUtils.formatDuration(totalTime),
             'Completed Tasks': completedTasks.toString(),
-            'Average per Task': completedTasks > 0 ? this.timeUtils.formatDuration(totalTime / completedTasks) : '0:00:00'
+            'Average per Task': completedTasks > 0 ? TimeUtils.formatDuration(totalTime / completedTasks) : '0:00:00'
         };
 
         if (this.selectedProjectId) {

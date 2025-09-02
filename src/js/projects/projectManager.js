@@ -11,11 +11,15 @@ export class ProjectManager {
         this.projectIcons = projectIcons;
     }
 
-    createProject(name, color, icon, parentWindow) {
+    createProject(name, color, icon, parentWindow, iconColorMode = 'auto') {
         try {
-            console.log('Creating project:', name, color, icon);
+            console.log('Creating project:', name, color, icon, 'Icon color mode:', iconColorMode);
             
-            const sql = `INSERT INTO Project (name, color, icon, total_time) VALUES ('${name.replace(/'/g, "''")}', '${color}', '${icon}', 0)`;
+            // First ensure the columns exist
+            this._ensureDarkIconsColumn();
+            this._ensureIconColorModeColumn();
+            
+            const sql = `INSERT INTO Project (name, color, icon, total_time, icon_color_mode) VALUES ('${name.replace(/'/g, "''")}', '${color}', '${icon}', 0, '${iconColorMode}')`;
             
             this.executeNonSelectCommand(this.dbConnection, sql);
             console.log('Project created successfully');
@@ -28,14 +32,48 @@ export class ProjectManager {
         }
     }
 
-    updateProject(projectId, name, color, icon, parentWindow) {
+    _ensureDarkIconsColumn() {
         try {
-            console.log('Updating project:', name, color, icon);
+            const alterSql = `ALTER TABLE Project ADD COLUMN dark_icons INTEGER DEFAULT 0`;
+            this.executeNonSelectCommand(this.dbConnection, alterSql);
+            console.log('Added dark_icons column to Project table');
+        } catch (error) {
+            // Column already exists, ignore error
+            if (error.message && error.message.includes('duplicate column name')) {
+                console.log('dark_icons column already exists in Project table');
+            } else {
+                console.log('Error adding dark_icons column:', error.message);
+            }
+        }
+    }
+
+    _ensureIconColorModeColumn() {
+        try {
+            const alterSql = `ALTER TABLE Project ADD COLUMN icon_color_mode TEXT DEFAULT 'auto'`;
+            this.executeNonSelectCommand(this.dbConnection, alterSql);
+            console.log('Added icon_color_mode column to Project table');
+        } catch (error) {
+            // Column already exists, ignore error
+            if (error.message && error.message.includes('duplicate column name')) {
+                console.log('icon_color_mode column already exists in Project table');
+            } else {
+                console.log('Error adding icon_color_mode column:', error.message);
+            }
+        }
+    }
+
+    updateProject(projectId, name, color, icon, parentWindow, iconColorMode = 'auto') {
+        try {
+            console.log('Updating project:', name, color, icon, 'Icon color mode:', iconColorMode);
             
-            const sql = `UPDATE Project SET name = '${name.replace(/'/g, "''")}', color = '${color}', icon = '${icon}' WHERE id = ${projectId}`;
+            // Ensure the columns exist
+            this._ensureDarkIconsColumn();
+            this._ensureIconColorModeColumn();
+            
+            const sql = `UPDATE Project SET name = '${name.replace(/'/g, "''")}', color = '${color}', icon = '${icon}', icon_color_mode = '${iconColorMode}' WHERE id = ${projectId}`;
             
             this.executeNonSelectCommand(this.dbConnection, sql);
-            console.log('Project updated:', name, color, icon);
+            console.log('Project updated:', name, color, icon, 'Icon color mode:', iconColorMode);
             
             // Reload projects
             parentWindow._loadProjects();
@@ -68,10 +106,88 @@ export class ProjectManager {
             body: 'Create a new project with icon and color.'
         });
         
+        // Main container for the entire dialog content
+        const mainBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 0,
+            margin_top: 12
+        });
+        
+        // Icon color switcher (Light/Dark)
+        let iconColorMode = 'auto'; // 'auto', 'light', 'dark'
+        
+        // Create visible tab-style switcher at the top
+        const tabLabel = new Gtk.Label({
+            label: 'Icon Mode:',
+            halign: Gtk.Align.CENTER,
+            margin_bottom: 8,
+            css_classes: ['heading']
+        });
+        mainBox.append(tabLabel);
+        
+        const tabBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 4,
+            halign: Gtk.Align.CENTER,
+            margin_bottom: 20,
+            height_request: 40
+        });
+        
+        const autoButton = new Gtk.Button({
+            label: 'Auto',
+            width_request: 80,
+            height_request: 36,
+            css_classes: ['suggested-action'] // Default selection
+        });
+        const lightButton = new Gtk.Button({
+            label: 'Light',
+            width_request: 80,
+            height_request: 36,
+            css_classes: ['']
+        });
+        const darkButton = new Gtk.Button({
+            label: 'Dark',
+            width_request: 80,
+            height_request: 36,
+            css_classes: ['']
+        });
+        
+        autoButton.connect('clicked', () => {
+            iconColorMode = 'auto';
+            console.log('Icon mode: Auto');
+            // Update button styles
+            autoButton.set_css_classes(['suggested-action']);
+            lightButton.set_css_classes(['']);
+            darkButton.set_css_classes(['']);
+        });
+        
+        lightButton.connect('clicked', () => {
+            iconColorMode = 'light';
+            console.log('Icon mode: Light (white icons)');
+            // Update button styles
+            autoButton.set_css_classes(['']);
+            lightButton.set_css_classes(['suggested-action']);
+            darkButton.set_css_classes(['']);
+        });
+        
+        darkButton.connect('clicked', () => {
+            iconColorMode = 'dark';
+            console.log('Icon mode: Dark (black icons)');
+            // Update button styles
+            autoButton.set_css_classes(['']);
+            lightButton.set_css_classes(['']);
+            darkButton.set_css_classes(['suggested-action']);
+        });
+        
+        tabBox.append(autoButton);
+        tabBox.append(lightButton);
+        tabBox.append(darkButton);
+        mainBox.append(tabBox);
+        
+        // Form content below the tabs
         const form = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
-            spacing: 12,
-            margin_top: 12
+            spacing: 12
         });
         
         // Project name input
@@ -93,7 +209,10 @@ export class ProjectManager {
         form.append(new Gtk.Label({label: 'Project Color:', halign: Gtk.Align.START}));
         form.append(colorGrid);
         
-        dialog.set_extra_child(form);
+        // Add form to main container
+        mainBox.append(form);
+        
+        dialog.set_extra_child(mainBox);
         dialog.add_response('cancel', 'Cancel');
         dialog.add_response('create', 'Create Project');
         dialog.set_response_appearance('create', Adw.ResponseAppearance.SUGGESTED);
@@ -102,7 +221,7 @@ export class ProjectManager {
             if (response === 'create') {
                 const name = nameEntry.get_text().trim();
                 if (name) {
-                    this.createProject(name, selectedColor.value, selectedIcon, parentWindow);
+                    this.createProject(name, selectedColor.value, selectedIcon, parentWindow, iconColorMode);
                 }
             }
             dialog.close();
@@ -112,15 +231,104 @@ export class ProjectManager {
     }
 
     createEditProjectDialog(project, parentWindow) {
+        console.log('Creating edit project dialog for:', project.name);
+        
         const dialog = new Adw.AlertDialog({
             heading: 'Edit Project',
             body: 'Update project name, icon, and color.'
         });
         
+        // Main container for the entire dialog content
+        const mainBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 0,
+            margin_top: 12
+        });
+        
+        console.log('MainBox created for edit dialog');
+        
+        // Icon color switcher (Light/Dark) - determine current mode from project data
+        let iconColorMode = 'auto'; // Default
+        if (project.icon_color_mode) {
+            iconColorMode = project.icon_color_mode;
+        } else if (project.dark_icons === 1) {
+            iconColorMode = 'dark'; // Legacy support
+        } else if (project.dark_icons === 2) {
+            iconColorMode = 'light'; // Legacy support
+        }
+        
+        // Create visible tab-style switcher at the top
+        const tabLabel = new Gtk.Label({
+            label: 'Icon Mode:',
+            halign: Gtk.Align.CENTER,
+            margin_bottom: 8,
+            css_classes: ['heading']
+        });
+        mainBox.append(tabLabel);
+        
+        const tabBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 4,
+            halign: Gtk.Align.CENTER,
+            margin_bottom: 20,
+            height_request: 40
+        });
+        
+        const autoButton = new Gtk.Button({
+            label: 'Auto',
+            width_request: 80,
+            height_request: 36,
+            css_classes: iconColorMode === 'auto' ? ['suggested-action'] : ['']
+        });
+        const lightButton = new Gtk.Button({
+            label: 'Light',
+            width_request: 80,
+            height_request: 36,
+            css_classes: iconColorMode === 'light' ? ['suggested-action'] : ['']
+        });
+        const darkButton = new Gtk.Button({
+            label: 'Dark',
+            width_request: 80,
+            height_request: 36,
+            css_classes: iconColorMode === 'dark' ? ['suggested-action'] : ['']
+        });
+        
+        autoButton.connect('clicked', () => {
+            iconColorMode = 'auto';
+            console.log('Icon mode: Auto');
+            // Update button styles
+            autoButton.set_css_classes(['suggested-action']);
+            lightButton.set_css_classes(['']);
+            darkButton.set_css_classes(['']);
+        });
+        
+        lightButton.connect('clicked', () => {
+            iconColorMode = 'light';
+            console.log('Icon mode: Light (white icons)');
+            // Update button styles
+            autoButton.set_css_classes(['']);
+            lightButton.set_css_classes(['suggested-action']);
+            darkButton.set_css_classes(['']);
+        });
+        
+        darkButton.connect('clicked', () => {
+            iconColorMode = 'dark';
+            console.log('Icon mode: Dark (black icons)');
+            // Update button styles
+            autoButton.set_css_classes(['']);
+            lightButton.set_css_classes(['']);
+            darkButton.set_css_classes(['suggested-action']);
+        });
+        
+        tabBox.append(autoButton);
+        tabBox.append(lightButton);
+        tabBox.append(darkButton);
+        mainBox.append(tabBox);
+        
+        // Form content below the tabs
         const form = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
-            spacing: 12,
-            margin_top: 12
+            spacing: 12
         });
         
         // Project name input
@@ -143,7 +351,12 @@ export class ProjectManager {
         form.append(new Gtk.Label({label: 'Project Color:', halign: Gtk.Align.START}));
         form.append(colorGrid);
         
-        dialog.set_extra_child(form);
+        // Add form to main container
+        console.log('Appending form to mainBox in edit dialog...');
+        mainBox.append(form);
+        
+        console.log('Setting mainBox as extra child in edit dialog...');
+        dialog.set_extra_child(mainBox);
         dialog.add_response('cancel', 'Cancel');
         dialog.add_response('save', 'Save Changes');
         dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
@@ -152,7 +365,7 @@ export class ProjectManager {
             if (response === 'save') {
                 const name = nameEntry.get_text().trim();
                 if (name) {
-                    this.updateProject(project.id, name, selectedColor.value, selectedIcon, parentWindow);
+                    this.updateProject(project.id, name, selectedColor.value, selectedIcon, parentWindow, iconColorMode);
                 }
             }
             dialog.close();
@@ -185,24 +398,50 @@ export class ProjectManager {
             });
             iconButton.set_child(icon);
             
-            // Highlight selected icon
+            // Apply selection styling with background highlight instead of changing icon color
             if (iconName === selectedIcon) {
-                iconButton.add_css_class('suggested-action');
+                const selectionCss = `
+                    button {
+                        background-color: alpha(@accent_bg_color, 0.2);
+                        border: 2px solid @accent_bg_color;
+                        border-radius: 6px;
+                    }
+                `;
+                const selectionProvider = new Gtk.CssProvider();
+                selectionProvider.load_from_data(selectionCss, -1);
+                iconButton.get_style_context().add_provider(selectionProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
             }
             
             iconButton.connect('clicked', () => {
                 iconSelection = iconName;
                 
-                // Update visual selection
+                // Update visual selection - remove highlighting from all buttons
                 for (let j = 0; j < 12 && j < this.projectIcons.length; j++) {
                     const row = Math.floor(j / 6);
                     const col = j % 6;
                     const btn = iconGrid.get_child_at(col, row);
                     if (btn) {
-                        btn.remove_css_class('suggested-action');
+                        // Remove any previous selection styling
+                        const context = btn.get_style_context();
+                        // Clear all providers to reset styling
+                        context.providers().forEach(provider => {
+                            context.remove_provider(provider);
+                        });
                     }
                 }
-                iconButton.add_css_class('suggested-action');
+                
+                // Apply selection styling to clicked button
+                const selectionCss = `
+                    button {
+                        background-color: alpha(@accent_bg_color, 0.2);
+                        border: 2px solid @accent_bg_color;
+                        border-radius: 6px;
+                    }
+                `;
+                const selectionProvider = new Gtk.CssProvider();
+                selectionProvider.load_from_data(selectionCss, -1);
+                iconButton.get_style_context().add_provider(selectionProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+                
                 console.log('Selected icon:', iconName);
             });
             

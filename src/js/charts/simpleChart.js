@@ -7,9 +7,11 @@ export class SimpleChart {
         this.currentPeriod = 'week'; // week, month, year
         this.selectedProjectId = null; // null = all projects
         this.selectedClientId = null; // null = all clients
+        this.allProjects = []; // Store projects for color mapping
     }
 
     createChart(allTasks, allProjects = [], allClients = []) {
+        this.allProjects = allProjects; // Store projects for color access
         if (!this.placeholder) return;
         
         // Clear existing chart content
@@ -126,9 +128,7 @@ export class SimpleChart {
             width_request: 40
         });
         
-        // Bar (visual representation)
-        const barHeight = Math.max((dayData.hours / maxHours) * 80, 2); // Min 2px height
-        
+        // Bar container with fixed height
         const barBox = new Gtk.Box({
             width_request: 24,
             height_request: 80,
@@ -136,31 +136,84 @@ export class SimpleChart {
             valign: Gtk.Align.END
         });
         
-        const bar = new Gtk.Box({
-            width_request: 24,
-            height_request: barHeight,
-            css_classes: ['chart-bar'],
-            halign: Gtk.Align.CENTER,
-            valign: Gtk.Align.END
-        });
+        if (dayData.projectSegments && dayData.projectSegments.length > 0) {
+            // Create stacked bar with multiple project colors
+            const totalBarHeight = Math.max((dayData.hours / maxHours) * 80, 2);
+            
+            // Create a vertical stacked bar
+            const stackedBar = new Gtk.Box({
+                orientation: Gtk.Orientation.VERTICAL,
+                width_request: 24,
+                height_request: totalBarHeight,
+                halign: Gtk.Align.CENTER,
+                valign: Gtk.Align.END,
+                css_classes: ['chart-bar-stack']
+            });
+            
+            let cumulativeHeight = 0;
+            dayData.projectSegments.forEach((segment, index) => {
+                if (segment.hours > 0) {
+                    const segmentHeight = (segment.hours / dayData.hours) * totalBarHeight;
+                    
+                    const segmentBar = new Gtk.Box({
+                        width_request: 24,
+                        height_request: segmentHeight,
+                        halign: Gtk.Align.FILL,
+                        valign: Gtk.Align.FILL,
+                        css_classes: [`chart-segment-${index}`]
+                    });
+                    
+                    // Get project color
+                    const project = this.allProjects.find(p => p.id === segment.projectId);
+                    const projectColor = project ? project.color : '#9a9996';
+                    
+                    // Apply color with border radius only for first/last segments
+                    const isFirst = index === 0;
+                    const isLast = index === dayData.projectSegments.length - 1;
+                    const borderRadius = isFirst && isLast ? '4px' : 
+                                       isFirst ? '4px 4px 0 0' : 
+                                       isLast ? '0 0 4px 4px' : '0';
+                    
+                    const segmentCss = `
+                        .chart-segment-${index} {
+                            background: ${projectColor};
+                            border-radius: ${borderRadius};
+                            ${index > 0 ? 'border-top: 1px solid rgba(255,255,255,0.3);' : ''}
+                        }
+                    `;
+                    
+                    const segmentProvider = new Gtk.CssProvider();
+                    segmentProvider.load_from_data(segmentCss, -1);
+                    segmentBar.get_style_context().add_provider(segmentProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+                    
+                    stackedBar.append(segmentBar);
+                }
+            });
+            
+            barBox.append(stackedBar);
+        } else {
+            // Empty day - show gray placeholder
+            const emptyBar = new Gtk.Box({
+                width_request: 24,
+                height_request: 2,
+                css_classes: ['chart-bar-empty'],
+                halign: Gtk.Align.CENTER,
+                valign: Gtk.Align.END
+            });
+            
+            const emptyCss = `
+                .chart-bar-empty {
+                    background: #deddda;
+                    border-radius: 2px;
+                }
+            `;
+            const emptyProvider = new Gtk.CssProvider();
+            emptyProvider.load_from_data(emptyCss, -1);
+            emptyBar.get_style_context().add_provider(emptyProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+            
+            barBox.append(emptyBar);
+        }
         
-        // Apply color based on activity level
-        let colorClass = 'low-activity';
-        if (dayData.hours > maxHours * 0.7) colorClass = 'high-activity';
-        else if (dayData.hours > maxHours * 0.3) colorClass = 'medium-activity';
-        
-        const barCss = `
-            .chart-bar.${colorClass} {
-                background: ${this._getActivityColor(dayData.hours, maxHours)};
-                border-radius: 4px;
-            }
-        `;
-        const barProvider = new Gtk.CssProvider();
-        barProvider.load_from_data(barCss, -1);
-        bar.get_style_context().add_provider(barProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
-        bar.add_css_class(colorClass);
-        
-        barBox.append(bar);
         barContainer.append(barBox);
         
         // Period label (day/week/month)
@@ -235,19 +288,39 @@ export class SimpleChart {
             const dayName = days[date.getDay() === 0 ? 6 : date.getDay() - 1];
             
             let totalSeconds = 0;
+            const projectHours = new Map(); // Track time per project for this day
+            
             tasks.forEach(task => {
                 if (task.start) {
                     const taskDate = new Date(task.start);
                     if (taskDate.toDateString() === date.toDateString()) {
-                        totalSeconds += task.duration || 0;
+                        const duration = task.duration || 0;
+                        totalSeconds += duration;
+                        
+                        // Track project hours
+                        const projectId = task.project_id || 1;
+                        projectHours.set(projectId, (projectHours.get(projectId) || 0) + duration);
                     }
                 }
             });
             
+            // Convert to project segments for stacking
+            const projectSegments = [];
+            for (const [projectId, duration] of projectHours) {
+                projectSegments.push({
+                    projectId: projectId,
+                    hours: duration / 3600
+                });
+            }
+            
+            // Sort by hours for consistent stacking
+            projectSegments.sort((a, b) => b.hours - a.hours);
+            
             data.push({
                 label: dayName,
                 hours: totalSeconds / 3600,
-                date: date
+                date: date,
+                projectSegments: projectSegments
             });
         }
         
@@ -266,20 +339,40 @@ export class SimpleChart {
             weekEnd.setDate(weekStart.getDate() + 6);
             
             let totalSeconds = 0;
+            const projectHours = new Map(); // Track time per project for this week
+            
             tasks.forEach(task => {
                 if (task.start) {
                     const taskDate = new Date(task.start);
                     if (taskDate >= weekStart && taskDate <= weekEnd) {
-                        totalSeconds += task.duration || 0;
+                        const duration = task.duration || 0;
+                        totalSeconds += duration;
+                        
+                        // Track project hours
+                        const projectId = task.project_id || 1;
+                        projectHours.set(projectId, (projectHours.get(projectId) || 0) + duration);
                     }
                 }
             });
+            
+            // Convert to project segments for stacking
+            const projectSegments = [];
+            for (const [projectId, duration] of projectHours) {
+                projectSegments.push({
+                    projectId: projectId,
+                    hours: duration / 3600
+                });
+            }
+            
+            // Sort by hours for consistent stacking
+            projectSegments.sort((a, b) => b.hours - a.hours);
             
             const germanWeekNumber = this._getGermanWeekNumber(weekStart);
             data.push({
                 label: `KW${germanWeekNumber}`,
                 hours: totalSeconds / 3600,
-                date: weekStart
+                date: weekStart,
+                projectSegments: projectSegments
             });
         }
         
@@ -298,31 +391,44 @@ export class SimpleChart {
             const monthName = months[date.getMonth()];
             
             let totalSeconds = 0;
+            const projectHours = new Map(); // Track time per project for this month
+            
             tasks.forEach(task => {
                 if (task.start) {
                     const taskDate = new Date(task.start);
                     if (taskDate.getFullYear() === date.getFullYear() && 
                         taskDate.getMonth() === date.getMonth()) {
-                        totalSeconds += task.duration || 0;
+                        const duration = task.duration || 0;
+                        totalSeconds += duration;
+                        
+                        // Track project hours
+                        const projectId = task.project_id || 1;
+                        projectHours.set(projectId, (projectHours.get(projectId) || 0) + duration);
                     }
                 }
             });
             
+            // Convert to project segments for stacking
+            const projectSegments = [];
+            for (const [projectId, duration] of projectHours) {
+                projectSegments.push({
+                    projectId: projectId,
+                    hours: duration / 3600
+                });
+            }
+            
+            // Sort by hours for consistent stacking
+            projectSegments.sort((a, b) => b.hours - a.hours);
+            
             data.push({
                 label: monthName,
                 hours: totalSeconds / 3600,
-                date: date
+                date: date,
+                projectSegments: projectSegments
             });
         }
         
         return data;
     }
 
-    _getActivityColor(hours, maxHours) {
-        const ratio = hours / maxHours;
-        if (ratio > 0.7) return '#33d17a'; // Green for high activity
-        if (ratio > 0.3) return '#f9c23c'; // Yellow for medium activity  
-        if (ratio > 0) return '#99c1f1';   // Light blue for low activity
-        return '#deddda';                  // Gray for no activity
-    }
 }

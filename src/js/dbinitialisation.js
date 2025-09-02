@@ -106,17 +106,10 @@ export function executeQuery(conn, sql, params = null) {
 
 // Helper function for executing non-select commands (INSERT, UPDATE, DELETE)
 export function executeNonSelectCommand(conn, sql, params = null) {
-    try {
-        console.log("SQL ausführen:", sql);
-        
-        // Use direct execution method to avoid GObject type issues
-        const result = conn.execute_non_select_command(sql);
-        console.log("Direktes Ausführungsergebnis:", result);
-        return result;
-    } catch (error) {
-        console.error('Ausführung des Non-Select-Befehls fehlgeschlagen:', error);
-        // Don't throw error to allow app to continue
-        console.log("Fortfahren ohne Datenbankschema-Erstellung");
-        return 1;
-    }
+    console.log("SQL ausführen:", sql);
+    
+    // Use direct execution method to avoid GObject type issues
+    const result = conn.execute_non_select_command(sql);
+    console.log("Direktes Ausführungsergebnis:", result);
+    return result;
 }
