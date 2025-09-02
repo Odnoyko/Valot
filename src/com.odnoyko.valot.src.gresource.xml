@@ -1,15 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-  <gresource prefix="/com/odnoyko/valot/js">
+  <gresource prefix="/com/odnoyko/valot">
     <!-- Base -->
+    <file>js/main.js</file>
     <file>js/test.js</file>
-    <file>main.js</file>
     <file>js/window.js</file>
     <!-- dbinit -->
     <file>js/dbinitialisation.js</file>
     <!-- Task -->
     <file>js/global/addtask.js</file>
     <file>js/global/timetracking.js</file>
-    <!-- Project -->
+    <file>js/global/trackingStateManager.js</file>
+    <!-- Utilities -->
+    <file>js/utils/timeUtils.js</file>
+    <!-- Charts -->
+    <file>js/charts/simpleChart.js</file>
+    <!-- Tasks -->
+    <file>js/tasks/taskRenderer.js</file>
+    <!-- Reports -->
+    <file>js/reports/pdfExporter.js</file>
+    <file>js/reports/htmlPdfExporter.js</file>
+    <file>js/reports/themeLoader.js</file>
+    <file>js/reports/templateEngine.js</file>
+    <file>js/reports/htmlTemplatePdfExporter.js</file>
+    <!-- Projects -->
+    <file>js/projects/projectManager.js</file>
   </gresource>
 </gresources>

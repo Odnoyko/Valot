@@ -1,35 +1,60 @@
-import Gda from 'gi://Gda';
-import GLib from 'gi://GLib';
-import GObject from 'gi://GObject';
-import { executeNonSelectCommand, setupDatabase } from '../dbinitialisation.js';
+import Gio from 'gi://Gio';
+import { executeNonSelectCommand } from 'resource:///com/odnoyko/valot/js/dbinitialisation.js';
 
-const conn = setupDatabase(); // Один раз в начале
+// Get connection from main app
+let dbConnection = null;
 
-export function saveTask(name, project, startTime, endTime, spentMicroseconds) {
-  const sql = `
-    INSERT INTO Task (name, project_id, start_time, end_time, time_spent)
-    VALUES (?, (SELECT id FROM Project WHERE name = ?), ?, ?, ?);
-  `;
+function getDbConnection() {
+  if (!dbConnection) {
+    // Get connection from main application
+    const app = Gio.Application.get_default();
+    if (app && app.database_connection) {
+      dbConnection = app.database_connection;
+      console.log("Datenbank aus Anwendung erhalten");
+    } else {
+      console.error("Datenbank in der Anwendung nicht gefunden");
+      throw new Error("Database connection not found");
+    }
+  }
+  return dbConnection;
+}
 
-  const params = new Gda.Set();
+export function saveTask(name, project, startTime, endTime, spentSeconds, projectId = 1, context = null) {
+  try {
+    console.log(`=== Aufgabe speichern ===`);
+    console.log(`Name: ${name}`);
+    console.log(`Projekt: ${project}`); 
+    console.log(`Beginn: ${startTime}`);
+    console.log(`Ende: ${endTime}`);
+    console.log(`Verbrachte Zeit: ${spentSeconds} Sekunden`);
+    
+    if (context) {
+      console.log(`Client: ${context.client?.name} (ID: ${context.client?.id})`);
+      console.log(`Currency: ${context.currency?.symbol} ${context.currency?.code}`);
+    }
+    
+    const conn = getDbConnection();
+    
+    // Escape single quotes to prevent SQL errors
+    const escapedName = name.replace(/'/g, "''");
+    
+    // Direct SQL without complex parameters for now
+    const clientId = context?.client?.id || 1; // Default to client ID 1
+    const sql = `
+      INSERT INTO Task (name, project_id, client_id, start_time, end_time, time_spent, created_at)
+      VALUES ('${escapedName}', ${projectId}, ${clientId}, '${startTime}', '${endTime}', ${spentSeconds}, CURRENT_TIMESTAMP)
+    `;
 
-const hName    = new Gda.Holder({ id: 'name',    g_type: GObject.TYPE_STRING });
-const hProject = new Gda.Holder({ id: 'project', g_type: GObject.TYPE_STRING });
-const hStart   = new Gda.Holder({ id: 'start',   g_type: GObject.TYPE_STRING });
-const hEnd     = new Gda.Holder({ id: 'end',     g_type: GObject.TYPE_STRING });
-const hSpent   = new Gda.Holder({ id: 'spent',   g_type: GObject.TYPE_INT64 });
-
-hName.set_value(name);
-hProject.set_value(project);
-hStart.set_value(startTime);
-hEnd.set_value(endTime);
-hSpent.set_value(spentMicroseconds);
-
-  params.add_holder(hName);
-  params.add_holder(hProject);
-  params.add_holder(hStart);
-  params.add_holder(hEnd);
-  params.add_holder(hSpent);
-
-  executeNonSelectCommand(conn, sql, params);
+    console.log("SQL-Abfrage:", sql);
+    
+    const result = executeNonSelectCommand(conn, sql, null);
+    console.log("✅ Aufgabe erfolgreich gespeichert, Ergebnis:", result);
+    
+    return result;
+    
+  } catch (error) {
+    console.error("❌ Fehler beim Speichern der Aufgabe:", error.message);
+    console.error("Stack-Trace:", error.stack);
+    throw error;
+  }
 }

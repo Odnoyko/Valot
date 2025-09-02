@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop">
+  <id>com.odnoyko.valot</id>
+  <launchable type="desktop-id">com.odnoyko.valot.desktop</launchable>
+  <name>Valot</name>
+  <summary>Time tracking application</summary>
+  <description>
+    <p>Valot is a simple and efficient time tracking application for managing tasks and projects.</p>
+    <p>Features:</p>
+    <ul>
+      <li>Track time for tasks and projects</li>
+      <li>Organize work by projects and clients</li>
+      <li>Generate reports and statistics</li>
+      <li>Export data to various formats</li>
+    </ul>
+  </description>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <releases>
+    <release version="0.1.1" date="2025-01-09">
+      <description>
+        <p>Major bug fixes and feature improvements release.</p>
+        <ul>
+          <li>Added task stack selection and deletion functionality</li>
+          <li>Fixed Delete key not working for selected stacks and tasks</li>
+          <li>Fixed stack selection issues on app startup</li>
+          <li>Improved tracking button state synchronization</li>
+          <li>Fixed timer conflicts and header synchronization</li>
+          <li>Enhanced UI feedback and error handling</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.0.1" date="2025-09-01">
+      <description>
+        <p>Initial release of Valot time tracking application.</p>
+      </description>
+    </release>
+  </releases>
+  <categories>
+    <category>Utility</category>
+    <category>Office</category>
+  </categories>
+  <keywords>
+    <keyword>time</keyword>
+    <keyword>tracking</keyword>
+    <keyword>productivity</keyword>
+    <keyword>tasks</keyword>
+    <keyword>projects</keyword>
+  </keywords>
+</component>

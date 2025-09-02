@@ -1,41 +1,48 @@
 /* Top Tracker Design */
 
 .toptracker {
-  background: white;
+  background: @window_bg_color;
   border-radius: 10px;
   padding: 2px;
-  box-shadow: 0px 0px 5px 2px rgba(0, 0, 0, 0.02);
-  border: 1px solid #ebebeb;
-  color: black;
+  box-shadow: 0px 0px 5px 2px alpha(@shadow_color, 0.02);
+  border: 1px solid @border_color;
+  color: @window_fg_color;
   margin: 6px 160px 6px 10px;
-  min-width:;
 }
-
+.tasksHeader {
+  background: @secondary_sidebar_bg_color;
+}
 .headernameinput {
+  padding-left: 20px;
   font-size: 17px;
   min-width: 200px;
 }
-entry,.headerNamebtn {
-  background: white;
+.headertimeinput {
+  font-size: 17px;
+  margin: 0px 16px;
+  font-weight: 700;
+}
+entry,
+.headerNamebtn {
+  background: @window_bg_color;
 }
 .headerbtn {
   font-size: 14px;
-  background: var(--shade-color);
+  background: @headerbar_shade_color;
   margin-right: 10px;
 }
-entry.headernameinput, entry.itemNameEntry {
+entry.headernameinput,
+entry.itemNameEntry {
   outline: none;
   outline-width: 0px;
 }
 
 .trackbutton {
-  background: var(--accent-bg-color);
-  max-height: 40px;
-  max-width: 40px;
-  min-width: 40px;
-  min-height: 40px;
+  background: @accent_bg_color;
+  min-width: 20px;
+  min-height: 30px;
   border-radius: 10px;
-  color: white;
+  color: @accent_fg_color;
   margin-left: 10px;
   transition: all 0.4s;
 }
@@ -44,24 +51,46 @@ entry.headernameinput, entry.itemNameEntry {
 .trackItem {
   margin: 0px 10px 10px 10px;
   padding: 10px;
-  background: white;
+  background: @window_bg_color;
   border-radius: 10px;
-  border: 1px solid #ebebeb;
+  border: 1px solid @border_color;
   transition: all 0.5s;
-  min-height: 50px;
-  max-height: 50px;
 }
 .trackItem:hover {
-  box-shadow: 0px 0px 5px 2px rgba(0, 0, 0, 0.05);
-  border: 1px solid #ebebeb;
+  box-shadow: 0px 0px 5px 2px alpha(@shadow_color, 0.05);
+  border: 1px solid @accent_bg_color;
 }
 .itemsContainer {
   background: transparent;
 }
 
 .itemsContainer row:selected {
-  border: 1px solid var(--accent-bg-color);
+  border: 1px solid @accent_bg_color;
 }
+.itemNameEntry {
+  min-height: 40px;
+  font-size: 18px;
+  color: @window_fg_color;
+  font-weight: 500;
+}
+.itemNameEntry.focus {
+  color: @window_fg_color;
+}
+.project_btn,
+.project_info {
+  font-weight: 100;
+  background: transparent;
+}
+.search {
+  background: @headerbar_shade_color;
+}
+.time_item_count {
+  margin: 0px 14px;
+}
+.item_track {
+  min-width: 30px;
+}
+
 
 /* Sidebar */
 .sidebarHeader {
@@ -78,24 +107,100 @@ entry.headernameinput, entry.itemNameEntry {
   background: transparent;
 }
 .Sidebutton Label {
-  text-align: end;
+  /* text-align not supported in GTK CSS, using justify instead */
 }
 .Sidebutton:hover {
-  background: #d9d9d9;
+  background: alpha(@accent_bg_color, 0.1);
 }
 .Sidebutton.active {
   padding: 10px;
-  background: #d9d9d9;
+  background: alpha(@accent_bg_color, 0.2);
 }
-.itemNameEntry {
-  min-height: 40px;
-  font-size: 20px;
-  color: black;
+
+/* Use system accent colors for all elements */
+.selected-task {
+  background: alpha(@accent_bg_color, 0.2);
+  border-left: 3px solid @accent_bg_color;
 }
-.itemNameEntry.focus {
-  color: black;
+
+.selected-task:hover {
+  background: alpha(@accent_bg_color, 0.3);
 }
-#demo {
-  background: black;
+
+/* Active tracking task styling */
+.tracking-active {
+  background: alpha(@success_color, 0.1);
+  border-left: 3px solid @success_color;
 }
+
+.tracking-active:hover {
+  background: alpha(@success_color, 0.2);
+}
+
+/* Context selection indicators */
+.context-selected {
+  background: alpha(@window_fg_color, 0);
+}
+
+.context-selected:hover {
+  background: alpha(@window_fg_color, 0.2);
+}
+
+.selected-project {
+  background: alpha(@success_color, 0.1);
+  border-left: 3px solid @success_color;
+}
+
+.selected-client {
+  background: alpha(@warning_color, 0.1);
+  border-left: 3px solid @warning_color;
+}
+
+/* Project icon and color selector styles */
+.icon-selector {
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.icon-selector:hover {
+  background: alpha(@accent_bg_color, 0.1);
+  transform: scale(1.05);
+}
+
+.icon-selector.icon-selected {
+  background: alpha(@accent_bg_color, 0.2);
+  border: 2px solid @accent_bg_color;
+  transform: scale(1.1);
+}
+
+.project-icon-container {
+  transition: all 0.2s ease;
+}
+
+.project-icon-container:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px alpha(@shadow_color, 0.2);
+}
+
+/* Client context button styling - clean flat appearance */
+#client_context_btn {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  border-radius: 0 !important;
+}
+
+#client_context_btn:hover {
+  background: alpha(@window_fg_color, 0.1) !important;
+  border-radius: 6px !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+#client_context_btn:active {
+  background: alpha(@window_fg_color, 0.15) !important;
+}
+
+
 

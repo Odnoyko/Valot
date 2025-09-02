@@ -1,0 +1,71 @@
+{
+  "name": "Corporate Dark",
+  "description": "Dark corporate theme with gold accents",
+  "layout": {
+    "margin": 40,
+    "cardPadding": 20,
+    "sectionSpacing": 35,
+    "headerHeight": 120,
+    "footerHeight": 60,
+    "cardHeight": 60,
+    "statCardHeight": 80,
+    "statCardsPerRow": 2
+  },
+  "colors": {
+    "primary": "#1A1A1A",
+    "secondary": "#333333",
+    "accent": "#FFD700",
+    "success": "#00C851",
+    "warning": "#FF8800",
+    "danger": "#FF4444",
+    "white": "#FFFFFF",
+    "lightGray": "#F5F5F5",
+    "mediumGray": "#999999",
+    "darkGray": "#2D2D2D",
+    "black": "#000000"
+  },
+  "typography": {
+    "titleSize": "xx-large",
+    "subtitleSize": "x-large",
+    "headerSize": "large",
+    "bodySize": "medium",
+    "captionSize": "small",
+    "titleWeight": "bold",
+    "headerWeight": "bold",
+    "bodyWeight": "normal"
+  },
+  "components": {
+    "header": {
+      "background": "primary",
+      "textColor": "white",
+      "accentHeight": 6,
+      "logoSize": 60,
+      "showLogo": true,
+      "showAccentStripe": true
+    },
+    "statsCards": {
+      "background": "darkGray",
+      "borderColor": "accent",
+      "accentColor": "accent",
+      "accentHeight": 4,
+      "iconSize": 10,
+      "showIcons": true,
+      "showBorder": true
+    },
+    "taskCards": {
+      "background": "white",
+      "borderColor": "mediumGray",
+      "statusIndicatorWidth": 6,
+      "badgeWidth": 30,
+      "badgeHeight": 24,
+      "showBadges": true,
+      "showStatusIndicator": true
+    },
+    "footer": {
+      "background": "primary",
+      "textColor": "mediumGray",
+      "showTimestamp": true,
+      "showPageNumber": true
+    }
+  }
+}
