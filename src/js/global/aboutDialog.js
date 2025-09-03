@@ -39,7 +39,7 @@ export function showAboutDialog(parentWindow) {
         ],
         copyright: '© 2025 Vitaly Odnoyko',
         license_type: Gtk.License.GPL_3_0,
-        website: 'https://gitlab.com/odnoyko/valot',
+        website: 'https://gitlab.com/valo27/valot',
         comments: 'A simple and elegant time tracking application for productivity and project management.',
     });
 
