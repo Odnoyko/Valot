@@ -33,6 +33,14 @@
     <display_length compare="ge">768</display_length>
   </recommends>
   <releases>
+    <release version="0.1.2" date="2025-09-03">
+      <description>
+        <p>Critical bug fix release.</p>
+        <ul>
+          <li>Fixed critical bug affecting application stability</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.1" date="2025-01-09">
       <description>
         <p>Major bug fixes and feature improvements release.</p>
