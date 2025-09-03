@@ -1,3 +1,5 @@
+<<<<<<< README.md
+=======
 
 ![Valot Logotype](data/icons/hicolor/scalable/apps/com.odnoyko.valot.svg)
 # Valot
@@ -57,3 +59,5 @@ This project is licensed under the GPL-3.0-or-later license. See the LICENSE fil
 
 - **Homepage**: https://gitlab.com/Valo27/valot
 - **Bug Reports**: https://gitlab.com/Valo27/valot/-/issues
+
+>>>>>>> README.md

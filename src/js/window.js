@@ -24,6 +24,7 @@ import Gdk from 'gi://Gdk';
 import GLib from 'gi://GLib';
 import { timeTrack } from 'resource:///com/odnoyko/valot/js/global/timetracking.js';
 import { trackingStateManager } from 'resource:///com/odnoyko/valot/js/global/trackingStateManager.js';
+import { saveTask } from 'resource:///com/odnoyko/valot/js/global/addtask.js';
 import { setupDatabase, executeQuery, executeNonSelectCommand } from 'resource:///com/odnoyko/valot/js/dbinitialisation.js';
 import { TimeUtils } from 'resource:///com/odnoyko/valot/js/utils/timeUtils.js';
 import { SimpleChart } from 'resource:///com/odnoyko/valot/js/charts/simpleChart.js';
@@ -2587,6 +2588,7 @@ export const ValotWindow = GObject.registerClass({
             }
             
             const taskIds = Array.from(this.selectedTasks);
+            const taskIdsToDelete = new Set(taskIds);
             const sql = `DELETE FROM Task WHERE id IN (${taskIds.join(',')})`;
             
             console.log(`🗑️ Executing delete SQL: ${sql}`);
@@ -2862,11 +2864,71 @@ export const ValotWindow = GObject.registerClass({
     _stopCurrentTracking() {
         console.log('Stop current tracking');
         
+        // Get current tracking info before stopping
+        const currentTracking = trackingStateManager.getCurrentTracking();
+        if (!currentTracking) {
+            console.log('No active tracking to stop');
+            return;
+        }
+        
         // Use the state manager to stop tracking, which will update all UI elements
         const stoppedTask = trackingStateManager.stopTracking();
         
-        if (stoppedTask) {
+        if (stoppedTask && currentTracking.name) {
             console.log('Stopped tracking via state manager for:', stoppedTask.name);
+            
+            // Use the duration calculated by trackingStateManager (already in seconds)
+            const spentSeconds = stoppedTask.duration;
+            const endDateTime = GLib.DateTime.new_now_local();
+            
+            // Get current context
+            const context = this.getSelectedContext ? this.getSelectedContext() : { 
+                project: { id: currentTracking.projectId || 1, name: currentTracking.projectName || 'Default' },
+                client: { id: 1, name: 'Default Client' },
+                currency: { code: 'EUR', symbol: '€' }
+            };
+            
+            const projectId = context.project?.id || currentTracking.projectId || 1;
+            const projectName = context.project?.name || currentTracking.projectName || "Default";
+            const clientId = context.client?.id || 1;
+            const clientName = context.client?.name || "Default Client";
+            const currency = context.currency || { code: 'EUR', symbol: '€' };
+            
+            // Format time strings
+            const startStr = currentTracking.startTime;
+            const endStr = endDateTime.format('%Y-%m-%d %H:%M:%S');
+            
+            console.log(`Saving task: ${currentTracking.name}, Time: ${spentSeconds} seconds`);
+            
+            // Save task
+            try {
+                console.log(`💾 Attempting to save task: "${currentTracking.name}"`);
+                console.log(`📊 Task context: Project: ${projectName}, Client: ${clientName}, Currency: ${currency.symbol} ${currency.code}`);
+                console.log(`⏰ Duration: ${spentSeconds}s, Time range: ${startStr} → ${endStr}`);
+                
+                const saveResult = saveTask(currentTracking.name, projectName, startStr, endStr, spentSeconds, projectId, {
+                    client: { id: clientId, name: clientName },
+                    currency: currency
+                });
+                
+                if (saveResult) {
+                    console.log("✅ Task successfully saved to database");
+                } else {
+                    console.log("❌ Failed to save task to database");
+                }
+                
+                // Update task list
+                if (typeof this._removeActiveTask === 'function') {
+                    this._removeActiveTask(currentTracking.name);
+                    console.log("🔄 Active task removed from UI");
+                }
+                if (typeof this.loadTasks === 'function') {
+                    this.loadTasks();
+                    console.log("🔄 Task list refreshed");
+                }
+            } catch (error) {
+                console.error("❌ Error during task save process:", error);
+            }
             
             // Also trigger the UI buttons to stop (for backward compatibility)
             const trackingButtons = [
