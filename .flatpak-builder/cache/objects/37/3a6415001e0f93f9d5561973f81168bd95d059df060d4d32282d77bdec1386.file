@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=com.odnoyko.valot
+Exec=/app/bin/com.odnoyko.valot --gapplication-service

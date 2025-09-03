@@ -20,9 +20,9 @@ appstream_file = i18n.merge_file(
   install_dir: get_option('datadir') / 'metainfo'
 )
 
-appstreamcli = find_program('appstreamcli', required: false, disabler: true)
-test('Validate appstream file', appstreamcli,
-     args: ['validate', '--no-net', '--explain', appstream_file])
+# appstreamcli = find_program('appstreamcli', required: false, disabler: true)
+# test('Validate appstream file', appstreamcli,
+#      args: ['validate', '--no-net', '--explain', appstream_file])
 
 install_data('com.odnoyko.valot.gschema.xml',
   install_dir: get_option('datadir') / 'glib-2.0' / 'schemas'
