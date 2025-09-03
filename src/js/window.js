@@ -22,6 +22,7 @@ import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
 import Gdk from 'gi://Gdk';
 import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 import { timeTrack } from 'resource:///com/odnoyko/valot/js/global/timetracking.js';
 import { trackingStateManager } from 'resource:///com/odnoyko/valot/js/global/trackingStateManager.js';
 import { saveTask } from 'resource:///com/odnoyko/valot/js/global/addtask.js';
@@ -33,6 +34,7 @@ import { ProjectManager } from 'resource:///com/odnoyko/valot/js/projects/projec
 import { PDFExporter } from 'resource:///com/odnoyko/valot/js/reports/pdfExporter.js';
 import { HTMLPDFExporter } from 'resource:///com/odnoyko/valot/js/reports/htmlPdfExporter.js';
 import { HTMLTemplatePDFExporter } from 'resource:///com/odnoyko/valot/js/reports/htmlTemplatePdfExporter.js';
+import { showAboutDialog } from 'resource:///com/odnoyko/valot/js/global/aboutDialog.js';
 
 export const ValotWindow = GObject.registerClass({
     GTypeName: 'ValotWindow',
@@ -198,6 +200,9 @@ export const ValotWindow = GObject.registerClass({
         this._show_sidebar_btn5.connect('clicked', () => {
             this._split_view.set_show_sidebar(true);
         });
+        
+        // Setup menu button with contribution window
+        this._setupMenuButton();
         
         // Handle both collapsed (mobile) and show-sidebar (manual toggle) changes
         this._split_view.connect('notify::collapsed', () => {
@@ -557,6 +562,13 @@ export const ValotWindow = GObject.registerClass({
         // Client context button (single moveable widget)
         this._client_context_btn.connect('clicked', () => {
             this._showClientSelector();
+        });
+    }
+    
+    _setupMenuButton() {
+        // Connect menu button to show about dialog directly
+        this._menu_button.connect('clicked', () => {
+            this._showAboutDialog();
         });
     }
     
@@ -3535,5 +3547,9 @@ export const ValotWindow = GObject.registerClass({
     _selectClient(clientId) {
         this.currentClientId = clientId;
         console.log('Selected client ID:', clientId);
+    }
+    
+    _showAboutDialog() {
+        showAboutDialog(this);
     }
 });
