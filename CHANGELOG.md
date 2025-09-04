@@ -12,6 +12,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.2] - 2025-09-04
+
+### 🐛 Bug Fixes
+- **Fixed PDF Export Dialog Issues**: Resolved GTK filesystem error preventing PDF report exports by improving file dialog initialization with better error handling
+- **Enhanced Report Folder Management**: Added automatic creation of `Documents/Valot` folder for organized report storage
+- **Improved File Dialog Stability**: Implemented fallback mechanisms for initial folder selection to prevent crashes during export operations
+
+### 🚀 Improvements  
+- **Better Export User Experience**: PDF export now defaults to dedicated Valot folder while allowing users to choose any destination
+- **Robust Error Handling**: Added comprehensive error catching for file system operations during export workflow
+
+---
+
 ## [0.2.1] - 2025-09-04
 
 ### 🐛 Bug Fixes

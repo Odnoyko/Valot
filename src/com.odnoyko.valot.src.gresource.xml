@@ -5,6 +5,7 @@
     <file>js/main.js</file>
     <file>js/test.js</file>
     <file>js/window.js</file>
+    <file>config.js</file>
     <!-- dbinit -->
     <file>js/dbinitialisation.js</file>
     <!-- Task -->
