@@ -1,8 +1,10 @@
 import Gtk from 'gi://Gtk';
+import Adw from 'gi://Adw';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import WebKit from 'gi://WebKit';
 import { TemplateEngine } from 'resource:///com/odnoyko/valot/js/reports/templateEngine.js';
+import { Config } from 'resource:///com/odnoyko/valot/config.js';
 
 export class HTMLTemplatePDFExporter {
     constructor(tasks, projects, clients) {
@@ -63,97 +65,100 @@ export class HTMLTemplatePDFExporter {
     }
 
     async exportToPDF(parentWindow) {
-        const dialog = new Gtk.FileDialog({
-            title: 'Export Custom Template Report as PDF'
-        });
-
-        // Set initial folder with better error handling and create Valot reports folder
         try {
-            const homeDir = GLib.get_home_dir();
-            let initialDir = homeDir;
-            
-            // Try to create Documents/Valot folder for reports
-            const documentsDir = GLib.build_filenamev([homeDir, 'Documents']);
-            if (GLib.file_test(documentsDir, GLib.FileTest.IS_DIR)) {
-                const valotReportsDir = GLib.build_filenamev([documentsDir, 'Valot']);
-                
-                // Create Valot folder if it doesn't exist
-                if (!GLib.file_test(valotReportsDir, GLib.FileTest.IS_DIR)) {
-                    try {
-                        GLib.mkdir_with_parents(valotReportsDir, 0o755);
-                    } catch (mkdirError) {
-                        console.log('Could not create Valot folder:', mkdirError);
-                    }
-                }
-                
-                // Try to set Valot folder as initial
-                if (GLib.file_test(valotReportsDir, GLib.FileTest.IS_DIR)) {
-                    try {
-                        const file = Gio.File.new_for_path(valotReportsDir);
-                        dialog.set_initial_folder(file);
-                        initialDir = valotReportsDir;
-                        console.log('Using Valot reports folder:', valotReportsDir);
-                    } catch (error) {
-                        console.log('Could not set Valot folder, trying Documents:', error);
-                        // Fallback to Documents
-                        const file = Gio.File.new_for_path(documentsDir);
-                        dialog.set_initial_folder(file);
-                        initialDir = documentsDir;
-                    }
-                } else {
-                    // Use Documents as fallback
-                    const file = Gio.File.new_for_path(documentsDir);
-                    dialog.set_initial_folder(file);
-                    initialDir = documentsDir;
-                }
-            } else {
-                // Ultimate fallback to home directory
-                const file = Gio.File.new_for_path(homeDir);
-                dialog.set_initial_folder(file);
-                console.log('Using home directory as fallback');
-            }
-
-            // Set initial filename
-            const defaultFileName = this._generateFileName();
-            const defaultFile = Gio.File.new_for_path(GLib.build_filenamev([initialDir, defaultFileName]));
-            dialog.set_initial_file(defaultFile);
-        } catch (error) {
-            console.log('Error setting initial folder, dialog will use system default:', error);
-            // Don't try to set any folder, let the system handle it
-        }
-
-        try {
-            const file = await new Promise((resolve, reject) => {
-                dialog.save(parentWindow, null, (source, result) => {
-                    try {
-                        const file = dialog.save_finish(result);
-                        resolve(file);
-                    } catch (error) {
-                        reject(error);
-                    }
-                });
-            });
+            // Create Valot reports folder and auto-save there
+            const reportsDir = Config.getValotReportsDir();
+            const file = await this._createReportsFolder(reportsDir);
             
             const filepath = file.get_path();
             if (filepath) {
                 await this._createPDFFromTemplate(filepath, parentWindow);
                 
-                const toast = new Gtk.AlertDialog({
-                    message: 'PDF Export Complete',
-                    detail: `Custom template report saved to: ${filepath}`
-                });
-                toast.show(parentWindow);
+                this._showSuccessDialog(filepath, reportsDir, parentWindow);
             }
         } catch (error) {
-            if (error.code !== Gtk.DialogError.DISMISSED) {
-                console.error('Template PDF export error:', error);
-                const errorDialog = new Gtk.AlertDialog({
-                    message: 'Export Failed',
-                    detail: `Could not export PDF: ${error.message}`
-                });
-                errorDialog.show(parentWindow);
-            }
+            console.error('Template PDF export error:', error);
+            const errorDialog = new Gtk.AlertDialog({
+                message: 'Export Failed',
+                detail: `Could not export PDF: ${error.message}`
+            });
+            errorDialog.show(parentWindow);
         }
+    }
+
+    async _createReportsFolder(reportsDir) {
+        console.log(`Attempting to create reports directory: ${reportsDir}`);
+        
+        try {
+            // Create Valot folder if it doesn't exist
+            if (!GLib.file_test(reportsDir, GLib.FileTest.IS_DIR)) {
+                console.log(`Directory doesn't exist, creating: ${reportsDir}`);
+                const result = GLib.mkdir_with_parents(reportsDir, 0o755);
+                if (result !== 0) {
+                    throw new Error(`Failed to create directory: ${reportsDir} (code: ${result})`);
+                }
+                console.log(`Successfully created directory: ${reportsDir}`);
+            } else {
+                console.log(`Directory already exists: ${reportsDir}`);
+            }
+            
+            // Generate filename and create file object
+            const fileName = this._generateFileName();
+            const filePath = GLib.build_filenamev([reportsDir, fileName]);
+            console.log(`Generated file path: ${filePath}`);
+            return Gio.File.new_for_path(filePath);
+        } catch (error) {
+            console.error(`Error in _createReportsFolder: ${error.message}`);
+            throw error;
+        }
+    }
+
+    _showSuccessDialog(filepath, reportsDir, parentWindow) {
+        const fileName = filepath.split('/').pop();
+        
+        const dialog = new Adw.AlertDialog({
+            heading: 'PDF Export Complete',
+            body: `Report saved successfully!\n\nFile: ${fileName}\nLocation: ${reportsDir}\n\nClick "Open Folder" to view the file in your file manager.`
+        });
+        
+        dialog.add_response('close', 'Close');
+        dialog.add_response('open_folder', 'Open Folder');
+        dialog.set_response_appearance('open_folder', Adw.ResponseAppearance.SUGGESTED);
+        
+        dialog.connect('response', (dialog, response) => {
+            if (response === 'open_folder') {
+                this._openFolder(reportsDir);
+            }
+            dialog.close();
+        });
+        
+        dialog.present(parentWindow);
+    }
+
+    _openFolder(folderPath) {
+        console.log(`Attempting to open folder: ${folderPath}`);
+        
+        try {
+            // Simple xdg-open call only
+            const subprocess = Gio.Subprocess.new(
+                ['xdg-open', folderPath],
+                Gio.SubprocessFlags.NONE
+            );
+            subprocess.wait_async(null, null);
+            console.log('✓ Opened folder via xdg-open');
+            return true;
+        } catch (error) {
+            console.error('Could not open folder:', error);
+        }
+        
+        // If failed, show simple dialog
+        const errorDialog = new Adw.AlertDialog({
+            heading: 'PDF Export Completed',
+            body: `Your report has been saved successfully!\n\nLocation: ${folderPath}\n\nPlease open this location manually in your file manager.`
+        });
+        errorDialog.add_response('close', 'OK');
+        errorDialog.present(null);
+        return false;
     }
 
     async _createPDFFromTemplate(filepath, parentWindow) {

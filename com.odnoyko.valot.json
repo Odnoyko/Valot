@@ -14,7 +14,7 @@
 	"--socket=session-bus",
 	"--socket=wayland",
 	"--device=dri",
-	"--filesystem=xdg-documents"
+	"--filesystem=~/valot:create"
 	],
     "build-options": {
         "append-path": "/usr/lib/sdk/typescript/bin:/usr/lib/sdk/node20/bin",

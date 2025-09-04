@@ -240,9 +240,6 @@ export const ValotWindow = GObject.registerClass({
         
         if (pages[pageName]) {
             try {
-                // Move tracking widget to the appropriate header before switching pages
-                this._moveTrackingWidget(pageName);
-                
                 // Use push_by_tag instead of pop_to_page for proper navigation
                 this._main_content.replace([pages[pageName]]);
             } catch (error) {
@@ -258,42 +255,6 @@ export const ValotWindow = GObject.registerClass({
         }
     }
 
-    _moveTrackingWidget(targetPage) {
-        const trackingWidget = this._tracking_widget;
-        if (!trackingWidget) {
-            console.log('Tracking widget not found');
-            return;
-        }
-
-        const headers = {
-            'tasks': this._tasks_header,
-            'projects': this._projects_header,
-            'clients': this._clients_header,
-            'reports': this._reports_header
-        };
-
-        const targetHeader = headers[targetPage];
-        if (!targetHeader) {
-            console.log(`Target header not found for page: ${targetPage}`);
-            return;
-        }
-
-        try {
-            // Check if widget is already in the target header
-            const currentParent = trackingWidget.get_parent();
-            if (currentParent === targetHeader) {
-                console.log(`📍 Tracking widget already in ${targetPage} page`);
-                return;
-            }
-
-            // Simply set the widget as title - GTK should handle reparenting automatically
-            targetHeader.set_title_widget(trackingWidget);
-            
-            console.log(`📍 Tracking widget moved to ${targetPage} page`);
-        } catch (error) {
-            console.error(`Error moving tracking widget to ${targetPage}:`, error);
-        }
-    }
     
     _setupTaskTracking() {
         // Set up single tracking widget that moves between pages
