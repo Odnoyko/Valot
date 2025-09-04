@@ -33,7 +33,7 @@ export function showAboutDialog(parentWindow) {
         application_name: 'Valot',
         application_icon: 'com.odnoyko.valot',
         developer_name: 'Vitaly Odnoyko',
-        version: '0.1.2',
+        version: '0.2.1',
         designers: [
             'Vitaly Odnoyko'
         ],
