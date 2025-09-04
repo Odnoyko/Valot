@@ -12,6 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.1] - 2025-09-04
+
+### 🐛 Bug Fixes
+- **Fixed Template Path Issues**: Converted hardcoded absolute paths to GResource system for better portability across different environments and deployments
+- **Enhanced Resource Loading**: Updated template engine to use packaged resources instead of filesystem paths, improving application stability
+
+### 🛠️ Technical Improvements
+- **Resource System Integration**: Added professional-report.html template to GResource manifest for proper packaging
+- **Backward Compatibility**: Maintained support for both resource URIs and file paths in template loading system
+
+---
+
 ## [0.2.0] - 2025-01-09
 
 ### 🐛 Bug Fixes
