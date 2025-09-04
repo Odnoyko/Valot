@@ -12,6 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.0] - 2025-01-09
+
+### 🐛 Bug Fixes
+- **Fixed Project Icon Centering**: Resolved issue where project icons in the project list were not properly centered using Gtk.Grid with homogeneous properties
+- **Fixed Report Page Icon**: Changed Reports sidebar icon from chart-line-symbolic to x-office-document-symbolic for better visual representation
+- **Removed Button Font Styling**: Cleaned up green accent button styling for Add project, Add report, and Add client buttons
+
+---
+
 ## [0.1.2] - 2025-09-03
 
 ### 🐛 Bug Fixes
