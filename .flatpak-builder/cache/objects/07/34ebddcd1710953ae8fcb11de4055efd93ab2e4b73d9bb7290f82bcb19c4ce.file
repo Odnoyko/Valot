@@ -1,0 +1,11 @@
+prefix=/app
+exec_prefix=/app/libexec
+libdir=/app/lib
+includedir=/app/include
+
+Name: libgda-6.0
+Description: GDA (GNOME Data Access) library
+Requires: gobject-2.0 gthread-2.0 libxml-2.0
+Version: 6.0.0
+Libs: -L${libdir} -lgda-6.0
+Cflags: -I${includedir}/libgda-6.0 -I${includedir}/libgda-6.0/libgda 

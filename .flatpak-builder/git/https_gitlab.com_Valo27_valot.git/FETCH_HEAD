@@ -1,7 +1,19 @@
-6b540e027dc75e245ad41ad95ef2825b18639384		branch 'main' of https://gitlab.com/Valo27/valot
+3a699658e4f38ade06894a18b8c7ff8c1acfaadf		branch 'beta' of https://gitlab.com/Valo27/valot
+2a40b2c8b5a50461f06f7582572a4ace6a063334		branch 'main' of https://gitlab.com/Valo27/valot
+3a699658e4f38ade06894a18b8c7ff8c1acfaadf		branch 'stable' of https://gitlab.com/Valo27/valot
 c4c37a6aa8749b1e12464c79ea868fa8fe439ac2		'refs/merge-requests/1/head' of https://gitlab.com/Valo27/valot
 10afeded30d72702c209089710f6bd35aa9ba98d		'refs/merge-requests/1/merge' of https://gitlab.com/Valo27/valot
 48b42d05510009f228d9ed9ed08642f60261d95e		'refs/merge-requests/2/head' of https://gitlab.com/Valo27/valot
 ebf9fc4331215bab6188ad3ee7c1bf8887b42d55		'refs/merge-requests/2/merge' of https://gitlab.com/Valo27/valot
 9d963ef5625bc43470c506a4202c2294df5f8d7f		'refs/merge-requests/3/head' of https://gitlab.com/Valo27/valot
 78530122056d575bab0909ad4276da8e460a55a0		'refs/merge-requests/3/merge' of https://gitlab.com/Valo27/valot
+98726261e3aefbe7cdc9ab4ac43c331cd0ab6309		'refs/merge-requests/4/head' of https://gitlab.com/Valo27/valot
+4cab831859692b90af630e2968414f36da3b2908		'refs/merge-requests/4/merge' of https://gitlab.com/Valo27/valot
+d91ea90193aa830efa918d343a3ee2fc83d93ad2		'refs/merge-requests/5/head' of https://gitlab.com/Valo27/valot
+b12ab1ed4005fef8d53ec4f9b4bee3273f61c570		'refs/merge-requests/5/merge' of https://gitlab.com/Valo27/valot
+d79c24985d973431643220cce0fd709215190c26		'refs/merge-requests/6/head' of https://gitlab.com/Valo27/valot
+2b1e2ebe75f580d4178af9a3ddcda0431d7d4c7f		'refs/merge-requests/6/merge' of https://gitlab.com/Valo27/valot
+72bb91407a05942d1e6ca3b6e666d5039e4e7714		'refs/merge-requests/7/head' of https://gitlab.com/Valo27/valot
+f729e45a65d02fcd9772483ed4c38f316135eac6		'refs/merge-requests/7/merge' of https://gitlab.com/Valo27/valot
+6a11c7dc037c688c8650978978738c1cdb466e1b		'refs/merge-requests/8/head' of https://gitlab.com/Valo27/valot
+b9b4ea2d24f90395885f25a729f36a91e5d81a91		'refs/merge-requests/8/merge' of https://gitlab.com/Valo27/valot

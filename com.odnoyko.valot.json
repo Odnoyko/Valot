@@ -1,7 +1,7 @@
 {
     "id" : "com.odnoyko.valot",
     "runtime" : "org.gnome.Platform",
-    "runtime-version" : "46",
+    "runtime-version" : "48",
     "sdk" : "org.gnome.Sdk",
     "sdk-extensions" : [
         "org.freedesktop.Sdk.Extension.node20",
@@ -41,7 +41,7 @@
                 {
                     "type": "git",
                     "url": "https://gitlab.gnome.org/jwestman/blueprint-compiler",
-                    "tag": "v0.14.0"
+                    "tag": "v0.18.0"
                 }
             ]
         },

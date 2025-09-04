@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="valot">
+	<schema id="com.odnoyko.com" path="/com/odnoyko/com/">
+	</schema>
+</schemalist>

@@ -1934,20 +1934,20 @@ export const ValotWindow = GObject.registerClass({
                 subtitle: `Total time: ${this._formatDuration(project.totalTime)}`
             });
             
-            // Add project icon with color
-            const iconBox = new Gtk.Box({
+            // Add project icon with color using Grid with homogeneous centering
+            const iconBox = new Gtk.Grid({
                 width_request: 32,
                 height_request: 32,
                 halign: Gtk.Align.CENTER,
                 valign: Gtk.Align.CENTER,
-                css_classes: ['project-icon-container']
+                css_classes: ['project-icon-container'],
+                column_homogeneous: true,
+                row_homogeneous: true
             });
             
             const icon = new Gtk.Image({
                 icon_name: project.icon || 'folder-symbolic',
-                pixel_size: 16,
-                halign: Gtk.Align.CENTER,
-                valign: Gtk.Align.CENTER
+                pixel_size: 16
             });
             
             // Determine icon color based on icon_color_mode setting
@@ -2000,7 +2000,8 @@ export const ValotWindow = GObject.registerClass({
             provider.load_from_data(css, -1);
             iconBox.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
             
-            iconBox.append(icon);
+            // Attach icon to grid at position (0,0) with perfect centering
+            iconBox.attach(icon, 0, 0, 1, 1);
             row.add_prefix(iconBox);
             
             // Add edit/delete buttons
@@ -3553,3 +3554,4 @@ export const ValotWindow = GObject.registerClass({
         showAboutDialog(this);
     }
 });
+

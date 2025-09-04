@@ -13,7 +13,7 @@ export class TemplateEngine {
         this.templates.set('professional-report', {
             name: 'Professional Report',
             description: 'Modern professional report with charts, logo, and toggleable sections',
-            templatePath: '/home/Val/Projects/MyApps/valot/Valot/src/js/reports/templates/professional-report.html'
+            templatePath: '/home/Val/Projects/MyApps/valot/valot/src/js/reports/templates/professional-report.html'
         });
     }
 
