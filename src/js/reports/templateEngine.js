@@ -9,11 +9,11 @@ export class TemplateEngine {
     }
 
     loadBuiltInTemplates() {
-        // Load the professional template from file path
+        // Load the professional template from resource
         this.templates.set('professional-report', {
             name: 'Professional Report',
             description: 'Modern professional report with charts, logo, and toggleable sections',
-            templatePath: '/home/Val/Projects/MyApps/valot/valot/src/js/reports/templates/professional-report.html'
+            resourcePath: 'resource:///com/odnoyko/valot/js/reports/templates/professional-report.html'
         });
     }
 
@@ -25,8 +25,21 @@ export class TemplateEngine {
 
         let html;
         
-        // Load HTML from file if template has templatePath
-        if (template.templatePath) {
+        // Load HTML from resource or file
+        if (template.resourcePath) {
+            try {
+                const file = Gio.File.new_for_uri(template.resourcePath);
+                const [success, contents] = file.load_contents(null);
+                if (success) {
+                    html = new TextDecoder().decode(contents);
+                } else {
+                    throw new Error(`Could not load template resource: ${template.resourcePath}`);
+                }
+            } catch (error) {
+                console.error('Error loading template resource:', error);
+                throw error;
+            }
+        } else if (template.templatePath) {
             try {
                 const file = Gio.File.new_for_path(template.templatePath);
                 const [success, contents] = file.load_contents(null);
