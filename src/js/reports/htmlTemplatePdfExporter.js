@@ -67,24 +67,60 @@ export class HTMLTemplatePDFExporter {
             title: 'Export Custom Template Report as PDF'
         });
 
-        // Set initial folder to user documents
-        const homeDir = GLib.get_home_dir();
-        const documentsDir = GLib.build_filenamev([homeDir, 'Documents']);
-        let initialDir = documentsDir;
-        
-        if (GLib.file_test(documentsDir, GLib.FileTest.IS_DIR)) {
-            const file = Gio.File.new_for_path(documentsDir);
-            dialog.set_initial_folder(file);
-        } else {
-            initialDir = homeDir;
-            const file = Gio.File.new_for_path(homeDir);
-            dialog.set_initial_folder(file);
-        }
+        // Set initial folder with better error handling and create Valot reports folder
+        try {
+            const homeDir = GLib.get_home_dir();
+            let initialDir = homeDir;
+            
+            // Try to create Documents/Valot folder for reports
+            const documentsDir = GLib.build_filenamev([homeDir, 'Documents']);
+            if (GLib.file_test(documentsDir, GLib.FileTest.IS_DIR)) {
+                const valotReportsDir = GLib.build_filenamev([documentsDir, 'Valot']);
+                
+                // Create Valot folder if it doesn't exist
+                if (!GLib.file_test(valotReportsDir, GLib.FileTest.IS_DIR)) {
+                    try {
+                        GLib.mkdir_with_parents(valotReportsDir, 0o755);
+                    } catch (mkdirError) {
+                        console.log('Could not create Valot folder:', mkdirError);
+                    }
+                }
+                
+                // Try to set Valot folder as initial
+                if (GLib.file_test(valotReportsDir, GLib.FileTest.IS_DIR)) {
+                    try {
+                        const file = Gio.File.new_for_path(valotReportsDir);
+                        dialog.set_initial_folder(file);
+                        initialDir = valotReportsDir;
+                        console.log('Using Valot reports folder:', valotReportsDir);
+                    } catch (error) {
+                        console.log('Could not set Valot folder, trying Documents:', error);
+                        // Fallback to Documents
+                        const file = Gio.File.new_for_path(documentsDir);
+                        dialog.set_initial_folder(file);
+                        initialDir = documentsDir;
+                    }
+                } else {
+                    // Use Documents as fallback
+                    const file = Gio.File.new_for_path(documentsDir);
+                    dialog.set_initial_folder(file);
+                    initialDir = documentsDir;
+                }
+            } else {
+                // Ultimate fallback to home directory
+                const file = Gio.File.new_for_path(homeDir);
+                dialog.set_initial_folder(file);
+                console.log('Using home directory as fallback');
+            }
 
-        // Set initial filename
-        const defaultFileName = this._generateFileName();
-        const defaultFile = Gio.File.new_for_path(GLib.build_filenamev([initialDir, defaultFileName]));
-        dialog.set_initial_file(defaultFile);
+            // Set initial filename
+            const defaultFileName = this._generateFileName();
+            const defaultFile = Gio.File.new_for_path(GLib.build_filenamev([initialDir, defaultFileName]));
+            dialog.set_initial_file(defaultFile);
+        } catch (error) {
+            console.log('Error setting initial folder, dialog will use system default:', error);
+            // Don't try to set any folder, let the system handle it
+        }
 
         try {
             const file = await new Promise((resolve, reject) => {
