@@ -10,18 +10,14 @@
     "command" : "com.odnoyko.valot",
     "finish-args": [
 	"--share=network",
-	"--socket=system-bus",
-	"--socket=session-bus",
 	"--socket=wayland",
+	"--socket=fallback-x11",
 	"--device=dri",
 	"--filesystem=~/valot:create",
 	"--socket=cups",
 	"--share=ipc",
-	"--filesystem=xdg-config/gtk-3.0",
-	"--filesystem=xdg-config/gtk-4.0",
 	"--filesystem=xdg-config/kdeglobals:ro",
-	"--env=QT_QPA_PLATFORM=wayland",
-	"--socket=x11"
+	"--env=QT_QPA_PLATFORM=wayland"
 	],
     "build-options": {
         "append-path": "/usr/lib/sdk/typescript/bin:/usr/lib/sdk/node20/bin",
@@ -81,7 +77,7 @@
                 {
                     "type" : "git",
                     "url" : "https://gitlab.com/Valo27/valot.git",
-                    "branch" : "main"
+                    "tag" : "v0.2.5"
                 }
             ]
         }
