@@ -1,8 +1,18 @@
-3a699658e4f38ade06894a18b8c7ff8c1acfaadf		branch 'beta' of https://gitlab.com/Valo27/valot
-2a40b2c8b5a50461f06f7582572a4ace6a063334		branch 'main' of https://gitlab.com/Valo27/valot
-3a699658e4f38ade06894a18b8c7ff8c1acfaadf		branch 'stable' of https://gitlab.com/Valo27/valot
+47764fe51ed0355cc2f3f163ed9c2a9475665c83		branch 'beta' of https://gitlab.com/Valo27/valot
+830ece671db61abb73fe81659772bc9425dcbfd5		branch 'main' of https://gitlab.com/Valo27/valot
+f5fb36a20fb375536bdb18925877fb544301daff		branch 'stable' of https://gitlab.com/Valo27/valot
 c4c37a6aa8749b1e12464c79ea868fa8fe439ac2		'refs/merge-requests/1/head' of https://gitlab.com/Valo27/valot
 10afeded30d72702c209089710f6bd35aa9ba98d		'refs/merge-requests/1/merge' of https://gitlab.com/Valo27/valot
+3ac87fbbc7b642b22d350354f80dc87ea3bdfea8		'refs/merge-requests/10/head' of https://gitlab.com/Valo27/valot
+8091b7998044a60dc18d8eec850a9b62589f3f56		'refs/merge-requests/10/merge' of https://gitlab.com/Valo27/valot
+1d535eca0cfa16bf6e743439eeae37ef989f8ea2		'refs/merge-requests/11/head' of https://gitlab.com/Valo27/valot
+5c5037877459250b3316122b47bd618ddc0344eb		'refs/merge-requests/11/merge' of https://gitlab.com/Valo27/valot
+55d856b3ad345c18c30bdb44a34e5fe9c39140e1		'refs/merge-requests/12/head' of https://gitlab.com/Valo27/valot
+7d4b4b67a462b30140c9b755d1ad9d597671853c		'refs/merge-requests/12/merge' of https://gitlab.com/Valo27/valot
+57096bc2c223e7418f8758c0d179491a951fb973		'refs/merge-requests/13/head' of https://gitlab.com/Valo27/valot
+292bb15411c6604dac76e0b48915506fe7c2af48		'refs/merge-requests/13/merge' of https://gitlab.com/Valo27/valot
+57096bc2c223e7418f8758c0d179491a951fb973		'refs/merge-requests/14/head' of https://gitlab.com/Valo27/valot
+be709110c805369d1c372f3ae56fb92b334d4aa1		'refs/merge-requests/14/merge' of https://gitlab.com/Valo27/valot
 48b42d05510009f228d9ed9ed08642f60261d95e		'refs/merge-requests/2/head' of https://gitlab.com/Valo27/valot
 ebf9fc4331215bab6188ad3ee7c1bf8887b42d55		'refs/merge-requests/2/merge' of https://gitlab.com/Valo27/valot
 9d963ef5625bc43470c506a4202c2294df5f8d7f		'refs/merge-requests/3/head' of https://gitlab.com/Valo27/valot
@@ -17,3 +27,10 @@ d79c24985d973431643220cce0fd709215190c26		'refs/merge-requests/6/head' of https:
 f729e45a65d02fcd9772483ed4c38f316135eac6		'refs/merge-requests/7/merge' of https://gitlab.com/Valo27/valot
 6a11c7dc037c688c8650978978738c1cdb466e1b		'refs/merge-requests/8/head' of https://gitlab.com/Valo27/valot
 b9b4ea2d24f90395885f25a729f36a91e5d81a91		'refs/merge-requests/8/merge' of https://gitlab.com/Valo27/valot
+47764fe51ed0355cc2f3f163ed9c2a9475665c83		'refs/merge-requests/9/head' of https://gitlab.com/Valo27/valot
+8704e86150cd52c3f85c179260ede777a01c62fa		'refs/merge-requests/9/merge' of https://gitlab.com/Valo27/valot
+9851c8f3c4030b612a1ccd4b12d7877b4714d82b		tag 'v0.2.0' of https://gitlab.com/Valo27/valot
+c99d8353c8028d7d08645de53636c269fedf8efe		tag 'v0.2.1' of https://gitlab.com/Valo27/valot
+ddbe5b67a1307573f2971df31fe9e2753d7f62d8		tag 'v0.2.2' of https://gitlab.com/Valo27/valot
+880efafd42bfb81b33184f69ae3bf6785bc402e3		tag 'v0.2.3' of https://gitlab.com/Valo27/valot
+57096bc2c223e7418f8758c0d179491a951fb973		tag 'v0.2.5' of https://gitlab.com/Valo27/valot
