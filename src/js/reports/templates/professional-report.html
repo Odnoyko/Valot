@@ -244,27 +244,9 @@
         </div>
     </div>
 
-    <!-- Charts Section -->
-    <div class="charts-section {{CHARTS_VISIBILITY}}">
+    <!-- Analytics Overview -->
+    <div class="analytics-section {{ANALYTICS_VISIBILITY}}">
         <h2 class="section-title">📊 Analytics Overview</h2>
-        <div class="charts-container">
-            <div class="chart">
-                <div class="chart-title">{{CHART_PERIOD_TITLE}}</div>
-                <div class="chart-content">
-                    <div class="bar-chart">
-                        {{TIME_CHART_HTML}}
-                    </div>
-                </div>
-            </div>
-            <div class="chart">
-                <div class="chart-title">Projects by Time</div>
-                <div class="chart-content">
-                    <div class="bar-chart">
-                        {{PROJECT_CHART_HTML}}
-                    </div>
-                </div>
-            </div>
-        </div>
         
         <!-- Stats Grid -->
         <div class="stats-grid">
@@ -283,6 +265,26 @@
             <div class="stat-card">
                 <span class="stat-number">{{AVG_DAILY_HOURS}}</span>
                 <div class="stat-label">Avg Daily Hours</div>
+            </div>
+        </div>
+        
+        <!-- Charts Section (separate and toggleable) -->
+        <div class="charts-container {{CHARTS_VISIBILITY}}">
+            <div class="chart">
+                <div class="chart-title">{{CHART_PERIOD_TITLE}}</div>
+                <div class="chart-content">
+                    <div class="bar-chart">
+                        {{TIME_CHART_HTML}}
+                    </div>
+                </div>
+            </div>
+            <div class="chart">
+                <div class="chart-title">Projects by Time</div>
+                <div class="chart-content">
+                    <div class="bar-chart">
+                        {{PROJECT_CHART_HTML}}
+                    </div>
+                </div>
             </div>
         </div>
     </div>

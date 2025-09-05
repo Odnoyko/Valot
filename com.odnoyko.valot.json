@@ -14,7 +14,14 @@
 	"--socket=session-bus",
 	"--socket=wayland",
 	"--device=dri",
-	"--filesystem=~/valot:create"
+	"--filesystem=~/valot:create",
+	"--socket=cups",
+	"--share=ipc",
+	"--filesystem=xdg-config/gtk-3.0",
+	"--filesystem=xdg-config/gtk-4.0",
+	"--filesystem=xdg-config/kdeglobals:ro",
+	"--env=QT_QPA_PLATFORM=wayland",
+	"--socket=x11"
 	],
     "build-options": {
         "append-path": "/usr/lib/sdk/typescript/bin:/usr/lib/sdk/node20/bin",

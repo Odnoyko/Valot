@@ -2,16 +2,15 @@ import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
-import WebKit from 'gi://WebKit';
 import { TemplateEngine } from 'resource:///com/odnoyko/valot/js/reports/templateEngine.js';
 import { Config } from 'resource:///com/odnoyko/valot/config.js';
 
-export class HTMLTemplatePDFExporter {
+export class ReportHTML {
     constructor(tasks, projects, clients) {
         this.tasks = tasks || [];
         this.projects = projects || [];
         this.clients = clients || [];
-        
+
         // Configuration options
         this.includeBilling = false;
         this.customDateRange = null;
@@ -19,16 +18,17 @@ export class HTMLTemplatePDFExporter {
         this.filterByClient = null;
         this.filterPeriod = 'week';
         this.currentTemplate = 'professional-report';
-        
+
         // Section visibility
         this.sections = {
+            showAnalytics: true,
             showCharts: true,
             showTasks: true,
             showProjects: true,
             showBilling: false,
             logoPath: null
         };
-        
+
         this.templateEngine = new TemplateEngine();
     }
 
@@ -64,23 +64,32 @@ export class HTMLTemplatePDFExporter {
         this.sections = { ...this.sections, ...sections };
     }
 
-    async exportToPDF(parentWindow) {
+    async exportToHTML(parentWindow, reason = 'fallback') {
         try {
+            // If this is a fallback from failed PDF export, disable charts but keep analytics
+            if (reason === 'fallback') {
+                this.sections.showCharts = false;
+                this.sections.showAnalytics = true;
+            }
+            
             // Create Valot reports folder and auto-save there
             const reportsDir = Config.getValotReportsDir();
             const file = await this._createReportsFolder(reportsDir);
-            
+
             const filepath = file.get_path();
             if (filepath) {
-                await this._createPDFFromTemplate(filepath, parentWindow);
-                
-                this._showSuccessDialog(filepath, reportsDir, parentWindow);
+                await this._createHTMLFromTemplate(filepath, parentWindow);
+
+                // Auto-open HTML file in browser
+                this._openHTMLFile(filepath);
+
+                this._showSuccessDialog(filepath, reportsDir, parentWindow, reason);
             }
         } catch (error) {
-            console.error('Template PDF export error:', error);
+            console.error('HTML export error:', error);
             const errorDialog = new Gtk.AlertDialog({
-                message: 'Export Failed',
-                detail: `Could not export PDF: ${error.message}`
+                message: 'HTML Export Failed',
+                detail: `Could not export HTML: ${error.message}`
             });
             errorDialog.show(parentWindow);
         }
@@ -88,7 +97,7 @@ export class HTMLTemplatePDFExporter {
 
     async _createReportsFolder(reportsDir) {
         console.log(`Attempting to create reports directory: ${reportsDir}`);
-        
+
         try {
             // Create Valot folder if it doesn't exist
             if (!GLib.file_test(reportsDir, GLib.FileTest.IS_DIR)) {
@@ -101,7 +110,7 @@ export class HTMLTemplatePDFExporter {
             } else {
                 console.log(`Directory already exists: ${reportsDir}`);
             }
-            
+
             // Generate filename and create file object
             const fileName = this._generateFileName();
             const filePath = GLib.build_filenamev([reportsDir, fileName]);
@@ -113,33 +122,42 @@ export class HTMLTemplatePDFExporter {
         }
     }
 
-    _showSuccessDialog(filepath, reportsDir, parentWindow) {
+    _showSuccessDialog(filepath, reportsDir, parentWindow, reason) {
         const fileName = filepath.split('/').pop();
-        
+
+        let message = 'HTML Report Export Complete';
+        let body = '';
+
+        if (reason === 'fallback') {
+            message = 'PDF Export Fallback - HTML Generated';
+            body = `PDF export is not available in your environment.\nHTML report created instead.\n\nFile: ${fileName}\nLocation: ${reportsDir}\n\n📄 To create PDF: Use the Print button in your browser to save as PDF.`;
+        } else {
+            body = `Report saved successfully!\n\nFile: ${fileName}\nLocation: ${reportsDir}\n\n📄 To create PDF: Use the Print button in your browser to save as PDF.`;
+        }
+
         const dialog = new Adw.AlertDialog({
-            heading: 'PDF Export Complete',
-            body: `Report saved successfully!\n\nFile: ${fileName}\nLocation: ${reportsDir}\n\nClick "Open Folder" to view the file in your file manager.`
+            heading: message,
+            body: body
         });
-        
+
         dialog.add_response('close', 'Close');
         dialog.add_response('open_folder', 'Open Folder');
         dialog.set_response_appearance('open_folder', Adw.ResponseAppearance.SUGGESTED);
-        
+
         dialog.connect('response', (dialog, response) => {
             if (response === 'open_folder') {
                 this._openFolder(reportsDir);
             }
             dialog.close();
         });
-        
+
         dialog.present(parentWindow);
     }
 
     _openFolder(folderPath) {
         console.log(`Attempting to open folder: ${folderPath}`);
-        
+
         try {
-            // Simple xdg-open call only
             const subprocess = Gio.Subprocess.new(
                 ['xdg-open', folderPath],
                 Gio.SubprocessFlags.NONE
@@ -149,105 +167,126 @@ export class HTMLTemplatePDFExporter {
             return true;
         } catch (error) {
             console.error('Could not open folder:', error);
+            return false;
+        }
+    }
+
+    _openHTMLFile(filepath) {
+        try {
+            const subprocess = Gio.Subprocess.new(
+                ['xdg-open', filepath],
+                Gio.SubprocessFlags.NONE
+            );
+
+            subprocess.wait_async(null, (source, result) => {
+                try {
+                    subprocess.wait_finish(result);
+                    console.log('✓ Opened HTML file in browser:', filepath);
+                } catch (error) {
+                    console.warn('Could not open HTML file in browser:', error);
+                }
+            });
+
+        } catch (error) {
+            console.warn('Failed to open HTML file:', error);
+        }
+    }
+
+    async _createHTMLFromTemplate(filepath, parentWindow) {
+        try {
+            // Get filtered data
+            const filteredTasks = this._getFilteredTasks();
+            const data = this.templateEngine.generateDataFromTasks(
+                filteredTasks,
+                this.projects,
+                this.clients,
+                {
+                    includeBilling: this.includeBilling,
+                    logoPath: this.sections.logoPath,
+                    period: this.filterPeriod
+                }
+            );
+
+            // Generate HTML from template with PDF print instructions
+            const html = this._generateHTMLWithPrintInstructions(data);
+
+            // Write HTML to file
+            const file = Gio.File.new_for_path(filepath);
+            const outputStream = file.replace(null, false, Gio.FileCreateFlags.NONE, null);
+
+            const bytes = new TextEncoder().encode(html);
+            outputStream.write_bytes(new GLib.Bytes(bytes), null);
+            outputStream.close(null);
+
+            console.log('HTML exported successfully to:', filepath);
+
+        } catch (error) {
+            console.error('Error creating HTML from template:', error);
+            throw error;
+        }
+    }
+
+    _generateHTMLWithPrintInstructions(data) {
+        // Get base HTML template
+        let html = this.templateEngine.renderTemplate(this.currentTemplate, data, this.sections);
+
+        // Add print instructions at the top after body opening
+        const printInstructions = `
+    <div class="print-instructions" style="background: linear-gradient(135deg, #ff6b6b, #ee5a24); color: white; padding: 20px; margin: 20px 0; border-radius: 12px; text-align: center; box-shadow: 0 4px 15px rgba(255,107,107,0.3); display: block !important;">
+        <h2 style="margin: 0 0 15px 0; font-size: 1.4em; font-weight: 600;">📄 Create PDF from this Report</h2>
+        <p style="margin: 0 0 20px 0; font-size: 1.1em; line-height: 1.4;">Direct PDF export is not available in your environment.<br>Use your browser's print function to save as PDF:</p>
+
+        <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin: 20px 0;">
+            <div style="background: rgba(255,255,255,0.2); padding: 15px 25px; border-radius: 8px; backdrop-filter: blur(10px);">
+                <strong style="font-size: 1.1em;">Linux/Windows:</strong><br>
+                <span style="font-size: 1.2em;">Ctrl + P</span>
+            </div>
+        </div>
+
+        <button onclick="window.print()" style="background: white; color: #ee5a24; border: none; padding: 15px 30px; border-radius: 8px; font-size: 1.1em; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+            🖨️ Print to PDF
+        </button>
+
+        <p style="margin: 15px 0 0 0; font-size: 0.9em; opacity: 0.9;">💡 Tip: Select "Save as PDF" or "Print to PDF" in your browser's print dialog</p>
+    </div>
+
+    <style>
+        .print-instructions {
+            position: relative;
+            z-index: 1000;
         }
         
-        // If failed, show simple dialog
-        const errorDialog = new Adw.AlertDialog({
-            heading: 'PDF Export Completed',
-            body: `Your report has been saved successfully!\n\nLocation: ${folderPath}\n\nPlease open this location manually in your file manager.`
-        });
-        errorDialog.add_response('close', 'OK');
-        errorDialog.present(null);
-        return false;
-    }
-
-    async _createPDFFromTemplate(filepath, parentWindow) {
-        return new Promise((resolve, reject) => {
-            try {
-                // Create WebKit view for HTML rendering
-                const webView = new WebKit.WebView();
-                
-                // Get filtered data
-                const filteredTasks = this._getFilteredTasks();
-                const data = this.templateEngine.generateDataFromTasks(
-                    filteredTasks, 
-                    this.projects, 
-                    this.clients,
-                    { 
-                        includeBilling: this.includeBilling,
-                        logoPath: this.sections.logoPath,
-                        period: this.filterPeriod
-                    }
-                );
-                
-                // Generate HTML from template
-                const html = this.templateEngine.renderTemplate(this.currentTemplate, data, this.sections);
-                
-                // Load HTML content
-                webView.load_html(html, 'file:///');
-                
-                // Wait for content to load then print
-                webView.connect('load-changed', (webView, loadEvent) => {
-                    if (loadEvent === WebKit.LoadEvent.FINISHED) {
-                        // Small delay to ensure rendering is complete
-                        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
-                            this._printWebViewToPDF(webView, filepath, parentWindow).then(resolve).catch(reject);
-                            return GLib.SOURCE_REMOVE;
-                        });
-                    }
-                });
-                
-            } catch (error) {
-                reject(error);
+        @media print {
+            .print-instructions {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden !important;
             }
-        });
-    }
+        }
+        
+        @page {
+            margin: 2cm;
+        }
+    </style>`;
 
-    async _printWebViewToPDF(webView, filepath, parentWindow) {
-        return new Promise((resolve, reject) => {
-            try {
-                const printOp = WebKit.PrintOperation.new(webView);
-                const printSettings = Gtk.PrintSettings.new();
-                
-                // Configure print settings for PDF
-                printSettings.set_printer('Print to File');
-                printSettings.set('output-file-format', 'pdf');
-                printSettings.set('output-uri', `file://${filepath}`);
-                
-                // Set page setup
-                const pageSetup = Gtk.PageSetup.new();
-                pageSetup.set_orientation(Gtk.PageOrientation.PORTRAIT);
-                pageSetup.set_paper_size(Gtk.PaperSize.new(Gtk.PAPER_NAME_A4));
-                
-                printOp.set_print_settings(printSettings);
-                printOp.set_page_setup(pageSetup);
-                
-                // Run print operation
-                printOp.print();
-                
-                // Monitor print completion
-                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
-                    if (GLib.file_test(filepath, GLib.FileTest.EXISTS)) {
-                        resolve();
-                        return GLib.SOURCE_REMOVE;
-                    }
-                    return GLib.SOURCE_CONTINUE;
-                });
-                
-            } catch (error) {
-                reject(error);
-            }
-        });
+        // Insert instructions after <body> tag
+        html = html.replace(/<body[^>]*>/, `$&${printInstructions}`);
+
+        return html;
     }
 
     _getFilteredTasks() {
         let filteredTasks = this.tasks || [];
-        
+
         // Apply project filter
         if (this.filterByProject) {
             filteredTasks = filteredTasks.filter(task => task.project_id === this.filterByProject);
         }
-        
+
         // Apply client filter
         if (this.filterByClient) {
             filteredTasks = filteredTasks.filter(task => task.client_id === this.filterByClient);
@@ -265,11 +304,11 @@ export class HTMLTemplatePDFExporter {
                 const monday = new Date(now);
                 monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
                 monday.setHours(0, 0, 0, 0);
-                
+
                 const sunday = new Date(monday);
                 sunday.setDate(monday.getDate() + 6);
                 sunday.setHours(23, 59, 59, 999);
-                
+
                 startDate = monday;
                 endDate = sunday;
             } else if (this.filterPeriod === 'month') {
@@ -295,7 +334,7 @@ export class HTMLTemplatePDFExporter {
     _generateFileName() {
         const date = new Date();
         const dateStr = date.toISOString().split('T')[0];
-        return `Custom_Template_Report_${dateStr}.pdf`;
+        return `Valot_Report_HTML_${dateStr}.html`;
     }
 
     // Template management methods

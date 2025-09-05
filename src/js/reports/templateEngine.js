@@ -58,6 +58,7 @@ export class TemplateEngine {
 
         // Handle conditional sections - set visibility
         const visibilityMap = {
+            'ANALYTICS_VISIBILITY': sections.showAnalytics !== false ? '' : 'hidden',
             'CHARTS_VISIBILITY': sections.showCharts ? '' : 'hidden',
             'TASKS_VISIBILITY': sections.showTasks ? '' : 'hidden', 
             'PROJECTS_VISIBILITY': sections.showProjects ? '' : 'hidden',
@@ -269,8 +270,6 @@ export class TemplateEngine {
     }
 
     _generateProjectChartData(tasks, projects) {
-        console.log('Debug - Projects:', projects.map(p => ({id: p.id, name: p.name})));
-        console.log('Debug - Tasks:', tasks.map(t => ({name: t.name, project_id: t.project_id, duration: t.duration})));
         
         // Calculate hours per project
         const projectHours = {};
@@ -280,7 +279,6 @@ export class TemplateEngine {
             projectHours[projectId] = (projectHours[projectId] || 0) + (task.duration || task.time_spent || 0) / 3600;
         });
 
-        console.log('Debug - Project Hours:', projectHours);
 
         // Sort projects by hours and take top 5
         const sortedProjects = Object.entries(projectHours)
