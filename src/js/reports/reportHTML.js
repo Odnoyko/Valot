@@ -21,6 +21,7 @@ export class ReportHTML {
 
         // Section visibility
         this.sections = {
+            showAnalytics: true,
             showCharts: true,
             showTasks: true,
             showProjects: true,
@@ -65,6 +66,12 @@ export class ReportHTML {
 
     async exportToHTML(parentWindow, reason = 'fallback') {
         try {
+            // If this is a fallback from failed PDF export, disable charts but keep analytics
+            if (reason === 'fallback') {
+                this.sections.showCharts = false;
+                this.sections.showAnalytics = true;
+            }
+            
             // Create Valot reports folder and auto-save there
             const reportsDir = Config.getValotReportsDir();
             const file = await this._createReportsFolder(reportsDir);
@@ -244,10 +251,25 @@ export class ReportHTML {
     </div>
 
     <style>
+        .print-instructions {
+            position: relative;
+            z-index: 1000;
+        }
+        
         @media print {
             .print-instructions {
                 display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden !important;
             }
+        }
+        
+        @page {
+            margin: 2cm;
         }
     </style>`;
 

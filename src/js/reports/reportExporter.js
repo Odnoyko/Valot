@@ -22,6 +22,7 @@ export class ReportExporter {
         
         // Section visibility
         this.sections = {
+            showAnalytics: true,
             showCharts: true,
             showTasks: true,
             showProjects: true,

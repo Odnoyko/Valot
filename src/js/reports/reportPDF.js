@@ -22,6 +22,7 @@ export class ReportPDF {
         
         // Section visibility
         this.sections = {
+            showAnalytics: true,
             showCharts: true,
             showTasks: true,
             showProjects: true,

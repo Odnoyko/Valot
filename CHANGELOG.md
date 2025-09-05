@@ -12,6 +12,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.5] - 2025-09-05
+
+### 🐛 Bug Fixes
+- **Fixed Print Instructions Display**: Print instructions now properly hide during PDF printing with enhanced CSS rules
+- **Fixed Broken Charts in HTML Export**: Removed debug console output that was breaking chart rendering in HTML fallback reports
+- **Smart Chart Management**: HTML fallback automatically disables problematic charts while preserving analytics summary cards
+
+### 🚀 Improvements  
+- **Enhanced Analytics Structure**: Separated analytics summary cards from chart visualizations for better control and reliability
+- **Improved HTML Fallback UX**: When PDF export fails, HTML export now shows clean analytics overview without broken chart elements
+- **Cleaner Debug Output**: Removed console spam from template engine for cleaner development experience
+
+### 🛠️ Technical Improvements
+- **Independent Section Control**: Added `showAnalytics` option to control summary cards separately from charts
+- **Automatic Fallback Optimization**: System intelligently adjusts report content based on export method capabilities
+- **Template Structure Enhancement**: Reorganized professional report template for better section independence
+
+---
+
 ## [0.2.4] - 2025-09-05
 
 ### 🚀 Major Features Added
