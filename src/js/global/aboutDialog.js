@@ -25,21 +25,22 @@
 
 import Adw from 'gi://Adw?version=1';
 import Gtk from 'gi://Gtk?version=4.0';
+import { Config } from 'resource:///com/odnoyko/valot/config.js';
 
 export function showAboutDialog(parentWindow) {
     console.log('Opening about dialog...');
 
     const aboutDialog = new Adw.AboutDialog({
-        application_name: 'Valot',
-        application_icon: 'com.odnoyko.valot',
-        developer_name: 'Vitaly Odnoyko',
-        version: '0.1.2',
+        application_name: Config.PACKAGE_NAME,
+        application_icon: Config.APPLICATION_ID,
+        developer_name: Config.DEVELOPER,
+        version: Config.VERSION,
         designers: [
-            'Vitaly Odnoyko'
+            Config.DEVELOPER
         ],
-        copyright: '© 2025 Vitaly Odnoyko',
+        copyright: `© 2025 ${Config.DEVELOPER}`,
         license_type: Gtk.License.GPL_3_0,
-        website: 'https://gitlab.com/valo27/valot',
+        website: Config.WEBSITE,
         comments: 'A simple and elegant time tracking application for productivity and project management.',
     });
 

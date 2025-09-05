@@ -9,11 +9,11 @@ export class TemplateEngine {
     }
 
     loadBuiltInTemplates() {
-        // Load the professional template from file path
+        // Load the professional template from resource
         this.templates.set('professional-report', {
             name: 'Professional Report',
             description: 'Modern professional report with charts, logo, and toggleable sections',
-            templatePath: '/home/Val/Projects/MyApps/valot/valot/src/js/reports/templates/professional-report.html'
+            resourcePath: 'resource:///com/odnoyko/valot/js/reports/templates/professional-report.html'
         });
     }
 
@@ -25,8 +25,21 @@ export class TemplateEngine {
 
         let html;
         
-        // Load HTML from file if template has templatePath
-        if (template.templatePath) {
+        // Load HTML from resource or file
+        if (template.resourcePath) {
+            try {
+                const file = Gio.File.new_for_uri(template.resourcePath);
+                const [success, contents] = file.load_contents(null);
+                if (success) {
+                    html = new TextDecoder().decode(contents);
+                } else {
+                    throw new Error(`Could not load template resource: ${template.resourcePath}`);
+                }
+            } catch (error) {
+                console.error('Error loading template resource:', error);
+                throw error;
+            }
+        } else if (template.templatePath) {
             try {
                 const file = Gio.File.new_for_path(template.templatePath);
                 const [success, contents] = file.load_contents(null);
@@ -45,6 +58,7 @@ export class TemplateEngine {
 
         // Handle conditional sections - set visibility
         const visibilityMap = {
+            'ANALYTICS_VISIBILITY': sections.showAnalytics !== false ? '' : 'hidden',
             'CHARTS_VISIBILITY': sections.showCharts ? '' : 'hidden',
             'TASKS_VISIBILITY': sections.showTasks ? '' : 'hidden', 
             'PROJECTS_VISIBILITY': sections.showProjects ? '' : 'hidden',
@@ -256,8 +270,6 @@ export class TemplateEngine {
     }
 
     _generateProjectChartData(tasks, projects) {
-        console.log('Debug - Projects:', projects.map(p => ({id: p.id, name: p.name})));
-        console.log('Debug - Tasks:', tasks.map(t => ({name: t.name, project_id: t.project_id, duration: t.duration})));
         
         // Calculate hours per project
         const projectHours = {};
@@ -267,7 +279,6 @@ export class TemplateEngine {
             projectHours[projectId] = (projectHours[projectId] || 0) + (task.duration || task.time_spent || 0) / 3600;
         });
 
-        console.log('Debug - Project Hours:', projectHours);
 
         // Sort projects by hours and take top 5
         const sortedProjects = Object.entries(projectHours)

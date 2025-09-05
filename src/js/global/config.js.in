@@ -1,0 +1,15 @@
+/* Auto-generated configuration file - DO NOT EDIT MANUALLY */
+import GLib from 'gi://GLib';
+
+export const Config = {
+    PACKAGE_NAME: '@PACKAGE_NAME@',
+    VERSION: '@PACKAGE_VERSION@',
+    WEBSITE: 'https://gitlab.com/valo27/valot',
+    DEVELOPER: 'Vitaly Odnoyko',
+    APPLICATION_ID: 'com.odnoyko.valot',
+    RESOURCE_PATH: '@resource_path@',
+    
+    getValotReportsDir() {
+        return GLib.build_filenamev([GLib.get_home_dir(), 'valot']);
+    }
+};

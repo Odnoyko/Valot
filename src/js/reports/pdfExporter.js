@@ -97,7 +97,7 @@ export class PDFExporter {
     }
 
     _createPDF(filepath) {
-        // Create a simple text-based report instead of using Cairo
+        // Create a simple text-based report
         const reportContent = this._generateTextReport();
         
         try {

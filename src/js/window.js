@@ -32,8 +32,7 @@ import { SimpleChart } from 'resource:///com/odnoyko/valot/js/charts/simpleChart
 import { TaskRenderer } from 'resource:///com/odnoyko/valot/js/tasks/taskRenderer.js';
 import { ProjectManager } from 'resource:///com/odnoyko/valot/js/projects/projectManager.js';
 import { PDFExporter } from 'resource:///com/odnoyko/valot/js/reports/pdfExporter.js';
-import { HTMLPDFExporter } from 'resource:///com/odnoyko/valot/js/reports/htmlPdfExporter.js';
-import { HTMLTemplatePDFExporter } from 'resource:///com/odnoyko/valot/js/reports/htmlTemplatePdfExporter.js';
+import { ReportExporter } from 'resource:///com/odnoyko/valot/js/reports/reportExporter.js';
 import { showAboutDialog } from 'resource:///com/odnoyko/valot/js/global/aboutDialog.js';
 
 export const ValotWindow = GObject.registerClass({
@@ -240,9 +239,6 @@ export const ValotWindow = GObject.registerClass({
         
         if (pages[pageName]) {
             try {
-                // Move tracking widget to the appropriate header before switching pages
-                this._moveTrackingWidget(pageName);
-                
                 // Use push_by_tag instead of pop_to_page for proper navigation
                 this._main_content.replace([pages[pageName]]);
             } catch (error) {
@@ -258,42 +254,6 @@ export const ValotWindow = GObject.registerClass({
         }
     }
 
-    _moveTrackingWidget(targetPage) {
-        const trackingWidget = this._tracking_widget;
-        if (!trackingWidget) {
-            console.log('Tracking widget not found');
-            return;
-        }
-
-        const headers = {
-            'tasks': this._tasks_header,
-            'projects': this._projects_header,
-            'clients': this._clients_header,
-            'reports': this._reports_header
-        };
-
-        const targetHeader = headers[targetPage];
-        if (!targetHeader) {
-            console.log(`Target header not found for page: ${targetPage}`);
-            return;
-        }
-
-        try {
-            // Check if widget is already in the target header
-            const currentParent = trackingWidget.get_parent();
-            if (currentParent === targetHeader) {
-                console.log(`📍 Tracking widget already in ${targetPage} page`);
-                return;
-            }
-
-            // Simply set the widget as title - GTK should handle reparenting automatically
-            targetHeader.set_title_widget(trackingWidget);
-            
-            console.log(`📍 Tracking widget moved to ${targetPage} page`);
-        } catch (error) {
-            console.error(`Error moving tracking widget to ${targetPage}:`, error);
-        }
-    }
     
     _setupTaskTracking() {
         // Set up single tracking widget that moves between pages
@@ -904,8 +864,8 @@ export const ValotWindow = GObject.registerClass({
         dialog.connect('response', (dialog, response) => {
             if (response === Gtk.ResponseType.OK) {
                 try {
-                    // Use HTML Template PDF Exporter only
-                    const pdfExporter = new HTMLTemplatePDFExporter(
+                    // Use Smart Report Exporter (tries PDF first, falls back to HTML)
+                    const reportExporter = new ReportExporter(
                         this.allTasks,
                         this.allProjects,
                         this.allClients
@@ -923,31 +883,31 @@ export const ValotWindow = GObject.registerClass({
                             const fromDate = new Date(fromText);
                             const toDate = new Date(toText);
                             toDate.setHours(23, 59, 59, 999); // End of day
-                            pdfExporter.configureDateRange(fromDate, toDate);
+                            reportExporter.configureDateRange(fromDate, toDate);
                         }
                     } else {
-                        pdfExporter.configurePeriod(selectedPeriod);
+                        reportExporter.configurePeriod(selectedPeriod);
                     }
 
                     // Apply project filter
                     const projectIndex = projectRow.get_selected();
                     if (projectIndex > 0) {
                         const selectedProject = this.allProjects[projectIndex - 1];
-                        pdfExporter.configureProjectFilter(selectedProject.id);
+                        reportExporter.configureProjectFilter(selectedProject.id);
                     }
 
                     // Apply client filter
                     const clientIndex = clientRow.get_selected();
                     if (clientIndex > 0) {
                         const selectedClient = this.allClients[clientIndex - 1];
-                        pdfExporter.configureClientFilter(selectedClient.id);
+                        reportExporter.configureClientFilter(selectedClient.id);
                     }
 
                     // Apply billing option
-                    pdfExporter.configureBilling(billingSwitch.get_active());
+                    reportExporter.configureBilling(billingSwitch.get_active());
 
                     // Configure sections visibility
-                    pdfExporter.configureSections({
+                    reportExporter.configureSections({
                         showCharts: chartsSwitch.get_active(),
                         showTasks: tasksSwitch.get_active(),
                         showProjects: projectsSwitch.get_active(),
@@ -956,8 +916,8 @@ export const ValotWindow = GObject.registerClass({
                         logoPath: selectedLogoPath
                     });
 
-                    // Export PDF
-                    pdfExporter.exportToPDF(this);
+                    // Smart export: Try PDF first, fallback to HTML if needed
+                    reportExporter.exportReport(this);
 
                 } catch (error) {
                     console.error('Export configuration error:', error);

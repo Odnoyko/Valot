@@ -5,6 +5,7 @@
     <file>js/main.js</file>
     <file>js/test.js</file>
     <file>js/window.js</file>
+    <file>config.js</file>
     <!-- dbinit -->
     <file>js/dbinitialisation.js</file>
     <!-- Task -->
@@ -20,10 +21,13 @@
     <file>js/tasks/taskRenderer.js</file>
     <!-- Reports -->
     <file>js/reports/pdfExporter.js</file>
-    <file>js/reports/htmlPdfExporter.js</file>
     <file>js/reports/themeLoader.js</file>
     <file>js/reports/templateEngine.js</file>
-    <file>js/reports/htmlTemplatePdfExporter.js</file>
+    <file>js/reports/templatePDFGenerator.js</file>
+    <file>js/reports/reportPDF.js</file>
+    <file>js/reports/reportHTML.js</file>
+    <file>js/reports/reportExporter.js</file>
+    <file>js/reports/templates/professional-report.html</file>
     <!-- Projects -->
     <file>js/projects/projectManager.js</file>
   </gresource>
