@@ -12,6 +12,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.4] - 2025-09-05
+
+### 🚀 Major Features Added
+- **Smart PDF Export System**: Implemented intelligent export system that tries PDF generation first, then gracefully falls back to HTML when PDF is unavailable (e.g., in Flatpak environments)
+- **HTML Report Fallback**: Added comprehensive HTML export with browser print instructions for environments where direct PDF generation is not supported
+- **Enhanced Error Tracking**: Added real-time progress dialogs, timeout handling, and detailed error categorization for PDF generation processes
+
+### 🐛 Bug Fixes  
+- **Removed Dead Cairo/Pango Code**: Eliminated non-functional Cairo/PangoCairo PDF export code that was causing confusion and potential conflicts
+- **Fixed Flatpak PDF Export**: Resolved WebKit PDF generation issues in sandboxed Flatpak environments through smart fallback system
+- **Improved Export Reliability**: Enhanced error handling prevents silent failures during PDF export attempts
+
+### 🛠️ Technical Improvements
+- **Refactored Export Architecture**: Created modular export system with `ReportExporter` coordinator, `ReportPDF`, and `ReportHTML` classes for better separation of concerns  
+- **Renamed Files for Clarity**: Renamed `htmlTemplatePdfExporter.js` to `templatePDFGenerator.js` with clearer class names
+- **Enhanced WebKit Integration**: Improved WebKit-based PDF generation with better print settings and page setup configuration
+- **Progress Feedback**: Added visual progress indicators and real-time status updates during export operations
+
+### 🎨 UI/UX Enhancements
+- **Better Export Feedback**: Users now see progress dialogs with detailed status updates during PDF generation
+- **Smart Success Messages**: Export completion dialogs adapt based on whether PDF or HTML fallback was used
+- **Preserved Configuration Options**: All existing report configuration options (periods, filters, sections, templates) remain fully functional
+
+### 🔧 Code Quality
+- **Clean File Structure**: Organized export functionality into logical, maintainable modules
+- **Comprehensive Logging**: Added detailed console logging for troubleshooting export issues
+- **Resource Management**: Updated GResource manifest to include all new export modules
+- **Maintained Template System**: Preserved existing template engine and customization capabilities
+
+---
+
 ## [0.2.2] - 2025-09-04
 
 ### 🐛 Bug Fixes

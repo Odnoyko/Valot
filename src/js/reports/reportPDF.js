@@ -6,7 +6,7 @@ import WebKit from 'gi://WebKit';
 import { TemplateEngine } from 'resource:///com/odnoyko/valot/js/reports/templateEngine.js';
 import { Config } from 'resource:///com/odnoyko/valot/config.js';
 
-export class HTMLTemplatePDFExporter {
+export class ReportPDF {
     constructor(tasks, projects, clients) {
         this.tasks = tasks || [];
         this.projects = projects || [];
@@ -65,24 +65,89 @@ export class HTMLTemplatePDFExporter {
     }
 
     async exportToPDF(parentWindow) {
+        // Show progress dialog
+        const progressDialog = new Adw.AlertDialog({
+            heading: 'Exporting PDF',
+            body: 'Preparing PDF export...\nPlease wait while your report is being generated.'
+        });
+        progressDialog.add_response('cancel', 'Cancel');
+        progressDialog.present(parentWindow);
+        
+        let exportCancelled = false;
+        progressDialog.connect('response', () => {
+            exportCancelled = true;
+            console.log('PDF export cancelled by user');
+        });
+
         try {
-            // Create Valot reports folder and auto-save there
+            console.log('🎯 Starting PDF export process...');
+            
+            // Step 1: Create folder
+            this._updateProgress(progressDialog, 'Creating export folder...');
             const reportsDir = Config.getValotReportsDir();
             const file = await this._createReportsFolder(reportsDir);
             
+            if (exportCancelled) throw new Error('Export cancelled by user');
+            
             const filepath = file.get_path();
+            console.log(`✓ Export folder ready: ${reportsDir}`);
+            
             if (filepath) {
-                await this._createPDFFromTemplate(filepath, parentWindow);
+                // Step 2: Generate PDF
+                this._updateProgress(progressDialog, 'Generating PDF from template...\nThis may take a few moments.');
                 
+                await this._createPDFFromTemplate(filepath, parentWindow, progressDialog);
+                
+                if (exportCancelled) {
+                    // Clean up partial file
+                    try {
+                        if (GLib.file_test(filepath, GLib.FileTest.EXISTS)) {
+                            const file = Gio.File.new_for_path(filepath);
+                            file.delete(null);
+                        }
+                    } catch (cleanupError) {
+                        console.warn('Could not clean up partial file:', cleanupError);
+                    }
+                    throw new Error('Export cancelled by user');
+                }
+                
+                // Success!
+                progressDialog.close();
+                console.log('✅ PDF export completed successfully!');
                 this._showSuccessDialog(filepath, reportsDir, parentWindow);
             }
         } catch (error) {
-            console.error('Template PDF export error:', error);
+            progressDialog.close();
+            console.error('💥 PDF export failed:', error);
+            
+            let errorMessage = error.message;
+            let errorDetail = '';
+            
+            // Categorize errors for better user feedback
+            if (error.message.includes('WebKit')) {
+                errorMessage = 'PDF Generation Failed';
+                errorDetail = 'WebKit rendering engine failed. This usually happens in sandboxed environments like Flatpak.\n\nTry using the HTML export option instead.';
+            } else if (error.message.includes('print')) {
+                errorMessage = 'Print System Unavailable';  
+                errorDetail = 'Cannot access system printer/PDF export functionality.\n\nThis feature may not be available in your environment.';
+            } else if (error.message.includes('timeout')) {
+                errorMessage = 'Export Timeout';
+                errorDetail = 'PDF generation took too long and was cancelled.\n\nTry reducing the amount of data in your report or try again.';
+            } else if (error.message.includes('cancelled')) {
+                // Don't show error for user cancellation
+                return;
+            } else {
+                errorDetail = `Technical details: ${error.message}`;
+            }
+            
             const errorDialog = new Gtk.AlertDialog({
-                message: 'Export Failed',
-                detail: `Could not export PDF: ${error.message}`
+                message: errorMessage,
+                detail: errorDetail
             });
             errorDialog.show(parentWindow);
+            
+            // Re-throw for fallback system
+            throw error;
         }
     }
 
@@ -161,14 +226,51 @@ export class HTMLTemplatePDFExporter {
         return false;
     }
 
-    async _createPDFFromTemplate(filepath, parentWindow) {
+    _updateProgress(progressDialog, message) {
+        try {
+            progressDialog.set_body(message);
+            console.log(`📋 Progress: ${message}`);
+        } catch (error) {
+            console.warn('Could not update progress dialog:', error);
+        }
+    }
+
+    async _createPDFFromTemplate(filepath, parentWindow, progressDialog) {
         return new Promise((resolve, reject) => {
+            let timeoutId = null;
+            let isCompleted = false;
+            
             try {
+                console.log('🖥️ Creating WebKit view for PDF rendering...');
+                
+                // Set timeout for the entire PDF generation process (30 seconds)
+                timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 30000, () => {
+                    if (!isCompleted) {
+                        console.error('⏰ PDF generation timeout after 30 seconds');
+                        reject(new Error('PDF generation timeout - process took too long'));
+                    }
+                    return GLib.SOURCE_REMOVE;
+                });
+                
                 // Create WebKit view for HTML rendering
                 const webView = new WebKit.WebView();
                 
+                // Handle WebKit errors
+                webView.connect('load-failed', (webView, loadEvent, failingURI, error) => {
+                    console.error('🚨 WebKit load failed:', error.message);
+                    if (!isCompleted) {
+                        isCompleted = true;
+                        if (timeoutId) GLib.source_remove(timeoutId);
+                        reject(new Error(`WebKit load failed: ${error.message}`));
+                    }
+                });
+                
+                this._updateProgress(progressDialog, 'Preparing template data...');
+                
                 // Get filtered data
                 const filteredTasks = this._getFilteredTasks();
+                console.log(`📊 Processing ${filteredTasks.length} tasks for report`);
+                
                 const data = this.templateEngine.generateDataFromTasks(
                     filteredTasks, 
                     this.projects, 
@@ -180,32 +282,65 @@ export class HTMLTemplatePDFExporter {
                     }
                 );
                 
+                this._updateProgress(progressDialog, 'Generating HTML from template...');
+                
                 // Generate HTML from template
                 const html = this.templateEngine.renderTemplate(this.currentTemplate, data, this.sections);
+                console.log(`📄 Generated HTML template (${html.length} characters)`);
+                
+                this._updateProgress(progressDialog, 'Loading template in WebKit...');
                 
                 // Load HTML content
                 webView.load_html(html, 'file:///');
                 
                 // Wait for content to load then print
                 webView.connect('load-changed', (webView, loadEvent) => {
-                    if (loadEvent === WebKit.LoadEvent.FINISHED) {
+                    console.log(`🔄 WebKit load event: ${loadEvent}`);
+                    
+                    if (loadEvent === WebKit.LoadEvent.STARTED) {
+                        this._updateProgress(progressDialog, 'WebKit is rendering content...');
+                    } else if (loadEvent === WebKit.LoadEvent.FINISHED) {
+                        console.log('✅ WebKit finished loading content');
+                        this._updateProgress(progressDialog, 'Content loaded, generating PDF...');
+                        
                         // Small delay to ensure rendering is complete
-                        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
-                            this._printWebViewToPDF(webView, filepath, parentWindow).then(resolve).catch(reject);
+                        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+                            if (!isCompleted) {
+                                this._printWebViewToPDF(webView, filepath, parentWindow, progressDialog)
+                                    .then(() => {
+                                        isCompleted = true;
+                                        if (timeoutId) GLib.source_remove(timeoutId);
+                                        resolve();
+                                    })
+                                    .catch((error) => {
+                                        isCompleted = true;
+                                        if (timeoutId) GLib.source_remove(timeoutId);
+                                        reject(error);
+                                    });
+                            }
                             return GLib.SOURCE_REMOVE;
                         });
                     }
                 });
                 
             } catch (error) {
+                console.error('💥 Error in _createPDFFromTemplate:', error);
+                isCompleted = true;
+                if (timeoutId) GLib.source_remove(timeoutId);
                 reject(error);
             }
         });
     }
 
-    async _printWebViewToPDF(webView, filepath, parentWindow) {
+    async _printWebViewToPDF(webView, filepath, parentWindow, progressDialog) {
         return new Promise((resolve, reject) => {
+            let printTimeoutId = null;
+            let checkIntervalId = null;
+            
             try {
+                console.log('🖨️ Starting print operation...');
+                this._updateProgress(progressDialog, 'Converting to PDF format...');
+                
                 const printOp = WebKit.PrintOperation.new(webView);
                 const printSettings = Gtk.PrintSettings.new();
                 
@@ -213,6 +348,8 @@ export class HTMLTemplatePDFExporter {
                 printSettings.set_printer('Print to File');
                 printSettings.set('output-file-format', 'pdf');
                 printSettings.set('output-uri', `file://${filepath}`);
+                
+                console.log(`📄 PDF will be saved to: ${filepath}`);
                 
                 // Set page setup
                 const pageSetup = Gtk.PageSetup.new();
@@ -222,19 +359,70 @@ export class HTMLTemplatePDFExporter {
                 printOp.set_print_settings(printSettings);
                 printOp.set_page_setup(pageSetup);
                 
-                // Run print operation
-                printOp.print();
+                // Set timeout for print operation (15 seconds)
+                printTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 15000, () => {
+                    console.error('⏰ Print operation timeout');
+                    if (checkIntervalId) GLib.source_remove(checkIntervalId);
+                    reject(new Error('Print operation timeout - PDF generation took too long'));
+                    return GLib.SOURCE_REMOVE;
+                });
                 
-                // Monitor print completion
-                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+                // Run print operation
+                try {
+                    printOp.print();
+                    console.log('✅ Print operation initiated');
+                    this._updateProgress(progressDialog, 'Writing PDF file...');
+                } catch (printError) {
+                    console.error('🚨 Print operation failed:', printError.message);
+                    if (printTimeoutId) GLib.source_remove(printTimeoutId);
+                    reject(new Error(`Print operation failed: ${printError.message}`));
+                    return;
+                }
+                
+                let checkCount = 0;
+                // Monitor print completion with better feedback
+                checkIntervalId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+                    checkCount++;
+                    
                     if (GLib.file_test(filepath, GLib.FileTest.EXISTS)) {
-                        resolve();
+                        console.log(`✅ PDF file created successfully: ${filepath}`);
+                        
+                        // Clean up timeouts
+                        if (printTimeoutId) GLib.source_remove(printTimeoutId);
+                        if (checkIntervalId) GLib.source_remove(checkIntervalId);
+                        
+                        // Verify file size
+                        try {
+                            const file = Gio.File.new_for_path(filepath);
+                            const fileInfo = file.query_info('standard::size', Gio.FileQueryInfoFlags.NONE, null);
+                            const fileSize = fileInfo.get_size();
+                            
+                            if (fileSize > 0) {
+                                console.log(`📊 PDF file size: ${fileSize} bytes`);
+                                resolve();
+                            } else {
+                                reject(new Error('Generated PDF file is empty'));
+                            }
+                        } catch (sizeError) {
+                            console.warn('Could not check file size:', sizeError);
+                            resolve(); // File exists, assume it's okay
+                        }
+                        
                         return GLib.SOURCE_REMOVE;
                     }
+                    
+                    // Update progress every few checks
+                    if (checkCount % 4 === 0) {
+                        this._updateProgress(progressDialog, `Writing PDF file... (${Math.floor(checkCount/2)}s)`);
+                    }
+                    
                     return GLib.SOURCE_CONTINUE;
                 });
                 
             } catch (error) {
+                console.error('💥 Error in _printWebViewToPDF:', error);
+                if (printTimeoutId) GLib.source_remove(printTimeoutId);
+                if (checkIntervalId) GLib.source_remove(checkIntervalId);
                 reject(error);
             }
         });

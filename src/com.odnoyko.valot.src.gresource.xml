@@ -21,10 +21,12 @@
     <file>js/tasks/taskRenderer.js</file>
     <!-- Reports -->
     <file>js/reports/pdfExporter.js</file>
-    <file>js/reports/htmlPdfExporter.js</file>
     <file>js/reports/themeLoader.js</file>
     <file>js/reports/templateEngine.js</file>
-    <file>js/reports/htmlTemplatePdfExporter.js</file>
+    <file>js/reports/templatePDFGenerator.js</file>
+    <file>js/reports/reportPDF.js</file>
+    <file>js/reports/reportHTML.js</file>
+    <file>js/reports/reportExporter.js</file>
     <file>js/reports/templates/professional-report.html</file>
     <!-- Projects -->
     <file>js/projects/projectManager.js</file>
