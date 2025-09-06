@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+cc<?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop">
   <id>com.odnoyko.valot</id>
   <launchable type="desktop-id">com.odnoyko.valot.desktop</launchable>
@@ -33,30 +33,34 @@
     <display_length compare="ge">768</display_length>
   </recommends>
   <releases>
-    <release version="0.1.2" date="2025-09-03">
+    <release version="0.2.5" date="2025-09-05">
       <description>
-        <p>Critical bug fix release.</p>
-        <ul>
-          <li>Fixed critical bug affecting application stability</li>
-        </ul>
+        <p>Latest release with improvements and bug fixes.</p>
       </description>
     </release>
-    <release version="0.1.1" date="2025-01-09">
+    <release version="0.2.4" date="2025-09-05">
       <description>
-        <p>Major bug fixes and feature improvements release.</p>
-        <ul>
-          <li>Added task stack selection and deletion functionality</li>
-          <li>Fixed Delete key not working for selected stacks and tasks</li>
-          <li>Fixed stack selection issues on app startup</li>
-          <li>Improved tracking button state synchronization</li>
-          <li>Fixed timer conflicts and header synchronization</li>
-          <li>Enhanced UI feedback and error handling</li>
-        </ul>
+        <p>Bug fixes and stability improvements.</p>
       </description>
     </release>
-    <release version="0.0.1" date="2025-09-01">
+    <release version="0.2.3" date="2025-09-04">
       <description>
-        <p>Initial release of Valot time tracking application.</p>
+        <p>Feature enhancements and fixes.</p>
+      </description>
+    </release>
+    <release version="0.2.2" date="2025-09-04">
+      <description>
+        <p>Fix Flatpak PDF Export Issues.</p>
+      </description>
+    </release>
+    <release version="0.2.1" date="2025-09-04">
+      <description>
+        <p>Bug fixes and improvements.</p>
+      </description>
+    </release>
+    <release version="0.2.0" date="2025-09-04">
+      <description>
+        <p>Initial stable release of Valot time tracking application.</p>
       </description>
     </release>
   </releases>
