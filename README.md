@@ -1,13 +1,13 @@
 # Valot
 <div align="center">
-![Valot Logotype](data/icons/hicolor/scalable/apps/com.odnoyko.valot.svg)
+    ![Valot Logotype](data/icons/hicolor/scalable/apps/com.odnoyko.valot.svg)
  <h1>⏱️ Valot</h1>
  <strong>A modern time tracking application built with GTK4 and Adwaita.</strong>
 </div>
 
-
-![Valot Screenshot](data/screenshots/v0.1.1.png)
-
+<div align="center">
+    ![Valot Screenshot](data/screenshots/v0.1.1.png)
+</div>
 ## Description
 
 Valot is designed for developers, freelancers, and professionals who need to track their work time efficiently. It offers a clean, modern interface that follows GNOME Human Interface Guidelines.
