@@ -1,10 +1,15 @@
-# Valot
-<div align="center">
+<div align="center" margin-bottom="40px;">
     ![Valot Logotype](data/icons/hicolor/scalable/apps/com.odnoyko.valot.svg)
  <h1>⏱️ Valot</h1>
  <strong>A modern time tracking application built with GTK4 and Adwaita.</strong>
 </div>
-
+<br>
+<div class="ignore-css">
+ <p align="center">
+  <a href="https://matrix.to/#/#Valot:matrix.org"><img src="https://img.shields.io/badge/Matrix-Join-brightgreen"></a>
+ </p>
+</div>
+<br>
 <div align="center">
     ![Valot Screenshot](data/screenshots/v0.1.1.png)
 </div>
@@ -30,6 +35,12 @@ Valot is designed for developers, freelancers, and professionals who need to tra
 flatpak install flathub com.odnoyko.valot
 ```
 
+### From AUR
+
+```bash
+yay valot
+```
+
 ### Building from Source
 
 Requirements:
@@ -38,6 +49,7 @@ Requirements:
 - libadwaita
 - libgda
 - blueprint-compiler
+- gjs
 
 ```bash
 git clone https://gitlab.com/Valo27/valot.git
