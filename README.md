@@ -1,7 +1,10 @@
-![Valot Logotype](data/icons/hicolor/scalable/apps/com.odnoyko.valot.svg)
 # Valot
+<div align="center">
+![Valot Logotype](data/icons/hicolor/scalable/apps/com.odnoyko.valot.svg)
+ <h1>⏱️ Valot</h1>
+ <strong>A modern time tracking application built with GTK4 and Adwaita.</strong>
+</div>
 
-A modern time tracking application built with GTK4 and Adwaita.
 
 ![Valot Screenshot](data/screenshots/v0.1.1.png)
 
