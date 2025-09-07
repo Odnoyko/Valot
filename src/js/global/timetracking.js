@@ -4,6 +4,7 @@ import Adw from 'gi://Adw';
 import GLib from 'gi://GLib';
 import { saveTask } from 'resource:///com/odnoyko/valot/js/global/addtask.js';
 import { trackingStateManager } from 'resource:///com/odnoyko/valot/js/global/trackingStateManager.js';
+import { InputValidator } from 'resource:///com/odnoyko/valot/js/global/inputValidation.js';
 console.log("Adw & GLib importiert");
 
 // Use trackingStateManager instead of local isTracking variable
@@ -45,9 +46,13 @@ export function timeTrack(button, input, label, taskContext = {}) {
       // Get task name
       const taskName = input.get_text().trim();
       
-      // Validate task name
-      if (!taskName || taskName.length === 0) {
-        console.log("Aufgabe nicht gespeichert: leerer Name");
+      // Validate task name with comprehensive validation
+      const nameValidation = InputValidator.validateTaskName(taskName);
+      if (!nameValidation.valid) {
+        console.log("Aufgabe nicht gespeichert: Validierungsfehler -", nameValidation.error);
+        
+        // Show validation error
+        InputValidator.showValidationTooltip(input, nameValidation.error, true);
         label.set_label('00:00:00');
         return;
       }
@@ -115,15 +120,21 @@ export function timeTrack(button, input, label, taskContext = {}) {
     } else {
       // START tracking
       const taskName = input.get_text().trim();
-      if (!taskName || taskName.length === 0) {
-        console.log("Geben Sie einen Aufgabennamen ein bevor Sie die Zeitverfolgung starten");
-        console.log("DEBUG: Aktueller Eingabewert:", `"${input.get_text()}"`);
-        console.log("DEBUG: Zum Testen müssen Sie zuerst einen Aufgabennamen in das Eingabefeld eingeben");
-        // TODO: Show user notification
+      
+      // Validate task name before starting tracking
+      const startValidation = InputValidator.validateTaskName(taskName);
+      if (!startValidation.valid) {
+        console.log("Zeitverfolgung nicht gestartet: Validierungsfehler -", startValidation.error);
+        
+        // Show validation error
+        InputValidator.showValidationTooltip(input, startValidation.error, true);
         return;
       }
 
-      console.log("✅ Zeitverfolgung gestartet für Aufgabe:", taskName);
+      // Use sanitized task name
+      const safeTaskName = startValidation.sanitized;
+      
+      console.log("✅ Zeitverfolgung gestartet für Aufgabe:", safeTaskName);
       startTime = GLib.get_monotonic_time();
       startDateTime = GLib.DateTime.new_now_local();
       console.log("Zeitverfolgung gestartet");
@@ -134,16 +145,24 @@ export function timeTrack(button, input, label, taskContext = {}) {
                                   window.getCurrentProjectName() : "Default";
       const currentProjectId = (window && window.currentProjectId) ? window.currentProjectId : 1;
 
-      // Create base name for grouping
-      const baseNameMatch = taskName.match(/^(.+?)\s*(?:\(\d+\))?$/);
-      const baseName = baseNameMatch ? baseNameMatch[1].trim() : taskName;
+      // Create base name for grouping using sanitized name
+      const baseNameMatch = safeTaskName.match(/^(.+?)\s*(?:\(\d+\))?$/);
+      const baseName = baseNameMatch ? baseNameMatch[1].trim() : safeTaskName;
 
-      // Start tracking in state manager
+      // Get current client context for tracking
+      const currentClient = (window && typeof window.getCurrentClient === 'function') ? 
+                           window.getCurrentClient() : null;
+      const currentClientId = window.currentClientId || 1;
+      const currentClientName = currentClient ? currentClient.name : 'Default Client';
+      
+      // Start tracking in state manager with sanitized name and full context
       trackingStateManager.startTracking({
-        name: taskName,
+        name: safeTaskName,
         baseName: baseName,
         projectId: currentProjectId,
         projectName: currentProjectName,
+        clientId: currentClientId,
+        clientName: currentClientName,
         startTime: startDateTime.format('%Y-%m-%d %H:%M:%S')
       });
 
@@ -151,9 +170,18 @@ export function timeTrack(button, input, label, taskContext = {}) {
       
       // Add task to list immediately when tracking starts
       if (window && typeof window._addTaskToList === 'function') {
+        // Get current client context
+        const currentClient = (window && typeof window.getCurrentClient === 'function') ? 
+                             window.getCurrentClient() : null;
+        const currentClientId = window.currentClientId || 1;
+        const currentClientName = currentClient ? currentClient.name : 'Default Client';
+        
         window._addTaskToList({
-          name: taskName,
+          name: safeTaskName,
           project: currentProjectName,
+          project_id: currentProjectId,
+          client: currentClientName,
+          client_id: currentClientId,
           duration: 0,
           start: startDateTime.format('%Y-%m-%d %H:%M:%S'),
           isActive: true
@@ -165,12 +193,28 @@ export function timeTrack(button, input, label, taskContext = {}) {
     }
   });
 
-  // Optional: Validate task name on input
+  // Real-time validation while typing
   input.connect("changed", () => {
     const text = input.get_text().trim();
-    // Enable/disable button based on input
     const currentlyTracking = trackingStateManager.getCurrentTracking();
+    
+    // Enable/disable button based on input
     button.set_sensitive(text.length > 0 || currentlyTracking);
+    
+    // Real-time validation for dangerous characters
+    if (text.length > 0) {
+      const validation = InputValidator.validateTaskName(text);
+      if (!validation.valid) {
+        // Show error styling
+        InputValidator.showValidationTooltip(input, validation.error, true);
+      } else {
+        // Clear error styling when input becomes valid
+        InputValidator.showValidationTooltip(input, null, false);
+      }
+    } else {
+      // Clear error styling when input is empty
+      InputValidator.showValidationTooltip(input, null, false);
+    }
   });
 
   // Add Enter key functionality to start/stop tracking

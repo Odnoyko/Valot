@@ -48,6 +48,25 @@ entry.itemNameEntry {
 }
 .trackbutton:hover {
 }
+
+/* Project search and add button integration */
+.linked > entry {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: none;
+}
+
+.linked > button {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  background: @view_bg_color;
+  border: 1px solid @border_color;
+  border-left: none;
+}
+
+.linked > button:hover {
+  background: @view_hover_bg_color;
+}
 .trackItem {
   margin: 0px 10px 10px 10px;
   padding: 10px;
@@ -200,6 +219,38 @@ entry.itemNameEntry {
 
 #client_context_btn:active {
   background: alpha(@window_fg_color, 0.15) !important;
+}
+
+/* Input Validation Error Styling */
+entry.error {
+  border: 2px solid #e01b24;
+  background: rgba(224, 27, 36, 0.1);
+  border-radius: 6px;
+}
+
+/* Also style text entry boxes */
+.error {
+  border: 2px solid #e01b24 !important;
+  background: rgba(224, 27, 36, 0.1) !important;
+  border-radius: 6px !important;
+}
+
+/* Inline editable labels - clean appearance */
+entry.inline-editable {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  min-height: 20px;
+  outline: none;
+}
+
+entry.inline-editable:focus {
+  background: alpha(@accent_bg_color, 0.1);
+  border: 1px solid @accent_bg_color;
+  border-radius: 6px;
+  padding: 6px;
+  outline: none;
 }
 
 

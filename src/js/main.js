@@ -31,6 +31,7 @@ import Gdk from 'gi://Gdk?version=4.0';
 
 import { setupDatabase } from 'resource:///com/odnoyko/valot/js/dbinitialisation.js';
 import { ValotWindow } from 'resource:///com/odnoyko/valot/js/window.js';
+import { CompactTrackerWindow } from 'resource:///com/odnoyko/valot/js/compactTracker.js';
 
 pkg.initGettext();
 pkg.initFormat();
@@ -51,15 +52,24 @@ export const ValotApplication = GObject.registerClass(
         constructor() {
             super({
                 application_id: 'com.odnoyko.valot',
-                flags: Gio.ApplicationFlags.DEFAULT_FLAGS,
+                flags: Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
                 resource_base_path: '/com/odnoyko/valot'
             });
 
             // Initialize database connection property
             this.database_connection = null;
+            
+            // Track compact tracker mode
+            this.compactMode = false;
+            this.compactWindow = null;
 
             // Setup actions
             this._setupActions();
+            
+            // Add command line options
+            this.add_main_option('compact', 'c'.charCodeAt(0), 
+                0, 0, 
+                'Launch in compact tracker mode', null);
         }
 
         _setupActions() {
@@ -76,7 +86,7 @@ export const ValotApplication = GObject.registerClass(
                     application_name: 'valot',
                     application_icon: 'com.odnoyko.valot',
                     developer_name: 'Odnoyko',
-                    version: '0.1.2',
+                    version: '0.3.0',
                     developers: [
                         'Odnoyko'
                     ],
@@ -88,6 +98,18 @@ export const ValotApplication = GObject.registerClass(
                 aboutDialog.present(this.active_window);
             });
             this.add_action(show_about_action);
+        }
+
+        vfunc_command_line(command_line) {
+            const options = command_line.get_options_dict();
+            
+            // Check if compact mode is requested
+            if (options.contains('compact')) {
+                this.compactMode = true;
+            }
+            
+            this.activate();
+            return 0;
         }
 
         _initializeDatabase() {
@@ -118,21 +140,55 @@ export const ValotApplication = GObject.registerClass(
 
             // Initialize database
             if (!this._initializeDatabase()) {
-                // If database initialization fails, you might want to:
-                // 1. Show an error and quit
-                // 2. Continue with limited functionality
-                // 3. Retry initialization
-
-                // For now, we'll continue but log the error
                 console.error("Application starting without database connection");
             }
 
-            let {active_window} = this;
+            if (this.compactMode) {
+                // Launch only compact tracker
+                this._launchCompactTracker();
+            } else {
+                // Launch full application
+                let {active_window} = this;
 
+                if (!active_window) {
+                    active_window = new ValotWindow(this);
+                }
+
+                active_window.present();
+            }
+        }
+
+        _launchCompactTracker() {
+            if (!this.compactWindow) {
+                // Create standalone compact tracker
+                this.compactWindow = new CompactTrackerWindow(this, null);
+                
+                // Make it always on top and persistent
+                this.compactWindow.set_keep_above(true);
+                this.compactWindow.stick();
+                
+                // Set window properties for always-on-top behavior
+                this.compactWindow.set_type_hint(Gdk.WindowTypeHint.UTILITY);
+                
+                // Handle close event - minimize instead of closing
+                this.compactWindow.connect('close-request', () => {
+                    this.compactWindow.set_visible(false);
+                    return true; // Prevent actual close
+                });
+            }
+
+            this.compactWindow.present();
+        }
+
+        openMainApplication() {
+            // Method to open main app from compact tracker
+            this.compactMode = false;
+            
+            let {active_window} = this;
             if (!active_window) {
                 active_window = new ValotWindow(this);
             }
-
+            
             active_window.present();
         }
 

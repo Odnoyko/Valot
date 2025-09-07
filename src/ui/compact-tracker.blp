@@ -1,0 +1,63 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $CompactTrackerWindow: Adw.Window {
+  title: _("Compact Tracker");
+  default-width: 350;
+  default-height: 100;
+  resizable: false;
+
+  content: Box {
+    orientation: vertical;
+    spacing: 8;
+    margin-top: 12;
+    margin-bottom: 12;
+    margin-start: 12;
+    margin-end: 12;
+
+    // Top row with task input and track button
+    Box {
+      orientation: horizontal;
+      spacing: 8;
+      hexpand: true;
+
+      Entry task_input {
+        placeholder-text: _("Enter task name...");
+        hexpand: true;
+      }
+
+      Button track_button {
+        icon-name: "media-playback-start-symbolic";
+        styles ["suggested-action"]
+      }
+    }
+
+    // Time display
+    Label time_display {
+      label: "00:00:00";
+      halign: center;
+      styles ["title-2", "monospace"]
+    }
+
+    // Bottom row with context buttons
+    Box {
+      orientation: horizontal;
+      spacing: 8;
+      halign: center;
+
+      Button project_button {
+        label: "Default";
+        styles ["flat"]
+      }
+
+      Separator {
+        orientation: vertical;
+      }
+
+      Button client_button {
+        label: "Default Client";
+        styles ["flat"]
+      }
+    }
+  };
+}

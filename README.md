@@ -33,7 +33,7 @@ Requirements:
 - Meson >= 1.0.0
 - GTK4
 - libadwaita
-- libgda
+- libgda6
 - blueprint-compiler
 
 ```bash

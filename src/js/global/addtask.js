@@ -1,5 +1,6 @@
 import Gio from 'gi://Gio';
 import { executeNonSelectCommand } from 'resource:///com/odnoyko/valot/js/dbinitialisation.js';
+import { InputValidator } from 'resource:///com/odnoyko/valot/js/global/inputValidation.js';
 
 // Get connection from main app
 let dbConnection = null;
@@ -33,16 +34,58 @@ export function saveTask(name, project, startTime, endTime, spentSeconds, projec
       console.log(`Currency: ${context.currency?.symbol} ${context.currency?.code}`);
     }
     
+    // Validate task name
+    const nameValidation = InputValidator.validateTaskName(name);
+    if (!nameValidation.valid) {
+      console.error('Task name validation failed:', nameValidation.error);
+      return false;
+    }
+    
+    // Validate project name if provided
+    if (project) {
+      const projectValidation = InputValidator.validateProjectName(project);
+      if (!projectValidation.valid) {
+        console.error('Project name validation failed:', projectValidation.error);
+        return false;
+      }
+    }
+    
+    // Validate project ID
+    const projectIdValidation = InputValidator.validateNumber(projectId, 1);
+    if (!projectIdValidation.valid) {
+      console.error('Project ID validation failed:', projectIdValidation.error);
+      return false;
+    }
+    
+    // Validate spent seconds
+    const timeValidation = InputValidator.validateNumber(spentSeconds, 0);
+    if (!timeValidation.valid) {
+      console.error('Time validation failed:', timeValidation.error);
+      return false;
+    }
+    
+    // Validate client ID if provided
+    let safeClientId = 1; // Default
+    if (context?.client?.id) {
+      const clientIdValidation = InputValidator.validateNumber(context.client.id, 1);
+      if (!clientIdValidation.valid) {
+        console.error('Client ID validation failed:', clientIdValidation.error);
+        return false;
+      }
+      safeClientId = clientIdValidation.sanitized;
+    }
+    
     const conn = getDbConnection();
     
-    // Escape single quotes to prevent SQL errors
-    const escapedName = name.replace(/'/g, "''");
+    // Use sanitized values
+    const safeName = nameValidation.sanitized;
+    const safeProjectId = projectIdValidation.sanitized;
+    const safeSpentSeconds = timeValidation.sanitized;
     
-    // Direct SQL without complex parameters for now
-    const clientId = context?.client?.id || 1; // Default to client ID 1
+    // Use secure SQL with sanitized inputs
     const sql = `
       INSERT INTO Task (name, project_id, client_id, start_time, end_time, time_spent, created_at)
-      VALUES ('${escapedName}', ${projectId}, ${clientId}, '${startTime}', '${endTime}', ${spentSeconds}, CURRENT_TIMESTAMP)
+      VALUES ('${InputValidator.sanitizeForSQL(safeName)}', ${safeProjectId}, ${safeClientId}, '${startTime}', '${endTime}', ${safeSpentSeconds}, CURRENT_TIMESTAMP)
     `;
 
     console.log("SQL-Abfrage:", sql);

@@ -33,6 +33,19 @@ cc<?xml version="1.0" encoding="UTF-8"?>
     <display_length compare="ge">768</display_length>
   </recommends>
   <releases>
+    <release version="0.3.0" date="2025-09-07">
+      <description>
+        <p>Major update introducing compact tracker functionality:</p>
+        <ul>
+          <li>New compact tracker window for always-on-top time tracking</li>
+          <li>Command line support with --compact flag for system shortcuts</li>
+          <li>Auto-show compact tracker when main window is minimized</li>
+          <li>Debug sidebar button for testing compact tracker</li>
+          <li>Improved window visibility and focus management</li>
+          <li>Enhanced unified tracking widgets across all pages</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.5" date="2025-09-05">
       <description>
         <p>Latest release with improvements and bug fixes.</p>

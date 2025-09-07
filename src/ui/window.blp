@@ -87,6 +87,17 @@ template $ValotWindow: Adw.ApplicationWindow {
                   icon-name: "x-office-document-symbolic";
                 }
               }
+
+              Adw.ActionRow sidebar_compact_tracker {
+                title: _("Compact Tracker");
+                subtitle: _("Debug: Launch floating tracker");
+                activatable: true;
+
+                [prefix]
+                Image {
+                  icon-name: "view-restore-symbolic";
+                }
+              }
             }
           }
 
@@ -249,17 +260,48 @@ template $ValotWindow: Adw.ApplicationWindow {
             }
 
             [title]
-            Label {
-              label: _("Projects");
-              css-classes: ["heading"];
+            Box tracking_widget_projects {
+              spacing: 8;
+              hexpand: true;
+              hexpand-set: true;
+              margin-end: 30;
+
+              Entry task_name_projects {
+                placeholder-text: _("Task name");
+                hexpand: true;
+                hexpand-set: true;
+              }
+
+              Button project_context_btn_projects {
+                icon-name: "folder-symbolic";
+                css-classes: ["flat"];
+                tooltip-text: _("Project");
+                width-request: 36;
+                height-request: 36;
+              }
+
+              Button client_context_btn_projects {
+                icon-name: "contact-new-symbolic";
+                css-classes: ["flat"];
+                tooltip-text: _("Client");
+                width-request: 36;
+                height-request: 36;
+              }
+
+              Label actual_time_projects {
+                label: "00:00:00";
+                css-classes: ["title-4"];
+                margin-start: 8;
+              }
+
+              Button track_button_projects {
+                icon-name: "media-playback-start-symbolic";
+                css-classes: ["suggested-action", "circular"];
+                tooltip-text: _("Start tracking");
+              }
             }
 
-            [end]
-            Button add_project_btn {
-              icon-name: "list-add-symbolic";
-              tooltip-text: _("Add Project");
-              css-classes: ["flat"];
-            }
+            // Add project button moved to search area
           }
 
           content: Box {
@@ -270,13 +312,32 @@ template $ValotWindow: Adw.ApplicationWindow {
             margin-start: 12;
             margin-end: 12;
 
-            Box {
-              spacing: 12;
+            Box search_add_box {
+              spacing: 0;
               margin-bottom: 12;
+              css-classes: ["linked"];
 
               SearchEntry project_search {
                 placeholder-text: _("Search projects...");
                 hexpand: true;
+              }
+
+              Button add_project_btn {
+                tooltip-text: _("Add Project");
+                css-classes: ["flat"];
+                
+                Box {
+                  spacing: 6;
+                  halign: center;
+                  
+                  Label {
+                    label: _("Add project");
+                  }
+                  
+                  Image {
+                    icon-name: "list-add-symbolic";
+                  }
+                }
               }
             }
 
@@ -290,42 +351,7 @@ template $ValotWindow: Adw.ApplicationWindow {
               }
             }
 
-            Box project_stats_box {
-              orientation: horizontal;
-              spacing: 24;
-              homogeneous: true;
-              margin-top: 12;
-
-              Adw.PreferencesGroup {
-                title: _("Total Projects");
-
-                Adw.ActionRow total_projects_row {
-                  title: _("Active Projects");
-                  subtitle: "1";
-
-                  [prefix]
-                  Image {
-                    icon-name: "folder-symbolic";
-                    css-classes: ["accent"];
-                  }
-                }
-              }
-
-              Adw.PreferencesGroup {
-                title: _("Total Time");
-
-                Adw.ActionRow total_time_row {
-                  title: _("All Projects");
-                  subtitle: "0:00:00";
-
-                  [prefix]
-                  Image {
-                    icon-name: "clock-symbolic";
-                    css-classes: ["success"];
-                  }
-                }
-              }
-            }
+            // Project stats removed as requested
           };
         }
       }
@@ -344,17 +370,48 @@ template $ValotWindow: Adw.ApplicationWindow {
             }
 
             [title]
-            Label {
-              label: _("Clients");
-              css-classes: ["heading"];
+            Box tracking_widget_clients {
+              spacing: 8;
+              hexpand: true;
+              hexpand-set: true;
+              margin-end: 30;
+
+              Entry task_name_clients {
+                placeholder-text: _("Task name");
+                hexpand: true;
+                hexpand-set: true;
+              }
+
+              Button project_context_btn_clients {
+                icon-name: "folder-symbolic";
+                css-classes: ["flat"];
+                tooltip-text: _("Project");
+                width-request: 36;
+                height-request: 36;
+              }
+
+              Button client_context_btn_clients {
+                icon-name: "contact-new-symbolic";
+                css-classes: ["flat"];
+                tooltip-text: _("Client");
+                width-request: 36;
+                height-request: 36;
+              }
+
+              Label actual_time_clients {
+                label: "00:00:00";
+                css-classes: ["title-4"];
+                margin-start: 8;
+              }
+
+              Button track_button_clients {
+                icon-name: "media-playback-start-symbolic";
+                css-classes: ["suggested-action", "circular"];
+                tooltip-text: _("Start tracking");
+              }
             }
 
-            [end]
-            Button add_client_btn {
-              icon-name: "list-add-symbolic";
-              tooltip-text: _("Add Client");
-              css-classes: ["flat"];
-            }
+            // Add client button moved to search area
           }
 
           content: Box {
@@ -365,13 +422,32 @@ template $ValotWindow: Adw.ApplicationWindow {
             margin-start: 12;
             margin-end: 12;
 
-            Box {
-              spacing: 12;
+            Box search_add_box_clients {
+              spacing: 0;
               margin-bottom: 12;
+              css-classes: ["linked"];
 
               SearchEntry client_search {
                 placeholder-text: _("Search clients...");
                 hexpand: true;
+              }
+
+              Button add_client_btn {
+                tooltip-text: _("Add Client");
+                css-classes: ["flat"];
+                
+                Box {
+                  spacing: 6;
+                  halign: center;
+                  
+                  Label {
+                    label: _("Add client");
+                  }
+                  
+                  Image {
+                    icon-name: "list-add-symbolic";
+                  }
+                }
               }
             }
 
@@ -385,42 +461,7 @@ template $ValotWindow: Adw.ApplicationWindow {
               }
             }
 
-            Box client_stats_box {
-              orientation: horizontal;
-              spacing: 24;
-              homogeneous: true;
-              margin-top: 12;
-
-              Adw.PreferencesGroup {
-                title: _("Total Clients");
-
-                Adw.ActionRow total_clients_row {
-                  title: _("Active Clients");
-                  subtitle: "0";
-
-                  [prefix]
-                  Image {
-                    icon-name: "contact-new-symbolic";
-                    css-classes: ["accent"];
-                  }
-                }
-              }
-
-              Adw.PreferencesGroup {
-                title: _("Total Revenue");
-
-                Adw.ActionRow total_revenue_row {
-                  title: _("All Clients");
-                  subtitle: "€0.00";
-
-                  [prefix]
-                  Image {
-                    icon-name: "credit-card-symbolic";
-                    css-classes: ["success"];
-                  }
-                }
-              }
-            }
+            // Client stats removed as requested
           };
         }
       }
@@ -440,9 +481,45 @@ template $ValotWindow: Adw.ApplicationWindow {
             }
 
             [title]
-            Label {
-              label: _("Reports");
-              css-classes: ["heading"];
+            Box tracking_widget_reports {
+              spacing: 8;
+              hexpand: true;
+              hexpand-set: true;
+              margin-end: 30;
+
+              Entry task_name_reports {
+                placeholder-text: _("Task name");
+                hexpand: true;
+                hexpand-set: true;
+              }
+
+              Button project_context_btn_reports {
+                icon-name: "folder-symbolic";
+                css-classes: ["flat"];
+                tooltip-text: _("Project");
+                width-request: 36;
+                height-request: 36;
+              }
+
+              Button client_context_btn_reports {
+                icon-name: "contact-new-symbolic";
+                css-classes: ["flat"];
+                tooltip-text: _("Client");
+                width-request: 36;
+                height-request: 36;
+              }
+
+              Label actual_time_reports {
+                label: "00:00:00";
+                css-classes: ["title-4"];
+                margin-start: 8;
+              }
+
+              Button track_button_reports {
+                icon-name: "media-playback-start-symbolic";
+                css-classes: ["suggested-action", "circular"];
+                tooltip-text: _("Start tracking");
+              }
             }
 
             [end]

@@ -1,6 +1,8 @@
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
 import { trackingStateManager } from 'resource:///com/odnoyko/valot/js/global/trackingStateManager.js';
+import { InputValidator } from 'resource:///com/odnoyko/valot/js/global/inputValidation.js';
+import { executeNonSelectCommand } from 'resource:///com/odnoyko/valot/js/dbinitialisation.js';
 
 // Task rendering functionality
 export class TaskRenderer {
@@ -11,6 +13,8 @@ export class TaskRenderer {
     }
 
     renderSingleTask(task) {
+        console.log(`🔧 TaskRenderer.renderSingleTask called for task:`, task);
+        
         // Calculate cost
         const cost = (task.duration / 3600) * (task.client_rate || 0);
         const costText = cost > 0 ? ` • €${cost.toFixed(2)}` : '';
@@ -26,8 +30,9 @@ export class TaskRenderer {
             ? `<span color="${projectColor}">●</span> ${task.project} • ${task.client} • Currently tracking • ${this.timeUtils.formatDate(task.start)}`
             : `<span color="${projectColor}">●</span> ${task.project} • ${task.client} • ${this.timeUtils.formatDate(task.start)}`;
         
+        // Create row with title and subtitle
         const row = new Adw.ActionRow({
-            title: task.name,
+            title: InputValidator.escapeForGTKMarkup(task.name),
             subtitle: coloredSubtitle,
             use_markup: true
         });
@@ -51,6 +56,7 @@ export class TaskRenderer {
         // Add right-click gesture for task selection
         this._addRightClickGesture(row, task);
         
+        console.log(`🔧 Returning completed row for task: "${task.name}"`);
         return row;
     }
 
@@ -66,7 +72,7 @@ export class TaskRenderer {
         const groupColoredSubtitle = `<span color="${projectColor}">●</span> ${group.latestTask.project} • ${group.latestTask.client}${activeText}`;
         
         const groupRow = new Adw.ExpanderRow({
-            title: `${group.baseName} (${group.tasks.length} sessions)`,
+            title: `${InputValidator.escapeForGTKMarkup(group.baseName)} (${group.tasks.length} sessions)`,
             subtitle: groupColoredSubtitle,
             use_markup: true
         });
@@ -89,13 +95,13 @@ export class TaskRenderer {
         this._addStackRightClickGesture(groupRow, group);
         
         // Check if this stack is selected and add visual styling
-        if (this.parentWindow.selectedStacks && this.parentWindow.selectedStacks.has(group.baseName)) {
+        if (this.parentWindow.selectedStacks && this.parentWindow.selectedStacks.has(group.groupKey)) {
             groupRow.add_css_class('selected-task'); // Reuse same CSS class for consistency
         }
         
         // Store stack row mapping for selection management
         if (this.parentWindow.stackRowMap) {
-            this.parentWindow.stackRowMap.set(groupRow, group.baseName);
+            this.parentWindow.stackRowMap.set(groupRow, group.groupKey);
         }
         
         return groupRow;
@@ -120,8 +126,13 @@ export class TaskRenderer {
                 timeLabel.set_label(`${this.timeUtils.formatDuration(task.duration)} • €${cost.toFixed(2)}`);
             }
             
+            // Create group key for this task time label
+            const taskBaseName = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+            const baseName = taskBaseName ? taskBaseName[1].trim() : task.name;
+            const taskGroupKey = `${baseName}::${task.project}::${task.client}`;
+            
             // Register for real-time updates if task is being tracked
-            trackingStateManager.registerTimeLabel(timeLabel, task.name);
+            trackingStateManager.registerTimeLabel(timeLabel, taskGroupKey);
             
             suffixBox.append(timeLabel);
         } else if (task.isActive) {
@@ -132,7 +143,12 @@ export class TaskRenderer {
                 halign: Gtk.Align.END
             });
             
-            trackingStateManager.registerTimeLabel(activeTimeLabel, task.name);
+            // Create group key for this active task time label
+            const activeTaskBaseName = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+            const activeBaseName = activeTaskBaseName ? activeTaskBaseName[1].trim() : task.name;
+            const activeTaskGroupKey = `${activeBaseName}::${task.project}::${task.client}`;
+            
+            trackingStateManager.registerTimeLabel(activeTimeLabel, activeTaskGroupKey);
             suffixBox.append(activeTimeLabel);
         }
         
@@ -157,14 +173,19 @@ export class TaskRenderer {
             tooltip_text: 'Start Tracking' // Will be updated by state manager
         });
         
-        // Register this button with the tracking state manager
-        trackingStateManager.registerTrackingButton(trackBtn, task.name);
+        // Create group key for this individual task (same logic as stacks)
+        const taskBaseName = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+        const baseName = taskBaseName ? taskBaseName[1].trim() : task.name;
+        const taskGroupKey = `${baseName}::${task.project}::${task.client}`;
+        
+        // Register this button with the tracking state manager using group key
+        trackingStateManager.registerTrackingButton(trackBtn, taskGroupKey);
         
         trackBtn.connect('clicked', () => {
             // Check current state dynamically when clicked
-            console.log(`🎯 Individual task button clicked: "${task.name}"`);
-            const isCurrentlyThisTaskTracking = trackingStateManager.isTaskTracking(task.name);
-            console.log(`🎯 Is "${task.name}" currently tracking? ${isCurrentlyThisTaskTracking}`);
+            console.log(`🎯 Individual task button clicked: "${task.name}" (groupKey: "${taskGroupKey}")`);
+            const isCurrentlyThisTaskTracking = trackingStateManager.isTaskTracking(taskGroupKey);
+            console.log(`🎯 Is "${taskGroupKey}" currently tracking? ${isCurrentlyThisTaskTracking}`);
             if (isCurrentlyThisTaskTracking) {
                 console.log(`🎯 Stopping tracking for individual task: "${task.name}"`);
                 this.parentWindow._stopCurrentTracking();
@@ -201,7 +222,7 @@ export class TaskRenderer {
         });
         
         // Register the group time label with tracking state manager
-        trackingStateManager.registerStackTimeLabel(groupTimeLabel, group.baseName);
+        trackingStateManager.registerStackTimeLabel(groupTimeLabel, group.groupKey);
         
         groupSuffixBox.append(groupTimeLabel);
         
@@ -214,11 +235,11 @@ export class TaskRenderer {
         
         // Register this button with the tracking state manager as a stack button
         // This will automatically update the button state when tracking changes
-        trackingStateManager.registerStackButton(groupTrackBtn, group.baseName);
+        trackingStateManager.registerStackButton(groupTrackBtn, group.groupKey);
         
         groupTrackBtn.connect('clicked', () => {
             // Check current state dynamically when clicked
-            const isCurrentlyStackTracking = trackingStateManager.isStackTracking(group.baseName);
+            const isCurrentlyStackTracking = trackingStateManager.isStackTracking(group.groupKey);
             if (isCurrentlyStackTracking) {
                 // Stop the current tracking
                 this.parentWindow._stopCurrentTracking();
@@ -244,7 +265,7 @@ export class TaskRenderer {
         const costText = cost > 0 ? ` • €${cost.toFixed(2)}` : '';
         
         const taskRow = new Adw.ActionRow({
-            title: task.name,
+            title: InputValidator.escapeForGTKMarkup(task.name),
             subtitle: task.isActive 
                 ? `Currently tracking • ${this.timeUtils.formatDate(task.start)}`
                 : `${this.timeUtils.formatDate(task.start)}`
@@ -324,14 +345,19 @@ export class TaskRenderer {
             tooltip_text: 'Start Tracking' // Will be updated by state manager
         });
         
-        // Register this button with the tracking state manager
-        trackingStateManager.registerTrackingButton(trackBtn, task.name);
+        // Create group key for this individual task (same logic as stacks)
+        const taskBaseName = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+        const baseName = taskBaseName ? taskBaseName[1].trim() : task.name;
+        const taskGroupKey = `${baseName}::${task.project}::${task.client}`;
+        
+        // Register this button with the tracking state manager using group key
+        trackingStateManager.registerTrackingButton(trackBtn, taskGroupKey);
         
         trackBtn.connect('clicked', () => {
             // Check current state dynamically when clicked
-            console.log(`🎯 Individual task button clicked: "${task.name}"`);
-            const isCurrentlyThisTaskTracking = trackingStateManager.isTaskTracking(task.name);
-            console.log(`🎯 Is "${task.name}" currently tracking? ${isCurrentlyThisTaskTracking}`);
+            console.log(`🎯 Individual task button clicked: "${task.name}" (groupKey: "${taskGroupKey}")`);
+            const isCurrentlyThisTaskTracking = trackingStateManager.isTaskTracking(taskGroupKey);
+            console.log(`🎯 Is "${taskGroupKey}" currently tracking? ${isCurrentlyThisTaskTracking}`);
             if (isCurrentlyThisTaskTracking) {
                 console.log(`🎯 Stopping tracking for individual task: "${task.name}"`);
                 this.parentWindow._stopCurrentTracking();
@@ -387,22 +413,24 @@ export class TaskRenderer {
         gesture.connect('pressed', (gesture, n_press, x, y) => {
             // Find all tasks that belong to this stack from the main task list
             // This ensures we get all tasks even if the stack was never expanded
+            // Tasks must match name, project, and client to belong to the same stack
             const stackTasks = this.parentWindow.allTasks.filter(task => {
                 const taskBaseName = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
                 const baseNameToCheck = taskBaseName ? taskBaseName[1].trim() : task.name;
-                return baseNameToCheck === group.baseName;
+                const taskGroupKey = `${baseNameToCheck}::${task.project}::${task.client}`;
+                return taskGroupKey === group.groupKey;
             });
             
-            console.log(`🎯 Stack right-clicked: "${group.baseName}" (found ${stackTasks.length} tasks in allTasks)`);
+            console.log(`🎯 Stack right-clicked: "${group.groupKey}" (found ${stackTasks.length} tasks in allTasks)`);
             console.log(`🎯 Group.tasks length: ${group.tasks.length}, allTasks match: ${stackTasks.length}`);
             
             // Ensure this is treated as a stack selection event
             gesture.set_state(Gtk.EventSequenceState.CLAIMED);
             
             if (this.parentWindow.selectedStacks && this.parentWindow.selectedTasks) {
-                if (this.parentWindow.selectedStacks.has(group.baseName)) {
+                if (this.parentWindow.selectedStacks.has(group.groupKey)) {
                     // DESELECT stack and all its tasks
-                    this.parentWindow.selectedStacks.delete(group.baseName);
+                    this.parentWindow.selectedStacks.delete(group.groupKey);
                     row.remove_css_class('selected-task');
                     
                     // Remove all tasks from this stack from selectedTasks using allTasks lookup
@@ -410,11 +438,11 @@ export class TaskRenderer {
                         this.parentWindow.selectedTasks.delete(task.id);
                     });
                     
-                    console.log(`🎯 Stack deselected: "${group.baseName}". Removed ${stackTasks.length} tasks from selection`);
+                    console.log(`🎯 Stack deselected: "${group.groupKey}". Removed ${stackTasks.length} tasks from selection`);
                     console.log(`🎯 Total selected stacks: ${this.parentWindow.selectedStacks.size}, tasks: ${this.parentWindow.selectedTasks.size}`);
                 } else {
                     // SELECT stack and all its tasks
-                    this.parentWindow.selectedStacks.add(group.baseName);
+                    this.parentWindow.selectedStacks.add(group.groupKey);
                     row.add_css_class('selected-task');
                     
                     // Add all tasks from this stack to selectedTasks using allTasks lookup
@@ -422,7 +450,7 @@ export class TaskRenderer {
                         this.parentWindow.selectedTasks.add(task.id);
                     });
                     
-                    console.log(`🎯 Stack selected: "${group.baseName}". Added ${stackTasks.length} tasks to selection`);
+                    console.log(`🎯 Stack selected: "${group.groupKey}". Added ${stackTasks.length} tasks to selection`);
                     console.log(`🎯 Task IDs added:`, stackTasks.map(t => t.id));
                     console.log(`🎯 Total selected stacks: ${this.parentWindow.selectedStacks.size}, tasks: ${this.parentWindow.selectedTasks.size}`);
                 }
@@ -430,5 +458,29 @@ export class TaskRenderer {
         });
         
         row.add_controller(gesture);
+    }
+
+    // Update task name in database
+    _updateTaskName(taskId, newName) {
+        if (!this.parentWindow.dbConnection) {
+            console.error('No database connection to update task name');
+            return;
+        }
+
+        try {
+            const safeName = InputValidator.sanitizeForSQL(newName);
+            const sql = `UPDATE Task SET name = '${safeName}' WHERE id = ${taskId}`;
+            
+            executeNonSelectCommand(this.parentWindow.dbConnection, sql);
+            console.log('Task name updated successfully');
+            
+            // Refresh the task list to show updated name
+            if (typeof this.parentWindow._loadTasks === 'function') {
+                this.parentWindow._loadTasks();
+            }
+            
+        } catch (error) {
+            console.error('Error updating task name:', error);
+        }
     }
 }

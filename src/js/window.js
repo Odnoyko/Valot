@@ -27,10 +27,13 @@ import { timeTrack } from 'resource:///com/odnoyko/valot/js/global/timetracking.
 import { trackingStateManager } from 'resource:///com/odnoyko/valot/js/global/trackingStateManager.js';
 import { saveTask } from 'resource:///com/odnoyko/valot/js/global/addtask.js';
 import { setupDatabase, executeQuery, executeNonSelectCommand } from 'resource:///com/odnoyko/valot/js/dbinitialisation.js';
+import { CompactTrackerWindow } from 'resource:///com/odnoyko/valot/js/compactTracker.js';
+import { InputValidator } from 'resource:///com/odnoyko/valot/js/global/inputValidation.js';
+import { ProjectManager } from 'resource:///com/odnoyko/valot/js/projects/projectManager.js';
+import { ClientManager } from 'resource:///com/odnoyko/valot/js/clients/clientManager.js';
 import { TimeUtils } from 'resource:///com/odnoyko/valot/js/utils/timeUtils.js';
 import { SimpleChart } from 'resource:///com/odnoyko/valot/js/charts/simpleChart.js';
 import { TaskRenderer } from 'resource:///com/odnoyko/valot/js/tasks/taskRenderer.js';
-import { ProjectManager } from 'resource:///com/odnoyko/valot/js/projects/projectManager.js';
 import { PDFExporter } from 'resource:///com/odnoyko/valot/js/reports/pdfExporter.js';
 import { ReportExporter } from 'resource:///com/odnoyko/valot/js/reports/reportExporter.js';
 import { showAboutDialog } from 'resource:///com/odnoyko/valot/js/global/aboutDialog.js';
@@ -41,16 +44,18 @@ export const ValotWindow = GObject.registerClass({
     InternalChildren: [
         'split_view', 'main_content', 'sidebar_list',
         'sidebar_toggle_btn', 'show_sidebar_btn', 'show_sidebar_btn2', 'show_sidebar_btn3', 'show_sidebar_btn5', 'menu_button',
-        'tasks_page', 'projects_page', 'clients_page', 'reports_page',
+        'tasks_page', 'projects_page', 'clients_page', 'reports_page', 'sidebar_compact_tracker',
         'track_button', 'task_name', 'actual_time',
+        'task_name_projects', 'project_context_btn_projects', 'client_context_btn_projects', 'actual_time_projects', 'track_button_projects',
+        'task_name_clients', 'project_context_btn_clients', 'client_context_btn_clients', 'actual_time_clients', 'track_button_clients', 
+        'task_name_reports', 'project_context_btn_reports', 'client_context_btn_reports', 'actual_time_reports', 'track_button_reports',
         'project_context_btn', 'client_context_btn',
         'task_search', 'task_filter', 'task_list',
         'prev_page_btn', 'next_page_btn', 'page_info',
         'recent_tasks_list', 'chart_placeholder', 'period_filter', 'project_filter', 'client_filter',
         'add_project_btn', 'project_search', 'project_list',
-        'total_projects_row', 'total_time_row',
-        'tracking_widget', 'tasks_header', 'projects_header', 'clients_header', 'reports_header',
-        'add_client_btn', 'client_search', 'client_list', 'total_clients_row', 'total_revenue_row',
+        'tracking_widget', 'tracking_widget_projects', 'tracking_widget_clients', 'tracking_widget_reports', 'tasks_header', 'projects_header', 'clients_header', 'reports_header',
+        'add_client_btn', 'client_search', 'client_list',
         'weekly_time_row', 'today_time_row', 'today_tasks_row', 'week_time_row', 'week_tasks_row',
         'month_time_row', 'month_tasks_row', 'export_pdf_btn',
     ],
@@ -71,6 +76,9 @@ export const ValotWindow = GObject.registerClass({
         this.stackRowMap = new Map(); // Maps stack rows to base names
         this.allClients = [];
         this.currentClientId = 1;
+        
+        // Compact tracker window
+        this.compactTrackerWindow = null;
         
         // Initialize modular components
         this.timeUtils = TimeUtils;
@@ -138,6 +146,8 @@ export const ValotWindow = GObject.registerClass({
                 this.projectColors,
                 this.projectIcons
             );
+            
+            this.clientManager = new ClientManager(this.dbConnection);
         }
         
         this._setupNavigation();
@@ -149,6 +159,7 @@ export const ValotWindow = GObject.registerClass({
         this._setupClients();
         this._setupKeyboardShortcuts();
         this._setupContextButtons();
+        this._setupCompactTrackerButton();
         
         this._loadProjects();
         this._loadClients();
@@ -169,6 +180,40 @@ export const ValotWindow = GObject.registerClass({
         this._setupTrackingStateSubscription();
         
         this._initializeContextButtons();
+        this._setupWindowVisibilityTracking();
+    }
+    
+    _setupWindowVisibilityTracking() {
+        // Only listen for window minimize/iconify, not focus loss
+        this.connect('notify::minimized', () => {
+            if (this.minimized) {
+                this._showCompactTrackerOnHide();
+            }
+        });
+    }
+    
+    _showCompactTrackerOnHide() {
+        console.log('🔄 Main window hidden - showing compact tracker...');
+        
+        if (!this.compactTrackerWindow) {
+            this.compactTrackerWindow = new CompactTrackerWindow(this.application, this);
+            console.log('🔄 Compact tracker created for hidden window');
+        }
+        
+        this.compactTrackerWindow.present();
+        console.log('🔄 Compact tracker shown');
+    }
+    
+    _launchCompactTrackerDebug() {
+        console.log('🧪 Debug: Launching compact tracker from sidebar...');
+        
+        if (!this.debugCompactTracker) {
+            this.debugCompactTracker = new CompactTrackerWindow(this.application, this);
+            console.log('🧪 Debug compact tracker created');
+        }
+        
+        this.debugCompactTracker.present();
+        console.log('🧪 Debug compact tracker presented');
     }
     
     _setupNavigation() {
@@ -179,6 +224,7 @@ export const ValotWindow = GObject.registerClass({
                 case 1: this._showPage('projects'); break;
                 case 2: this._showPage('clients'); break;
                 case 3: this._showPage('reports'); this._updateReports(); this._updateChart(); break;
+                case 4: this._launchCompactTrackerDebug(); break; // Debug compact tracker
             }
         });
         
@@ -256,8 +302,151 @@ export const ValotWindow = GObject.registerClass({
 
     
     _setupTaskTracking() {
-        // Set up single tracking widget that moves between pages
-        timeTrack(this._track_button, this._task_name, this._actual_time);
+        // Set up multiple synchronized tracking widgets for all pages
+        this._setupUnifiedTrackingWidgets();
+    }
+    
+    _setupUnifiedTrackingWidgets() {
+        // Create array of all tracking widgets using direct references to unique IDs
+        this.trackingWidgets = [
+            {
+                container: this._tracking_widget,
+                button: this._track_button,
+                input: this._task_name,
+                timeLabel: this._actual_time,
+                projectBtn: this._project_context_btn,
+                clientBtn: this._client_context_btn
+            },
+            {
+                container: this._tracking_widget_projects,
+                button: this._track_button_projects,
+                input: this._task_name_projects,
+                timeLabel: this._actual_time_projects,
+                projectBtn: this._project_context_btn_projects,
+                clientBtn: this._client_context_btn_projects
+            },
+            {
+                container: this._tracking_widget_clients,
+                button: this._track_button_clients,
+                input: this._task_name_clients,
+                timeLabel: this._actual_time_clients,
+                projectBtn: this._project_context_btn_clients,
+                clientBtn: this._client_context_btn_clients
+            },
+            {
+                container: this._tracking_widget_reports,
+                button: this._track_button_reports,
+                input: this._task_name_reports,
+                timeLabel: this._actual_time_reports,
+                projectBtn: this._project_context_btn_reports,
+                clientBtn: this._client_context_btn_reports
+            }
+        ];
+        
+        // Initialize tracking on the first widget (master) and sync others
+        const masterWidget = this.trackingWidgets[0];
+        timeTrack(masterWidget.button, masterWidget.input, masterWidget.timeLabel);
+        
+        // Set up synchronization for all widgets
+        this._synchronizeTrackingWidgets();
+    }
+    
+    _synchronizeTrackingWidgets() {
+        // Synchronize all tracking widgets efficiently using trackingStateManager
+        this.trackingWidgets.forEach((widget, index) => {
+            // Register ALL buttons and time labels with the tracking state manager (including master)
+            trackingStateManager.registerTrackingButton(widget.button, null, widget.input);
+            trackingStateManager.registerTimeLabel(widget.timeLabel);
+            
+            // For non-master widgets, set up additional tracking functionality
+            if (index > 0) {
+                // Set up full tracking functionality for each widget
+                // This ensures each button can independently start/stop tracking
+                widget.button.connect('clicked', () => {
+                    this._handleUnifiedTrackingClick(widget, index);
+                });
+                
+                // Add Enter key support for task input
+                widget.input.connect('activate', () => {
+                    widget.button.emit('clicked');
+                });
+            }
+            
+            // Sync input changes between widgets using proper GTK4 signals
+            // This avoids interrupting the user while typing
+            
+            // Create a focus controller for this input
+            const focusController = new Gtk.EventControllerFocus();
+            widget.input.add_controller(focusController);
+            
+            focusController.connect('leave', () => {
+                this._syncAllInputsFromWidget(widget, index);
+            });
+            
+            // Create a key controller for Enter key handling
+            const keyController = new Gtk.EventControllerKey();
+            widget.input.add_controller(keyController);
+            
+            keyController.connect('key-pressed', (controller, keyval, keycode, state) => {
+                if (keyval === Gdk.KEY_Return || keyval === Gdk.KEY_KP_Enter) {
+                    this._syncAllInputsFromWidget(widget, index);
+                }
+                return false; // Continue event propagation
+            });
+            
+            // Connect project and client buttons to the same handlers
+            widget.projectBtn.connect('clicked', () => {
+                this._showProjectSelector();
+            });
+            
+            widget.clientBtn.connect('clicked', () => {
+                this._showClientSelector();
+            });
+        });
+        
+        console.log(`🎯 Unified tracking setup complete - ${this.trackingWidgets.length} widgets synchronized`);
+    }
+    
+    _syncAllInputsFromWidget(sourceWidget, sourceIndex) {
+        // Sync all other inputs from the source widget
+        const text = sourceWidget.input.get_text();
+        this.trackingWidgets.forEach((targetWidget, targetIndex) => {
+            if (targetIndex !== sourceIndex && targetWidget.input.get_text() !== text) {
+                targetWidget.input.set_text(text);
+            }
+        });
+    }
+    
+    _handleUnifiedTrackingClick(widget, widgetIndex) {
+        // Handle tracking button clicks from any widget
+        const currentTracking = trackingStateManager.getCurrentTracking();
+        
+        if (currentTracking) {
+            // Stop current tracking - use the master widget's logic
+            const masterWidget = this.trackingWidgets[0];
+            if (masterWidget && masterWidget.button) {
+                masterWidget.button.emit('clicked');
+            }
+        } else {
+            // Start new tracking - ensure task name is set in master widget first
+            const taskName = widget.input.get_text().trim();
+            if (taskName.length === 0) return;
+            
+            // Validate task name
+            const validation = InputValidator.validateTaskName(taskName);
+            if (!validation.valid) {
+                InputValidator.showValidationTooltip(widget.input, validation.error, true);
+                return;
+            }
+            
+            // Set the task name in master widget and start tracking
+            const masterWidget = this.trackingWidgets[0];
+            if (masterWidget && masterWidget.input && masterWidget.button) {
+                masterWidget.input.set_text(validation.sanitized);
+                masterWidget.button.emit('clicked');
+                console.log(`✅ Started tracking from widget ${widgetIndex}: "${validation.sanitized}"`);
+            }
+        }
     }
     
     _setupTrackingStateSubscription() {
@@ -503,26 +692,54 @@ export const ValotWindow = GObject.registerClass({
         // Use key-released instead since key-pressed is being consumed
         controller.connect('key-released', (controller, keyval, keycode, state) => {
             if (keyval === Gdk.KEY_Delete || keyval === Gdk.KEY_KP_Delete) {
-                console.log(`🗑️ Delete key RELEASED - triggering delete! Selected tasks: ${this.selectedTasks.size}, Selected stacks: ${this.selectedStacks.size}`);
-                this._deleteSelectedTasks();
+                // Check what is selected and delete accordingly
+                const selectedTasks = this.selectedTasks ? this.selectedTasks.size : 0;
+                const selectedStacks = this.selectedStacks ? this.selectedStacks.size : 0;
+                const selectedProjects = this.selectedProjects ? this.selectedProjects.size : 0;
+                const selectedClients = this.selectedClients ? this.selectedClients.size : 0;
+                
+                console.log(`🗑️ Delete key RELEASED - Selected tasks: ${selectedTasks}, Selected stacks: ${selectedStacks}, Selected projects: ${selectedProjects}, Selected clients: ${selectedClients}`);
+                
+                if (selectedClients > 0) {
+                    console.log(`🗑️ Deleting ${selectedClients} selected clients`);
+                    this._deleteSelectedClients();
+                } else if (selectedProjects > 0) {
+                    console.log(`🗑️ Deleting ${selectedProjects} selected projects`);
+                    this._deleteSelectedProjects();
+                } else if (selectedTasks > 0 || selectedStacks > 0) {
+                    console.log(`🗑️ Deleting ${selectedTasks} tasks and ${selectedStacks} stacks`);
+                    this._deleteSelectedTasks();
+                } else {
+                    console.log('🗑️ Nothing selected to delete');
+                }
+                
                 return Gdk.EVENT_STOP;
             }
             return Gdk.EVENT_PROPAGATE;
         });
+
         
         console.log('🎯 Keyboard shortcuts setup complete');
     }
     
+    _setupCompactTrackerButton() {
+        // This function sets up any compact tracker specific UI elements
+        // Currently the compact tracker is opened via Ctrl+T shortcut or menu
+        console.log('🎯 Compact tracker button setup complete');
+    }
+    
     _setupContextButtons() {
-        // Project context button (single moveable widget)
+        // Project context button (main/sidebar)
         this._project_context_btn.connect('clicked', () => {
             this._showProjectSelector();
         });
         
-        // Client context button (single moveable widget)
+        // Client context button (main/sidebar)  
         this._client_context_btn.connect('clicked', () => {
             this._showClientSelector();
         });
+        
+        // Note: Tracking widget context buttons are set up in _synchronizeTrackingWidgets()
     }
     
     _setupMenuButton() {
@@ -1132,8 +1349,12 @@ export const ValotWindow = GObject.registerClass({
             const baseNameMatch = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
             const baseName = baseNameMatch ? baseNameMatch[1].trim() : task.name;
             
-            if (!groups.has(baseName)) {
-                groups.set(baseName, {
+            // Create unique key combining base name, project, and client for proper stacking
+            const groupKey = `${baseName}::${task.project}::${task.client}`;
+            
+            if (!groups.has(groupKey)) {
+                groups.set(groupKey, {
+                    groupKey: groupKey,
                     baseName: baseName,
                     tasks: [],
                     totalDuration: 0,
@@ -1143,7 +1364,7 @@ export const ValotWindow = GObject.registerClass({
                 });
             }
             
-            const group = groups.get(baseName);
+            const group = groups.get(groupKey);
             group.tasks.push(task);
             group.totalDuration += task.duration || 0;
             group.totalCost += (task.duration / 3600) * (task.client_rate || 0);
@@ -1192,7 +1413,7 @@ export const ValotWindow = GObject.registerClass({
             : `<span color="${projectColor}">●</span> ${task.project} • ${task.client} • ${this._formatDate(task.start)}`;
         
         const row = new Adw.ActionRow({
-            title: task.name,
+            title: InputValidator.escapeForGTKMarkup(task.name),
             subtitle: coloredSubtitle,
             use_markup: true
         });
@@ -1301,7 +1522,7 @@ export const ValotWindow = GObject.registerClass({
         const groupColoredSubtitle = `<span color="${projectColor}">●</span> ${group.latestTask.project} • ${group.latestTask.client}${activeText}`;
         
         const groupRow = new Adw.ExpanderRow({
-            title: `${group.baseName} (${group.tasks.length} sessions)`,
+            title: `${InputValidator.escapeForGTKMarkup(group.baseName)} (${group.tasks.length} sessions)`,
             subtitle: groupColoredSubtitle,
             use_markup: true
         });
@@ -1550,7 +1771,7 @@ export const ValotWindow = GObject.registerClass({
                 const recentColoredSubtitle = `<span color="${projectColor}">●</span> ${task.project} • ${this._formatDate(task.start)}`;
                 
                 const row = new Adw.ActionRow({
-                    title: task.name,
+                    title: InputValidator.escapeForGTKMarkup(task.name),
                     subtitle: recentColoredSubtitle,
                     use_markup: true
                 });
@@ -1883,112 +2104,384 @@ export const ValotWindow = GObject.registerClass({
     }
     
     _updateProjectsList() {
-        // Clear existing projects
-        while (this._project_list.get_first_child()) {
-            this._project_list.remove(this._project_list.get_first_child());
+        // Use the filter function to display all projects (empty search = show all)
+        this._filterProjects();
+    }
+    
+    _getProjectIconColor(project) {
+        const iconColorMode = project.icon_color_mode || 'auto';
+        
+        if (iconColorMode === 'dark') {
+            return 'black';
+        } else if (iconColorMode === 'light') {
+            return 'white';
+        } else {
+            // Auto mode - determine from color brightness
+            const colorInfo = this.projectColors.find(c => c.value === project.color);
+            if (colorInfo) {
+                return colorInfo.textColor;
+            } else {
+                // Calculate brightness for custom colors
+                return this._calculateColorBrightness(project.color) > 128 ? 'black' : 'white';
+            }
+        }
+    }
+    
+    _calculateColorBrightness(hexColor) {
+        // Remove # if present
+        const hex = hexColor.replace('#', '');
+        
+        // Parse RGB values
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);  
+        const b = parseInt(hex.substr(4, 2), 16);
+        
+        // Calculate brightness using the luminance formula
+        return (r * 299 + g * 587 + b * 114) / 1000;
+    }
+    
+    _handleProjectNameChange(projectId, newName) {
+        // Validate and update project name
+        const validation = InputValidator.validateProjectName(newName);
+        if (!validation.valid) {
+            console.warn('Invalid project name:', validation.error);
+            this._loadProjects(); // Reload to revert changes
+            return;
         }
         
-        this.allProjects.forEach(project => {
-            const row = new Adw.ActionRow({
-                title: project.name,
-                subtitle: `Total time: ${this._formatDuration(project.totalTime)}`
+        try {
+            const sql = `UPDATE Project SET name = '${InputValidator.sanitizeForSQL(validation.sanitized)}' WHERE id = ${projectId}`;
+            executeNonSelectCommand(this.dbConnection, sql);
+            console.log(`Project name updated: ID ${projectId} -> "${validation.sanitized}"`);
+            
+            // Update in memory and refresh related UI
+            const project = this.allProjects.find(p => p.id === projectId);
+            if (project) {
+                project.name = validation.sanitized;
+            }
+            
+            // Refresh context buttons if this is the current project
+            if (this.currentProjectId === projectId) {
+                this._updateProjectButtonsDisplay(validation.sanitized);
+            }
+            
+        } catch (error) {
+            console.error('Error updating project name:', error);
+            this._loadProjects(); // Reload to revert changes
+        }
+    }
+    
+    _addProjectSelectionHandlers(row, project) {
+        // ONLY right-click gesture for selection - NO OTHER TRIGGERS
+        const rightClickGesture = new Gtk.GestureClick({
+            button: 3 // ONLY Right click
+        });
+        
+        rightClickGesture.connect('pressed', () => {
+            console.log(`Right-click detected on project: ${project.name}`);
+            this._toggleProjectSelection(project.id, row);
+        });
+        
+        row.add_controller(rightClickGesture);
+        
+        // Explicitly prevent left-click from doing anything
+        const leftClickGesture = new Gtk.GestureClick({
+            button: 1 // Left click
+        });
+        
+        leftClickGesture.connect('pressed', () => {
+            console.log(`Left-click blocked on project: ${project.name} - only right-click selects`);
+            // Do nothing - selection ONLY with right-click
+        });
+        
+        row.add_controller(leftClickGesture);
+    }
+    
+    _toggleProjectSelection(projectId, row) {
+        if (projectId === 1) {
+            // Can't select Default project
+            console.log('Cannot select Default project');
+            return;
+        }
+        
+        if (this.selectedProjects.has(projectId)) {
+            // Deselect - multiple selection support
+            this.selectedProjects.delete(projectId);
+            row.remove_css_class('selected-task');
+            console.log(`Project deselected: ${projectId}. Total selected: ${this.selectedProjects.size}`);
+        } else {
+            // Select - multiple selection support
+            this.selectedProjects.add(projectId);
+            row.add_css_class('selected-task');
+            console.log(`Project selected: ${projectId}. Total selected: ${this.selectedProjects.size}`);
+        }
+        
+        this._updateProjectSelectionUI();
+    }
+    
+    _updateProjectSelectionUI() {
+        const selectedCount = this.selectedProjects.size;
+        
+        // Footer removed from UI - just log selection count
+        if (selectedCount > 0) {
+            console.log(`${selectedCount} projects selected`);
+        }
+    }
+    
+    _deleteSelectedProjects() {
+        if (this.selectedProjects.size === 0) return;
+        
+        const dialog = new Adw.AlertDialog({
+            heading: 'Delete Selected Projects',
+            body: `Are you sure you want to delete ${this.selectedProjects.size} projects? All associated tasks will be moved to the Default project.`
+        });
+        
+        dialog.add_response('cancel', 'Cancel');
+        dialog.add_response('delete', 'Delete');
+        dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
+        
+        dialog.connect('response', (dialog, response) => {
+            if (response === 'delete') {
+                // Delete all selected projects
+                this.selectedProjects.forEach(projectId => {
+                    this._confirmDeleteProject(projectId);
+                });
+                
+                // Clear selection
+                this.selectedProjects.clear();
+                this._updateProjectSelectionUI();
+                this._loadProjects(); // Refresh list
+            }
+        });
+        
+        dialog.present(this);
+    }
+    
+    _showProjectAppearanceDialog(projectId) {
+        const project = this.allProjects.find(p => p.id === projectId);
+        if (!project) return;
+        
+        const dialog = new Adw.Window({
+            title: `Edit ${project.name} Appearance`,
+            width_request: 500,
+            height_request: 600,
+            modal: true,
+            transient_for: this
+        });
+        
+        const toolbarView = new Adw.ToolbarView();
+        
+        // Header bar
+        const headerBar = new Adw.HeaderBar();
+        
+        const cancelBtn = new Gtk.Button({
+            label: 'Cancel'
+        });
+        cancelBtn.connect('clicked', () => {
+            dialog.close();
+        });
+        headerBar.pack_start(cancelBtn);
+        
+        const saveBtn = new Gtk.Button({
+            label: 'Save',
+            css_classes: ['suggested-action']
+        });
+        headerBar.pack_end(saveBtn);
+        
+        toolbarView.add_top_bar(headerBar);
+        
+        // Content
+        const scrolled = new Gtk.ScrolledWindow({
+            vexpand: true
+        });
+        
+        const content = new Adw.PreferencesPage();
+        
+        // Color selection group
+        const colorGroup = new Adw.PreferencesGroup({
+            title: 'Color',
+            description: 'Choose a color for this project'
+        });
+        
+        // Color grid
+        const colorFlow = new Gtk.FlowBox({
+            max_children_per_line: 6,
+            min_children_per_line: 3,
+            column_spacing: 8,
+            row_spacing: 8,
+            margin_top: 12,
+            margin_bottom: 12,
+            margin_start: 12,
+            margin_end: 12,
+            selection_mode: Gtk.SelectionMode.SINGLE
+        });
+        
+        let selectedColor = project.color;
+        
+        // Add predefined colors
+        this.projectColors.forEach(color => {
+            const colorBox = new Gtk.Box({
+                width_request: 48,
+                height_request: 48,
+                css_classes: ['color-selector'],
+                halign: Gtk.Align.CENTER,
+                valign: Gtk.Align.CENTER
             });
             
-            // Add project icon with color using Grid with homogeneous centering
-            const iconBox = new Gtk.Grid({
-                width_request: 32,
-                height_request: 32,
+            const provider = new Gtk.CssProvider();
+            provider.load_from_string(
+                `.color-selector { 
+                    background-color: ${color.value}; 
+                    border-radius: 24px; 
+                    border: 3px solid transparent;
+                }
+                .color-selector.selected { 
+                    border-color: @accent_color;
+                }`
+            );
+            colorBox.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+            
+            if (color.value === project.color) {
+                colorBox.add_css_class('selected');
+            }
+            
+            const gesture = new Gtk.GestureClick();
+            gesture.connect('pressed', () => {
+                // Remove selected class from all colors - GTK4 compatible
+                let child = colorFlow.get_first_child();
+                while (child) {
+                    const colorWidget = child.get_first_child();
+                    if (colorWidget) {
+                        colorWidget.remove_css_class('selected');
+                    }
+                    child = child.get_next_sibling();
+                }
+                
+                colorBox.add_css_class('selected');
+                selectedColor = color.value;
+            });
+            
+            colorBox.add_controller(gesture);
+            colorFlow.append(colorBox);
+        });
+        
+        const colorRow = new Adw.ActionRow();
+        colorRow.set_child(colorFlow);
+        colorGroup.add(colorRow);
+        
+        // Icon selection group
+        const iconGroup = new Adw.PreferencesGroup({
+            title: 'Icon',
+            description: 'Choose an icon for this project'
+        });
+        
+        // Icon grid
+        const iconFlow = new Gtk.FlowBox({
+            max_children_per_line: 8,
+            min_children_per_line: 4,
+            column_spacing: 8,
+            row_spacing: 8,
+            margin_top: 12,
+            margin_bottom: 12,
+            margin_start: 12,
+            margin_end: 12,
+            selection_mode: Gtk.SelectionMode.SINGLE
+        });
+        
+        let selectedIcon = project.icon;
+        
+        // Add predefined icons
+        this.projectIcons.forEach(iconName => {
+            const iconBox = new Gtk.Box({
+                width_request: 40,
+                height_request: 40,
+                css_classes: ['icon-selector'],
                 halign: Gtk.Align.CENTER,
-                valign: Gtk.Align.CENTER,
-                css_classes: ['project-icon-container'],
-                column_homogeneous: true,
-                row_homogeneous: true
+                valign: Gtk.Align.CENTER
             });
             
             const icon = new Gtk.Image({
-                icon_name: project.icon || 'folder-symbolic',
-                pixel_size: 16
+                icon_name: iconName,
+                pixel_size: 24
             });
             
-            // Determine icon color based on icon_color_mode setting
-            let iconColor = 'black'; // Default
-            
-            const iconColorMode = project.icon_color_mode || 'auto';
-            
-            if (iconColorMode === 'dark') {
-                // Force dark/black icons
-                iconColor = 'black';
-                console.log(`Project ${project.name}: Using dark icons (manual override)`);
-            } else if (iconColorMode === 'light') {
-                // Force light/white icons
-                iconColor = 'white';
-                console.log(`Project ${project.name}: Using light icons (manual override)`);
-            } else {
-                // Auto mode - use color detection
-                const colorInfo = this.projectColors.find(c => c.value === project.color);
-                if (colorInfo) {
-                    iconColor = colorInfo.textColor;
-                    console.log(`Project ${project.name}: Auto mode - Color ${project.color}, Icon color: ${iconColor}`);
-                } else {
-                    // For colors not in predefined list, determine based on color brightness
-                    console.log(`Unknown color ${project.color} for project ${project.name}, using brightness detection`);
-                    // If color starts with dark values, use white icons
-                    if (project.color && (project.color.startsWith('#1') || project.color.startsWith('#2') || 
-                        project.color.startsWith('#3') || project.color.startsWith('#4') || 
-                        project.color.startsWith('#5') || project.color.toLowerCase().includes('dark'))) {
-                        iconColor = 'white';
-                    }
-                }
-            }
-            
-            // Apply color styling
-            const css = `
-                .project-icon-container {
-                    background: ${project.color};
-                    border-radius: 16px;
-                    border: 1px solid rgba(0,0,0,0.15);
-                    padding: 0;
-                    margin: 0;
-                }
-                .project-icon-container image {
-                    color: ${iconColor};
-                    ${iconColor === 'white' ? '-gtk-icon-shadow: 1px 1px 1px rgba(0,0,0,0.3);' : ''}
-                }
-            `;
+            iconBox.append(icon);
             
             const provider = new Gtk.CssProvider();
-            provider.load_from_data(css, -1);
+            provider.load_from_string(
+                `.icon-selector { 
+                    background-color: alpha(@accent_color, 0.1);
+                    border-radius: 8px; 
+                    border: 2px solid transparent;
+                }
+                .icon-selector.selected { 
+                    border-color: @accent_color;
+                    background-color: @accent_color;
+                }
+                .icon-selector.selected image {
+                    color: white;
+                }`
+            );
             iconBox.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
             
-            // Attach icon to grid at position (0,0) with perfect centering
-            iconBox.attach(icon, 0, 0, 1, 1);
-            row.add_prefix(iconBox);
+            if (iconName === project.icon) {
+                iconBox.add_css_class('selected');
+            }
             
-            // Add edit/delete buttons
-            const editBtn = new Gtk.Button({
-                icon_name: 'document-edit-symbolic',
-                css_classes: ['flat'],
-                tooltip_text: 'Edit Project'
+            const gesture = new Gtk.GestureClick();
+            gesture.connect('pressed', () => {
+                // Remove selected class from all icons - GTK4 compatible
+                let child = iconFlow.get_first_child();
+                while (child) {
+                    const iconWidget = child.get_first_child();
+                    if (iconWidget) {
+                        iconWidget.remove_css_class('selected');
+                    }
+                    child = child.get_next_sibling();
+                }
+                
+                iconBox.add_css_class('selected');
+                selectedIcon = iconName;
             });
-            editBtn.connect('clicked', () => this._editProject(project.id));
             
-            const deleteBtn = new Gtk.Button({
-                icon_name: 'user-trash-symbolic', 
-                css_classes: ['flat', 'destructive-action'],
-                tooltip_text: 'Delete Project',
-                sensitive: project.id !== 1 // Can't delete default project
-            });
-            deleteBtn.connect('clicked', () => this._deleteProject(project.id));
-            
-            const buttonBox = new Gtk.Box({
-                spacing: 6
-            });
-            buttonBox.append(editBtn);
-            buttonBox.append(deleteBtn);
-            row.add_suffix(buttonBox);
-            
-            this._project_list.append(row);
+            iconBox.add_controller(gesture);
+            iconFlow.append(iconBox);
         });
+        
+        const iconRow = new Adw.ActionRow();
+        iconRow.set_child(iconFlow);
+        iconGroup.add(iconRow);
+        
+        content.add(colorGroup);
+        content.add(iconGroup);
+        
+        scrolled.set_child(content);
+        toolbarView.set_content(scrolled);
+        dialog.set_content(toolbarView);
+        
+        // Save button action
+        saveBtn.connect('clicked', () => {
+            try {
+                const sql = `UPDATE Project SET color = '${selectedColor}', icon = '${selectedIcon}' WHERE id = ${projectId}`;
+                executeNonSelectCommand(this.dbConnection, sql);
+                
+                // Update in memory
+                project.color = selectedColor;
+                project.icon = selectedIcon;
+                
+                // Refresh UI
+                this._updateProjectsList();
+                this._updateProjectButtonsDisplay(project.name);
+                
+                console.log(`Project appearance updated: ${project.name} -> Color: ${selectedColor}, Icon: ${selectedIcon}`);
+                dialog.close();
+                
+            } catch (error) {
+                console.error('Error updating project appearance:', error);
+            }
+        });
+        
+        dialog.present();
     }
     
     _updateProjectSelector() {
@@ -2001,11 +2494,11 @@ export const ValotWindow = GObject.registerClass({
     }
     
     _updateProjectStats() {
+        // Project stats UI removed - stats calculation still available in memory
         const totalProjects = this.allProjects.length;
         const totalTime = this.allProjects.reduce((sum, p) => sum + p.totalTime, 0);
         
-        this._total_projects_row.set_subtitle(totalProjects.toString());
-        this._total_time_row.set_subtitle(this._formatDuration(totalTime));
+        console.log(`Project stats: ${totalProjects} projects, ${this._formatDuration(totalTime)} total time`);
     }
     
     _addTaskToList(task) {
@@ -2042,9 +2535,11 @@ export const ValotWindow = GObject.registerClass({
             margin_end: 12
         });
         
-        // Project name
+        // Project name - pre-filled with search text
+        const searchText = this._project_search.get_text().trim();
         const nameEntry = new Gtk.Entry({
-            placeholder_text: 'Project name'
+            placeholder_text: 'Project name',
+            text: searchText // Pre-fill with search input
         });
         form.append(new Gtk.Label({label: 'Project Name:', halign: Gtk.Align.START}));
         form.append(nameEntry);
@@ -2133,9 +2628,17 @@ export const ValotWindow = GObject.registerClass({
             console.log('Dialog response:', response);
             if (response === 'create') {
                 const name = nameEntry.get_text().trim();
+                
+                // Validate project name
+                const nameValidation = InputValidator.validateProjectName(name);
+                if (!nameValidation.valid) {
+                    InputValidator.showValidationTooltip(nameEntry, nameValidation.error, true);
+                    return; // Don't close dialog
+                }
+                
                 console.log('Creating project:', name, selectedColor.value, selectedIcon);
-                if (name) {
-                    this._createProject(name, selectedColor.value, selectedIcon);
+                if (nameValidation.sanitized) {
+                    this._createProject(nameValidation.sanitized, selectedColor.value, selectedIcon);
                 }
             }
             dialog.close();
@@ -2158,6 +2661,10 @@ export const ValotWindow = GObject.registerClass({
             const sql = `INSERT INTO Project (name, color, icon, total_time) VALUES ('${name.replace(/'/g, "''")}', '${color}', '${icon}', 0)`;
             const result = executeNonSelectCommand(this.dbConnection, sql);
             console.log('Project created:', name, color, icon);
+            
+            // Clear search input after successful creation
+            this._project_search.set_text('');
+            
             this._loadProjects(); // Refresh the list
         } catch (error) {
             console.error('Error creating project:', error);
@@ -2371,9 +2878,17 @@ export const ValotWindow = GObject.registerClass({
             console.log('Edit dialog response:', response);
             if (response === 'save') {
                 const name = nameEntry.get_text().trim();
+                
+                // Validate project name
+                const nameValidation = InputValidator.validateProjectName(name);
+                if (!nameValidation.valid) {
+                    InputValidator.showValidationTooltip(nameEntry, nameValidation.error, true);
+                    return; // Don't close dialog
+                }
+                
                 console.log('Updating project:', name, selectedColor.value, selectedIcon);
-                if (name) {
-                    this._updateProject(projectId, name, selectedColor.value, selectedIcon);
+                if (nameValidation.sanitized) {
+                    this._updateProject(projectId, nameValidation.sanitized, selectedColor.value, selectedIcon);
                 }
             }
             dialog.close();
@@ -2444,8 +2959,147 @@ export const ValotWindow = GObject.registerClass({
     }
     
     _filterProjects() {
-        // TODO: Implement project filtering
-        console.log('Filter projects:', this._project_search.get_text());
+        const searchText = this._project_search.get_text().toLowerCase().trim();
+        console.log('Filter projects:', searchText);
+        
+        // Clear existing projects
+        while (this._project_list.get_first_child()) {
+            this._project_list.remove(this._project_list.get_first_child());
+        }
+        
+        // Initialize selected projects set if not exists
+        if (!this.selectedProjects) {
+            this.selectedProjects = new Set();
+        }
+        
+        // Filter projects based on search text
+        const filteredProjects = searchText.length === 0 
+            ? this.allProjects 
+            : this.allProjects.filter(project => 
+                project.name.toLowerCase().includes(searchText)
+            );
+        
+        console.log(`Showing ${filteredProjects.length} of ${this.allProjects.length} projects`);
+        
+        // Render filtered projects using the same logic as _updateProjectsList
+        filteredProjects.forEach(project => {
+            // Create ListBoxRow with custom content (same as _updateProjectsList)
+            const row = new Gtk.ListBoxRow({
+                activatable: false,
+                selectable: false
+            });
+            
+            // Create main horizontal box
+            const mainBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 12,
+                margin_start: 16,
+                margin_end: 16,
+                margin_top: 12,
+                margin_bottom: 12,
+                hexpand: true
+            });
+            
+            // Add prefix with clickable icon
+            const iconButton = new Gtk.Button({
+                width_request: 32,
+                height_request: 32,
+                halign: Gtk.Align.CENTER,
+                valign: Gtk.Align.CENTER,
+                css_classes: ['project-icon-button', 'flat'],
+                tooltip_text: 'Click to change color and icon'
+            });
+            
+            const icon = new Gtk.Image({
+                icon_name: project.icon || 'folder-symbolic',
+                pixel_size: 16
+            });
+            
+            // Determine icon color and apply styling
+            let iconColor = this._getProjectIconColor(project);
+            
+            // Apply background color and icon color
+            const provider = new Gtk.CssProvider();
+            provider.load_from_string(
+                `.project-icon-button { 
+                    background-color: ${project.color}; 
+                    border-radius: 6px; 
+                    color: ${iconColor}; 
+                    min-width: 32px;
+                    min-height: 32px;
+                }
+                .project-icon-button:hover {
+                    filter: brightness(1.1);
+                }`
+            );
+            iconButton.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+            
+            iconButton.set_child(icon);
+            
+            // Click to edit appearance
+            iconButton.connect('clicked', () => {
+                this._showProjectAppearanceDialog(project.id);
+            });
+            
+            // Editable project name
+            const nameLabel = new Gtk.EditableLabel({
+                text: project.name,
+                hexpand: true,
+                valign: Gtk.Align.CENTER
+            });
+            
+            // Handle name changes
+            nameLabel.connect('changed', () => {
+                const newName = nameLabel.get_text().trim();
+                if (newName && newName !== project.name) {
+                    this._handleProjectNameChange(project.id, newName);
+                }
+            });
+            
+            // Add right-click to editable label for selection (no context menu)
+            const labelRightClick = new Gtk.GestureClick({
+                button: 3, // Right click
+                propagation_phase: Gtk.PropagationPhase.CAPTURE
+            });
+            
+            labelRightClick.connect('pressed', (gesture, n_press, x, y) => {
+                console.log(`Right-click on label detected for project: ${project.name}`);
+                this._toggleProjectSelection(project.id, row);
+                
+                // Prevent context menu from appearing
+                gesture.set_state(Gtk.EventSequenceState.CLAIMED);
+                return Gdk.EVENT_STOP;
+            });
+            
+            nameLabel.add_controller(labelRightClick);
+            
+            // Time display
+            const timeLabel = new Gtk.Label({
+                label: this._formatDuration(project.totalTime),
+                css_classes: ['time-display', 'monospace', 'title-4'],
+                valign: Gtk.Align.CENTER,
+                halign: Gtk.Align.END
+            });
+            
+            // Assemble the row
+            mainBox.append(iconButton);
+            mainBox.append(nameLabel);
+            mainBox.append(timeLabel);
+            row.set_child(mainBox);
+            
+            // Add selection logic (right-click to select/deselect)
+            this._addProjectSelectionHandlers(row, project);
+            
+            // Apply selection styling if selected
+            if (this.selectedProjects.has(project.id)) {
+                row.add_css_class('selected-task'); // Use same class as tasks
+            }
+            
+            this._project_list.append(row);
+        });
+        
+        // Update selection UI
+        this._updateProjectSelectionUI();
     }
     
     _selectProject(projectId) {
@@ -2618,6 +3272,21 @@ export const ValotWindow = GObject.registerClass({
             placeholder_text: 'Task name',
             text: task.name
         });
+        
+        // Add real-time validation while typing
+        nameEntry.connect('changed', () => {
+            const currentText = nameEntry.get_text();
+            const validation = InputValidator.validateTaskName(currentText);
+            
+            if (currentText.length > 0 && !validation.valid) {
+                // Show error styling
+                InputValidator.showValidationTooltip(nameEntry, validation.error, true);
+            } else {
+                // Clear error styling when input is empty or valid
+                InputValidator.showValidationTooltip(nameEntry, null, false);
+            }
+        });
+        
         form.append(new Gtk.Label({label: 'Task Name:', halign: Gtk.Align.START}));
         form.append(nameEntry);
         
@@ -2712,10 +3381,17 @@ export const ValotWindow = GObject.registerClass({
                 const startTime = startTimeEntry.get_text().trim();
                 const endTime = endTimeEntry.get_text().trim();
                 
-                if (name && projectIndex >= 0 && clientIndex >= 0) {
+                // Validate task name
+                const nameValidation = InputValidator.validateTaskName(name);
+                if (!nameValidation.valid) {
+                    InputValidator.showValidationTooltip(nameEntry, nameValidation.error, true);
+                    return;
+                }
+                
+                if (nameValidation.sanitized && projectIndex >= 0 && clientIndex >= 0) {
                     const project = this.allProjects[projectIndex];
                     const client = this.allClients[clientIndex];
-                    this._updateTask(taskId, name, project.id, client.id, startTime, endTime);
+                    this._updateTask(taskId, nameValidation.sanitized, project.id, client.id, startTime, endTime);
                 }
             }
             dialog.close();
@@ -2731,8 +3407,39 @@ export const ValotWindow = GObject.registerClass({
             return;
         }
         
+        // Validate all inputs
+        const nameValidation = InputValidator.validateTaskName(name);
+        if (!nameValidation.valid) {
+            console.error('Task name validation failed in _updateTask:', nameValidation.error);
+            return;
+        }
+        
+        const idValidation = InputValidator.validateNumber(taskId, 1);
+        if (!idValidation.valid) {
+            console.error('Task ID validation failed:', idValidation.error);
+            return;
+        }
+        
+        const projectIdValidation = InputValidator.validateNumber(projectId, 1);
+        if (!projectIdValidation.valid) {
+            console.error('Project ID validation failed:', projectIdValidation.error);
+            return;
+        }
+        
+        const clientIdValidation = InputValidator.validateNumber(clientId, 1);
+        if (!clientIdValidation.valid) {
+            console.error('Client ID validation failed:', clientIdValidation.error);
+            return;
+        }
+        
         try {
-            let sql = `UPDATE Task SET name = '${name.replace(/'/g, "''")}', project_id = ${projectId}, client_id = ${clientId}`;
+            // Use sanitized and validated values
+            const safeName = nameValidation.sanitized;
+            const safeTaskId = idValidation.sanitized;
+            const safeProjectId = projectIdValidation.sanitized;
+            const safeClientId = clientIdValidation.sanitized;
+            
+            let sql = `UPDATE Task SET name = '${InputValidator.sanitizeForSQL(safeName)}', project_id = ${safeProjectId}, client_id = ${safeClientId}`;
             
             let newDuration = null;
             
@@ -2760,7 +3467,7 @@ export const ValotWindow = GObject.registerClass({
                 sql += `, end_time = '${isoEndTime}'`;
             }
             
-            sql += ` WHERE id = ${taskId}`;
+            sql += ` WHERE id = ${safeTaskId}`;
             
             executeNonSelectCommand(this.dbConnection, sql);
             console.log('Task updated:', name, projectId, clientId, startTime, endTime);
@@ -2812,9 +3519,9 @@ export const ValotWindow = GObject.registerClass({
         // If task is completed, use the same name to create a new session
         
         // Set task name in all header input fields 
-        const taskInputs = [
-            this._task_name
-        ];
+        const taskInputs = this.trackingWidgets ? 
+            this.trackingWidgets.map(w => w.input) : 
+            [];
         
         taskInputs.forEach(input => {
             if (input) {
@@ -2823,9 +3530,9 @@ export const ValotWindow = GObject.registerClass({
         });
         
         // Start tracking on the main tasks page
-        const trackButton = this._track_button;
+        const trackButton = this.trackingWidgets && this.trackingWidgets[0] ? this.trackingWidgets[0].button : null;
         if (trackButton) {
-            // Simulate clicking the track button to start tracking
+            // Simulate clicking the master track button to start tracking
             trackButton.emit('clicked');
             console.log(`✅ Started tracking: "${newTaskName}" with project: ${task.project}, client: ${task.client}`);
         }
@@ -2904,9 +3611,9 @@ export const ValotWindow = GObject.registerClass({
             }
             
             // Also trigger the UI buttons to stop (for backward compatibility)
-            const trackingButtons = [
-                this._track_button
-            ];
+            const trackingButtons = this.trackingWidgets ? 
+                this.trackingWidgets.map(w => w.button) : 
+                [];
             
             trackingButtons.forEach(btn => {
                 if (btn && btn.get_icon_name() === 'media-playback-stop-symbolic') {
@@ -3031,9 +3738,10 @@ export const ValotWindow = GObject.registerClass({
         const project = this.allProjects.find(p => p.name === projectName);
         if (!project) return;
         
-        const projectButtons = [
-            this._project_context_btn
-        ];
+        // Update all project buttons across all tracking widgets
+        const projectButtons = this.trackingWidgets ? 
+            this.trackingWidgets.map(w => w.projectBtn).concat([this._project_context_btn]) : 
+            [this._project_context_btn];
         
         // Determine icon color based on icon_color_mode setting
         let iconColor = 'black'; // Default
@@ -3100,6 +3808,11 @@ export const ValotWindow = GObject.registerClass({
                 btn.add_css_class('project-context-active');
             }
         });
+        
+        // Update compact tracker if it exists
+        if (this.compactTrackerWindow) {
+            this.compactTrackerWindow.updateContext();
+        }
     }
     
     _lightenColor(color, percent) {
@@ -3116,9 +3829,10 @@ export const ValotWindow = GObject.registerClass({
 
     
     _updateClientButtonsDisplay(clientName) {
-        const clientButtons = [
-            this._client_context_btn
-        ];
+        // Update all client buttons across all tracking widgets
+        const clientButtons = this.trackingWidgets ? 
+            this.trackingWidgets.map(w => w.clientBtn).concat([this._client_context_btn]) : 
+            [this._client_context_btn];
         
         clientButtons.forEach(btn => {
             if (btn) {
@@ -3127,6 +3841,11 @@ export const ValotWindow = GObject.registerClass({
                 btn.add_css_class('context-selected');
             }
         });
+        
+        // Update compact tracker if it exists
+        if (this.compactTrackerWindow) {
+            this.compactTrackerWindow.updateContext();
+        }
     }
     
     
@@ -3163,6 +3882,50 @@ export const ValotWindow = GObject.registerClass({
             project: this.getCurrentProject(),
             client: this.getCurrentClient()
         };
+    }
+
+    // Compact Tracker Window Methods
+    showCompactTracker() {
+        if (this.compactTrackerWindow) {
+            // If already exists, just present it
+            this.compactTrackerWindow.present();
+            return;
+        }
+
+        // Create new compact tracker window
+        this.compactTrackerWindow = new CompactTrackerWindow(this.get_application(), this);
+        
+        // Handle window close
+        this.compactTrackerWindow.connect('close-request', () => {
+            this.compactTrackerWindow = null;
+            return false; // Allow the window to close
+        });
+
+        this.compactTrackerWindow.present();
+        console.log('Compact tracker window opened');
+    }
+
+    _startTrackingFromCompact(taskName) {
+        console.log('Starting tracking from compact tracker:', taskName);
+        
+        // Set the task name in all tracking widget inputs
+        if (this.trackingWidgets) {
+            this.trackingWidgets.forEach(widget => {
+                if (widget.input) {
+                    widget.input.set_text(taskName);
+                }
+            });
+        }
+        
+        // Use the master tracking widget's button to start tracking
+        if (this.trackingWidgets && this.trackingWidgets[0] && this.trackingWidgets[0].button) {
+            this.trackingWidgets[0].button.emit('clicked');
+        }
+        
+        // Update compact tracker if it exists
+        if (this.compactTrackerWindow) {
+            this.compactTrackerWindow.updateContext();
+        }
     }
     
     // Client management methods
@@ -3226,7 +3989,7 @@ export const ValotWindow = GObject.registerClass({
             `;
             executeNonSelectCommand(this.dbConnection, defaultClient);
             
-            this._loadClients();
+            // Don't call _loadClients again to avoid infinite recursion
         } catch (error) {
             console.error('Error creating client table:', error);
         }
@@ -3255,50 +4018,242 @@ export const ValotWindow = GObject.registerClass({
     }
     
     _updateClientsList() {
-        // Clear existing clients
-        while (this._client_list.get_first_child()) {
-            this._client_list.remove(this._client_list.get_first_child());
-        }
-        
-        this.allClients.forEach(client => {
-            const row = new Adw.ActionRow({
-                title: client.name,
-                subtitle: `${client.email} • €${client.rate}/hour`
-            });
-            
-            // Add edit/delete buttons
-            const editBtn = new Gtk.Button({
-                icon_name: 'document-edit-symbolic',
-                css_classes: ['flat'],
-                tooltip_text: 'Edit Client'
-            });
-            editBtn.connect('clicked', () => this._editClient(client.id));
-            
-            const deleteBtn = new Gtk.Button({
-                icon_name: 'user-trash-symbolic', 
-                css_classes: ['flat', 'destructive-action'],
-                tooltip_text: 'Delete Client',
-                sensitive: client.id !== 1 // Can't delete default client
-            });
-            deleteBtn.connect('clicked', () => this._deleteClient(client.id));
-            
-            const buttonBox = new Gtk.Box({
-                spacing: 6
-            });
-            buttonBox.append(editBtn);
-            buttonBox.append(deleteBtn);
-            row.add_suffix(buttonBox);
-            
-            this._client_list.append(row);
-        });
+        // Use the filter function to display all clients (empty search = show all)
+        this._filterClients();
     }
     
     _updateClientStats() {
+        // Client stats UI removed - stats calculation still available in memory
         const totalClients = this.allClients.length;
         const totalRevenue = this.allClients.reduce((sum, c) => sum + (c.totalRevenue || 0), 0);
         
-        this._total_clients_row.set_subtitle(totalClients.toString());
-        this._total_revenue_row.set_subtitle(`€${totalRevenue.toFixed(2)}`);
+        console.log(`Client stats: ${totalClients} clients, €${totalRevenue.toFixed(2)} total revenue`);
+    }
+    
+    _handleClientNameChange(clientId, newName) {
+        // Validate and update client name
+        const validation = InputValidator.validateClientName(newName);
+        if (!validation.valid) {
+            console.warn('Invalid client name:', validation.error);
+            return;
+        }
+        
+        if (!this.dbConnection) return;
+        
+        try {
+            const sql = `UPDATE Client SET name = '${validation.sanitized}' WHERE id = ${clientId}`;
+            executeNonSelectCommand(this.dbConnection, sql);
+            
+            // Update in memory
+            const client = this.allClients.find(c => c.id === clientId);
+            if (client) {
+                client.name = validation.sanitized;
+            }
+            
+            console.log(`Client name updated: ${clientId} -> ${validation.sanitized}`);
+        } catch (error) {
+            console.error('Error updating client name:', error);
+            this._loadClients(); // Reload to revert changes
+        }
+    }
+    
+    _addClientSelectionHandlers(row, client) {
+        // ONLY right-click gesture for selection - NO OTHER TRIGGERS
+        const rightClickGesture = new Gtk.GestureClick({
+            button: 3 // ONLY Right click
+        });
+        
+        rightClickGesture.connect('pressed', () => {
+            console.log(`Right-click detected on client: ${client.name}`);
+            this._toggleClientSelection(client.id, row);
+        });
+        
+        row.add_controller(rightClickGesture);
+        
+        // Explicitly prevent left-click from doing anything
+        const leftClickGesture = new Gtk.GestureClick({
+            button: 1 // Left click
+        });
+        
+        leftClickGesture.connect('pressed', () => {
+            console.log(`Left-click blocked on client: ${client.name} - only right-click selects`);
+            // Do nothing - selection ONLY with right-click
+        });
+        
+        row.add_controller(leftClickGesture);
+    }
+    
+    _toggleClientSelection(clientId, row) {
+        if (clientId === 1) {
+            // Can't select Default client
+            console.log('Cannot select Default client');
+            return;
+        }
+        
+        if (this.selectedClients.has(clientId)) {
+            // Deselect - multiple selection support
+            this.selectedClients.delete(clientId);
+            row.remove_css_class('selected-task');
+            console.log(`Client deselected: ${clientId}. Total selected: ${this.selectedClients.size}`);
+        } else {
+            // Select - multiple selection support
+            this.selectedClients.add(clientId);
+            row.add_css_class('selected-task');
+            console.log(`Client selected: ${clientId}. Total selected: ${this.selectedClients.size}`);
+        }
+        
+        this._updateClientSelectionUI();
+    }
+    
+    _updateClientSelectionUI() {
+        const selectedCount = this.selectedClients.size;
+        
+        // Footer removed from UI - just log selection count
+        if (selectedCount > 0) {
+            console.log(`${selectedCount} clients selected`);
+        }
+    }
+    
+    _showCurrencyRateDialog(clientId) {
+        const client = this.allClients.find(c => c.id === clientId);
+        if (!client) return;
+        
+        const dialog = new Adw.AlertDialog({
+            heading: `Edit Rate for ${client.name}`,
+            body: 'Set currency and hourly rate for this client'
+        });
+        
+        // Create content box
+        const contentBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 12,
+            margin_start: 12,
+            margin_end: 12,
+            margin_top: 12,
+            margin_bottom: 12
+        });
+        
+        // Currency selection
+        const currencyLabel = new Gtk.Label({
+            label: 'Currency:',
+            halign: Gtk.Align.START
+        });
+        
+        const currencyDropdown = new Gtk.DropDown({
+            model: new Gtk.StringList({
+                strings: ['€ (EUR)', '$ (USD)', '£ (GBP)', '¥ (JPY)', '₽ (RUB)']
+            }),
+            selected: 0 // Default to EUR
+        });
+        
+        // Rate entry
+        const rateLabel = new Gtk.Label({
+            label: 'Hourly Rate:',
+            halign: Gtk.Align.START
+        });
+        
+        const rateEntry = new Gtk.Entry({
+            text: client.rate.toString(),
+            placeholder_text: 'Enter hourly rate',
+            input_purpose: Gtk.InputPurpose.NUMBER
+        });
+        
+        contentBox.append(currencyLabel);
+        contentBox.append(currencyDropdown);
+        contentBox.append(rateLabel);
+        contentBox.append(rateEntry);
+        
+        dialog.set_extra_child(contentBox);
+        dialog.add_response('cancel', 'Cancel');
+        dialog.add_response('save', 'Save');
+        dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
+        
+        dialog.connect('response', (dialog, response) => {
+            if (response === 'save') {
+                const newRate = parseFloat(rateEntry.get_text());
+                const currencyIndex = currencyDropdown.get_selected();
+                const currencies = ['€', '$', '£', '¥', '₽'];
+                const selectedCurrency = currencies[currencyIndex];
+                
+                if (!isNaN(newRate) && newRate > 0) {
+                    this._updateClientRate(clientId, newRate, selectedCurrency);
+                }
+            }
+        });
+        
+        dialog.present(this);
+    }
+    
+    _updateClientRate(clientId, newRate, currency) {
+        if (!this.dbConnection) return;
+        
+        try {
+            const sql = `UPDATE Client SET rate = ${newRate} WHERE id = ${clientId}`;
+            executeNonSelectCommand(this.dbConnection, sql);
+            
+            // Update in memory
+            const client = this.allClients.find(c => c.id === clientId);
+            if (client) {
+                client.rate = newRate;
+                client.currency = currency; // Store currency (may need to add column later)
+            }
+            
+            console.log(`Client rate updated: ${clientId} -> ${currency}${newRate}/h`);
+            this._updateClientsList(); // Refresh display
+            this._calculateClientStats();
+            this._updateClientStats();
+            
+        } catch (error) {
+            console.error('Error updating client rate:', error);
+        }
+    }
+    
+    _deleteSelectedClients() {
+        if (this.selectedClients.size === 0) return;
+        
+        const dialog = new Adw.AlertDialog({
+            heading: 'Delete Selected Clients',
+            body: `Are you sure you want to delete ${this.selectedClients.size} clients? All associated tasks will be moved to the Default Client.`
+        });
+        
+        dialog.add_response('cancel', 'Cancel');
+        dialog.add_response('delete', 'Delete');
+        dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
+        
+        dialog.connect('response', (dialog, response) => {
+            if (response === 'delete') {
+                // Delete all selected clients
+                this.selectedClients.forEach(clientId => {
+                    this._confirmDeleteClient(clientId);
+                });
+                
+                // Clear selection
+                this.selectedClients.clear();
+                this._updateClientSelectionUI();
+                this._loadClients(); // Refresh list
+            }
+        });
+        
+        dialog.present(this);
+    }
+    
+    _confirmDeleteClient(clientId) {
+        if (!this.dbConnection) return;
+        
+        try {
+            // Move tasks to default client
+            const updateTasks = `UPDATE Task SET client_id = 1 WHERE client_id = ${clientId}`;
+            executeNonSelectCommand(this.dbConnection, updateTasks);
+            
+            // Delete client
+            const deleteClient = `DELETE FROM Client WHERE id = ${clientId}`;
+            executeNonSelectCommand(this.dbConnection, deleteClient);
+            
+            console.log('Client deleted:', clientId);
+            this._loadClients(); // Refresh
+        } catch (error) {
+            console.error('Error deleting client:', error);
+        }
     }
     
     _showAddClientDialog() {
@@ -3317,8 +4272,25 @@ export const ValotWindow = GObject.registerClass({
             margin_end: 12
         });
         
+        // Client name - pre-filled with search text
+        const searchText = this._client_search.get_text().trim();
         const nameEntry = new Gtk.Entry({
-            placeholder_text: 'Client name'
+            placeholder_text: 'Client name',
+            text: searchText // Pre-fill with search input
+        });
+        
+        // Add real-time validation while typing
+        nameEntry.connect('changed', () => {
+            const currentText = nameEntry.get_text();
+            const validation = InputValidator.validateClientName(currentText);
+            
+            if (currentText.length > 0 && !validation.valid) {
+                // Show error styling
+                InputValidator.showValidationTooltip(nameEntry, validation.error, true);
+            } else {
+                // Clear error styling when input is empty or valid
+                InputValidator.showValidationTooltip(nameEntry, null, false);
+            }
         });
         
         const emailEntry = new Gtk.Entry({
@@ -3351,8 +4323,16 @@ export const ValotWindow = GObject.registerClass({
                 const name = nameEntry.get_text().trim();
                 const email = emailEntry.get_text().trim();
                 const rate = rateSpinButton.get_value();
-                if (name) {
-                    this._createClient(name, email, rate);
+                
+                // Validate client name
+                const nameValidation = InputValidator.validateClientName(name);
+                if (!nameValidation.valid) {
+                    InputValidator.showValidationTooltip(nameEntry, nameValidation.error, true);
+                    return; // Don't close dialog
+                }
+                
+                if (nameValidation.sanitized) {
+                    this._createClient(nameValidation.sanitized, email, rate);
                 }
             }
             dialog.close();
@@ -3371,6 +4351,10 @@ export const ValotWindow = GObject.registerClass({
             const sql = `INSERT INTO Client (name, email, rate) VALUES ('${name.replace(/'/g, "''")}', '${email.replace(/'/g, "''")}', ${rate})`;
             executeNonSelectCommand(this.dbConnection, sql);
             console.log('Client created:', name, email, rate);
+            
+            // Clear search input after successful creation
+            this._client_search.set_text('');
+            
             this._loadClients();
         } catch (error) {
             console.error('Error creating client:', error);
@@ -3403,6 +4387,20 @@ export const ValotWindow = GObject.registerClass({
             placeholder_text: 'Client name',
             text: client.name
         });
+        
+        // Add real-time validation while typing
+        nameEntry.connect('changed', () => {
+            const currentText = nameEntry.get_text();
+            const validation = InputValidator.validateClientName(currentText);
+            
+            if (currentText.length > 0 && !validation.valid) {
+                // Show error styling
+                InputValidator.showValidationTooltip(nameEntry, validation.error, true);
+            } else {
+                // Clear error styling when input is empty or valid
+                InputValidator.showValidationTooltip(nameEntry, null, false);
+            }
+        });
         form.append(new Gtk.Label({label: 'Client Name:', halign: Gtk.Align.START}));
         form.append(nameEntry);
         
@@ -3434,9 +4432,16 @@ export const ValotWindow = GObject.registerClass({
                 const email = emailEntry.get_text().trim();
                 const rate = parseFloat(rateEntry.get_text().trim()) || 0;
                 
-                console.log('Updating client:', name, email, rate);
-                if (name) {
-                    this._updateClient(clientId, name, email, rate);
+                // Validate client name
+                const nameValidation = InputValidator.validateClientName(name);
+                if (!nameValidation.valid) {
+                    InputValidator.showValidationTooltip(nameEntry, nameValidation.error, true);
+                    return; // Don't close dialog
+                }
+                
+                console.log('Updating client:', nameValidation.sanitized, email, rate);
+                if (nameValidation.sanitized) {
+                    this._updateClient(clientId, nameValidation.sanitized, email, rate);
                 }
             }
             dialog.close();
@@ -3501,8 +4506,112 @@ export const ValotWindow = GObject.registerClass({
     }
     
     _filterClients() {
-        console.log('Filter clients:', this._client_search.get_text());
-        // TODO: Implement client filtering
+        const searchText = this._client_search.get_text().toLowerCase().trim();
+        console.log('Filter clients:', searchText);
+        
+        // Clear existing clients
+        while (this._client_list.get_first_child()) {
+            this._client_list.remove(this._client_list.get_first_child());
+        }
+        
+        // Initialize selected clients set if not exists
+        if (!this.selectedClients) {
+            this.selectedClients = new Set();
+        }
+        
+        // Filter clients based on search text
+        const filteredClients = searchText.length === 0 
+            ? this.allClients 
+            : this.allClients.filter(client => 
+                client.name.toLowerCase().includes(searchText) ||
+                (client.email && client.email.toLowerCase().includes(searchText))
+            );
+        
+        console.log(`Showing ${filteredClients.length} of ${this.allClients.length} clients`);
+        
+        // Render filtered clients using the same logic as _updateClientsList
+        filteredClients.forEach(client => {
+            // Create ListBoxRow with custom content (same as _updateClientsList)
+            const row = new Gtk.ListBoxRow({
+                activatable: false,
+                selectable: false
+            });
+            
+            // Create main horizontal box
+            const mainBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 12,
+                margin_start: 16,
+                margin_end: 16,
+                margin_top: 12,
+                margin_bottom: 12,
+                hexpand: true
+            });
+            
+            // Editable client name
+            const nameLabel = new Gtk.EditableLabel({
+                text: client.name,
+                hexpand: true,
+                valign: Gtk.Align.CENTER
+            });
+            
+            // Handle name changes
+            nameLabel.connect('changed', () => {
+                const newName = nameLabel.get_text().trim();
+                if (newName && newName !== client.name) {
+                    this._handleClientNameChange(client.id, newName);
+                }
+            });
+            
+            // Add right-click to editable label for selection (no context menu)
+            const labelRightClick = new Gtk.GestureClick({
+                button: 3, // Right click
+                propagation_phase: Gtk.PropagationPhase.CAPTURE
+            });
+            
+            labelRightClick.connect('pressed', (gesture, n_press, x, y) => {
+                console.log(`Right-click on client label detected: ${client.name}`);
+                this._toggleClientSelection(client.id, row);
+                
+                // Stop all propagation
+                gesture.set_state(Gtk.EventSequenceState.CLAIMED);
+                return Gdk.EVENT_STOP;
+            });
+            
+            nameLabel.add_controller(labelRightClick);
+            
+            // Clickable currency display (replaces time display from projects)
+            const currencyButton = new Gtk.Button({
+                label: `€${client.rate.toFixed(0)}/h`,
+                css_classes: ['flat', 'currency-button'],
+                tooltip_text: 'Click to edit currency and rate',
+                valign: Gtk.Align.CENTER,
+                halign: Gtk.Align.END
+            });
+            
+            // Click to edit currency and rate
+            currencyButton.connect('clicked', () => {
+                this._showCurrencyRateDialog(client.id);
+            });
+            
+            // Assemble the row (no icon)
+            mainBox.append(nameLabel);
+            mainBox.append(currencyButton);
+            row.set_child(mainBox);
+            
+            // Add selection logic (right-click to select/deselect)
+            this._addClientSelectionHandlers(row, client);
+            
+            // Apply selection styling if selected
+            if (this.selectedClients.has(client.id)) {
+                row.add_css_class('selected-task'); // Use same class as tasks/projects
+            }
+            
+            this._client_list.append(row);
+        });
+        
+        // Update selection UI
+        this._updateClientSelectionUI();
     }
     
     _selectClient(clientId) {

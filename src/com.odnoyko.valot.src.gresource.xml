@@ -5,6 +5,7 @@
     <file>js/main.js</file>
     <file>js/test.js</file>
     <file>js/window.js</file>
+    <file>js/compactTracker.js</file>
     <file>config.js</file>
     <!-- dbinit -->
     <file>js/dbinitialisation.js</file>
@@ -13,6 +14,7 @@
     <file>js/global/timetracking.js</file>
     <file>js/global/trackingStateManager.js</file>
     <file>js/global/aboutDialog.js</file>
+    <file>js/global/inputValidation.js</file>
     <!-- Utilities -->
     <file>js/utils/timeUtils.js</file>
     <!-- Charts -->
@@ -30,5 +32,7 @@
     <file>js/reports/templates/professional-report.html</file>
     <!-- Projects -->
     <file>js/projects/projectManager.js</file>
+    <!-- Clients -->
+    <file>js/clients/clientManager.js</file>
   </gresource>
 </gresources>

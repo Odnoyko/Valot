@@ -98,34 +98,37 @@ class TrackingStateManager {
 
     /**
      * Check if a specific task is being tracked
-     * @param {string} taskName - Task name to check
+     * @param {string} taskIdentifier - Task group key (baseName::project::client) to check
      * @returns {boolean}
      */
-    isTaskTracking(taskName) {
-        return this.currentTrackingTask && this.currentTrackingTask.name === taskName;
+    isTaskTracking(taskIdentifier) {
+        if (!this.currentTrackingTask) {
+            return false;
+        }
+        
+        // Create group key for current tracking task
+        const currentTaskGroupKey = `${this.currentTrackingTask.baseName}::${this.currentTrackingTask.projectName}::${this.currentTrackingTask.clientName}`;
+        return currentTaskGroupKey === taskIdentifier;
     }
 
     /**
      * Check if any task in a stack/group is being tracked
-     * @param {string} baseName - Base name of the stack/group
+     * @param {string} groupKey - Full group key (baseName::project::client) of the stack/group
      * @returns {boolean}
      */
-    isStackTracking(baseName) {
+    isStackTracking(groupKey) {
         if (!this.currentTrackingTask) {
-            console.log(`📊 TrackingStateManager: isStackTracking("${baseName}") = false (no active tracking)`);
+            console.log(`📊 TrackingStateManager: isStackTracking("${groupKey}") = false (no active tracking)`);
             return false;
         }
         
-        // Check if the current task belongs to this stack
-        const taskBelongsToStack = 
-            this.currentTrackingTask.baseName === baseName || 
-            this.currentTrackingTask.name.startsWith(baseName) ||
-            this.currentTrackingTask.name.startsWith(baseName + " ");
+        // Create group key for current tracking task
+        const currentTaskGroupKey = `${this.currentTrackingTask.baseName}::${this.currentTrackingTask.projectName}::${this.currentTrackingTask.clientName}`;
+        const taskBelongsToStack = currentTaskGroupKey === groupKey;
         
-        console.log(`📊 TrackingStateManager: isStackTracking("${baseName}") = ${taskBelongsToStack}`);
-        console.log(`📊 Current task: "${this.currentTrackingTask.name}", baseName: "${this.currentTrackingTask.baseName}"`);
-        console.log(`📊 Comparison: task.baseName === baseName: ${this.currentTrackingTask.baseName === baseName}`);
-        console.log(`📊 Comparison: task.name.startsWith("${baseName}"): ${this.currentTrackingTask.name.startsWith(baseName)}`);
+        console.log(`📊 TrackingStateManager: isStackTracking("${groupKey}") = ${taskBelongsToStack}`);
+        console.log(`📊 Current task group key: "${currentTaskGroupKey}"`);
+        console.log(`📊 Requested group key: "${groupKey}"`);
         
         return taskBelongsToStack;
     }
@@ -133,29 +136,29 @@ class TrackingStateManager {
     /**
      * Register a tracking button for updates
      * @param {Gtk.Button} button - The button to register
-     * @param {string} taskName - Associated task name (optional)
+     * @param {string} taskIdentifier - Associated task identifier (group key for individual tasks, null for general buttons)
      * @param {Gtk.Entry} input - Associated input field (optional)
      */
-    registerTrackingButton(button, taskName = null, input = null) {
-        this.trackingButtons.add({ button, taskName, input });
+    registerTrackingButton(button, taskIdentifier = null, input = null) {
+        this.trackingButtons.add({ button, taskName: taskIdentifier, input });
     }
 
     /**
      * Register a stack/group tracking button
      * @param {Gtk.Button} button - The stack button
-     * @param {string} baseName - Base name of the stack/group
+     * @param {string} groupKey - Full group key (baseName::project::client) of the stack/group
      */
-    registerStackButton(button, baseName) {
-        this.stackButtons.set(baseName, button);
+    registerStackButton(button, groupKey) {
+        this.stackButtons.set(groupKey, button);
     }
 
     /**
      * Register a stack/group time label for real-time updates
      * @param {Gtk.Label} label - The time label
-     * @param {string} baseName - Base name of the stack/group
+     * @param {string} groupKey - Full group key (baseName::project::client) of the stack/group
      */
-    registerStackTimeLabel(label, baseName) {
-        this.stackTimeLabels.set(baseName, label);
+    registerStackTimeLabel(label, groupKey) {
+        this.stackTimeLabels.set(groupKey, label);
     }
 
     /**
@@ -249,24 +252,24 @@ class TrackingStateManager {
      * @private
      */
     _updateStackButtons() {
-        this.stackButtons.forEach((button, baseName) => {
+        this.stackButtons.forEach((button, groupKey) => {
             if (!button || typeof button.set_icon_name !== 'function') return;
 
             try {
-                const isTracking = this.isStackTracking(baseName);
+                const isTracking = this.isStackTracking(groupKey);
                 if (isTracking) {
                     // A task in this stack is being tracked
                     button.set_icon_name('media-playback-stop-symbolic');
                     button.set_tooltip_text('Stop tracking');
-                    console.log(`📊 TrackingStateManager: Stack button "${baseName}" updated to STOP state`);
+                    console.log(`📊 TrackingStateManager: Stack button "${groupKey}" updated to STOP state`);
                 } else {
                     // No task in this stack is being tracked
                     button.set_icon_name('media-playback-start-symbolic');
                     button.set_tooltip_text('Start New Session');
-                    console.log(`📊 TrackingStateManager: Stack button "${baseName}" updated to START state`);
+                    console.log(`📊 TrackingStateManager: Stack button "${groupKey}" updated to START state`);
                 }
             } catch (error) {
-                console.error(`📊 TrackingStateManager: Error updating stack button "${baseName}":`, error);
+                console.error(`📊 TrackingStateManager: Error updating stack button "${groupKey}":`, error);
             }
         });
     }
@@ -350,11 +353,11 @@ class TrackingStateManager {
         });
 
         // Update stack time labels
-        this.stackTimeLabels.forEach((stackLabel, baseName) => {
+        this.stackTimeLabels.forEach((stackLabel, groupKey) => {
             if (stackLabel && typeof stackLabel.set_text === 'function') {
-                if (this.currentTrackingTask && this.isStackTracking(baseName)) {
+                if (this.currentTrackingTask && this.isStackTracking(groupKey)) {
                     stackLabel.set_text(`Tracking: ${timeStr}`);
-                    console.log(`📊 TrackingStateManager: Updated stack label for "${baseName}" to "Tracking: ${timeStr}"`);
+                    console.log(`📊 TrackingStateManager: Updated stack label for "${groupKey}" to "Tracking: ${timeStr}"`);
                 } else if (!this.currentTrackingTask) {
                     // Reset stack label when tracking stops - this would need the original text
                     // For now, we'll clear the tracking indicator
@@ -362,11 +365,11 @@ class TrackingStateManager {
                         const currentText = stackLabel.get_text();
                         if (currentText && currentText.startsWith('Tracking: ')) {
                             // Remove the tracking prefix, but this is not ideal since we don't know the original text
-                            console.log(`📊 TrackingStateManager: Clearing tracking indicator for stack "${baseName}"`);
+                            console.log(`📊 TrackingStateManager: Clearing tracking indicator for stack "${groupKey}"`);
                             stackLabel.set_text(''); // This should be improved to restore original text
                         }
                     } catch (error) {
-                        console.error(`📊 TrackingStateManager: Error clearing stack label for "${baseName}":`, error);
+                        console.error(`📊 TrackingStateManager: Error clearing stack label for "${groupKey}":`, error);
                     }
                 }
             }
