@@ -505,33 +505,6 @@ export class ClientManager {
         }
     }
 
-    // Update client in database
-    updateClient(clientId, name, email, rate, parentWindow) {
-        if (!this.dbConnection) {
-            console.error('No database connection to update client');
-            return;
-        }
-
-        try {
-            const safeName = InputValidator.sanitizeForSQL(name);
-            const safeEmail = InputValidator.sanitizeForSQL(email);
-            const safeRate = parseFloat(rate) || 0;
-            const safeClientId = parseInt(clientId);
-
-            const sql = `UPDATE Client SET name = '${safeName}', email = '${safeEmail}', rate = ${safeRate} WHERE id = ${safeClientId}`;
-            
-            executeNonSelectCommand(this.dbConnection, sql);
-            console.log('Client updated successfully');
-            
-            // Reload clients in parent window
-            if (parentWindow && typeof parentWindow._loadClients === 'function') {
-                parentWindow._loadClients();
-            }
-            
-        } catch (error) {
-            console.error('Error updating client:', error);
-        }
-    }
 
     // Delete client dialog
     showDeleteClientDialog(clientId, parentWindow) {
@@ -798,6 +771,344 @@ export class ClientManager {
         });
 
         return dialog;
+    }
+
+    /**
+     * Show task creation dialog for client - styled like client creation dialog but without name input
+     */
+    showCreateTaskDialog(client, parentWindow) {
+        const dialog = new Adw.AlertDialog({
+            heading: `Track Time - ${client.name}`,
+            body: `Create a new time entry for ${client.name}`
+        });
+
+        const form = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 12,
+            margin_top: 12,
+            margin_bottom: 12,
+            margin_start: 12,
+            margin_end: 12
+        });
+
+        // Task description (using EntryRow like client creation)
+        const descRow = new Adw.EntryRow({
+            title: 'Task Description'
+        });
+        const descEntry = descRow.get_delegate();
+        descEntry.set_placeholder_text('Describe what you worked on...');
+        form.append(descRow);
+
+        // Project selection using ComboRow
+        let projectRow = null;
+        if (parentWindow.projectManager) {
+            projectRow = new Adw.ComboRow({
+                title: 'Project'
+            });
+            
+            const projectModel = new Gtk.StringList();
+            try {
+                const projects = parentWindow.projectManager.getAllProjects();
+                projects.forEach(project => {
+                    projectModel.append(project.name);
+                });
+                
+                projectRow.set_model(projectModel);
+                
+                // Set current project as default
+                if (parentWindow.currentProjectId) {
+                    const currentProject = projects.find(p => p.id === parentWindow.currentProjectId);
+                    if (currentProject) {
+                        const index = projects.indexOf(currentProject);
+                        projectRow.set_selected(index);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading projects for task dialog:', error);
+            }
+
+            form.append(projectRow);
+        }
+
+        // Time input using SpinRows
+        const hoursRow = new Adw.SpinRow({
+            title: 'Hours',
+            adjustment: new Gtk.Adjustment({
+                lower: 0,
+                upper: 24,
+                step_increment: 1,
+                page_increment: 1
+            })
+        });
+
+        const minutesRow = new Adw.SpinRow({
+            title: 'Minutes', 
+            adjustment: new Gtk.Adjustment({
+                lower: 0,
+                upper: 59,
+                step_increment: 1,
+                page_increment: 15
+            })
+        });
+
+        form.append(hoursRow);
+        form.append(minutesRow);
+
+        // Cost calculation display using ActionRow
+        const currencySymbol = getCurrencySymbol(client.currency || 'USD');
+        const costRow = new Adw.ActionRow({
+            title: 'Estimated Cost',
+            subtitle: `${currencySymbol}0.00`
+        });
+
+        // Update cost when time changes
+        const updateCost = () => {
+            const hours = hoursRow.get_value();
+            const minutes = minutesRow.get_value();
+            const totalHours = hours + (minutes / 60);
+            const cost = totalHours * (client.rate || 0);
+            costRow.set_subtitle(`${currencySymbol}${cost.toFixed(2)}`);
+        };
+
+        hoursRow.connect('notify::value', updateCost);
+        minutesRow.connect('notify::value', updateCost);
+
+        form.append(costRow);
+
+        dialog.set_extra_child(form);
+        dialog.add_response('cancel', 'Cancel');
+        dialog.add_response('create', 'Create Entry');
+        dialog.set_response_appearance('create', Adw.ResponseAppearance.SUGGESTED);
+
+        dialog.connect('response', (dialog, response) => {
+            if (response === 'create') {
+                const description = descEntry.get_text().trim();
+                const hours = hoursRow.get_value();
+                const minutes = minutesRow.get_value();
+                const totalSeconds = (hours * 3600) + (minutes * 60);
+                
+                if (totalSeconds === 0) {
+                    const errorDialog = new Adw.AlertDialog({
+                        heading: 'Invalid Input',
+                        body: 'Please enter a time duration'
+                    });
+                    errorDialog.add_response('ok', 'OK');
+                    errorDialog.present(parentWindow);
+                    return;
+                }
+
+                // Get selected project ID
+                let selectedProjectId = parentWindow.currentProjectId || 1;
+                if (projectRow) {
+                    try {
+                        const projects = parentWindow.projectManager.getAllProjects();
+                        const selectedIndex = projectRow.get_selected();
+                        if (selectedIndex < projects.length) {
+                            selectedProjectId = projects[selectedIndex].id;
+                        }
+                    } catch (error) {
+                        console.error('Error getting selected project:', error);
+                    }
+                }
+
+                // Create the time entry
+                this._createTimeEntry(client, description, selectedProjectId, totalSeconds, parentWindow);
+            }
+            dialog.close();
+        });
+
+        dialog.present(parentWindow);
+    }
+
+    /**
+     * Create a time entry for the client
+     */
+    _createTimeEntry(client, description, projectId, durationSeconds, parentWindow) {
+        try {
+            // Use the task creation system to create a time entry
+            if (parentWindow.taskManager) {
+                const taskName = description || `Work for ${client.name}`;
+                const endTime = new Date();
+                const startTime = new Date(endTime.getTime() - (durationSeconds * 1000));
+                
+                // Create task with the specified time duration
+                parentWindow.taskManager.createTask(
+                    taskName,
+                    projectId,
+                    client.id,
+                    startTime.toISOString(),
+                    endTime.toISOString(),
+                    durationSeconds
+                );
+
+                // Show success message
+                const successDialog = new Adw.AlertDialog({
+                    heading: 'Time Entry Created',
+                    body: `Successfully created ${Math.floor(durationSeconds / 3600)}h ${Math.floor((durationSeconds % 3600) / 60)}m time entry for ${client.name}`
+                });
+                successDialog.add_response('ok', 'OK');
+                successDialog.present(parentWindow);
+
+                // Refresh tasks page if available
+                if (parentWindow.pageComponents?.tasks) {
+                    parentWindow.pageComponents.tasks.loadTasks();
+                }
+            } else {
+                console.error('TaskManager not available');
+            }
+        } catch (error) {
+            console.error('Error creating time entry:', error);
+            const errorDialog = new Adw.AlertDialog({
+                heading: 'Error',
+                body: 'Failed to create time entry. Please try again.'
+            });
+            errorDialog.add_response('ok', 'OK');
+            errorDialog.present(parentWindow);
+        }
+    }
+
+    /**
+     * Show edit rate dialog for client - styled like client creation but only rate and currency
+     */
+    showEditRateDialog(client, parentWindow) {
+        console.log('Opening edit rate dialog for client:', client.name);
+        
+        const dialog = new Adw.AlertDialog({
+            heading: `Edit Rate - ${client.name}`,
+            body: 'Change hourly rate and currency for this client'
+        });
+
+        // Create inline form layout (horizontal) - same as client creation
+        const form = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            width_request: 400,
+            margin_top: 12,
+            margin_bottom: 12,
+            margin_start: 12,
+            margin_end: 12
+        });
+
+        // Rate input with +/- buttons (left side)
+        const rateBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 0,
+            css_classes: ['linked'],
+            width_request: 120
+        });
+
+        const rateMinusBtn = new Gtk.Button({
+            label: '−',
+            css_classes: ['flat'],
+            width_request: 30
+        });
+
+        const rateEntry = new Gtk.Entry({
+            text: (client.rate || 0).toString(),
+            width_request: 60,
+            halign: Gtk.Align.CENTER,
+            css_classes: ['monospace']
+        });
+
+        const ratePlusBtn = new Gtk.Button({
+            label: '+',
+            css_classes: ['flat'],
+            width_request: 30
+        });
+
+        // Rate adjustment logic
+        const adjustRate = (delta) => {
+            let currentRate = parseFloat(rateEntry.get_text()) || 0;
+            currentRate = Math.max(0, currentRate + delta);
+            rateEntry.set_text(currentRate.toFixed(0));
+        };
+
+        rateMinusBtn.connect('clicked', () => adjustRate(-1));
+        ratePlusBtn.connect('clicked', () => adjustRate(1));
+
+        rateBox.append(rateMinusBtn);
+        rateBox.append(rateEntry);
+        rateBox.append(ratePlusBtn);
+
+        // Currency dropdown with search (right side)
+        const currencyDropdown = new Gtk.DropDown({
+            width_request: 120,
+            tooltip_text: 'Select currency'
+        });
+
+        // Get currency data
+        const allCurrencies = getAllCurrencies();
+        const currencyModel = new Gtk.StringList();
+        
+        allCurrencies.forEach(currency => {
+            currencyModel.append(`${currency.symbol} ${currency.code}`);
+        });
+        
+        currencyDropdown.set_model(currencyModel);
+        currencyDropdown.set_enable_search(true);
+
+        // Set current currency as selected
+        const currentCurrencyIndex = allCurrencies.findIndex(c => c.code === (client.currency || 'USD'));
+        currencyDropdown.set_selected(currentCurrencyIndex >= 0 ? currentCurrencyIndex : 0);
+        
+        let selectedCurrency = allCurrencies[currentCurrencyIndex >= 0 ? currentCurrencyIndex : 0];
+
+        // Handle currency selection change
+        currencyDropdown.connect('notify::selected', () => {
+            const selectedIndex = currencyDropdown.get_selected();
+            selectedCurrency = allCurrencies[selectedIndex];
+        });
+
+        form.append(rateBox);
+        form.append(currencyDropdown);
+
+        dialog.set_extra_child(form);
+        dialog.add_response('cancel', 'Cancel');
+        dialog.add_response('save', 'Save Changes');
+        dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
+        dialog.set_default_response('save');
+
+        // Focus rate entry
+        rateEntry.grab_focus();
+        rateEntry.select_region(0, -1);
+
+        dialog.connect('response', (dialog, response) => {
+            if (response === 'save') {
+                const rate = parseFloat(rateEntry.get_text()) || 0;
+                
+                // Update client rate and currency
+                const success = this.updateClient(
+                    client.id,
+                    client.name,
+                    client.email || '',
+                    rate,
+                    selectedCurrency.code,
+                    parentWindow
+                );
+
+                if (success) {
+                    console.log('✅ Client rate updated successfully');
+                    
+                    // Refresh clients page to update the display
+                    if (parentWindow && parentWindow.clientsPageComponent) {
+                        console.log('🔄 Refreshing clients page after rate update');
+                        parentWindow.clientsPageComponent.loadClients();
+                    }
+                    
+                    // Also update main window client data if available
+                    if (parentWindow._loadClients) {
+                        console.log('🔄 Refreshing main window client data');
+                        parentWindow._loadClients();
+                    }
+                } else {
+                    console.log('❌ Failed to update client rate');
+                    return; // Don't close dialog on error
+                }
+            }
+            dialog.close();
+        });
+
+        dialog.present(parentWindow);
     }
 
     /**

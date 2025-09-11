@@ -468,28 +468,28 @@ export class ClientsPage {
                 });
                 rateLabel.add_controller(rateDoubleClick);
                 
-                // Right: Currency button (clickable to change currency)
+                // Combined price/currency button
                 const currencySymbol = getCurrencySymbol(client.currency || 'USD');
-                const currencyButton = new Gtk.Button({
-                    css_classes: ['flat', 'currency-button'],
+                const priceValueButton = new Gtk.Button({
+                    css_classes: ['flat', 'price-value-button'],
                     halign: Gtk.Align.END,
                     valign: Gtk.Align.CENTER,
-                    width_request: 80,
-                    tooltip_text: 'Click to change currency'
+                    width_request: 120,
+                    tooltip_text: 'Click to change rate and currency'
                 });
                 
-                const currencyLabel = new Gtk.Label({
-                    label: `${currencySymbol} ${client.currency || 'USD'}`,
-                    css_classes: ['currency-display', 'monospace'],
-                    halign: Gtk.Align.END,
+                const priceValueLabel = new Gtk.Label({
+                    label: `${currencySymbol}${(client.rate || 0).toFixed(2)}`,
+                    css_classes: ['price-value-display', 'monospace'],
+                    halign: Gtk.Align.CENTER,
                     valign: Gtk.Align.CENTER
                 });
                 
-                currencyButton.set_child(currencyLabel);
+                priceValueButton.set_child(priceValueLabel);
                 
-                // Connect currency change dialog
-                currencyButton.connect('clicked', () => {
-                    this._showCurrencyChangeDialog(client);
+                // Connect to edit client rate and currency
+                priceValueButton.connect('clicked', () => {
+                    this._showPriceValueDialog(client);
                 });
                 
                 // Add right-click selection handlers
@@ -497,7 +497,7 @@ export class ClientsPage {
                 
                 // Assemble the row
                 mainBox.append(nameLabel);
-                mainBox.append(currencyButton);
+                mainBox.append(priceValueButton);
                 
                 row.set_child(mainBox);
                 
@@ -994,6 +994,18 @@ export class ClientsPage {
             });
         }
     }
+
+    /**
+     * Show price/value dialog to edit client rate and currency
+     */
+    _showPriceValueDialog(client) {
+        if (this.clientManager) {
+            this.clientManager.showEditRateDialog(client, this.parentWindow);
+        } else {
+            console.error('ClientManager not available for price/value dialog');
+        }
+    }
+
 
 
 
