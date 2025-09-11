@@ -797,6 +797,11 @@ export class TasksPage {
             this.filteredTasks = [];
         } finally {
             this.hideLoading();
+            
+            // Update weekly time in sidebar after loading tasks
+            if (this.parentWindow && typeof this.parentWindow.updateWeeklyTime === 'function') {
+                await this.parentWindow.updateWeeklyTime();
+            }
         }
     }
 

@@ -59,7 +59,7 @@ export const ValotWindow = GObject.registerClass({
         'split_view', 'main_content', 'sidebar_list',
         'sidebar_toggle_btn', 'menu_button',
         'tasks_page', 'projects_page', 'clients_page', 'reports_page', 
-        'sidebar_compact_tracker',
+        'sidebar_compact_tracker', 'weekly_time_row',
         'task_search', 'task_filter', 'task_list', 
         'prev_page_btn', 'next_page_btn', 'page_info', 'pagination_box',
         'project_search', 'add_project_btn', 'project_list',
@@ -203,6 +203,18 @@ export const ValotWindow = GObject.registerClass({
         // Make trackingStateManager available to child components
         this.trackingStateManager = trackingStateManager;
 
+        // Register sidebar elements for real-time updates
+        if (this._weekly_time_row) {
+            trackingStateManager.registerSidebarElement('weeklyTime', this._weekly_time_row);
+        }
+
+        // Subscribe to tracking events for weekly time updates
+        trackingStateManager.subscribe((event, eventData) => {
+            if (event === 'updateWeeklyTime') {
+                this._updateWeeklyTimeRealTime(eventData.additionalTime);
+            }
+        });
+
         // Initialize modular dialog manager
         this.modularDialogManager = new ModularDialogManager(this, this.application);
 
@@ -210,6 +222,9 @@ export const ValotWindow = GObject.registerClass({
         // Load initial data
         this._loadProjects();
         this._loadClients();
+        
+        // Update weekly time after initial data load
+        setTimeout(() => this.updateWeeklyTime(), 1000);
     }
 
     /**
@@ -1308,6 +1323,20 @@ export const ValotWindow = GObject.registerClass({
             console.error('❌ Failed to load clients:', error);
             this.allClients = [];
         }
+    }
+
+    /**
+     * Update weekly time display in real-time during tracking
+     */
+    async _updateWeeklyTimeRealTime(additionalSeconds) {
+        await this.timeUtils.updateWeeklyTimeDisplay(this._weekly_time_row, this.allTasks, additionalSeconds);
+    }
+
+    /**
+     * Update weekly time display (called when switching pages, loading data, etc.)
+     */
+    async updateWeeklyTime() {
+        await this.timeUtils.updateWeeklyTimeDisplay(this._weekly_time_row, this.allTasks);
     }
 
 });

@@ -336,6 +336,11 @@ export class ReportsPage {
             this.showError('Load Error', 'Failed to load reports');
         } finally {
             this.hideLoading();
+            
+            // Update weekly time in sidebar after loading reports
+            if (this.parentWindow && typeof this.parentWindow.updateWeeklyTime === 'function') {
+                await this.parentWindow.updateWeeklyTime();
+            }
         }
     }
 
