@@ -134,7 +134,7 @@ export class TaskRenderer {
                 }
 
             }
-            trackingStateManager.registerTimeLabel(timeLabel, taskGroupKey);
+            // Note: TimeLabel registration is handled by TaskRowTemplate, no need to register here again
         });
 
         // Find and register track buttons created by WidgetFactory

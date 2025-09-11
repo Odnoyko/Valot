@@ -45,6 +45,7 @@ class TrackingStateManager {
         this.trackingStartTime = Date.now();
         this.currentElapsedTime = 0;
         this.dbUpdateCounter = 0; // Reset database update counter
+        this.cachedDbTime = null; // Cache database time to avoid multiple fetches
 
         // Create new task in database immediately when tracking starts
         this._createNewTaskInDatabase(taskInfo);
@@ -87,6 +88,7 @@ class TrackingStateManager {
         this.currentTrackingTask = null;
         this.trackingStartTime = null;
         this.currentElapsedTime = 0;
+        this.cachedDbTime = null;
 
         // Stop real-time updates
         this._stopRealTimeUpdates();
@@ -469,8 +471,11 @@ class TrackingStateManager {
             return;
         }
 
-        // Get database time once for the tracked task to avoid multiple DB calls
-        const trackedTaskDbTime = await this.getTotalTaskTime(this.currentTrackingTask.name);
+        // Get database time once and cache it to avoid multiple DB calls and prevent accumulation
+        if (this.cachedDbTime === null) {
+            this.cachedDbTime = await this.getTotalTaskTime(this.currentTrackingTask.name);
+            console.log(`💾 Cached database time for "${this.currentTrackingTask.name}": ${this.cachedDbTime}s`);
+        }
 
         // Update individual task time labels (we know currentTrackingTask exists here)
         for (const { label, taskGroupKey } of this.timeLabels) {
@@ -481,8 +486,11 @@ class TrackingStateManager {
                 console.log(`⏰ Updating header timer: ${timeStr}`);
                 label.set_text(timeStr);
             } else if (this.isTaskTracking(taskGroupKey)) {
-                // This specific task is being tracked - show in format: ● total time (database + current)
-                this._updateTrackingLabel(label, trackedTaskDbTime);
+                // This specific task is being tracked - show total time (cached database + current session)
+                const totalTime = this.cachedDbTime + this.currentElapsedTime;
+                const totalTimeStr = this._formatElapsedTime(totalTime);
+                label.set_css_classes(['caption']);
+                label.set_text(`● ${totalTimeStr}`);
 
 
             } else {
@@ -494,9 +502,8 @@ class TrackingStateManager {
         this.stackTimeLabels.forEach(async (stackLabelData, groupKey) => {
             if (stackLabelData && stackLabelData.label && typeof stackLabelData.label.set_text === 'function') {
                 if (this.currentTrackingTask && this.isStackTracking(groupKey)) {
-                    // Get database time for the currently tracked task
-                    const stackDbTime = await this.getTotalTaskTime(this.currentTrackingTask.name);
-                    this._updateTrackingLabel(stackLabelData.label, stackDbTime);
+                    // Use cached database time for consistency
+                    this._updateTrackingLabel(stackLabelData.label, this.cachedDbTime);
 
                 } else if (!this.currentTrackingTask) {
                     // Restore original text when tracking stops
@@ -536,16 +543,18 @@ class TrackingStateManager {
             return;
         }
 
-        // Get database time for earnings calculation
-        const trackedTaskDbTime = await this.getTotalTaskTime(this.currentTrackingTask.name);
+        // Use cached database time for earnings calculation
+        if (this.cachedDbTime === null) {
+            this.cachedDbTime = await this.getTotalTaskTime(this.currentTrackingTask.name);
+        }
         
         // Update money labels
         for (const { label, taskGroupKey, clientInfo } of this.moneyLabels) {
             if (!label || typeof label.set_text !== 'function') continue;
             
             if (taskGroupKey && this.isTaskTracking(taskGroupKey)) {
-                // This specific task is being tracked - calculate earnings
-                const totalTime = trackedTaskDbTime + this.currentElapsedTime;
+                // This specific task is being tracked - calculate earnings using cached time
+                const totalTime = this.cachedDbTime + this.currentElapsedTime;
                 const earnings = this._calculateEarnings(totalTime, clientInfo);
                 
                 if (earnings) {

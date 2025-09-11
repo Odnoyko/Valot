@@ -90,8 +90,8 @@ export class TaskStackTemplate {
         
         // Prepare time text (without money info)
         if (isCurrentlyTracking) {
-            // Show live time with dot indicator for active tracking
-            timeText = '● Live tracking';
+  	    timeText = `● Tracked`;
+
         } else if (this.group.totalDuration > 0) {
             timeText = this.timeUtils.formatDuration(this.group.totalDuration);
         }
@@ -106,6 +106,7 @@ export class TaskStackTemplate {
             moneyText: moneyText,
             showEditButton: false,
             showTrackButton: true,
+            showCostTracking: this.parentWindow.showCostTracking !== false, // Default to true unless explicitly disabled
             onTrackClick: async () => await GlobalTracking.handleTaskTracking(this.group.latestTask, this.parentWindow)
         });
 
@@ -134,31 +135,13 @@ export class TaskStackTemplate {
         timeLabels.forEach(timeLabel => {
             const isCurrentlyTracking = trackingStateManager.isStackTracking(this.group.groupKey);
 
+            // Always register stack time label for updates (do this once)
+            trackingStateManager.registerStackTimeLabel(timeLabel, this.group.groupKey);
+
             if (isCurrentlyTracking) {
                 timeLabel.set_css_classes(['caption']);
-                
-                // Register for real-time updates
-                trackingStateManager.registerStackTimeLabel(timeLabel, this.group.groupKey);
-
-                // Show current total time if tracking
-                if (trackingStateManager.isStackTracking(this.group.groupKey)) {
-                    const currentTracking = trackingStateManager.getCurrentTracking();
-                    if (currentTracking) {
-                        trackingStateManager.getTotalTaskTime(currentTracking.name).then(dbTime => {
-                            const elapsedTime = trackingStateManager.currentElapsedTime || 0;
-                            const totalTime = dbTime + elapsedTime;
-                            const totalTimeStr = this._formatElapsedTime(totalTime);
-                            timeLabel.set_markup(`● ${totalTimeStr}`);
-                        }).catch(error => {
-                            console.error(`Fehler beim Abrufen der Datenbankzeit:`, error);
-                            const elapsedTime = trackingStateManager.currentElapsedTime || 0;
-                            const timeStr = this._formatElapsedTime(elapsedTime);
-                            timeLabel.set_markup(`● ${timeStr}`);
-                        });
-                    }
-                }
+                // Don't manually update time - let trackingStateManager handle all real-time updates
             }
-            trackingStateManager.registerStackTimeLabel(timeLabel, this.group.groupKey);
         });
 
         // Find and register track buttons
@@ -233,13 +216,12 @@ export class TaskStackTemplate {
         } else if (isCurrentlyTracking) {
             // Show active indicator for currently tracking task within stack
             const activeLabel = new Gtk.Label({
-                label: '● Live tracking',
+                label: `● Tracked`,
                 css_classes: ['caption'],
                 halign: Gtk.Align.END
             });
             taskSuffixBox.append(activeLabel);
         }
-
         if (isCurrentlyTracking) {
             taskRow.add_css_class('tracking-active');
         }

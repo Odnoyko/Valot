@@ -1309,4 +1309,5 @@ export const ValotWindow = GObject.registerClass({
             this.allClients = [];
         }
     }
+
 });

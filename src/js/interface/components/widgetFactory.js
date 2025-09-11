@@ -331,17 +331,16 @@ export class WidgetFactory {
             halign: Gtk.Align.END
         });
 
-        // Money label - separate from time label, appears first (before time)
+        // Money label - appears first
         const moneyLabel = new Gtk.Label({
             label: moneyText || '',
             css_classes: ['caption', 'dim-label'], // Always dim styling, never turns green
             halign: Gtk.Align.END,
-            visible: moneyText ? true : false // Only show if there's money text
+            visible: (moneyText && config.showCostTracking !== false) ? true : false // Show if there's money text and cost tracking is enabled
         });
         suffixBox.append(moneyLabel);
 
-        // Time label - always create one, even if timeText is empty
-        // (will be filled in by tracking state manager during real-time updates)
+        // Time label - appears after cost
         const timeLabel = new Gtk.Label({
             label: timeText || '', // Use timeText if provided, otherwise empty
             css_classes,

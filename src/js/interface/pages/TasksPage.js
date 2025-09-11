@@ -67,6 +67,9 @@ export class TasksPage {
         // Connect to existing UI elements
         this._connectToExistingUI();
         
+        // Enable cost tracking by default (can be overridden by parent window setting)
+        this.showCostTracking = this.parentWindow?.showCostTracking !== false;
+        
         // Subscribe to tracking state changes for automatic task list updates
         this._subscribeToTrackingStateChanges();
     }
@@ -482,7 +485,7 @@ export class TasksPage {
             group.totalDuration += task.duration || 0;
             
             // Calculate cost if client rate exists
-            const clientRate = 0; // Would come from client data
+            const clientRate = task.client_rate || 0;
             group.totalCost += (task.duration / 3600) * clientRate;
             
             if (task.is_active) {
@@ -597,33 +600,11 @@ export class TasksPage {
                 // Stop tracking in state manager
                 const stoppedTask = this.parentWindow.trackingStateManager.stopTracking();
                 
-                // Save to database using the same logic as timetracking.js
-                if (stoppedTask && elapsedSeconds > 0) {
-                    try {
-                        // Import the update function
-                        import('resource:///com/odnoyko/valot/js/func/global/addtask.js')
-                            .then(({ updateTaskWhenTrackingStops }) => {
-                                const endTimeStr = endTime.toISOString().replace('T', ' ').substring(0, 19);
-                                console.log(`💾 TasksPage: Updating task "${stoppedTask.name}" with ${elapsedSeconds}s`);
-                                
-                                const updateResult = updateTaskWhenTrackingStops(stoppedTask.name, endTimeStr, elapsedSeconds, {
-                                    client: { id: stoppedTask.clientId, name: stoppedTask.clientName },
-                                    currency: { code: 'EUR', symbol: '€' }
-                                });
-                                
-                                if (updateResult !== null && updateResult !== undefined) {
-                                    // Refresh the task list to show updated time
-                                    this.loadTasks();
-                                } else {
-                                    console.log("❌ TasksPage: Failed to update task in database");
-                                }
-                            })
-                            .catch(error => {
-                                console.error("❌ TasksPage: Error importing updateTaskWhenTrackingStops:", error);
-                            });
-                    } catch (error) {
-                        console.error("❌ TasksPage: Error during database save:", error);
-                    }
+                // Database update is now handled by trackingStateManager._updateTaskInDatabase()
+                // No need to call updateTaskWhenTrackingStops again here
+                if (stoppedTask) {
+                    // Just refresh the task list to show updated time
+                    this.loadTasks();
                 } else {
                 }
             }
