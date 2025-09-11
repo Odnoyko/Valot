@@ -29,9 +29,9 @@ import Gtk from 'gi://Gtk?version=4.0';
 import Adw from 'gi://Adw?version=1';
 import Gdk from 'gi://Gdk?version=4.0';
 
-import { setupDatabase } from 'resource:///com/odnoyko/valot/js/dbinitialisation.js';
-import { ValotWindow } from 'resource:///com/odnoyko/valot/js/window.js';
-import { CompactTrackerWindow } from 'resource:///com/odnoyko/valot/js/compactTracker.js';
+import { setupDatabase } from 'resource:///com/odnoyko/valot/js/func/global/dbinitialisation.js';
+import { ValotWindow } from 'resource:///com/odnoyko/valot/js/mainwindow.js';
+import { CompactTrackerWindow } from 'resource:///com/odnoyko/valot/js/compacttracker.js';
 
 pkg.initGettext();
 pkg.initFormat();
@@ -115,10 +115,10 @@ export const ValotApplication = GObject.registerClass(
         _initializeDatabase() {
             try {
                 this.database_connection = setupDatabase();
-                print("База данных подключена успешно");
+                print("Datenbank erfolgreich verbunden");
                 return true;
             } catch (error) {
-                print(`Ошибка подключения к базе данных: ${error.message}`);
+                print(`Fehler bei der Datenbankverbindung: ${error.message}`);
 
                 // Show error dialog to user
                 const dialog = new Adw.AlertDialog({
@@ -198,7 +198,7 @@ export const ValotApplication = GObject.registerClass(
                 try {
                     // Close database connection if your database wrapper supports it
                     // this.database_connection.close();
-                    print("Database connection closed");
+                    print("Datenbankverbindung geschlossen");
                 } catch (error) {
                     print(`Error closing database: ${error.message}`);
                 }

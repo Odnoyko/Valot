@@ -1,0 +1,201 @@
+import Gda from 'gi://Gda?version=6.0';
+import GLib from 'gi://GLib';
+
+function openDatabase() {
+    const dbPath = GLib.build_filenamev([
+        GLib.get_user_data_dir(),
+        'valot',
+        'valot.db'
+    ]);
+
+    console.log(`Datenbank wird erstellt unter Pfad: ${dbPath}`);
+
+    // Ensure directory exists
+    GLib.mkdir_with_parents(GLib.path_get_dirname(dbPath), 0o755);
+
+    // SQLite connection string with DB_DIR and DB_NAME format
+    const connectionString = `DB_DIR=${GLib.path_get_dirname(dbPath)};DB_NAME=${GLib.path_get_basename(dbPath)}`;
+    
+    try {
+        const connection = Gda.Connection.open_from_string(
+            'SQLite',
+            connectionString,
+            null,
+            Gda.ConnectionOptions.NONE
+        );
+        
+        console.log("Datenbank erfolgreich verbunden");
+        return connection;
+    } catch (error) {
+        console.error('Fehler bei der Datenbankverbindung:', error.message);
+        throw error;
+    }
+}
+
+function initDatabase(conn) {
+    try {
+        console.log("Datenbankschema wird initialisiert...");
+        
+        // Create Project table
+        const createProjectTable = `
+            CREATE TABLE IF NOT EXISTS Project (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                color TEXT DEFAULT '#cccccc',
+                total_time INTEGER DEFAULT 0
+            )`;
+        
+        executeNonSelectCommand(conn, createProjectTable);
+        console.log("Tabelle Project erstellt");
+
+        // Create Client table
+        const createClientTable = `
+            CREATE TABLE IF NOT EXISTS Client (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                email TEXT,
+                rate REAL DEFAULT 0.0,
+                currency TEXT DEFAULT 'USD'
+            )`;
+        
+        executeNonSelectCommand(conn, createClientTable);
+        console.log("Tabelle Client erstellt");
+
+        // Add client_id to Project table if it doesn't exist
+        try {
+            const alterProjectSql = `ALTER TABLE Project ADD COLUMN client_id INTEGER DEFAULT 1`;
+            executeNonSelectCommand(conn, alterProjectSql);
+            console.log("client_id column added to Project table");
+        } catch (error) {
+            if (error.message && error.message.includes('duplicate column name')) {
+                console.log("client_id column already exists in Project table");
+            } else {
+                console.log("Error adding client_id column:", error.message);
+            }
+        }
+
+        // Create Task table
+        const createTaskTable = `
+            CREATE TABLE IF NOT EXISTS Task (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                info TEXT,
+                project_id INTEGER NOT NULL DEFAULT 1,
+                client_id INTEGER DEFAULT 1,
+                time_spent INTEGER DEFAULT 0,
+                start_time TEXT,
+                end_time TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (project_id) REFERENCES Project(id) ON DELETE CASCADE,
+                FOREIGN KEY (client_id) REFERENCES Client(id) ON DELETE SET DEFAULT
+            )`;
+        
+        executeNonSelectCommand(conn, createTaskTable);
+        console.log("Tabelle Task erstellt");
+
+        // Create default project
+        const defaultProjectSql = `
+            INSERT OR IGNORE INTO Project (id, name, color, total_time)
+            VALUES (1, 'Default', '#cccccc', 0)`;
+        
+        executeNonSelectCommand(conn, defaultProjectSql);
+        console.log("Standard-Projekt erstellt");
+
+        // Create default client
+        const defaultClientSql = `
+            INSERT OR IGNORE INTO Client (id, name, email, rate, currency)
+            VALUES (1, 'Default Client', '', 0.0, 'USD')`;
+        
+        executeNonSelectCommand(conn, defaultClientSql);
+        console.log("Standard-Client erstellt");
+
+        // Ensure additional columns exist (for existing databases)
+        ensureProjectIconColumn(conn);
+        ensureDarkIconsColumn(conn);
+        ensureIconColorModeColumn(conn);
+
+        console.log('Datenbankschema erfolgreich initialisiert');
+
+    } catch (error) {
+        console.error('Fehler bei der Datenbankinitialisierung:', error);
+        throw error;
+    }
+}
+
+function ensureProjectIconColumn(conn) {
+    try {
+        const alterSql = `ALTER TABLE Project ADD COLUMN icon TEXT DEFAULT 'folder-symbolic'`;
+        executeNonSelectCommand(conn, alterSql);
+        console.log('Added icon column to Project table');
+    } catch (error) {
+        // Column already exists, ignore error
+        if (error.message && error.message.includes('duplicate column name')) {
+            console.log('Icon column already exists in Project table');
+        } else {
+            console.log('Error adding icon column:', error.message);
+        }
+    }
+}
+
+function ensureDarkIconsColumn(conn) {
+    try {
+        const alterSql = `ALTER TABLE Project ADD COLUMN dark_icons INTEGER DEFAULT 0`;
+        executeNonSelectCommand(conn, alterSql);
+        console.log('Added dark_icons column to Project table');
+    } catch (error) {
+        // Column already exists, ignore error
+        if (error.message && error.message.includes('duplicate column name')) {
+            console.log('dark_icons column already exists in Project table');
+        } else {
+            console.log('Error adding dark_icons column:', error.message);
+        }
+    }
+}
+
+function ensureIconColorModeColumn(conn) {
+    try {
+        const alterSql = `ALTER TABLE Project ADD COLUMN icon_color_mode TEXT DEFAULT 'auto'`;
+        executeNonSelectCommand(conn, alterSql);
+        console.log('Added icon_color_mode column to Project table');
+    } catch (error) {
+        // Column already exists, ignore error
+        if (error.message && error.message.includes('duplicate column name')) {
+            console.log('icon_color_mode column already exists in Project table');
+        } else {
+            console.log('Error adding icon_color_mode column:', error.message);
+        }
+    }
+}
+
+export function setupDatabase() {
+    try {
+        const conn = openDatabase();
+        initDatabase(conn);
+        return conn;
+    } catch (error) {
+        console.error('Database setup failed:', error);
+        throw error;
+    }
+}
+
+// Helper function for executing queries
+export function executeQuery(conn, sql, params = null) {
+    try {
+        // Use the direct execution method to avoid GObject type issues
+        const result = conn.execute_select_command(sql);
+        return result;
+    } catch (error) {
+        console.error('Query execution failed:', error);
+        throw error;
+    }
+}
+
+// Helper function for executing non-select commands (INSERT, UPDATE, DELETE)
+export function executeNonSelectCommand(conn, sql, params = null) {
+    console.log("SQL ausführen:", sql);
+    
+    // Use direct execution method to avoid GObject type issues
+    const result = conn.execute_non_select_command(sql);
+    console.log("Direktes Ausführungsergebnis:", result);
+    return result;
+}

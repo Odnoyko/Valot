@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 11.09.2025
+
+### 🏗️ Architecture
+- **New App Architecture**: Completely redesigned application architecture with modular component system
+- **Small Changes**: Various UI improvements and code optimizations
+
+---
+
 ## [0.2.5] - 2025-09-05
 
 ### 🐛 Bug Fixes

@@ -49,6 +49,67 @@ entry.itemNameEntry {
 .trackbutton:hover {
 }
 
+/* Project selection and styling */
+.selected-project {
+  background-color: alpha(@accent_bg_color, 0.1);
+  border-left: 3px solid @accent_bg_color;
+}
+
+.project-settings-button {
+  transition: all 0.2s ease-in-out;
+}
+
+.project-name-label {
+  font-weight: 500;
+}
+
+.time-display {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Project appearance styling */
+.emoji-icon {
+  font-size: 18px;
+}
+
+/* Icon selection styling */
+.selected-icon {
+  background-color: alpha(@accent_bg_color, 0.2);
+  border: 2px solid @accent_bg_color;
+  border-radius: 6px;
+}
+
+/* Client selection styling */
+.selected-client {
+  background-color: alpha(@accent_bg_color, 0.1);
+  border-left: 3px solid @accent_bg_color;
+}
+
+.client-name-label {
+  font-weight: 500;
+}
+
+.currency-display {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* Currency button styling for dialogs */
+.currency-button-label {
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+/* Currency change button styling */
+.currency-button {
+  transition: all 0.2s ease-in-out;
+}
+
+.currency-button:hover {
+  background-color: alpha(@accent_bg_color, 0.1);
+  border-radius: 4px;
+}
+
 /* Project search and add button integration */
 .linked > entry {
   border-top-right-radius: 0;
@@ -253,5 +314,147 @@ entry.inline-editable:focus {
   outline: none;
 }
 
+/* === Reusable Component Styles === */
+
+/* Project dots for task lists */
+.project-dot {
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+.project-dot-group {
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+/* Project icon buttons */
+.project-icon-button {
+  border-radius: 50%;
+  min-width: 36px;
+  min-height: 36px;
+  border: 1px solid alpha(@border_color, 0.3);
+}
+
+.project-icon-button:hover {
+  filter: brightness(1.1);
+}
+
+/* Currency indicators */
+.currency-indicator {
+  background: alpha(@accent_color, 0.1);
+  border: 1px solid alpha(@accent_color, 0.3);
+  border-radius: 4px;
+  padding: 2px 4px;
+  min-height: 20px;
+}
+
+/* Emoji display styles */
+.emoji-display {
+  font-size: 16px;
+}
+
+.emoji-preview {
+  font-size: 14px;
+  text-shadow: 0 1px 2px alpha(black, 0.4);
+}
+
+.project-circle-emoji {
+  font-size: 14px;
+  text-shadow: 0 1px 2px alpha(black, 0.4);
+}
+
+.project-circle-icon {
+  color: white;
+  -gtk-icon-shadow: 0 1px 2px alpha(black, 0.4);
+}
+
+/* Icon color overrides */
+.icon-white {
+  color: white;
+  -gtk-icon-style: symbolic;
+}
+
+.icon-black {
+  color: black;
+  -gtk-icon-style: symbolic;
+}
+
+/* Time display formatting */
+.time-display {
+  font-family: monospace;
+  font-weight: bold;
+}
+
+/* Color picker preview */
+.color-preview {
+  border-radius: 50%;
+  border: 2px solid alpha(@border_color, 0.3);
+}
+
+.color-preview:hover {
+  filter: brightness(1.1);
+}
+
+/* Selection highlights */
+.selection-highlight {
+  background-color: alpha(@accent_bg_color, 0.2);
+  border: 2px solid @accent_bg_color;
+  border-radius: 6px;
+}
+
+/* Task Template Styling */
+.template-icon {
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 4px;
+  background-color: alpha(@accent_bg_color, 0.1);
+  color: @accent_fg_color;
+}
+
+.template-badge {
+  background-color: alpha(@accent_bg_color, 0.2);
+  color: @accent_fg_color;
+  border-radius: 8px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.task-template-row {
+  padding: 12px;
+  border-bottom: 1px solid alpha(@border_color, 0.1);
+}
+
+.task-template-row:hover {
+  background-color: alpha(@accent_bg_color, 0.05);
+}
+
+.task-template-row:selected {
+  background-color: alpha(@accent_bg_color, 0.2);
+}
+
+.template-details {
+  margin-top: 8px;
+  padding: 12px;
+  background-color: alpha(@card_bg_color, 0.5);
+  border-radius: 6px;
+}
 
 
+.caption.dim-label {
+      color: @window_fg_color;
+  }
+  .caption {
+      color: @accent_bg_color;
+  }
+
+.project-entry {
+	min-width: 300px;
+}
+.project-appearance-btn {
+	max-width: 10px;
+	max-height: 10px;
+	height: 10px;
+	width: 10px;
+}
