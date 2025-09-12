@@ -88,16 +88,6 @@ template $ValotWindow: Adw.ApplicationWindow {
                 }
               }
 
-              Adw.ActionRow sidebar_compact_tracker {
-                title: _("Compact Tracker");
-                subtitle: _("Debug: Launch floating tracker");
-                activatable: true;
-
-                [prefix]
-                Image {
-                  icon-name: "view-restore-symbolic";
-                }
-              }
             }
           }
 
@@ -184,6 +174,13 @@ template $ValotWindow: Adw.ApplicationWindow {
                 css-classes: ["suggested-action", "circular"];
                 tooltip-text: _("Start tracking");
               }
+            }
+
+            [end]
+            Button compact_tracker_btn {
+              icon-name: "view-restore-symbolic";
+              css-classes: ["flat", "circular"];
+              tooltip-text: _("Open Compact Tracker");
             }
           }
 
@@ -301,7 +298,12 @@ template $ValotWindow: Adw.ApplicationWindow {
               }
             }
 
-            // Add project button moved to search area
+            [end]
+            Button compact_tracker_btn_projects {
+              icon-name: "view-restore-symbolic";
+              css-classes: ["flat", "circular"];
+              tooltip-text: _("Open Compact Tracker");
+            }
           }
 
           content: Box {
@@ -411,7 +413,12 @@ template $ValotWindow: Adw.ApplicationWindow {
               }
             }
 
-            // Add client button moved to search area
+            [end]
+            Button compact_tracker_btn_clients {
+              icon-name: "view-restore-symbolic";
+              css-classes: ["flat", "circular"];
+              tooltip-text: _("Open Compact Tracker");
+            }
           }
 
           content: Box {
@@ -523,6 +530,12 @@ template $ValotWindow: Adw.ApplicationWindow {
             }
 
             [end]
+            Button compact_tracker_btn_reports {
+              icon-name: "view-restore-symbolic";
+              css-classes: ["flat", "circular"];
+              tooltip-text: _("Open Compact Tracker");
+            }
+
             Button export_pdf_btn {
               icon-name: "document-save-symbolic"; 
               tooltip-text: _("PDF Export Preview");

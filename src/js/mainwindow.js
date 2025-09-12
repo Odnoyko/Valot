@@ -21,7 +21,7 @@
 import GObject from 'gi://GObject';
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
-import Gdk from 'gi://Gdk';
+import Gdk from 'gi://Gdk?version=4.0';
 import GLib from 'gi://GLib';
 import { setupDatabase } from 'resource:///com/odnoyko/valot/js/func/global/dbinitialisation.js';
 import { CompactTrackerWindow } from 'resource:///com/odnoyko/valot/js/compacttracker.js';
@@ -59,16 +59,15 @@ export const ValotWindow = GObject.registerClass({
         'split_view', 'main_content', 'sidebar_list',
         'sidebar_toggle_btn', 'menu_button',
         'tasks_page', 'projects_page', 'clients_page', 'reports_page', 
-        'sidebar_compact_tracker',
         'task_search', 'task_filter', 'task_list', 
         'prev_page_btn', 'next_page_btn', 'page_info', 'pagination_box',
         'project_search', 'add_project_btn', 'project_list',
         'client_search', 'add_client_btn', 'client_list',
         // Tracking widgets for all pages
-        'tracking_widget', 'task_name', 'actual_time', 'track_button', 'project_context_btn', 'client_context_btn',
-        'tracking_widget_projects', 'task_name_projects', 'actual_time_projects', 'track_button_projects', 
-        'tracking_widget_clients', 'task_name_clients', 'actual_time_clients', 'track_button_clients',
-        'tracking_widget_reports', 'task_name_reports', 'actual_time_reports', 'track_button_reports'
+        'tracking_widget', 'task_name', 'actual_time', 'track_button', 'project_context_btn', 'client_context_btn', 'compact_tracker_btn',
+        'tracking_widget_projects', 'task_name_projects', 'actual_time_projects', 'track_button_projects', 'compact_tracker_btn_projects',
+        'tracking_widget_clients', 'task_name_clients', 'actual_time_clients', 'track_button_clients', 'compact_tracker_btn_clients',
+        'tracking_widget_reports', 'task_name_reports', 'actual_time_reports', 'track_button_reports', 'compact_tracker_btn_reports'
     ],
 }, class ValotWindow extends Adw.ApplicationWindow {
     constructor(application) {
@@ -941,8 +940,37 @@ export const ValotWindow = GObject.registerClass({
     }
 
     _setupCompactTrackerButton() {
-        this._sidebar_compact_tracker.connect('activated', () => {
-            this._launchCompactTrackerDebug();
+        // Connect compact tracker buttons for all pages with shift-click detection
+        const buttons = [
+            this._compact_tracker_btn,
+            this._compact_tracker_btn_projects, 
+            this._compact_tracker_btn_clients,
+            this._compact_tracker_btn_reports
+        ];
+
+        buttons.forEach(button => {
+            if (button) {
+                // Add gesture controller to handle all clicks
+                const controller = new Gtk.GestureClick();
+                controller.connect('pressed', (gesture, n_press, x, y) => {
+                    const event = gesture.get_current_event();
+                    if (event) {
+                        const modifiers = event.get_modifier_state();
+                        const shiftPressed = (modifiers & Gdk.ModifierType.SHIFT_MASK) !== 0;
+                        
+                        // Claim the event to prevent normal button click
+                        gesture.set_state(Gtk.EventSequenceState.CLAIMED);
+                        
+                        // Call with appropriate shift state
+                        this._launchCompactTrackerDebug(shiftPressed);
+                    } else {
+                        // Fallback for normal click if no event
+                        gesture.set_state(Gtk.EventSequenceState.CLAIMED);
+                        this._launchCompactTrackerDebug(false);
+                    }
+                });
+                button.add_controller(controller);
+            }
         });
     }
 
@@ -1074,34 +1102,70 @@ export const ValotWindow = GObject.registerClass({
         
         if (!this.compactTrackerWindow) {
             this.compactTrackerWindow = new CompactTrackerWindow(this.application, this);
+            
+            // Handle window destruction properly
+            this.compactTrackerWindow.connect('destroy', () => {
+                this.compactTrackerWindow = null;
+                console.log('🔄 Compact tracker destroyed, reference cleared');
+            });
+            
             console.log('🔄 Compact tracker created for hidden window');
         }
         
-        // Force sync before presenting
         this.compactTrackerWindow.syncWithMainWindow();
         this.compactTrackerWindow.present();
         console.log('🔄 Compact tracker shown');
     }
 
-    _launchCompactTrackerDebug() {
-        console.log('🧪 Debug: Toggling compact tracker from sidebar...');
+    _launchCompactTrackerDebug(shiftPressed = false) {
+        console.log(`🧪 Debug: Toggling compact tracker, shift: ${shiftPressed}`);
         
         if (!this.compactTrackerWindow) {
             this.compactTrackerWindow = new CompactTrackerWindow(this.application, this);
+            
+            // Set shift mode on compact tracker
+            this.compactTrackerWindow.setShiftMode(shiftPressed);
+            
+            // Handle window destruction properly
+            this.compactTrackerWindow.connect('destroy', () => {
+                this.compactTrackerWindow = null;
+                console.log('🧪 Compact tracker destroyed, reference cleared');
+            });
+            
             console.log('🧪 Debug compact tracker created');
-            // Force sync before presenting
             this.compactTrackerWindow.syncWithMainWindow();
             this.compactTrackerWindow.present();
-            console.log('🧪 Debug compact tracker shown');
+            
+            // Hide main window only if shift not pressed
+            if (!shiftPressed) {
+                this.set_visible(false);
+                console.log('🧪 Debug compact tracker shown, main window hidden');
+            } else {
+                console.log('🧪 Debug compact tracker shown, main window stays visible (shift mode)');
+            }
         } else {
             if (this.compactTrackerWindow.is_visible()) {
                 this.compactTrackerWindow.set_visible(false);
                 console.log('🧪 Debug compact tracker hidden');
+                // When hiding, show main window if it was hidden in normal mode
+                if (!this.compactTrackerWindow.shiftMode && !this.is_visible()) {
+                    this.set_visible(true);
+                    this.present();
+                    console.log('🧪 Main window restored after hiding compact tracker');
+                }
             } else {
-                // Force sync before presenting
+                // Update shift mode
+                this.compactTrackerWindow.setShiftMode(shiftPressed);
                 this.compactTrackerWindow.syncWithMainWindow();
                 this.compactTrackerWindow.present();
-                console.log('🧪 Debug compact tracker shown');
+                
+                // Hide main window only if shift not pressed
+                if (!shiftPressed) {
+                    this.set_visible(false);
+                    console.log('🧪 Debug compact tracker shown, main window hidden');
+                } else {
+                    console.log('🧪 Debug compact tracker shown, main window stays visible (shift mode)');
+                }
             }
         }
     }
