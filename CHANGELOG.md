@@ -95,7 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.2.0] - 2025-01-09
+## [0.2.0] - 2025-09-03
 
 ### 🐛 Bug Fixes
 - **Fixed Project Icon Centering**: Resolved issue where project icons in the project list were not properly centered using Gtk.Grid with homogeneous properties
@@ -111,7 +111,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.1.1] - 2025-01-09
+## [0.1.1] - 2025-08-26
 
 ### 🎯 Major Features Added
 - **Task Stack Selection & Deletion**: Right-click on task stacks to select and delete entire groups of related tasks
