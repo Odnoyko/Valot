@@ -22,8 +22,7 @@ export class HeaderTrackingWidget {
         const trackingBox = new Gtk.Box({
             spacing: 8,
             hexpand: true,
-            hexpand_set: true,
-            margin_end: 30
+            hexpand_set: true
         });
 
         // Task name entry
@@ -39,7 +38,7 @@ export class HeaderTrackingWidget {
             height_request: 36,
             halign: Gtk.Align.CENTER,
             valign: Gtk.Align.CENTER,
-            css_classes: ['flat'],
+            css_classes: ['flat', 'header-tracking-project-button'],
             tooltip_text: 'Project'
         });
 

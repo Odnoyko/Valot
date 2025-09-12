@@ -930,7 +930,7 @@ export class TasksPage {
     _isThisWeek(date) { return false; }
     _startTracking(data) { console.log('Start tracking:', data); }
     _stopTracking() { console.log('Stop tracking'); }
-    _editTask(task) { 
+    _editTaskObject(task) { 
         const dialog = new Adw.AlertDialog({
             heading: 'Edit Task',
             body: `Modify "${task.name}"`
@@ -938,13 +938,19 @@ export class TasksPage {
 
         // Create inline form layout
         const form = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
+            orientation: Gtk.Orientation.VERTICAL,
             spacing: 12,
             margin_top: 12,
             margin_bottom: 12,
             margin_start: 12,
             margin_end: 12,
             width_request: 600
+        });
+
+        // Create first row for name, project, and client
+        const firstRow = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12
         });
 
         // 1. Task name input
@@ -1069,12 +1075,450 @@ export class TasksPage {
         );
 
         const clientButton = clientDropdown.getWidget();
-        clientButton.set_size_request(140, 36);
+        clientButton.set_size_request(36, 36);
 
-        // Assemble inline layout
-        form.append(nameEntry);
-        form.append(projectButton);
-        form.append(clientButton);
+        // Assemble first row
+        firstRow.append(nameEntry);
+        firstRow.append(projectButton);
+        firstRow.append(clientButton);
+
+        // Create datetime fields
+        const datetimeRow = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12
+        });
+
+        // Start time input with button
+        const startTimeBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 4
+        });
+        
+        const startLabel = new Gtk.Label({
+            label: 'Start Time:',
+            halign: Gtk.Align.START,
+            css_classes: ['caption']
+        });
+        
+        // Parse existing start time or set defaults
+        let startDate = new Date();
+        if (task.start || task.start_time) {
+            // Try both field names since database uses start_time
+            const startTimeValue = task.start || task.start_time;
+            console.log(`🔧 Raw start time from DB: ${startTimeValue}`);
+            
+            // Parse as local time - database stores local time without timezone info
+            if (startTimeValue.includes('T')) {
+                // ISO format - force local interpretation by removing timezone info
+                const localTimeStr = startTimeValue.replace('T', ' ').substring(0, 19);
+                const [datePart, timePart] = localTimeStr.split(' ');
+                const [year, month, day] = datePart.split('-').map(Number);
+                const [hours, minutes, seconds] = timePart.split(':').map(Number);
+                startDate = new Date(year, month - 1, day, hours, minutes, seconds || 0);
+            } else {
+                // Format: "YYYY-MM-DD HH:MM:SS" - parse as local time
+                const [datePart, timePart] = startTimeValue.split(' ');
+                const [year, month, day] = datePart.split('-').map(Number);
+                const [hours, minutes, seconds] = (timePart || '00:00:00').split(':').map(Number);
+                startDate = new Date(year, month - 1, day, hours, minutes, seconds || 0);
+            }
+            console.log(`🔧 Parsed start time as local: ${startDate.toLocaleString()}`);
+            console.log(`🔧 System timezone offset: ${startDate.getTimezoneOffset()} minutes`);
+        }
+        
+        // Store current date for start time
+        let currentStartDate = startDate;
+        
+        // Create button content with time and date
+        const updateStartButtonContent = () => {
+            const timeStr = `${currentStartDate.getHours().toString().padStart(2, '0')}:${currentStartDate.getMinutes().toString().padStart(2, '0')}`;
+            const dateStr = `${currentStartDate.getDate().toString().padStart(2, '0')}/${(currentStartDate.getMonth() + 1).toString().padStart(2, '0')}/${currentStartDate.getFullYear()}`;
+            
+            const buttonBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 8,
+                halign: Gtk.Align.CENTER
+            });
+            
+            const timeLabel = new Gtk.Label({
+                label: timeStr,
+                css_classes: ['monospace', 'title-4']
+            });
+            
+            const dateLabel = new Gtk.Label({
+                label: dateStr,
+                css_classes: ['caption', 'dim-label']
+            });
+            
+            const separatorLabel = new Gtk.Label({
+                label: '•',
+                css_classes: ['caption', 'dim-label']
+            });
+            
+            buttonBox.append(timeLabel);
+            buttonBox.append(separatorLabel);
+            buttonBox.append(dateLabel);
+            
+            return buttonBox;
+        };
+        
+        const startTimeButton = new Gtk.Button({
+            css_classes: ['flat'],
+            tooltip_text: 'Select start date and time',
+            width_request: 180
+        });
+        startTimeButton.set_child(updateStartButtonContent());
+        
+        startTimeBox.append(startLabel);
+        startTimeBox.append(startTimeButton);
+
+        // End time input with button
+        const endTimeBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 4
+        });
+        
+        const endLabel = new Gtk.Label({
+            label: 'End Time:',
+            halign: Gtk.Align.START,
+            css_classes: ['caption']
+        });
+        
+        // Parse existing end time or set defaults
+        let endDate = new Date();
+        if (task.end || task.end_time) {
+            // Try both field names since database uses end_time
+            const endTimeValue = task.end || task.end_time;
+            console.log(`🔧 Raw end time from DB: ${endTimeValue}`);
+            
+            // Parse as local time - database stores local time without timezone info
+            if (endTimeValue.includes('T')) {
+                // ISO format - force local interpretation by removing timezone info
+                const localTimeStr = endTimeValue.replace('T', ' ').substring(0, 19);
+                const [datePart, timePart] = localTimeStr.split(' ');
+                const [year, month, day] = datePart.split('-').map(Number);
+                const [hours, minutes, seconds] = timePart.split(':').map(Number);
+                endDate = new Date(year, month - 1, day, hours, minutes, seconds || 0);
+            } else {
+                // Format: "YYYY-MM-DD HH:MM:SS" - parse as local time
+                const [datePart, timePart] = endTimeValue.split(' ');
+                const [year, month, day] = datePart.split('-').map(Number);
+                const [hours, minutes, seconds] = (timePart || '00:00:00').split(':').map(Number);
+                endDate = new Date(year, month - 1, day, hours, minutes, seconds || 0);
+            }
+            console.log(`🔧 Parsed end time as local: ${endDate.toLocaleString()}`);
+        }
+        
+        // Store current date for end time
+        let currentEndDate = endDate;
+        
+        // Create button content with time and date
+        const updateEndButtonContent = () => {
+            if (!task.end && !task.end_time) {
+                // Show placeholder when no end time is set
+                const placeholderBox = new Gtk.Box({
+                    orientation: Gtk.Orientation.HORIZONTAL,
+                    spacing: 8,
+                    halign: Gtk.Align.CENTER
+                });
+                
+                const placeholderLabel = new Gtk.Label({
+                    label: 'Select end time',
+                    css_classes: ['caption', 'dim-label']
+                });
+                
+                placeholderBox.append(placeholderLabel);
+                return placeholderBox;
+            }
+            
+            const timeStr = `${currentEndDate.getHours().toString().padStart(2, '0')}:${currentEndDate.getMinutes().toString().padStart(2, '0')}`;
+            const dateStr = `${currentEndDate.getDate().toString().padStart(2, '0')}/${(currentEndDate.getMonth() + 1).toString().padStart(2, '0')}/${currentEndDate.getFullYear()}`;
+            
+            const buttonBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 8,
+                halign: Gtk.Align.CENTER
+            });
+            
+            const timeLabel = new Gtk.Label({
+                label: timeStr,
+                css_classes: ['monospace', 'title-4']
+            });
+            
+            const dateLabel = new Gtk.Label({
+                label: dateStr,
+                css_classes: ['caption', 'dim-label']
+            });
+            
+            const separatorLabel = new Gtk.Label({
+                label: '•',
+                css_classes: ['caption', 'dim-label']
+            });
+            
+            buttonBox.append(timeLabel);
+            buttonBox.append(separatorLabel);
+            buttonBox.append(dateLabel);
+            
+            return buttonBox;
+        };
+        
+        const endTimeButton = new Gtk.Button({
+            css_classes: ['flat'],
+            tooltip_text: 'Select end date and time',
+            width_request: 180
+        });
+        endTimeButton.set_child(updateEndButtonContent());
+        
+        endTimeBox.append(endLabel);
+        endTimeBox.append(endTimeButton);
+
+        // Duration display (calculated automatically)
+        const durationBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 4
+        });
+        
+        const durationLabel = new Gtk.Label({
+            label: 'Duration:',
+            halign: Gtk.Align.START,
+            css_classes: ['caption']
+        });
+        
+        const durationDisplay = new Gtk.Label({
+            label: task.duration ? (this.parentWindow?.timeUtils ? this.parentWindow.timeUtils.formatDuration(task.duration) : '00:00:00') : '00:00:00',
+            halign: Gtk.Align.START,
+            css_classes: ['monospace', 'dim-label']
+        });
+        
+        durationBox.append(durationLabel);
+        durationBox.append(durationDisplay);
+
+        datetimeRow.append(startTimeBox);
+        datetimeRow.append(endTimeBox);
+        datetimeRow.append(durationBox);
+
+        // Function to create datetime from date and time string
+        const createDateTime = (date, timeString) => {
+            const [hours, minutes] = timeString.split(':').map(Number);
+            const result = new Date(date);
+            result.setHours(hours, minutes, 0, 0);
+            return result;
+        };
+
+        // Function to recalculate duration
+        const recalculateDuration = () => {
+            if (currentStartDate && currentEndDate && (task.end || task.end_time)) {
+                try {
+                    const durationMs = currentEndDate - currentStartDate;
+                    
+                    if (durationMs > 0) {
+                        const durationSeconds = Math.floor(durationMs / 1000);
+                        const formattedDuration = this.parentWindow?.timeUtils ? 
+                            this.parentWindow.timeUtils.formatDuration(durationSeconds) : 
+                            `${Math.floor(durationSeconds / 3600)}:${Math.floor((durationSeconds % 3600) / 60).toString().padStart(2, '0')}:${(durationSeconds % 60).toString().padStart(2, '0')}`;
+                        durationDisplay.set_label(formattedDuration);
+                        return durationSeconds;
+                    } else {
+                        durationDisplay.set_label('Invalid range');
+                        return null;
+                    }
+                } catch (error) {
+                    durationDisplay.set_label('Invalid format');
+                    return null;
+                }
+            } else {
+                durationDisplay.set_label('--:--:--');
+                return null;
+            }
+        };
+
+        // Add calendar popup for start time
+        startTimeButton.connect('clicked', () => {
+            const calendarDialog = new Adw.AlertDialog({
+                heading: 'Select Start Date & Time',
+                body: 'Choose the start date and time for this task'
+            });
+
+            const calendarBox = new Gtk.Box({
+                orientation: Gtk.Orientation.VERTICAL,
+                spacing: 12,
+                margin_top: 12,
+                margin_bottom: 12,
+                margin_start: 12,
+                margin_end: 12
+            });
+
+            const calendar = new Gtk.Calendar();
+            // Set calendar to the current start date
+            const startGDate = GLib.DateTime.new_local(
+                currentStartDate.getFullYear(),
+                currentStartDate.getMonth() + 1, // GLib months are 1-based
+                currentStartDate.getDate(),
+                currentStartDate.getHours(),
+                currentStartDate.getMinutes(),
+                currentStartDate.getSeconds()
+            );
+            calendar.select_day(startGDate);
+            
+            const timeBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 6,
+                halign: Gtk.Align.CENTER
+            });
+            
+            const hourSpin = new Gtk.SpinButton({
+                adjustment: new Gtk.Adjustment({
+                    lower: 0,
+                    upper: 23,
+                    step_increment: 1,
+                    value: currentStartDate.getHours()
+                }),
+                width_request: 60
+            });
+            
+            const minuteSpin = new Gtk.SpinButton({
+                adjustment: new Gtk.Adjustment({
+                    lower: 0,
+                    upper: 59,
+                    step_increment: 1,
+                    value: currentStartDate.getMinutes()
+                }),
+                width_request: 60
+            });
+            
+            timeBox.append(hourSpin);
+            timeBox.append(new Gtk.Label({ label: ':' }));
+            timeBox.append(minuteSpin);
+            
+            calendarBox.append(calendar);
+            calendarBox.append(timeBox);
+            calendarDialog.set_extra_child(calendarBox);
+            
+            calendarDialog.add_response('cancel', 'Cancel');
+            calendarDialog.add_response('ok', 'OK');
+            calendarDialog.set_response_appearance('ok', Adw.ResponseAppearance.SUGGESTED);
+            
+            calendarDialog.connect('response', (dialog, response) => {
+                if (response === 'ok') {
+                    const selectedDate = calendar.get_date();
+                    // Convert GDateTime to JavaScript Date
+                    currentStartDate = new Date(
+                        selectedDate.get_year(), 
+                        selectedDate.get_month() - 1, // GLib months are 1-based, JS months are 0-based
+                        selectedDate.get_day_of_month()
+                    );
+                    
+                    const hours = hourSpin.get_value_as_int();
+                    const minutes = minuteSpin.get_value_as_int();
+                    currentStartDate.setHours(hours, minutes, 0, 0);
+                    
+                    // Update button content
+                    startTimeButton.set_child(updateStartButtonContent());
+                    recalculateDuration();
+                }
+                dialog.close();
+            });
+            
+            calendarDialog.present(this.parentWindow);
+        });
+
+        // Add calendar popup for end time
+        endTimeButton.connect('clicked', () => {
+            const calendarDialog = new Adw.AlertDialog({
+                heading: 'Select End Date & Time',
+                body: 'Choose the end date and time for this task'
+            });
+
+            const calendarBox = new Gtk.Box({
+                orientation: Gtk.Orientation.VERTICAL,
+                spacing: 12,
+                margin_top: 12,
+                margin_bottom: 12,
+                margin_start: 12,
+                margin_end: 12
+            });
+
+            const calendar = new Gtk.Calendar();
+            // Set calendar to the current end date
+            const endGDate = GLib.DateTime.new_local(
+                currentEndDate.getFullYear(),
+                currentEndDate.getMonth() + 1, // GLib months are 1-based
+                currentEndDate.getDate(),
+                currentEndDate.getHours(),
+                currentEndDate.getMinutes(),
+                currentEndDate.getSeconds()
+            );
+            calendar.select_day(endGDate);
+            
+            const timeBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 6,
+                halign: Gtk.Align.CENTER
+            });
+            
+            const hourSpin = new Gtk.SpinButton({
+                adjustment: new Gtk.Adjustment({
+                    lower: 0,
+                    upper: 23,
+                    step_increment: 1,
+                    value: currentEndDate.getHours()
+                }),
+                width_request: 60
+            });
+            
+            const minuteSpin = new Gtk.SpinButton({
+                adjustment: new Gtk.Adjustment({
+                    lower: 0,
+                    upper: 59,
+                    step_increment: 1,
+                    value: currentEndDate.getMinutes()
+                }),
+                width_request: 60
+            });
+            
+            timeBox.append(hourSpin);
+            timeBox.append(new Gtk.Label({ label: ':' }));
+            timeBox.append(minuteSpin);
+            
+            calendarBox.append(calendar);
+            calendarBox.append(timeBox);
+            calendarDialog.set_extra_child(calendarBox);
+            
+            calendarDialog.add_response('cancel', 'Cancel');
+            calendarDialog.add_response('ok', 'OK');
+            calendarDialog.set_response_appearance('ok', Adw.ResponseAppearance.SUGGESTED);
+            
+            calendarDialog.connect('response', (dialog, response) => {
+                if (response === 'ok') {
+                    const selectedDate = calendar.get_date();
+                    // Convert GDateTime to JavaScript Date
+                    currentEndDate = new Date(
+                        selectedDate.get_year(), 
+                        selectedDate.get_month() - 1, // GLib months are 1-based, JS months are 0-based
+                        selectedDate.get_day_of_month()
+                    );
+                    
+                    const hours = hourSpin.get_value_as_int();
+                    const minutes = minuteSpin.get_value_as_int();
+                    currentEndDate.setHours(hours, minutes, 0, 0);
+                    
+                    // Update button content and mark that end time is now set
+                    task.end = 'set'; // Flag to show we have an end time
+                    endTimeButton.set_child(updateEndButtonContent());
+                    recalculateDuration();
+                }
+                dialog.close();
+            });
+            
+            calendarDialog.present(this.parentWindow);
+        });
+
+        // Initial duration calculation
+        recalculateDuration();
+
+        // Assemble the form
+        form.append(firstRow);
+        form.append(datetimeRow);
 
         dialog.set_extra_child(form);
         dialog.add_response('cancel', 'Cancel');
@@ -1095,12 +1539,61 @@ export class TasksPage {
                     return;
                 }
 
-                // Update task with new name, project, and client
-                this._updateTask(task.id, { 
+                // Get datetime values from the button data
+                let calculatedDuration = null;
+                let startTimeFormatted = null;
+                let endTimeFormatted = null;
+                
+                // Always save start time since we have it
+                if (currentStartDate) {
+                    // Format as local time for database (YYYY-MM-DD HH:MM:SS)
+                    const year = currentStartDate.getFullYear();
+                    const month = (currentStartDate.getMonth() + 1).toString().padStart(2, '0');
+                    const day = currentStartDate.getDate().toString().padStart(2, '0');
+                    const hours = currentStartDate.getHours().toString().padStart(2, '0');
+                    const minutes = currentStartDate.getMinutes().toString().padStart(2, '0');
+                    const seconds = currentStartDate.getSeconds().toString().padStart(2, '0');
+                    startTimeFormatted = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                }
+                
+                // Save end time only if it was set
+                if ((task.end || task.end_time) && currentEndDate) {
+                    // Format as local time for database (YYYY-MM-DD HH:MM:SS)
+                    const year = currentEndDate.getFullYear();
+                    const month = (currentEndDate.getMonth() + 1).toString().padStart(2, '0');
+                    const day = currentEndDate.getDate().toString().padStart(2, '0');
+                    const hours = currentEndDate.getHours().toString().padStart(2, '0');
+                    const minutes = currentEndDate.getMinutes().toString().padStart(2, '0');
+                    const seconds = currentEndDate.getSeconds().toString().padStart(2, '0');
+                    endTimeFormatted = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                    
+                    // Calculate duration if both times are set
+                    calculatedDuration = recalculateDuration();
+                    if (calculatedDuration === null && currentEndDate <= currentStartDate) {
+                        const errorDialog = new Adw.AlertDialog({
+                            heading: 'Invalid Date/Time',
+                            body: 'End time must be after start time'
+                        });
+                        errorDialog.add_response('ok', 'OK');
+                        errorDialog.present(this.parentWindow);
+                        return;
+                    }
+                }
+
+                // Prepare update data
+                const updateData = { 
                     name,
                     project_id: selectedProject.id,
                     client_id: selectedClient.id
-                });
+                };
+                
+                // Add datetime fields if provided
+                if (startTimeFormatted) updateData.start = startTimeFormatted;
+                if (endTimeFormatted) updateData.end = endTimeFormatted;
+                if (calculatedDuration !== null) updateData.duration = calculatedDuration;
+
+                // Update task with new data
+                this._updateTask(task.id, updateData);
             }
             dialog.close();
         });

@@ -100,6 +100,16 @@ export class GlobalTracking {
             
             console.log(`🔧 Using: projectName="${projectName}", clientName="${clientName}"`);
             
+            // Create local time string instead of UTC
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            const localStartTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            
             await trackingStateManager.startTracking({
                 name: validation.sanitized,
                 baseName: baseName,
@@ -107,7 +117,7 @@ export class GlobalTracking {
                 projectName: projectName,
                 clientId: clientId,
                 clientName: clientName,
-                startTime: new Date().toISOString().replace('T', ' ').substring(0, 19)
+                startTime: localStartTime
             });
         }
     }
@@ -204,6 +214,16 @@ export class GlobalTracking {
             // Start NEW task session with SAME name (will be grouped in stack automatically)
             console.log(`▶️ Starting NEW session for: ${baseName}`);
             
+            // Create local time string instead of UTC
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            const localStartTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            
             await trackingStateManager.startTracking({
                 name: baseName,
                 baseName: baseName,
@@ -211,7 +231,7 @@ export class GlobalTracking {
                 projectName: projectName,
                 clientId: task.client_id || 1,
                 clientName: clientName,
-                startTime: new Date().toISOString().replace('T', ' ').substring(0, 19)
+                startTime: localStartTime
             });
         }
     }

@@ -98,7 +98,9 @@ export class TaskStackTemplate {
 
         // Prepare separate money text
         if (this.group.totalCost > 0) {
-            moneyText = `€${this.group.totalCost.toFixed(2)}`;
+            const currency = this.group.latestTask.currency || 'EUR';
+            const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
+            moneyText = `${currencySymbol}${this.group.totalCost.toFixed(2)}`;
         }
 
         const { suffixBox, timeLabel, moneyLabel } = WidgetFactory.createTaskSuffixBox({
@@ -209,7 +211,9 @@ export class TaskStackTemplate {
             });
 
             if (cost > 0) {
-                taskTimeLabel.set_label(`${this.timeUtils.formatDuration(task.duration)} • €${cost.toFixed(2)}`);
+                const currency = task.currency || 'EUR';
+                const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
+                taskTimeLabel.set_label(`${this.timeUtils.formatDuration(task.duration)} • ${currencySymbol}${cost.toFixed(2)}`);
             }
 
             taskSuffixBox.append(taskTimeLabel);

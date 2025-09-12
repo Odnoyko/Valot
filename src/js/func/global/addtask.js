@@ -215,7 +215,8 @@ export function updateTaskWhenTrackingStops(taskName, endTime, spentSeconds, con
     }
     
     // Now update the specific task by ID
-    const updateSql = `UPDATE Task SET end_time = '${endTime}', time_spent = ${currentTimeSpent + safeSpentSeconds} WHERE id = ${foundTaskId}`;
+    // Note: Don't add safeSpentSeconds to currentTimeSpent because updateActiveTaskInRealTime already keeps time_spent current
+    const updateSql = `UPDATE Task SET end_time = '${endTime}', time_spent = ${safeSpentSeconds} WHERE id = ${foundTaskId}`;
     console.log("💾 SQL-Update für Task ID", foundTaskId, ":", updateSql);
     
     const result = executeNonSelectCommand(conn, updateSql, null);

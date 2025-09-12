@@ -707,7 +707,15 @@ class TrackingStateManager {
         try {
             const { updateTaskWhenTrackingStops } = await import('resource:///com/odnoyko/valot/js/func/global/addtask.js');
             
-            const endTime = new Date().toISOString().replace('T', ' ').substring(0, 19);
+            // Use local time instead of UTC
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            const endTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
             updateTaskWhenTrackingStops(stoppedTask.name, endTime, elapsedSeconds, {
                 client: { id: stoppedTask.clientId, name: stoppedTask.clientName },
                 currency: { code: 'EUR', symbol: '€' }

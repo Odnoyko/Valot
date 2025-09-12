@@ -44,8 +44,7 @@ export class TrackingWidget {
         const container = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 8,
-            hexpand: true,
-            margin_end: 30
+            hexpand: true
         });
 
         return container;
@@ -69,7 +68,7 @@ export class TrackingWidget {
         if (this.config.showProjectButton) {
             this.projectButton = new Button({
                 iconName: 'folder-symbolic',
-                cssClasses: ['flat'],
+                cssClasses: ['flat', 'tracking-widget-project-button'],
                 tooltipText: 'Select Project',
                 widthRequest: 36,
                 heightRequest: 36,

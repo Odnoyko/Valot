@@ -1,31 +1,5 @@
 /* Top Tracker Design */
 
-.toptracker {
-  background: @window_bg_color;
-  border-radius: 10px;
-  padding: 2px;
-  box-shadow: 0px 0px 5px 2px alpha(@shadow_color, 0.02);
-  border: 1px solid @border_color;
-  color: @window_fg_color;
-  margin: 6px 160px 6px 10px;
-}
-.tasksHeader {
-  background: @secondary_sidebar_bg_color;
-}
-.headernameinput {
-  padding-left: 20px;
-  font-size: 17px;
-  min-width: 200px;
-}
-.headertimeinput {
-  font-size: 17px;
-  margin: 0px 16px;
-  font-weight: 700;
-}
-entry,
-.headerNamebtn {
-  background: @window_bg_color;
-}
 .headerbtn {
   font-size: 14px;
   background: @headerbar_shade_color;
@@ -231,10 +205,6 @@ entry.itemNameEntry {
   border-left: 3px solid @success_color;
 }
 
-.selected-client {
-  background: alpha(@warning_color, 0.1);
-  border-left: 3px solid @warning_color;
-}
 
 /* Project icon and color selector styles */
 .icon-selector {
@@ -455,4 +425,21 @@ entry.inline-editable:focus {
 .project-appearance-btn {
 	min-width: 10px;
 	min-height: 10px;
+}
+
+/* Custom project button styles */
+.tracking-widget-project-button {
+  padding:0px;
+}
+
+.widget-factory-project-button {
+  padding:0px;
+}
+
+.header-tracking-project-button {
+  padding:0px;
+}
+
+.project-color-settings-button {
+  padding:0px;
 }

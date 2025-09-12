@@ -21,7 +21,9 @@ export class TaskRowTemplate {
     _createTaskWidget() {
         // Calculate cost
         const cost = (this.task.duration / 3600) * (this.task.client_rate || 0);
-        const costText = cost > 0 ? ` • €${cost.toFixed(2)}` : '';
+        const currency = this.task.currency || 'EUR';
+        const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
+        const costText = cost > 0 ? ` • ${currencySymbol}${cost.toFixed(2)}` : '';
 
         // Find project color
         const projectsArray = this.parentWindow.allProjects || this.allProjects || [];
@@ -96,7 +98,9 @@ export class TaskRowTemplate {
 
         // Prepare separate money text
         if (cost > 0) {
-            moneyText = `€${cost.toFixed(2)}`;
+            const currency = this.task.currency || 'EUR';
+            const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
+            moneyText = `${currencySymbol}${cost.toFixed(2)}`;
         }
 
         const { suffixBox, timeLabel, moneyLabel } = WidgetFactory.createTaskSuffixBox({

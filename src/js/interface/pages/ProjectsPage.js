@@ -415,11 +415,11 @@ export class ProjectsPage {
                 
                 // Right: Time display only
                 const timeLabel = new Gtk.Label({
-                    label: this._formatDuration(project.totalTime || 0),
+                    label: this._formatDurationHMS(project.totalTime || 0),
                     css_classes: ['time-display', 'monospace', 'dim-label'],
                     valign: Gtk.Align.CENTER,
                     halign: Gtk.Align.END,
-                    width_request: 80
+                    width_request: 100
                 });
                 
                 // Add right-click selection handlers
@@ -695,7 +695,21 @@ export class ProjectsPage {
         }
 
         try {
-            const sql = `SELECT id, name, color, total_time, icon, dark_icons, icon_color_mode FROM Project ORDER BY id`;
+            // Calculate total tracked time for each project from tasks
+            const sql = `
+                SELECT 
+                    p.id, 
+                    p.name, 
+                    p.color, 
+                    p.icon, 
+                    p.dark_icons, 
+                    p.icon_color_mode,
+                    COALESCE(SUM(t.time_spent), 0) as total_time
+                FROM Project p
+                LEFT JOIN Task t ON p.id = t.project_id
+                GROUP BY p.id, p.name, p.color, p.icon, p.dark_icons, p.icon_color_mode
+                ORDER BY p.id
+            `;
             const result = this.projectManager.dbConnection.execute_select_command(sql);
             const projects = [];
 
@@ -705,10 +719,10 @@ export class ProjectsPage {
                         id: result.get_value_at(0, i),
                         name: result.get_value_at(1, i),
                         color: result.get_value_at(2, i) || '#cccccc',
-                        totalTime: result.get_value_at(3, i) || 0,
-                        icon: result.get_value_at(4, i) || 'folder-symbolic',
-                        dark_icons: result.get_value_at(5, i) || 0,
-                        icon_color_mode: result.get_value_at(6, i) || 'auto'
+                        icon: result.get_value_at(3, i) || 'folder-symbolic',
+                        dark_icons: result.get_value_at(4, i) || 0,
+                        icon_color_mode: result.get_value_at(5, i) || 'auto',
+                        totalTime: result.get_value_at(6, i) || 0
                     };
                     projects.push(project);
                 }
@@ -884,7 +898,7 @@ export class ProjectsPage {
     }
 
     /**
-     * Format duration helper
+     * Format duration helper (legacy)
      */
     _formatDuration(totalSeconds) {
         if (!totalSeconds) return '0h 0m';
@@ -897,6 +911,19 @@ export class ProjectsPage {
         } else {
             return `${minutes}m`;
         }
+    }
+
+    /**
+     * Format duration in HH:MM:SS format
+     */
+    _formatDurationHMS(totalSeconds) {
+        if (!totalSeconds) return '00:00:00';
+        
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
     /**

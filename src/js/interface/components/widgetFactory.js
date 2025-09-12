@@ -23,8 +23,7 @@ export class WidgetFactory {
         const trackingWidget = new Gtk.Box({
             spacing: 8,
             hexpand: true,
-            hexpand_set: true,
-            margin_end: 30
+            hexpand_set: true
         });
 
         // Task name entry
@@ -41,7 +40,7 @@ export class WidgetFactory {
         // Project button
         const projectButton = new Gtk.Button({
             icon_name: 'folder-symbolic',
-            css_classes: ['flat'],
+            css_classes: ['flat', 'widget-factory-project-button'],
             tooltip_text: 'Project',
             width_request: 36,
             height_request: 36
@@ -228,7 +227,7 @@ export class WidgetFactory {
             height_request: 36,
             halign: Gtk.Align.CENTER,
             valign: Gtk.Align.CENTER,
-            css_classes: ['project-icon-button', 'flat'],
+            css_classes: ['project-icon-button', 'project-color-settings-button', 'flat'],
             tooltip_text: 'Click to change color and icon'
         });
 

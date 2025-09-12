@@ -63,6 +63,10 @@ export const ValotWindow = GObject.registerClass({
         'prev_page_btn', 'next_page_btn', 'page_info', 'pagination_box',
         'project_search', 'add_project_btn', 'project_list',
         'client_search', 'add_client_btn', 'client_list',
+        // Sidebar stats
+        'weekly_time_row',
+        // Page-specific sidebar toggle buttons
+        'show_sidebar_btn', 'show_sidebar_btn2', 'show_sidebar_btn3', 'show_sidebar_btn5',
         // Tracking widgets for all pages
         'tracking_widget', 'task_name', 'actual_time', 'track_button', 'project_context_btn', 'client_context_btn', 'compact_tracker_btn',
         'tracking_widget_projects', 'task_name_projects', 'actual_time_projects', 'track_button_projects', 'compact_tracker_btn_projects',
@@ -116,6 +120,15 @@ export const ValotWindow = GObject.registerClass({
         
         // Setup other keyboard shortcuts
         this._setupKeyboardShortcuts();
+        
+        // Subscribe to tracking events for updating stats
+        this._setupTrackingSubscriptions();
+        
+        // Initialize weekly stats (async)
+        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            this.updateWeeklyStats();
+            return false; // Remove from event loop
+        });
         
     }
 
@@ -894,6 +907,7 @@ export const ValotWindow = GObject.registerClass({
                         this.tasksPageComponent.refresh().catch(error => {
                             console.error('Failed to refresh tasks page:', error);
                         });
+                        this.updateWeeklyStats();
                     }
                     break;
                 case 1: 
@@ -936,6 +950,9 @@ export const ValotWindow = GObject.registerClass({
             const isOpen = this._sidebar_toggle_btn.get_active();
             this._split_view.set_show_sidebar(isOpen);
         });
+
+        // Setup responsive sidebar behavior
+        this._setupResponsiveSidebar();
 
     }
 
@@ -995,6 +1012,7 @@ export const ValotWindow = GObject.registerClass({
                             this.tasksPageComponent.refresh().catch(error => {
                                 console.error('Failed to refresh tasks page:', error);
                             });
+                            this.updateWeeklyStats();
                         }
                         return true;
                     case 50: // Ctrl+2 - Projects
@@ -1093,6 +1111,7 @@ export const ValotWindow = GObject.registerClass({
             this.tasksPageComponent.refresh().catch(error => {
                 console.error('Failed to load initial tasks data:', error);
             });
+            this.updateWeeklyStats();
         }
         
     }
@@ -1372,6 +1391,170 @@ export const ValotWindow = GObject.registerClass({
             console.error('❌ Failed to load clients:', error);
             this.allClients = [];
         }
+    }
+
+    /**
+     * Update weekly statistics in sidebar
+     */
+    async updateWeeklyStats() {
+        if (!this.dbConnection || !this._weekly_time_row) {
+            return;
+        }
+
+        try {
+            // Get current week date range
+            const now = new Date();
+            const startOfWeek = new Date(now);
+            startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday as start of week
+            startOfWeek.setHours(0, 0, 0, 0);
+            
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            endOfWeek.setHours(23, 59, 59, 999);
+
+            const startDateStr = startOfWeek.toISOString().split('T')[0];
+            const endDateStr = endOfWeek.toISOString().split('T')[0];
+
+            // Query tasks for current week
+            const sql = `
+                SELECT COUNT(*) as task_count, SUM(time_spent) as total_time
+                FROM Task 
+                WHERE DATE(created_at) >= '${startDateStr}' 
+                AND DATE(created_at) <= '${endDateStr}'
+            `;
+
+            const result = this.dbConnection.execute_select_command(sql);
+            let taskCount = 0;
+            let totalSeconds = 0;
+
+            if (result && result.get_n_rows() > 0) {
+                taskCount = result.get_value_at(0, 0) || 0;
+                totalSeconds = result.get_value_at(1, 0) || 0;
+            }
+
+            // Format time as HH:MM:SS
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            // Update the UI
+            const subtitle = `${timeStr} • ${taskCount} tasks`;
+            this._weekly_time_row.set_subtitle(subtitle);
+
+        } catch (error) {
+            console.error('❌ Failed to update weekly stats:', error);
+            this._weekly_time_row.set_subtitle('Error loading stats');
+        }
+    }
+
+    /**
+     * Setup tracking event subscriptions
+     */
+    _setupTrackingSubscriptions() {
+        if (!this.trackingStateManager) {
+            console.warn('TrackingStateManager not available for subscriptions');
+            return;
+        }
+
+        // Subscribe to tracking events
+        this.trackingStateManager.subscribe((event, taskInfo) => {
+            try {
+                switch (event) {
+                    case 'stop':
+                        console.log('📊 Tracking stopped, updating stats');
+                        // Update weekly stats
+                        this.updateWeeklyStats();
+                        // Update project stats
+                        this._updateProjectStats();
+                        // Update task list
+                        this._updateTaskStats();
+                        break;
+                    case 'start':
+                        console.log('📊 Tracking started');
+                        break;
+                    case 'updateTaskList':
+                        // Update stats when task list changes
+                        this.updateWeeklyStats();
+                        break;
+                }
+            } catch (error) {
+                console.error('❌ Error handling tracking event:', error);
+            }
+        });
+    }
+
+    /**
+     * Update project statistics (refresh projects page if visible)
+     */
+    _updateProjectStats() {
+        if (this.projectsPageComponent && typeof this.projectsPageComponent.loadProjects === 'function') {
+            this.projectsPageComponent.loadProjects().catch(error => {
+                console.error('❌ Failed to refresh project stats:', error);
+            });
+        }
+    }
+
+    /**
+     * Update task statistics (refresh tasks page if visible)
+     */
+    _updateTaskStats() {
+        if (this.tasksPageComponent && typeof this.tasksPageComponent.refresh === 'function') {
+            this.tasksPageComponent.refresh().catch(error => {
+                console.error('❌ Failed to refresh task stats:', error);
+            });
+        }
+    }
+
+    /**
+     * Setup responsive sidebar behavior for small screens
+     */
+    _setupResponsiveSidebar() {
+        // Connect all page-specific sidebar buttons
+        const sidebarButtons = [
+            this._show_sidebar_btn,     // Tasks page
+            this._show_sidebar_btn2,    // Projects page  
+            this._show_sidebar_btn3,    // Clients page
+            this._show_sidebar_btn5     // Reports page
+        ];
+
+        sidebarButtons.forEach(button => {
+            if (button) {
+                button.connect('clicked', () => {
+                    this._split_view.set_show_sidebar(true);
+                });
+            }
+        });
+
+        // Function to update page button visibility based on sidebar state
+        const updatePageButtonVisibility = () => {
+            const isCollapsed = this._split_view.get_collapsed();
+            const isVisible = this._split_view.get_show_sidebar();
+            
+            // Show page buttons when sidebar is hidden (either collapsed OR manually hidden)
+            const shouldShowButtons = isCollapsed || !isVisible;
+            
+            sidebarButtons.forEach(button => {
+                if (button) {
+                    button.set_visible(shouldShowButtons);
+                }
+            });
+
+            console.log(`Sidebar collapsed: ${isCollapsed}, visible: ${isVisible} - page buttons: ${shouldShowButtons ? 'visible' : 'hidden'}`);
+        };
+
+        // Monitor split view collapsed state (responsive behavior)
+        this._split_view.connect('notify::collapsed', updatePageButtonVisibility);
+
+        // Monitor sidebar visibility changes (manual toggle)
+        this._split_view.connect('notify::show-sidebar', () => {
+            const isVisible = this._split_view.get_show_sidebar();
+            this._sidebar_toggle_btn.set_active(isVisible);
+            updatePageButtonVisibility();
+        });
+
+        // Initial state check
+        updatePageButtonVisibility();
     }
 
 });
