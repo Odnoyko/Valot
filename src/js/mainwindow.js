@@ -28,6 +28,7 @@ import { CompactTrackerWindow } from 'resource:///com/odnoyko/valot/js/compacttr
 import { ProjectManager } from 'resource:///com/odnoyko/valot/js/func/pages/projectManager.js';
 import { ClientManager } from 'resource:///com/odnoyko/valot/js/func/pages/clientManager.js';
 import { TaskManager } from 'resource:///com/odnoyko/valot/js/func/pages/taskManager.js';
+import { TaskRenderer } from 'resource:///com/odnoyko/valot/js/func/pages/taskRenderer.js';
 import { GlobalTracking } from 'resource:///com/odnoyko/valot/js/func/global/globalTracking.js';
 import { TimeUtils } from 'resource:///com/odnoyko/valot/js/func/global/timeUtils.js';
 import { SimpleChart } from 'resource:///com/odnoyko/valot/js/func/pages/simpleChart.js';
@@ -58,7 +59,7 @@ export const ValotWindow = GObject.registerClass({
     InternalChildren: [
         'split_view', 'main_content', 'sidebar_list',
         'sidebar_toggle_btn', 'menu_button',
-        'tasks_page', 'projects_page', 'clients_page', 'reports_page', 
+        'tasks_page', 'projects_page', 'clients_page', 'reports_page',
         'task_search', 'task_filter', 'task_list', 
         'prev_page_btn', 'next_page_btn', 'page_info', 'pagination_box',
         'project_search', 'add_project_btn', 'project_list',
@@ -71,7 +72,15 @@ export const ValotWindow = GObject.registerClass({
         'tracking_widget', 'task_name', 'actual_time', 'track_button', 'project_context_btn', 'client_context_btn', 'compact_tracker_btn',
         'tracking_widget_projects', 'task_name_projects', 'actual_time_projects', 'track_button_projects', 'compact_tracker_btn_projects',
         'tracking_widget_clients', 'task_name_clients', 'actual_time_clients', 'track_button_clients', 'compact_tracker_btn_clients',
-        'tracking_widget_reports', 'task_name_reports', 'actual_time_reports', 'track_button_reports', 'compact_tracker_btn_reports'
+        'tracking_widget_reports', 'task_name_reports', 'actual_time_reports', 'track_button_reports', 'compact_tracker_btn_reports',
+        // Reports page chart elements  
+        'chart_placeholder', 'period_filter', 'project_filter', 'client_filter',
+        // Reports page statistics
+        'reports_total_time_value', 'reports_total_projects_value', 'reports_total_tasks_value',
+        // Currency carousel
+        'reports_currency_carousel', 'reports_carousel_indicators',
+        // Reports page recent tasks
+        'recent_tasks_list', 'reports_delete_selected_btn'
     ],
 }, class ValotWindow extends Adw.ApplicationWindow {
     constructor(application) {
@@ -101,6 +110,10 @@ export const ValotWindow = GObject.registerClass({
         this.selectedStacks = new Set();
         this.taskRowMap = new Map();
         this.stackRowMap = new Map();
+        
+        // Reports page selection state
+        this.reportsSelectedTasks = new Set();
+        this.reportsSelectedStacks = new Set();
         
         // Initialize modular page components
         this._initializePages();
@@ -207,9 +220,23 @@ export const ValotWindow = GObject.registerClass({
             (db, sql) => db.execute_non_select_command(sql)
         );
 
+        // Initialize TaskRenderer for Reports page recent tasks
+        this.reportsTaskRenderer = new TaskRenderer(
+            TimeUtils,
+            this.allProjects || [],
+            this
+        );
+        // Set Reports-specific selection state
+        this.reportsTaskRenderer.selectedTasks = this.reportsSelectedTasks;
+        this.reportsTaskRenderer.selectedStacks = this.reportsSelectedStacks;
+        // Set callback for selection changes
+        this.reportsTaskRenderer.onSelectionChanged = () => {
+            this._updateReportsDeleteButton();
+        };
+
         // Initialize other managers
         this.timeUtils = TimeUtils;
-        this.simpleChart = new SimpleChart();
+        this.simpleChart = new SimpleChart(this._chart_placeholder);
         this.reportExporter = new ReportExporter();
         
         // Make trackingStateManager available to child components
@@ -265,6 +292,7 @@ export const ValotWindow = GObject.registerClass({
             timeUtils: this.timeUtils,
             parentWindow: this
         });
+
 
         // Store page components for easy access
         this.pageComponents = {
@@ -892,12 +920,24 @@ export const ValotWindow = GObject.registerClass({
         // Tasks page uses the existing template UI, so just connect the functionality
         // The TasksPage component connects to existing UI elements via _connectToExistingUI()
         
+        
+        // Setup Reports page chart filters
+        this._setupReportsChartFilters();
+        
+        // Setup Reports page delete button
+        this._setupReportsDeleteButton();
+        
         // For other pages, we can connect them to work with the existing template
         // or replace their content if needed
     }
 
     _setupNavigation() {
         // Setup sidebar navigation using original working method
+        if (!this._sidebar_list) {
+            console.error('❌ sidebar_list is null - UI template may not be fully loaded');
+            return;
+        }
+        
         this._sidebar_list.connect('row-activated', (list, row) => {
             const index = row.get_index();
             switch (index) {
@@ -933,9 +973,11 @@ export const ValotWindow = GObject.registerClass({
                             console.error('Failed to refresh reports page:', error);
                         });
                     }
-                    break;
-                case 4: 
-                    // Compact tracker handled by _setupCompactTrackerButton()
+                    // Update chart and statistics when Reports page is shown
+                    this._refreshReportsChartFilters();
+                    this._updateChart();
+                    this._updateReportsStatistics();
+                    this._updateRecentTasksList();
                     break;
             }
         });
@@ -1038,6 +1080,8 @@ export const ValotWindow = GObject.registerClass({
                                 console.error('Failed to refresh reports page:', error);
                             });
                         }
+                        this._updateReportsStatistics();
+                        this._updateRecentTasksList();
                         return true;
                 }
             }
@@ -1555,6 +1599,724 @@ export const ValotWindow = GObject.registerClass({
 
         // Initial state check
         updatePageButtonVisibility();
+    }
+    
+    /**
+     * Setup chart filters for Reports page (like v0.2.5)
+     */
+    _setupReportsChartFilters() {
+        if (!this._period_filter || !this._project_filter || !this._client_filter) {
+            console.warn('Chart filter elements not found');
+            return;
+        }
+        
+        // Setup period filter
+        this._period_filter.connect('notify::selected', () => {
+            const selectedPeriod = this._period_filter.get_selected();
+            const periods = ['week', 'month', 'year'];
+            if (this.simpleChart && periods[selectedPeriod]) {
+                this.simpleChart.setPeriod(periods[selectedPeriod]);
+                this._updateChart();
+                this._updateReportsStatistics(); // Update statistics when period changes
+                this._updateRecentTasksList(); // Update recent tasks when period changes
+            }
+        });
+
+        // Setup project filter - populate with projects
+        this._refreshReportsChartFilters();
+
+        this._project_filter.connect('notify::selected', () => {
+            const selectedProject = this._project_filter.get_selected();
+            const projectId = selectedProject === 0 ? null : this.allProjects[selectedProject - 1]?.id;
+            if (this.simpleChart) {
+                this.simpleChart.setProjectFilter(projectId);
+                this._updateChart();
+                this._updateReportsStatistics(); // Update statistics when project changes
+                this._updateRecentTasksList(); // Update recent tasks when project changes
+            }
+        });
+
+        this._client_filter.connect('notify::selected', () => {
+            const selectedClient = this._client_filter.get_selected();
+            const clientId = selectedClient === 0 ? null : this.allClients[selectedClient - 1]?.id;
+            if (this.simpleChart) {
+                this.simpleChart.setClientFilter(clientId);
+                this._updateChart();
+                this._updateReportsStatistics(); // Update statistics when client changes
+                this._updateRecentTasksList(); // Update recent tasks when client changes
+            }
+        });
+        
+        console.log('✅ Reports chart filters setup completed');
+    }
+
+    /**
+     * Setup Reports page delete button functionality
+     */
+    _setupReportsDeleteButton() {
+        if (!this._reports_delete_selected_btn) {
+            console.warn('Reports delete button not found');
+            return;
+        }
+
+        this._reports_delete_selected_btn.connect('clicked', () => {
+            this._deleteSelectedReportsTasks();
+        });
+        
+        console.log('✅ Reports delete button setup completed');
+    }
+
+    /**
+     * Delete selected tasks from Reports page
+     */
+    _deleteSelectedReportsTasks() {
+        if (this.reportsSelectedTasks.size === 0 && this.reportsSelectedStacks.size === 0) {
+            console.log('No tasks selected for deletion');
+            return;
+        }
+
+        // Show confirmation dialog
+        const dialog = new Adw.AlertDialog({
+            heading: 'Delete Selected Tasks',
+            body: `Are you sure you want to delete ${this.reportsSelectedTasks.size} selected tasks? This action cannot be undone.`
+        });
+
+        dialog.add_response('cancel', 'Cancel');
+        dialog.add_response('delete', 'Delete');
+        dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
+        
+        dialog.connect('response', (dialog, response) => {
+            if (response === 'delete') {
+                this._performReportsTaskDeletion();
+            }
+        });
+
+        dialog.present(this);
+    }
+
+    /**
+     * Perform actual task deletion from Reports page selection
+     */
+    _performReportsTaskDeletion() {
+        if (!this.dbConnection || !this.taskManager) {
+            console.error('Database connection or TaskManager not available');
+            return;
+        }
+
+        try {
+            // Collect all task IDs to delete (from individual tasks and stacks)
+            const taskIdsToDelete = new Set([...this.reportsSelectedTasks]);
+            
+            // Add tasks from selected stacks
+            for (const stackKey of this.reportsSelectedStacks) {
+                const stackTasks = this.allTasks.filter(task => {
+                    const taskBaseName = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+                    const baseName = taskBaseName ? taskBaseName[1].trim() : task.name;
+                    const taskGroupKey = `${baseName}::${task.project_name || 'Unknown'}::${task.client_name || 'Default'}`;
+                    return taskGroupKey === stackKey;
+                });
+                
+                stackTasks.forEach(task => taskIdsToDelete.add(task.id));
+            }
+
+            console.log(`Deleting ${taskIdsToDelete.size} tasks from Reports selection`);
+
+            // Delete each task
+            for (const taskId of taskIdsToDelete) {
+                const sql = `DELETE FROM Task WHERE id = ${taskId}`;
+                this.dbConnection.execute_non_select_command(sql);
+            }
+
+            // Clear selections
+            this.reportsSelectedTasks.clear();
+            this.reportsSelectedStacks.clear();
+            this._updateReportsDeleteButton();
+
+            // Refresh data
+            this._loadTasks();
+            this._updateRecentTasksList();
+            this._updateReportsStatistics();
+            this._updateChart();
+
+            console.log(`✅ Successfully deleted ${taskIdsToDelete.size} tasks`);
+
+        } catch (error) {
+            console.error('❌ Failed to delete tasks:', error);
+        }
+    }
+
+    /**
+     * Update Reports delete button visibility and state
+     */
+    _updateReportsDeleteButton() {
+        if (!this._reports_delete_selected_btn) return;
+
+        const hasSelection = this.reportsSelectedTasks.size > 0 || this.reportsSelectedStacks.size > 0;
+        this._reports_delete_selected_btn.set_visible(hasSelection);
+        this._reports_delete_selected_btn.set_sensitive(hasSelection);
+
+        if (hasSelection) {
+            const totalCount = this.reportsSelectedTasks.size + this.reportsSelectedStacks.size;
+            this._reports_delete_selected_btn.set_tooltip_text(`Delete ${totalCount} selected items`);
+        }
+    }
+    
+    /**
+     * Update chart filter dropdowns with current data
+     */
+    _refreshReportsChartFilters() {
+        if (!this._project_filter || !this._client_filter) return;
+
+        // Update project filter dropdown
+        const projectStringList = new Gtk.StringList();
+        projectStringList.append('All Projects');
+        if (this.allProjects) {
+            this.allProjects.forEach(project => {
+                projectStringList.append(project.name);
+            });
+        }
+        this._project_filter.set_model(projectStringList);
+        this._project_filter.set_selected(0);
+
+        // Update client filter dropdown
+        const clientStringList = new Gtk.StringList();
+        clientStringList.append('All Clients');
+        if (this.allClients) {
+            this.allClients.forEach(client => {
+                clientStringList.append(client.name);
+            });
+        }
+        this._client_filter.set_model(clientStringList);
+        this._client_filter.set_selected(0);
+    }
+    
+    /**
+     * Update the Reports page chart
+     */
+    _updateChart() {
+        if (this.simpleChart) {
+            this.simpleChart.createChart(this.allTasks, this.allProjects, this.allClients);
+            console.log('📊 Chart updated in Reports page');
+        }
+    }
+    
+    /**
+     * Update Reports page statistics based on current filters
+     */
+    _updateReportsStatistics() {
+        if (!this.allTasks || !this._reports_total_time_value) {
+            return;
+        }
+        
+        try {
+            // Get current filter settings
+            const periodIndex = this._period_filter ? this._period_filter.get_selected() : 0;
+            const projectIndex = this._project_filter ? this._project_filter.get_selected() : 0;
+            const clientIndex = this._client_filter ? this._client_filter.get_selected() : 0;
+            
+            // Get filter values
+            const periods = ['week', 'month', 'year'];
+            const currentPeriod = periods[periodIndex] || 'week';
+            const selectedProjectId = projectIndex === 0 ? null : this.allProjects[projectIndex - 1]?.id;
+            const selectedClientId = clientIndex === 0 ? null : this.allClients[clientIndex - 1]?.id;
+            
+            // Filter tasks based on current settings
+            const filteredTasks = this._getFilteredTasksForReports(currentPeriod, selectedProjectId, selectedClientId);
+            
+            // Calculate statistics
+            const stats = this._calculateFilteredStatistics(filteredTasks, selectedProjectId, selectedClientId);
+            
+            // Update UI
+            this._reports_total_time_value.set_label(this._formatTime(stats.totalTime));
+            this._reports_total_projects_value.set_label(stats.activeProjects.toString());
+            this._updateCurrencyCarousel(stats.totalEarnings);
+            this._reports_total_tasks_value.set_label(stats.totalTasks.toString());
+            
+            console.log('📊 Reports statistics updated:', stats);
+            
+        } catch (error) {
+            console.error('❌ Failed to update Reports statistics:', error);
+        }
+    }
+
+    /**
+     * Update the currency carousel with earnings from different currencies
+     */
+    _updateCurrencyCarousel(earningsByCurrency) {
+        if (!this._reports_currency_carousel) {
+            console.warn('Currency carousel not found');
+            return;
+        }
+
+        try {
+            // Clear existing carousel pages
+            let child = this._reports_currency_carousel.get_first_child();
+            while (child) {
+                const next = child.get_next_sibling();
+                this._reports_currency_carousel.remove(child);
+                child = next;
+            }
+
+            // Add pages for each currency
+            for (const [currency, amount] of earningsByCurrency) {
+                const currencySymbol = this._getCurrencySymbol(currency);
+                const formattedAmount = `${currencySymbol}${amount.toFixed(2)}`;
+                
+                // Create a page for this currency
+                const currencyPage = new Gtk.Box({
+                    orientation: Gtk.Orientation.VERTICAL,
+                    valign: Gtk.Align.CENTER,
+                    halign: Gtk.Align.CENTER,
+                    spacing: 4
+                });
+
+                // Main amount label
+                const amountLabel = new Gtk.Label({
+                    label: formattedAmount,
+                    css_classes: ['title-1'],
+                    halign: Gtk.Align.CENTER
+                });
+
+                // Currency code label (smaller)
+                const currencyLabel = new Gtk.Label({
+                    label: currency,
+                    css_classes: ['caption', 'dim-label'],
+                    halign: Gtk.Align.CENTER
+                });
+
+                currencyPage.append(amountLabel);
+                currencyPage.append(currencyLabel);
+
+                this._reports_currency_carousel.append(currencyPage);
+            }
+
+            // Show/hide indicators based on number of currencies
+            if (this._reports_carousel_indicators) {
+                this._reports_carousel_indicators.set_visible(earningsByCurrency.size > 1);
+            }
+
+            console.log(`💰 Updated currency carousel with ${earningsByCurrency.size} currencies`);
+
+        } catch (error) {
+            console.error('❌ Failed to update currency carousel:', error);
+        }
+    }
+
+    /**
+     * Update Recent Tasks list in Reports page with TaskRenderer
+     */
+    _updateRecentTasksList() {
+        if (!this._recent_tasks_list || !this.reportsTaskRenderer) {
+            return;
+        }
+
+        try {
+            console.log('🔄 Updating Recent Tasks list...');
+
+            // Get current filter settings
+            const selectedPeriod = this._period_filter?.get_selected() || 0;
+            const periods = ['week', 'month', 'year'];
+            const period = periods[selectedPeriod];
+
+            const selectedProjectIndex = this._project_filter?.get_selected() || 0;
+            const projectId = selectedProjectIndex > 0 ? this.allProjects[selectedProjectIndex - 1]?.id : null;
+
+            const selectedClientIndex = this._client_filter?.get_selected() || 0;
+            const clientId = selectedClientIndex > 0 ? this.allClients[selectedClientIndex - 1]?.id : null;
+
+            // Get filtered tasks based on current Reports page filters
+            const filteredTasks = this._getFilteredTasksForReports(period, projectId, clientId);
+
+            // Sort by created_at descending and limit to recent 10 tasks
+            const recentTasks = filteredTasks
+                .sort((a, b) => new Date(b.created_at || b.start_time) - new Date(a.created_at || a.start_time))
+                .slice(0, 10);
+
+            console.log(`Found ${recentTasks.length} recent tasks to display`);
+
+            // Clear existing tasks
+            let child = this._recent_tasks_list.get_first_child();
+            while (child) {
+                const next = child.get_next_sibling();
+                this._recent_tasks_list.remove(child);
+                child = next;
+            }
+
+            // Clear task renderer state for recent tasks
+            if (this.reportsTaskRenderer) {
+                this.reportsTaskRenderer.clearAllActiveTaskTracking();
+            }
+
+            if (recentTasks.length === 0) {
+                // Show empty state
+                const emptyRow = new Adw.ActionRow({
+                    title: 'No recent tasks',
+                    subtitle: 'Tasks matching your filters will appear here',
+                    sensitive: false
+                });
+                
+                const icon = new Gtk.Image({
+                    icon_name: 'view-list-symbolic',
+                    css_classes: ['dim-label']
+                });
+                emptyRow.add_prefix(icon);
+                
+                this._recent_tasks_list.append(emptyRow);
+                return;
+            }
+
+            // Group similar tasks for stacking
+            const taskGroups = this._groupSimilarTasksForRecent(recentTasks);
+
+            // Render using TaskRenderer
+            taskGroups.forEach(group => {
+                if (group.tasks.length === 1) {
+                    // Single task
+                    const row = this.reportsTaskRenderer.renderSingleTask(group.tasks[0]);
+                    this._recent_tasks_list.append(row);
+                } else {
+                    // Multiple tasks (stack) - limit to 5 tasks per group for recent tasks
+                    group.tasks = group.tasks.slice(0, 5);
+                    const groupRow = this.reportsTaskRenderer.renderTaskGroup(group);
+                    this._recent_tasks_list.append(groupRow);
+                }
+            });
+
+            // Update delete button visibility
+            this._updateReportsDeleteButton();
+            
+            console.log('✅ Recent Tasks list updated successfully');
+
+        } catch (error) {
+            console.error('❌ Failed to update Recent Tasks list:', error);
+        }
+    }
+
+    /**
+     * Group similar tasks for Recent Tasks (simplified grouping for reports)
+     */
+    _groupSimilarTasksForRecent(tasks) {
+        const groups = new Map();
+        
+        tasks.forEach(task => {
+            // Get base name by removing numbers in parentheses
+            const baseNameMatch = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+            const baseName = baseNameMatch ? baseNameMatch[1].trim() : task.name;
+            
+            // Create unique key combining base name, project, and client
+            const groupKey = `${baseName}::${task.project_name || 'Unknown'}::${task.client_name || 'Default'}`;
+            
+            if (!groups.has(groupKey)) {
+                groups.set(groupKey, {
+                    groupKey: groupKey,
+                    baseName: baseName,
+                    tasks: [],
+                    totalDuration: 0,
+                    totalCost: 0,
+                    hasActive: false,
+                    latestTask: null
+                });
+            }
+            
+            const group = groups.get(groupKey);
+            group.tasks.push(task);
+            group.totalDuration += task.duration || 0;
+            
+            // Calculate cost if client rate exists
+            const clientRate = task.client_rate || 0;
+            group.totalCost += (task.duration / 3600) * clientRate;
+            
+            if (task.is_active) {
+                group.hasActive = true;
+            }
+            
+            // Keep track of the most recent task
+            if (!group.latestTask || new Date(task.created_at) > new Date(group.latestTask.created_at)) {
+                group.latestTask = task;
+            }
+        });
+        
+        return Array.from(groups.values());
+    }
+    
+    /**
+     * Get filtered tasks based on Reports page filter settings
+     */
+    _getFilteredTasksForReports(period, projectId, clientId) {
+        if (!this.allTasks) return [];
+        
+        // Get date range for period
+        const dateRange = this._getDateRangeForPeriod(period);
+        
+        return this.allTasks.filter(task => {
+            // Date filter
+            const taskDate = new Date(task.created_at || task.start_time);
+            if (taskDate < dateRange.start || taskDate > dateRange.end) {
+                return false;
+            }
+            
+            // Project filter
+            if (projectId && task.project_id !== projectId) {
+                return false;
+            }
+            
+            // Client filter  
+            if (clientId && task.client_id !== clientId) {
+                return false;
+            }
+            
+            return true;
+        });
+    }
+    
+    /**
+     * Get date range for a given period (like v0.2.5 logic)
+     */
+    _getDateRangeForPeriod(period) {
+        const now = new Date();
+        let start, end;
+        
+        switch (period) {
+            case 'week':
+                start = new Date(now);
+                start.setDate(now.getDate() - now.getDay()); // Start of week
+                start.setHours(0, 0, 0, 0);
+                end = new Date(start);
+                end.setDate(start.getDate() + 6); // End of week
+                end.setHours(23, 59, 59, 999);
+                break;
+                
+            case 'month':
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+                end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                end.setHours(23, 59, 59, 999);
+                break;
+                
+            case 'year':
+                start = new Date(now.getFullYear(), 0, 1);
+                end = new Date(now.getFullYear(), 11, 31);
+                end.setHours(23, 59, 59, 999);
+                break;
+                
+            default:
+                // Default to week
+                start = new Date(now);
+                start.setDate(now.getDate() - now.getDay());
+                start.setHours(0, 0, 0, 0);
+                end = new Date(start);
+                end.setDate(start.getDate() + 6);
+                end.setHours(23, 59, 59, 999);
+        }
+        
+        return { start, end };
+    }
+    
+    /**
+     * Calculate statistics from filtered tasks
+     */
+    _calculateFilteredStatistics(tasks, selectedProjectId, selectedClientId) {
+        console.log('📊 Calculating statistics for', tasks.length, 'tasks');
+        console.log('📊 Sample task data:', tasks.length > 0 ? tasks[0] : 'No tasks');
+        
+        const totalTime = tasks.reduce((sum, task) => {
+            const taskTime = task.duration || task.time_spent || 0;
+            console.log(`📊 Task "${task.name}": ${taskTime} seconds`);
+            return sum + taskTime;
+        }, 0);
+        const totalTasks = tasks.length;
+        
+        console.log('📊 Total calculated time:', totalTime, 'seconds');
+        
+        // Count unique projects
+        const projectIds = new Set();
+        if (selectedProjectId) {
+            // If project filter is applied, count only that project
+            projectIds.add(selectedProjectId);
+        } else {
+            // Count all unique projects in filtered tasks
+            tasks.forEach(task => {
+                if (task.project_id) {
+                    projectIds.add(task.project_id);
+                }
+            });
+        }
+        const activeProjects = projectIds.size;
+        
+        // Calculate earnings by currency
+        const earningsByCurrency = new Map();
+        
+        if (this.allClients) {
+            tasks.forEach(task => {
+                const client = this.allClients.find(c => c.id === task.client_id);
+                if (client && client.rate) {
+                    const taskTime = task.duration || task.time_spent || 0;
+                    const currency = client.currency || 'USD';
+                    const earnings = taskTime * (client.rate / 3600); // rate per hour
+                    
+                    if (earningsByCurrency.has(currency)) {
+                        earningsByCurrency.set(currency, earningsByCurrency.get(currency) + earnings);
+                    } else {
+                        earningsByCurrency.set(currency, earnings);
+                    }
+                }
+            });
+        }
+        
+        // If no earnings, show default
+        if (earningsByCurrency.size === 0) {
+            earningsByCurrency.set('USD', 0);
+        }
+        
+        const totalEarnings = earningsByCurrency;
+        
+        return {
+            totalTime,
+            activeProjects,
+            totalEarnings,
+            totalTasks
+        };
+    }
+    
+    /**
+     * Get currency symbol (simple implementation)
+     */
+    _getCurrencySymbol(currency) {
+        const symbols = {
+            'USD': '$',
+            'EUR': '€',
+            'GBP': '£',
+            'JPY': '¥',
+            'CHF': 'Fr.',
+            'CAD': 'C$',
+            'AUD': 'A$',
+            'CNY': '¥',
+            'INR': '₹',
+            'KRW': '₩',
+            'BRL': 'R$',
+            'RUB': '₽',
+            'SEK': 'kr',
+            'NOK': 'kr',
+            'DKK': 'kr',
+            'PLN': 'zł',
+            'CZK': 'Kč',
+            'HUF': 'Ft',
+            'TRY': '₺',
+            'ZAR': 'R',
+            'MXN': '$',
+            'SGD': 'S$',
+            'HKD': 'HK$',
+            'NZD': 'NZ$'
+        };
+        return symbols[currency] || currency;
+    }
+    
+    /**
+     * Format time in seconds to HH:MM:SS
+     */
+    _formatTime(seconds) {
+        if (!seconds || seconds < 0) return '00:00:00';
+        
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+        
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // TaskRenderer compatibility methods
+
+    /**
+     * Edit task by ID - called by TaskRenderer
+     */
+    _editTask(taskId) {
+        const task = this.allTasks?.find(t => t.id === taskId);
+        if (task && this.tasksPageComponent) {
+            // Delegate to TasksPage component which has the edit functionality
+            this.tasksPageComponent._editTaskById(task);
+        } else {
+            console.warn(`Task with ID ${taskId} not found for editing`);
+        }
+    }
+
+    /**
+     * Start tracking from task - called by TaskRenderer
+     */
+    _startTrackingFromTask(task) {
+        console.log(`🎯 MainWindow: Starting tracking for task: "${task.name}"`);
+        
+        if (this.tasksPageComponent) {
+            // Use TasksPage's tracking start logic
+            this.tasksPageComponent._startTrackingFromTask(task);
+        } else {
+            // Fallback implementation
+            this._setTrackingContext(task.project_id, task.client_id);
+            this._startTracking(task.name);
+        }
+    }
+
+    /**
+     * Stop current tracking - called by TaskRenderer
+     */
+    _stopCurrentTracking() {
+        console.log('🎯 MainWindow: Stopping current tracking');
+        
+        if (this.tasksPageComponent) {
+            // Use TasksPage's tracking stop logic
+            this.tasksPageComponent._stopCurrentTracking();
+        } else {
+            // Fallback implementation
+            this._stopTracking();
+        }
+    }
+
+    /**
+     * Set tracking context (project/client) - helper method
+     */
+    _setTrackingContext(projectId, clientId) {
+        if (projectId) this.currentProjectId = projectId;
+        if (clientId) this.currentClientId = clientId;
+        
+        // Update UI selectors if available
+        this._updateProjectClientSelectors();
+    }
+
+    /**
+     * Start tracking with task name - simplified implementation
+     */
+    _startTracking(taskName) {
+        if (this.globalTracking) {
+            this.globalTracking.startTracking({
+                name: taskName,
+                projectId: this.currentProjectId,
+                clientId: this.currentClientId
+            });
+        }
+    }
+
+    /**
+     * Stop tracking - simplified implementation
+     */
+    _stopTracking() {
+        if (this.globalTracking) {
+            this.globalTracking.stopTracking();
+        }
+    }
+
+    /**
+     * Update project/client UI selectors - helper method
+     */
+    _updateProjectClientSelectors() {
+        // Update project context button
+        const project = this.allProjects?.find(p => p.id === this.currentProjectId);
+        if (project && this._project_context_btn) {
+            this._project_context_btn.set_label(project.name);
+        }
+
+        // Update client context button  
+        const client = this.allClients?.find(c => c.id === this.currentClientId);
+        if (client && this._client_context_btn) {
+            this._client_context_btn.set_label(client.name);
+        }
     }
 
 });

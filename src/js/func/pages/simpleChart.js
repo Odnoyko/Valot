@@ -83,7 +83,7 @@ export class SimpleChart {
         const barsBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 8,
-            halign: Gtk.Align.CENTER,
+            halign: Gtk.Align.CENTER,ass
             height_request: 120
         });
         

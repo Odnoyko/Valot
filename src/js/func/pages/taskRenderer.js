@@ -423,13 +423,21 @@ export class TaskRenderer {
     }
 
     _toggleTaskSelection(row, task) {
-        if (this.parentWindow.selectedTasks) {
-            if (this.parentWindow.selectedTasks.has(task.id)) {
-                this.parentWindow.selectedTasks.delete(task.id);
+        // Use the selectedTasks set from the renderer (could be main page or reports page)
+        const selectedTasks = this.selectedTasks || this.parentWindow.selectedTasks;
+        
+        if (selectedTasks) {
+            if (selectedTasks.has(task.id)) {
+                selectedTasks.delete(task.id);
                 row.remove_css_class('selected-task');
             } else {
-                this.parentWindow.selectedTasks.add(task.id);
+                selectedTasks.add(task.id);
                 row.add_css_class('selected-task');
+            }
+            
+            // Call selection changed callback if available
+            if (this.onSelectionChanged) {
+                this.onSelectionChanged();
             }
         }
     }
@@ -455,27 +463,36 @@ export class TaskRenderer {
             // Ensure this is treated as a stack selection event
             gesture.set_state(Gtk.EventSequenceState.CLAIMED);
 
-            if (this.parentWindow.selectedStacks && this.parentWindow.selectedTasks) {
-                if (this.parentWindow.selectedStacks.has(group.groupKey)) {
+            // Use the selected sets from the renderer (could be main page or reports page)
+            const selectedStacks = this.selectedStacks || this.parentWindow.selectedStacks;
+            const selectedTasks = this.selectedTasks || this.parentWindow.selectedTasks;
+            
+            if (selectedStacks && selectedTasks) {
+                if (selectedStacks.has(group.groupKey)) {
                     // DESELECT stack and all its tasks
-                    this.parentWindow.selectedStacks.delete(group.groupKey);
+                    selectedStacks.delete(group.groupKey);
                     row.remove_css_class('selected-task');
 
                     // Remove all tasks from this stack from selectedTasks using allTasks lookup
                     stackTasks.forEach(task => {
-                        this.parentWindow.selectedTasks.delete(task.id);
+                        selectedTasks.delete(task.id);
                     });
 
                 } else {
                     // SELECT stack and all its tasks
-                    this.parentWindow.selectedStacks.add(group.groupKey);
+                    selectedStacks.add(group.groupKey);
                     row.add_css_class('selected-task');
 
                     // Add all tasks from this stack to selectedTasks using allTasks lookup
                     stackTasks.forEach(task => {
-                        this.parentWindow.selectedTasks.add(task.id);
+                        selectedTasks.add(task.id);
                     });
 
+                }
+                
+                // Call selection changed callback if available
+                if (this.onSelectionChanged) {
+                    this.onSelectionChanged();
                 }
             }
         });

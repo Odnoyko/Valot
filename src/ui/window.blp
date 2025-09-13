@@ -88,6 +88,7 @@ template $ValotWindow: Adw.ApplicationWindow {
                 }
               }
 
+
             }
           }
 
@@ -608,85 +609,146 @@ template $ValotWindow: Adw.ApplicationWindow {
                 }
               }
 
-              Box {
-                orientation: horizontal;
-                spacing: 24;
-                homogeneous: true;
+              // Summary Statistics Section (Filter-Responsive)
+              Adw.PreferencesGroup {
+                title: _("Summary Statistics");
 
-                Adw.PreferencesGroup {
-                  title: _("Today");
+                Box reports_stats_columns {
+                  orientation: horizontal;
+                  spacing: 24;
+                  homogeneous: true;
 
-                  Adw.ActionRow today_time_row {
-                    title: _("Total Time");
-                    subtitle: "0:00:00";
+                  // Total Time Column
+                  Box reports_total_time_column {
+                    orientation: vertical;
+                    css-classes: ["card"];
 
-                    [prefix]
-                    Image {
-                      icon-name: "clock-symbolic";
-                      css-classes: ["accent"];
+                    Box {
+                      orientation: vertical;
+                      spacing: 12;
+                      margin-top: 16;
+                      margin-bottom: 16;
+                      margin-start: 16;
+                      margin-end: 16;
+
+                      Image {
+                        icon-name: "clock-symbolic";
+                        pixel-size: 32;
+                        css-classes: ["accent"];
+                      }
+
+                      Label reports_total_time_value {
+                        label: "00:00:00";
+                        css-classes: ["title-1"];
+                      }
+
+                      Label {
+                        label: _("Total Time");
+                        css-classes: ["caption"];
+                      }
                     }
                   }
 
-                  Adw.ActionRow today_tasks_row {
-                    title: _("Tasks Completed");
-                    subtitle: "0";
+                  // Total Projects Column
+                  Box reports_total_projects_column {
+                    orientation: vertical;
+                    css-classes: ["card"];
 
-                    [prefix]
-                    Image {
-                      icon-name: "emblem-ok-symbolic";
-                      css-classes: ["success"];
-                    }
-                  }
-                }
+                    Box {
+                      orientation: vertical;
+                      spacing: 12;
+                      margin-top: 16;
+                      margin-bottom: 16;
+                      margin-start: 16;
+                      margin-end: 16;
 
-                Adw.PreferencesGroup {
-                  title: _("This Week");
+                      Image {
+                        icon-name: "folder-symbolic";
+                        pixel-size: 32;
+                        css-classes: ["accent"];
+                      }
 
-                  Adw.ActionRow week_time_row {
-                    title: _("Total Time");
-                    subtitle: "0:00:00";
+                      Label reports_total_projects_value {
+                        label: "0";
+                        css-classes: ["title-1"];
+                      }
 
-                    [prefix]
-                    Image {
-                      icon-name: "calendar-symbolic";
-                      css-classes: ["accent"];
-                    }
-                  }
-
-                  Adw.ActionRow week_tasks_row {
-                    title: _("Tasks Completed");
-                    subtitle: "0";
-
-                    [prefix]
-                    Image {
-                      icon-name: "view-list-symbolic";
-                      css-classes: ["success"];
-                    }
-                  }
-                }
-
-                Adw.PreferencesGroup {
-                  title: _("This Month");
-
-                  Adw.ActionRow month_time_row {
-                    title: _("Total Time");
-                    subtitle: "0:00:00";
-
-                    [prefix]
-                    Image {
-                      icon-name: "calendar-month-symbolic";
-                      css-classes: ["accent"];
+                      Label {
+                        label: _("Active Projects");
+                        css-classes: ["caption"];
+                      }
                     }
                   }
 
-                  Adw.ActionRow month_tasks_row {
-                    title: _("Tasks Completed");
-                    subtitle: "0";
+                  // Total Money Column with Currency Carousel
+                  Box reports_total_money_column {
+                    orientation: vertical;
+                    css-classes: ["card"];
 
-                    [prefix]
-                    Image {
-                      icon-name: "emblem-default-symbolic";
-                      css-classes: ["success"];
+                    Box {
+                      orientation: vertical;
+                      spacing: 8;
+                      margin-top: 12;
+                      margin-bottom: 12;
+                      margin-start: 12;
+                      margin-end: 12;
+
+                      Image {
+                        icon-name: "money-symbolic";
+                        pixel-size: 32;
+                        css-classes: ["accent"];
+                      }
+
+                      // Currency Carousel
+                      Adw.Carousel reports_currency_carousel {
+                        halign: center;
+                        valign: center;
+                        height-request: 60;
+                        allow-long-swipes: true;
+                        allow-scroll-wheel: true;
+                      }
+
+                      // Carousel indicators
+                      Adw.CarouselIndicatorDots reports_carousel_indicators {
+                        carousel: reports_currency_carousel;
+                        halign: center;
+                      }
+
+                      Label {
+                        label: _("Total Earnings");
+                        css-classes: ["caption"];
+                      }
+                    }
+                  }
+
+                  // Total Tasks Column
+                  Box reports_total_tasks_column {
+                    orientation: vertical;
+                    css-classes: ["card"];
+
+                    Box {
+                      orientation: vertical;
+                      spacing: 12;
+                      margin-top: 16;
+                      margin-bottom: 16;
+                      margin-start: 16;
+                      margin-end: 16;
+
+                      Image {
+                        icon-name: "view-list-symbolic";
+                        pixel-size: 32;
+                        css-classes: ["accent"];
+                      }
+
+                      Label reports_total_tasks_value {
+                        label: "0";
+                        css-classes: ["title-1"];
+                      }
+
+                      Label {
+                        label: _("Tracked Tasks");
+                        css-classes: ["caption"];
+                      }
                     }
                   }
                 }
@@ -695,6 +757,15 @@ template $ValotWindow: Adw.ApplicationWindow {
               Adw.PreferencesGroup {
                 title: _("Recent Tasks");
                 description: _("Your most recent completed tasks");
+
+                [header-suffix]
+                Button reports_delete_selected_btn {
+                  icon-name: "user-trash-symbolic";
+                  tooltip-text: _("Delete Selected Tasks");
+                  css-classes: ["destructive-action", "flat"];
+                  sensitive: false;
+                  visible: false;
+                }
 
                 ListBox recent_tasks_list {
                   css-classes: ["boxed-list"];
@@ -711,6 +782,7 @@ template $ValotWindow: Adw.ApplicationWindow {
           };
         }
       }
+
     };
   };
 }

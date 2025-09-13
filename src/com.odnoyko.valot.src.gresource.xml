@@ -38,6 +38,11 @@
     <file>js/func/pages/searchManager.js</file>
     <file>js/func/pages/windowManagers.js</file>
     <file>js/func/pages/ProjectsPageBehavior.js</file>
+    <file>js/func/pages/textCharts.js</file>
+    <file>js/func/pages/drawingCharts.js</file>
+    <file>js/func/pages/webCharts.js</file>
+    <file>js/func/pages/cssCharts.js</file>
+    <file>js/func/pages/legacyCharts.js</file>
     <file>js/func/pages/templates/professional-report.html</file>
 
     <!-- Component Functionality -->
