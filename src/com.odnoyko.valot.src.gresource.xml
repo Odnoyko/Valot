@@ -19,6 +19,7 @@
     <file>js/func/global/timeUtils.js</file>
     <file>js/func/global/eventManager.js</file>
     <file>js/func/global/colorUtils.js</file>
+    <file>js/func/global/dateFilters.js</file>
     <file>js/func/global/keyboardHandler.js</file>
 
     <!-- Page-Specific Functionality -->

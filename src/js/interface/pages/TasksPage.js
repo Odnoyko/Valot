@@ -8,6 +8,7 @@ import { Label } from '../components/primitive/Label.js';
 import { WidgetFactory } from '../components/widgetFactory.js';
 import { TaskManager } from '../../func/pages/taskManager.js';
 import { TaskRenderer } from '../../func/pages/taskRenderer.js';
+import { DateFilters } from '../../func/global/dateFilters.js';
 import { trackingStateManager } from '../../func/global/trackingStateManager.js';
 import { executeQuery, executeNonSelectCommand } from '../../func/global/dbinitialisation.js';
 import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/js/data/currencies.js';
@@ -376,16 +377,16 @@ export class TasksPage {
                 }
             }
 
-            // Date/status filters
+            // Date/status filters - use start date (when work was done) instead of created_at
             switch (this.activeFilter) {
                 case 'today':
-                    return this._isToday(task.date);
+                    return DateFilters.isToday(task.start);
                 case 'week':
-                    return this._isThisWeek(task.date);
+                    return DateFilters.isThisWeek(task.start);
                 case 'month':
-                    return this._isThisMonth(task.date);
+                    return DateFilters.isThisMonth(task.start);
                 case 'active':
-                    return task.is_active;
+                    return task.is_active === 1;
                 default:
                     return true;
             }
@@ -430,15 +431,17 @@ export class TasksPage {
         this.allTasks = [...this.filteredTasks];
         this.parentWindow.allTasks = this.allTasks;
 
-        // Calculate pagination
-        const totalPages = Math.ceil(this.filteredTasks.length / this.itemsPerPage);
+        // Group all tasks first, then paginate groups (not individual tasks)
+        const allTaskGroups = this._groupSimilarTasks(this.filteredTasks);
+        
+        // Calculate pagination based on groups, not individual tasks
+        const totalPages = Math.ceil(allTaskGroups.length / this.itemsPerPage);
         const start = this.currentPage * this.itemsPerPage;
-        const end = Math.min(start + this.itemsPerPage, this.filteredTasks.length);
-        const tasksToShow = this.filteredTasks.slice(start, end);
+        const end = Math.min(start + this.itemsPerPage, allTaskGroups.length);
+        const groupsToShow = allTaskGroups.slice(start, end);
 
-        // Group similar tasks and render
-        const taskGroups = this._groupSimilarTasks(tasksToShow);
-        this._renderTaskGroups(taskGroups);
+        // Render paginated groups
+        this._renderTaskGroups(groupsToShow);
 
         // Update pagination info
         this._updatePaginationInfo(totalPages);
