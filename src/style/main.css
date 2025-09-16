@@ -34,8 +34,7 @@ entry.itemNameEntry {
 
 /* Project selection and styling */
 .selected-project {
-  background-color: alpha(@accent_bg_color, 0.1);
-  border-left: 2px solid @accent_bg_color;
+  background-color: alpha(@accent_bg_color, 0.15);
 }
 
 .project-settings-button {
@@ -64,8 +63,7 @@ entry.itemNameEntry {
 
 /* Client selection styling */
 .selected-client {
-  background-color: alpha(@accent_bg_color, 0.1);
-  border-left: 2px solid @accent_bg_color;
+  background-color: alpha(@accent_bg_color, 0.15);
 }
 
 .client-name-label {
@@ -186,7 +184,6 @@ row:hover {
 }
 .selected-task {
   background: alpha(@accent_bg_color, 0.15);
-  border-left: 2px solid @accent_bg_color;
 }
 
 .selected-task:hover,
@@ -215,8 +212,7 @@ row:hover {
 }
 
 .selected-project {
-  background: alpha(@success_color, 0.1);
-  border-left: 1px solid @success_color;
+  background: alpha(@success_color, 0.15);
 }
 
 

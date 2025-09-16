@@ -112,11 +112,17 @@ export const ValotWindow = GObject.registerClass({
         // Initialize managers
         this._initializeManagers();
         
+        // Setup GTK overflow properties on content boxes
+        this._setupContentBoxOverflow();
+        
         // Initialize task selection state
         this.selectedTasks = new Set();
         this.selectedStacks = new Set();
         this.taskRowMap = new Map();
         this.stackRowMap = new Map();
+        
+        // Track current page for selection clearing
+        this.currentPageIndex = 0; // Start with tasks page
         
         // Reports page selection state
         this.reportsSelectedTasks = new Set();
@@ -269,7 +275,7 @@ export const ValotWindow = GObject.registerClass({
         this._loadClients();
         
         // Update weekly time after initial data load
-        setTimeout(() => this.updateWeeklyTime(), 1000);
+        setTimeout(() => this.updateWeeklyStats(), 1000);
     }
 
     /**
@@ -283,6 +289,32 @@ export const ValotWindow = GObject.registerClass({
             taskManager: this.taskManager,
             ...config
         });
+    }
+
+    /**
+     * Setup GTK overflow properties on content boxes
+     * Adds overflow hidden to main content list boxes, excluding tracking widget elements
+     */
+    _setupContentBoxOverflow() {
+        // Add overflow hidden to main page content boxes
+        if (this._task_list) {
+            this._task_list.set_overflow(Gtk.Overflow.HIDDEN);
+        }
+        
+        if (this._project_list) {
+            this._project_list.set_overflow(Gtk.Overflow.HIDDEN);
+        }
+        
+        if (this._client_list) {
+            this._client_list.set_overflow(Gtk.Overflow.HIDDEN);
+        }
+        
+        if (this._recent_tasks_list) {
+            this._recent_tasks_list.set_overflow(Gtk.Overflow.HIDDEN);
+        }
+        
+        // Note: We deliberately exclude tracking widget related content boxes
+        // as they need to be able to overflow for dropdown functionality
     }
 
     _initializePages() {
@@ -997,6 +1029,10 @@ export const ValotWindow = GObject.registerClass({
         
         this._sidebar_list.connect('row-activated', (list, row) => {
             const index = row.get_index();
+            
+            // Clear selections when navigating away from Projects and Clients pages
+            this._clearPageSelections(index);
+            
             switch (index) {
                 case 0: 
                     this._showPage('tasks'); 
@@ -1090,6 +1126,28 @@ export const ValotWindow = GObject.registerClass({
         });
     }
 
+    /**
+     * Clear selections when navigating away from Projects and Clients pages
+     */
+    _clearPageSelections(targetPageIndex) {
+        // Clear projects selection when leaving projects page (index 1)
+        if (this.currentPageIndex === 1 && targetPageIndex !== 1) {
+            if (this.projectsPageComponent && typeof this.projectsPageComponent._clearSelection === 'function') {
+                this.projectsPageComponent._clearSelection();
+            }
+        }
+        
+        // Clear clients selection when leaving clients page (index 2)
+        if (this.currentPageIndex === 2 && targetPageIndex !== 2) {
+            if (this.clientsPageComponent && typeof this.clientsPageComponent._clearSelection === 'function') {
+                this.clientsPageComponent._clearSelection();
+            }
+        }
+        
+        // Update current page tracking
+        this.currentPageIndex = targetPageIndex;
+    }
+
     _setupWindowVisibilityTracking() {
         this.connect('notify::minimized', () => {
             if (this.minimized) {
@@ -1106,6 +1164,7 @@ export const ValotWindow = GObject.registerClass({
             if (state & Gdk.ModifierType.CONTROL_MASK) {
                 switch (keyval) {
                     case 49: // Ctrl+1 - Tasks
+                        this._clearPageSelections(0);
                         this._showPage('tasks');
                         if (this.tasksPageComponent) {
                             this.tasksPageComponent.refresh().catch(error => {
@@ -1115,6 +1174,7 @@ export const ValotWindow = GObject.registerClass({
                         }
                         return true;
                     case 50: // Ctrl+2 - Projects
+                        this._clearPageSelections(1);
                         this._showPage('projects');
                         if (this.projectsPageComponent) {
                             this.projectsPageComponent.refresh().catch(error => {
@@ -1123,6 +1183,7 @@ export const ValotWindow = GObject.registerClass({
                         }
                         return true;
                     case 51: // Ctrl+3 - Clients
+                        this._clearPageSelections(2);
                         this._showPage('clients');
                         if (this.clientsPageComponent) {
                             this.clientsPageComponent.refresh().catch(error => {
@@ -1131,6 +1192,7 @@ export const ValotWindow = GObject.registerClass({
                         }
                         return true;
                     case 52: // Ctrl+4 - Reports
+                        this._clearPageSelections(3);
                         this._showPage('reports');
                         if (this.reportsPageComponent) {
                             this.reportsPageComponent.refresh().catch(error => {
@@ -1527,6 +1589,48 @@ export const ValotWindow = GObject.registerClass({
             console.error('❌ Failed to update weekly stats:', error);
             this._weekly_time_row.set_subtitle('Error loading stats');
         }
+    }
+
+    /**
+     * Update weekly time in real-time during tracking
+     */
+    _updateWeeklyTimeRealTime(additionalTime = 0) {
+        if (!this._weekly_time_row) {
+            return;
+        }
+
+        // Use the existing updateWeeklyStats method as base and add real-time time
+        this.updateWeeklyStats().then(() => {
+            // Get current subtitle and add additional time if needed
+            if (additionalTime > 0) {
+                try {
+                    const currentSubtitle = this._weekly_time_row.get_subtitle();
+                    const timeMatch = currentSubtitle.match(/(\d{2}):(\d{2}):(\d{2})/);
+                    
+                    if (timeMatch) {
+                        const currentHours = parseInt(timeMatch[1]);
+                        const currentMinutes = parseInt(timeMatch[2]);
+                        const currentSeconds = parseInt(timeMatch[3]);
+                        const currentTotalSeconds = currentHours * 3600 + currentMinutes * 60 + currentSeconds;
+                        
+                        const newTotalSeconds = currentTotalSeconds + additionalTime;
+                        const hours = Math.floor(newTotalSeconds / 3600);
+                        const minutes = Math.floor((newTotalSeconds % 3600) / 60);
+                        const seconds = newTotalSeconds % 60;
+                        const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                        
+                        const taskCountMatch = currentSubtitle.match(/(\d+) tasks?/);
+                        const taskCount = taskCountMatch ? taskCountMatch[1] : '0';
+                        
+                        this._weekly_time_row.set_subtitle(`${timeStr} • ${taskCount} tasks`);
+                    }
+                } catch (error) {
+                    console.error('❌ Failed to update real-time weekly stats:', error);
+                }
+            }
+        }).catch(error => {
+            console.error('❌ Failed to update weekly stats for real-time update:', error);
+        });
     }
 
     /**

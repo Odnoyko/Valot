@@ -208,6 +208,9 @@ export const CompactTrackerWindow = GObject.registerClass({
                 this._task_input.set_text(currentTracking.name);
             }
 
+            // Update track button icon based on current tracking state
+            this._updateTrackingButtonState();
+
             // Update project button
             this._updateProjectButton();
 
@@ -215,6 +218,26 @@ export const CompactTrackerWindow = GObject.registerClass({
             if (this._client_dropdown && this.mainWindow?.allClients) {
                 this._client_dropdown.updateClients(this.mainWindow.allClients, this.mainWindow.currentClientId);
             }
+        }
+    }
+
+    /**
+     * Update the tracking button icon based on current tracking state
+     */
+    _updateTrackingButtonState() {
+        if (!this._track_button) {
+            return;
+        }
+
+        const currentTracking = trackingStateManager.getCurrentTracking();
+        if (currentTracking) {
+            // Something is currently being tracked - show stop icon
+            this._track_button.set_icon_name('media-playback-stop-symbolic');
+            this._track_button.set_tooltip_text('Stop tracking');
+        } else {
+            // Nothing is being tracked - show start icon
+            this._track_button.set_icon_name('media-playback-start-symbolic');
+            this._track_button.set_tooltip_text('Start tracking');
         }
     }
 
