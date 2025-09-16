@@ -84,12 +84,10 @@ export class ClientsPage {
         if (this.addClientBtn) {
             // Connecting Add Client button
             this.addClientBtn.connect('clicked', () => {
-                console.log('🔥 КНОПКА ADD CLIENT НАЖАТА - вызываем ClientsPage.showAddClientDialogNEW()');
                 this.showAddClientDialogNEW();
             });
             // Add Client button connected
         } else {
-            console.log('❌ Кнопка Add Client НЕ НАЙДЕНА');
         }
 
     }
@@ -106,14 +104,11 @@ export class ClientsPage {
      */
     showAddClientDialogNEW() {
         try {
-            console.log('🔍 СТАРТ showAddClientDialogNEW() - НАШ МЕТОД!');
             
             // Get text from search input directly - простой способ
             const searchText = this.clientSearch ? this.clientSearch.get_text().trim() : '';
-            console.log('🔍 Search text получен:', `"${searchText}"`);
             
             if (this.clientManager) {
-                console.log('🔍 Вызываем ClientManager с текстом:', `"${searchText}"`);
                 this.clientManager.showCreateClientDialog(this.parentWindow, searchText);
             } else {
                 console.error('❌ ClientManager not available');
@@ -270,7 +265,6 @@ export class ClientsPage {
                         if (this.clientSearch) {
                             this.clientSearch.set_text('');
                         }
-                        console.log(`Created client: ${clientName} with currency ${selectedCurrency.code}`);
                     }
                 }
             }
@@ -451,7 +445,6 @@ export class ClientsPage {
         }
 
         if (!this.filteredClients || this.filteredClients.length === 0) {
-            console.log('No clients to display');
             return;
         }
 
@@ -584,7 +577,6 @@ export class ClientsPage {
         // Validate new name
         if (newName.length < 1 || newName.length > 100) {
             nameLabel.set_text(client.name);
-            console.warn('Invalid client name length');
             return;
         }
 
@@ -600,7 +592,6 @@ export class ClientsPage {
 
         if (!success) {
             nameLabel.set_text(client.name);
-            console.warn('Failed to update client name');
         }
     }
 
@@ -715,7 +706,6 @@ export class ClientsPage {
             
             currencyButton.connect('clicked', () => {
                 selectedCurrency = currency;
-                console.log('Selected currency:', currency.code, currency.symbol);
                 
                 // Update visual selection
                 for (let j = 0; j < commonCurrencies.length; j++) {
@@ -754,7 +744,6 @@ export class ClientsPage {
                 );
                 
                 if (success) {
-                    console.log(`Updated client ${client.name} currency to ${selectedCurrency.code}`);
                 }
             }
             dialog.close();
@@ -807,7 +796,6 @@ export class ClientsPage {
         }
 
         this._updateSelectionUI();
-        console.log(`Client ${clientId} selection toggled. Selected: ${Array.from(this.selectedClients)}`);
     }
 
     /**
@@ -853,9 +841,7 @@ export class ClientsPage {
         
         // For now, just log the selection since we're using the template UI
         if (selectedCount > 0) {
-            console.log(`${selectedCount} clients selected`);
         } else {
-            console.log('No clients selected');
         }
     }
 
@@ -1212,7 +1198,6 @@ export class ClientsPage {
     // Data fetching methods
     async _fetchClients() {
         if (!this.clientManager || !this.clientManager.dbConnection) {
-            console.warn('No database connection for clients');
             return [];
         }
 
@@ -1229,7 +1214,6 @@ export class ClientsPage {
             try {
                 result = this.clientManager.dbConnection.execute_select_command(sql);
             } catch (currencyColumnError) {
-                console.log('Currency column not found, trying without it:', currencyColumnError.message);
                 // Fallback to basic columns
                 sql = `SELECT id, name, email, rate FROM Client ORDER BY name`;
                 result = this.clientManager.dbConnection.execute_select_command(sql);

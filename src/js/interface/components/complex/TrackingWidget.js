@@ -147,7 +147,6 @@ export class TrackingWidget {
 
             const taskName = this.taskEntry.getText().trim();
             if (!taskName) {
-                console.log('❌ No task name entered');
                 return;
             }
 

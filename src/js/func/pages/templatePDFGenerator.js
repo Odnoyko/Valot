@@ -88,25 +88,20 @@ export class TemplatePDFGenerator {
     }
 
     async _createReportsFolder(reportsDir) {
-        console.log(`Attempting to create reports directory: ${reportsDir}`);
         
         try {
             // Create Valot folder if it doesn't exist
             if (!GLib.file_test(reportsDir, GLib.FileTest.IS_DIR)) {
-                console.log(`Directory doesn't exist, creating: ${reportsDir}`);
                 const result = GLib.mkdir_with_parents(reportsDir, 0o755);
                 if (result !== 0) {
                     throw new Error(`Failed to create directory: ${reportsDir} (code: ${result})`);
                 }
-                console.log(`Successfully created directory: ${reportsDir}`);
             } else {
-                console.log(`Directory already exists: ${reportsDir}`);
             }
             
             // Generate filename and create file object
             const fileName = this._generateFileName();
             const filePath = GLib.build_filenamev([reportsDir, fileName]);
-            console.log(`Generated file path: ${filePath}`);
             return Gio.File.new_for_path(filePath);
         } catch (error) {
             console.error(`Error in _createReportsFolder: ${error.message}`);
@@ -137,7 +132,6 @@ export class TemplatePDFGenerator {
     }
 
     _openFolder(folderPath) {
-        console.log(`Attempting to open folder: ${folderPath}`);
         
         try {
             // Simple xdg-open call only
@@ -146,7 +140,6 @@ export class TemplatePDFGenerator {
                 Gio.SubprocessFlags.NONE
             );
             subprocess.wait_async(null, null);
-            console.log('✓ Opened folder via xdg-open');
             return true;
         } catch (error) {
             console.error('Could not open folder:', error);

@@ -304,7 +304,6 @@ export class BasePage {
      */
     showSuccess(message) {
         // Could implement toast notifications here
-        console.log('Success:', message);
     }
 
     /**

@@ -38,7 +38,6 @@ export class WebCharts {
             container.append(webView);
             
         } catch (error) {
-            console.warn('WebKit not available, falling back to text chart');
             this._fallbackToTextChart(container, data, options);
         }
     }

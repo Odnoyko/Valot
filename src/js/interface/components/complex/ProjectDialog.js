@@ -220,22 +220,18 @@ export class ProjectDialog extends FormDialog {
         // Call the save handler
         if (this.onProjectSave) {
             try {
-                console.log('ProjectDialog: Calling save handler with data:', projectData, 'mode:', this.mode);
                 const result = this.onProjectSave(projectData, this.mode, this);
                 
                 // If save handler returns false, keep dialog open
                 if (result === false) {
-                    console.log('ProjectDialog: Save handler returned false, keeping dialog open');
                     return false;
                 }
                 
                 // Emit success event
                 this._emit('projectSaved', { data: projectData, mode: this.mode });
-                console.log('ProjectDialog: Project saved successfully');
                 return true; // Close dialog
                 
             } catch (error) {
-                console.error('ProjectDialog: Error saving project:', error);
                 this.showFieldError('name', 'Failed to save project. Please try again.');
                 return false;
             }

@@ -294,7 +294,6 @@ export class ModularDialogManager {
     // Default save handlers (to be overridden or replaced with actual logic)
     
     _handleProjectSave(projectData, mode) {
-        console.log('Project save:', mode, projectData);
         
         // This would integrate with the actual project manager
         if (this.parentWindow && this.parentWindow.projectManager) {
@@ -322,7 +321,6 @@ export class ModularDialogManager {
     }
 
     _handleClientSave(clientData, mode) {
-        console.log('Client save:', mode, clientData);
         
         // This would integrate with the actual client manager
         if (this.parentWindow && this.parentWindow.clientManager) {
@@ -337,7 +335,6 @@ export class ModularDialogManager {
     }
 
     _handleTaskSave(taskData, mode) {
-        console.log('Task save:', mode, taskData);
         
         // This would integrate with the actual task management system
         // Implementation would depend on the existing task management logic

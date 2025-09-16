@@ -14,7 +14,6 @@ let startDateTime = null;
 let intervalId = null;
 
 export function timeTrack(button, input, label, taskContext = {}) {
-  console.log("Zeitverfolgung initialisiert");
   
   // Handle both Button component and GTK widget
   const gtkButton = button.widget || button; // Use .widget if it's a Button component, otherwise use as GTK widget
@@ -29,12 +28,9 @@ export function timeTrack(button, input, label, taskContext = {}) {
   }
   
   gtkButton.connect("clicked", async () => {
-    console.log(`🚨 BUTTON CLICKED - timetracking.js`);
     const currentTracking = trackingStateManager.getCurrentTracking();
-    console.log(`🚨 Current tracking state:`, currentTracking);
     if (currentTracking) {
       // STOP tracking
-      console.log("Zeitverfolgung gestoppt");
       
       const endTime = GLib.get_monotonic_time();
       const endDateTime = GLib.DateTime.new_now_local();
@@ -51,20 +47,16 @@ export function timeTrack(button, input, label, taskContext = {}) {
 
       // Get task name
       const taskName = input.get_text().trim();
-      console.log(`🚨 STOP: Got task name from input: "${taskName}"`);
       
       // Validate task name with comprehensive validation
       const nameValidation = InputValidator.validateTaskName(taskName);
-      console.log(`🚨 STOP: Validation result:`, nameValidation);
       if (!nameValidation.valid) {
-        console.log("❌ Aufgabe nicht gespeichert: Validierungsfehler -", nameValidation.error);
         
         // Show validation error
         InputValidator.showValidationTooltip(input, nameValidation.error, true);
         label.set_label('00:00:00');
         return;
       }
-      console.log(`🚨 STOP: Validation passed, proceeding with update...`);
 
       // Stop tracking in state manager
       const stoppedTask = await trackingStateManager.stopTracking();
@@ -88,7 +80,6 @@ export function timeTrack(button, input, label, taskContext = {}) {
       const startStr = startDateTime.format('%Y-%m-%d %H:%M:%S');
       const endStr = endDateTime.format('%Y-%m-%d %H:%M:%S');
 
-      console.log(`Aufgabe speichern: ${taskName}, Zeit: ${spentSeconds} Sek`);
 
       // Reset display
       label.set_label('00:00:00');
@@ -105,7 +96,6 @@ export function timeTrack(button, input, label, taskContext = {}) {
       // Validate task name before starting tracking
       const startValidation = InputValidator.validateTaskName(taskName);
       if (!startValidation.valid) {
-        console.log("Zeitverfolgung nicht gestartet: Validierungsfehler -", startValidation.error);
         
         // Show validation error
         InputValidator.showValidationTooltip(input, startValidation.error, true);
@@ -117,7 +107,6 @@ export function timeTrack(button, input, label, taskContext = {}) {
       
       startTime = GLib.get_monotonic_time();
       startDateTime = GLib.DateTime.new_now_local();
-      console.log("Zeitverfolgung gestartet");
 
       // Get task context info
       const window = gtkButton.get_root();
@@ -167,7 +156,6 @@ export function timeTrack(button, input, label, taskContext = {}) {
             });
           }
         } else {
-          console.log("❌ Failed to save task when tracking started");
         }
       } catch (error) {
         console.error("❌ Error saving task when tracking started:", error);
@@ -225,14 +213,10 @@ export function timeTrack(button, input, label, taskContext = {}) {
 
   // Add Enter key functionality to start/stop tracking
   input.connect("activate", () => {
-    console.log(`🚨 ENTER KEY PRESSED - timetracking.js`);
     const text = input.get_text().trim();
-    console.log(`🚨 Input text: "${text}"`);
     if (text.length > 0) {
       // Simulate button click to start/stop tracking
-      console.log(`🚨 About to emit button click...`);
       gtkButton.emit('clicked');
-      console.log(`🚨 Button click emitted`);
       const trackingAfterClick = trackingStateManager.getCurrentTracking();
       if (trackingAfterClick) {
       } else {

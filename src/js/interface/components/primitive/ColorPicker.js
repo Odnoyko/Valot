@@ -179,7 +179,6 @@ export class ColorPicker {
                     this._selectColor(hexColor, customButton);
                 } catch (error) {
                     // User cancelled or error occurred
-                    console.log('Custom color selection cancelled');
                 }
             }
         );

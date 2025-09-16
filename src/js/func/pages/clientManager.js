@@ -22,7 +22,6 @@ export class ClientManager {
 
     createClient(name, email, rate, currency, parentWindow) {
         try {
-            console.log('Creating client:', name, email, rate, currency);
             
             // Validate inputs
             const nameValidation = InputValidator.validateClientName(name);
@@ -49,14 +48,11 @@ export class ClientManager {
             const sql = `INSERT INTO Client (name, email, rate, currency) VALUES ('${safeName}', '${safeEmail}', ${safeRate}, '${safeCurrency}')`;
             
             this.executeNonSelectCommand(this.dbConnection, sql);
-            console.log('Client created successfully');
             
             // Reload clients
             if (parentWindow && parentWindow.clientsPageComponent) {
-                console.log('Reloading clients after creation...');
                 parentWindow.clientsPageComponent.loadClients();
             } else {
-                console.warn('Parent window or clientsPageComponent not found for reload');
             }
             return true;
             
@@ -69,7 +65,6 @@ export class ClientManager {
 
     updateClient(clientId, name, email, rate, currency, parentWindow) {
         try {
-            console.log('Updating client:', name, email, rate, currency);
             
             const nameValidation = InputValidator.validateClientName(name);
             if (!nameValidation.valid) {
@@ -87,7 +82,6 @@ export class ClientManager {
             const sql = `UPDATE Client SET name = '${safeName}', email = '${safeEmail}', rate = ${safeRate}, currency = '${safeCurrency}' WHERE id = ${clientId}`;
             
             this.executeNonSelectCommand(this.dbConnection, sql);
-            console.log('Client updated successfully');
             
             // Reload clients
             if (parentWindow && parentWindow.clientsPageComponent) {
@@ -104,7 +98,6 @@ export class ClientManager {
 
     deleteClient(clientId, parentWindow) {
         try {
-            console.log('Deleting client with ID:', clientId);
             
             // Prevent deletion of default client
             if (clientId === 1) {
@@ -115,7 +108,6 @@ export class ClientManager {
             const sql = `DELETE FROM Client WHERE id = ${clientId}`;
             
             this.executeNonSelectCommand(this.dbConnection, sql);
-            console.log('Client deleted successfully');
             
             // Reload clients
             if (parentWindow && parentWindow.clientsPageComponent) {
@@ -139,7 +131,6 @@ export class ClientManager {
             if (error.message && error.message.includes('duplicate column name')) {
                 // currency column already exists
             } else {
-                console.log('Error adding currency column:', error.message);
             }
         }
     }
@@ -178,7 +169,6 @@ export class ClientManager {
 
     // Create client dialog - inline layout like projects
     showCreateClientDialog(parentWindow, prefillName = '') {
-        console.log('🔥 ClientManager: Using inline client dialog with prefill:', prefillName);
         
         const dialog = new Adw.AlertDialog({
             heading: 'Create Client',
@@ -285,7 +275,6 @@ export class ClientManager {
         currencyDropdown.connect('notify::selected', () => {
             const selectedIndex = currencyDropdown.get_selected();
             selectedCurrency = allCurrencies[selectedIndex];
-            console.log('Selected currency:', selectedCurrency.code);
         });
 
         // Assemble the rate row
@@ -315,21 +304,18 @@ export class ClientManager {
                 
                 // Валидация имени клиента с визуальной обратной связью
                 if (!name) {
-                    console.log('❌ Client name is required');
                     nameEntry.add_css_class('error');
                     nameEntry.set_tooltip_text('Имя клиента обязательно');
                     return;
                 }
                 
                 if (name.length < 2) {
-                    console.log('❌ Client name too short');
                     nameEntry.add_css_class('error');
                     nameEntry.set_tooltip_text('Имя клиента должно содержать минимум 2 символа');
                     return;
                 }
                 
                 if (name.length > 100) {
-                    console.log('❌ Client name too long');
                     nameEntry.add_css_class('error');
                     nameEntry.set_tooltip_text('Имя клиента не должно превышать 100 символов');
                     return;
@@ -349,7 +335,6 @@ export class ClientManager {
                 );
 
                 if (success) {
-                    console.log('✅ Client created successfully, refreshing page');
                     
                     // Refresh clients data in main window and update dropdowns
                     if (parentWindow._loadClients) {
@@ -365,20 +350,14 @@ export class ClientManager {
                     
                     // Update all client dropdowns in tracking widgets after a short delay to ensure data is loaded
                     setTimeout(() => {
-                        console.log('🔄 Updating client dropdowns in tracking widgets');
                         if (parentWindow.trackingWidgets && parentWindow.allClients) {
-                            console.log(`Found ${parentWindow.trackingWidgets.length} tracking widgets with ${parentWindow.allClients.length} clients`);
                             parentWindow.trackingWidgets.forEach(({ widget }) => {
                                 if (widget.updateClientDisplay) {
-                                    console.log('✅ Updating client dropdown in widget');
                                     widget.updateClientDisplay();
                                 } else {
-                                    console.log('❌ Widget does not have updateClientDisplay method');
                                 }
                             });
                         } else {
-                            console.log('❌ No tracking widgets or clients found');
-                            console.log(`trackingWidgets: ${!!parentWindow.trackingWidgets}, allClients: ${!!parentWindow.allClients}`);
                         }
                     }, 200);
                     
@@ -391,7 +370,6 @@ export class ClientManager {
                         }, 100);
                     }
                 } else {
-                    console.log('❌ Failed to create client');
                     return; // Не закрываем диалог при ошибке
                 }
             }
@@ -426,7 +404,6 @@ export class ClientManager {
             const currentEmail = result.get_value_at(iter, 1);
             const currentRate = result.get_value_at(iter, 2);
 
-            console.log('Edit client dialog for:', currentName);
             
             const dialog = new Adw.AlertDialog({
                 heading: 'Edit Client',
@@ -487,7 +464,6 @@ export class ClientManager {
             dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
 
             dialog.connect('response', (dialog, response) => {
-                console.log('Edit client dialog response:', response);
                 if (response === 'save') {
                     const name = nameEntry.get_text().trim();
                     const email = emailEntry.get_text().trim();
@@ -500,7 +476,6 @@ export class ClientManager {
                         return; // Don't close dialog
                     }
                     
-                    console.log('Updating client:', nameValidation.sanitized, email, rate);
                     if (nameValidation.sanitized) {
                         this.updateClient(clientId, nameValidation.sanitized, email, rate, parentWindow);
                     }
@@ -509,7 +484,6 @@ export class ClientManager {
             });
 
             dialog.present(parentWindow);
-            console.log('Edit client dialog presented');
             
         } catch (error) {
             console.error('Error showing edit client dialog:', error);
@@ -550,7 +524,6 @@ export class ClientManager {
             const sql = `DELETE FROM Client WHERE id = ${safeClientId}`;
             
             executeNonSelectCommand(this.dbConnection, sql);
-            console.log('Client deleted successfully');
             
             // Reload clients in parent window
             if (parentWindow && typeof parentWindow._loadClients === 'function') {
@@ -584,7 +557,6 @@ export class ClientManager {
                 });
             }
 
-            console.log('Loaded clients:', clients.length);
             return clients;
             
         } catch (error) {
@@ -649,7 +621,6 @@ export class ClientManager {
             }
 
             // Save the change
-            console.log(`Inline edit: Updating client "${client.name}" to "${validation.sanitized}"`);
             this.updateClient(client.id, validation.sanitized, client.email, client.rate, parentWindow);
             InputValidator.showValidationTooltip(nameEntry, null, false);
         };
@@ -689,13 +660,11 @@ export class ClientManager {
      * Show create client dialog using modular system
      */
     showCreateClientDialogModular(parentWindow = null) {
-        console.log('Opening modular create client dialog...');
         
         const dialog = new ClientDialog({
             mode: 'create',
             parentWindow,
             onClientSave: (clientData, mode, dialog) => {
-                console.log('Modular client save:', clientData);
                 
                 const success = this.createClient(clientData, parentWindow);
                 
@@ -716,14 +685,12 @@ export class ClientManager {
      * Show edit client dialog using modular system
      */
     showEditClientDialogModular(client, parentWindow = null) {
-        console.log('Opening modular edit client dialog for:', client.name);
         
         const dialog = new ClientDialog({
             mode: 'edit',
             client,
             parentWindow,
             onClientSave: (clientData, mode, dialog) => {
-                console.log('Modular client update:', clientData);
                 
                 const success = this.updateClient(clientData, parentWindow);
                 
@@ -982,7 +949,6 @@ export class ClientManager {
      * Show edit rate dialog for client - styled like client creation but only rate and currency
      */
     showEditRateDialog(client, parentWindow) {
-        console.log('Opening edit rate dialog for client:', client.name);
         
         const dialog = new Adw.AlertDialog({
             heading: `Edit Rate - ${client.name}`,
@@ -1099,21 +1065,17 @@ export class ClientManager {
                 );
 
                 if (success) {
-                    console.log('✅ Client rate updated successfully');
                     
                     // Refresh clients page to update the display
                     if (parentWindow && parentWindow.clientsPageComponent) {
-                        console.log('🔄 Refreshing clients page after rate update');
                         parentWindow.clientsPageComponent.loadClients();
                     }
                     
                     // Also update main window client data if available
                     if (parentWindow._loadClients) {
-                        console.log('🔄 Refreshing main window client data');
                         parentWindow._loadClients();
                     }
                 } else {
-                    console.log('❌ Failed to update client rate');
                     return; // Don't close dialog on error
                 }
             }

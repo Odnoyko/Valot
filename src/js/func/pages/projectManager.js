@@ -29,7 +29,6 @@ export class ProjectManager {
 
     createProject(name, color, icon, parentWindow, iconColorMode = 'auto') {
         try {
-            console.log('Creating project:', name, color, icon, 'Icon color mode:', iconColorMode);
             
             // Validate inputs one more time for safety
             const nameValidation = InputValidator.validateProjectName(name);
@@ -73,7 +72,6 @@ export class ProjectManager {
             const sql = `INSERT INTO Project (name, color, icon, total_time, icon_color_mode, icon_color) VALUES ('${safeName}', '${safeColor}', '${safeIcon}', 0, '${safeIconColorMode}', '${calculatedIconColor}')`;
             
             this.executeNonSelectCommand(this.dbConnection, sql);
-            console.log('Project created successfully');
             
             // Reload projects
             if (parentWindow && parentWindow.projectsPageComponent) {
@@ -92,13 +90,11 @@ export class ProjectManager {
         try {
             const alterSql = `ALTER TABLE Project ADD COLUMN dark_icons INTEGER DEFAULT 0`;
             this.executeNonSelectCommand(this.dbConnection, alterSql);
-            console.log('Added dark_icons column to Project table');
         } catch (error) {
             // Column already exists, ignore error
             if (error.message && error.message.includes('duplicate column name')) {
                 // dark_icons column already exists
             } else {
-                console.log('Error adding dark_icons column:', error.message);
             }
         }
     }
@@ -107,13 +103,11 @@ export class ProjectManager {
         try {
             const alterSql = `ALTER TABLE Project ADD COLUMN icon_color_mode TEXT DEFAULT 'auto'`;
             this.executeNonSelectCommand(this.dbConnection, alterSql);
-            console.log('Added icon_color_mode column to Project table');
         } catch (error) {
             // Column already exists, ignore error
             if (error.message && error.message.includes('duplicate column name')) {
                 // icon_color_mode column already exists
             } else {
-                console.log('Error adding icon_color_mode column:', error.message);
             }
         }
     }
@@ -122,13 +116,11 @@ export class ProjectManager {
         try {
             const alterSql = `ALTER TABLE Project ADD COLUMN icon_color TEXT DEFAULT 'white'`;
             this.executeNonSelectCommand(this.dbConnection, alterSql);
-            console.log('Added icon_color column to Project table');
         } catch (error) {
             // Column already exists, ignore error
             if (error.message && error.message.includes('duplicate column name')) {
                 // icon_color column already exists
             } else {
-                console.log('Error adding icon_color column:', error.message);
             }
         }
     }
@@ -139,7 +131,6 @@ export class ProjectManager {
      */
     createProjectAndGetId(name, color, icon, parentWindow, iconColorMode = 'auto') {
         try {
-            console.log('Creating project and returning ID:', name, color, icon, 'Icon color mode:', iconColorMode);
             
             // Validate inputs
             const nameValidation = InputValidator.validateProjectName(name);
@@ -183,17 +174,14 @@ export class ProjectManager {
             const sql = `INSERT INTO Project (name, color, icon, total_time, icon_color_mode, icon_color) VALUES ('${safeName}', '${safeColor}', '${safeIcon}', 0, '${safeIconColorMode}', '${calculatedIconColor}')`;
             
             this.executeNonSelectCommand(this.dbConnection, sql);
-            console.log('Project inserted, now retrieving ID...');
             
             // Get the newly created project by name (since name is unique)
             const getIdSql = `SELECT id FROM Project WHERE name = '${safeName}' ORDER BY id DESC LIMIT 1`;
             const result = this.executeQuery(this.dbConnection, getIdSql);
             
-            console.log('Query result for new project ID:', result);
             
             if (result && result.get_n_rows() > 0) {
                 const newProjectId = result.get_value_at(0, 0); // column 0, row 0
-                console.log('Project created successfully with ID:', newProjectId);
                 
                 // Reload projects in parent window
                 if (parentWindow && parentWindow.projectsPageComponent) {
@@ -246,8 +234,7 @@ export class ProjectManager {
 
     updateProject(projectId, name, color, icon, parentWindow, iconColorMode = 'auto') {
         try {
-            console.log('Updating project:', name, color, icon, 'Icon color mode:', iconColorMode);
-            
+                
             // Validate project ID
             const idValidation = InputValidator.validateNumber(projectId, 1);
             if (!idValidation.valid) {
@@ -290,7 +277,6 @@ export class ProjectManager {
             const sql = `UPDATE Project SET name = '${InputValidator.sanitizeForSQL(safeName)}', color = '${safeColor}', icon = '${safeIcon}', icon_color_mode = '${safeIconColorMode}', icon_color = '${calculatedIconColor}' WHERE id = ${safeProjectId}`;
             
             this.executeNonSelectCommand(this.dbConnection, sql);
-            console.log('Project updated successfully with validated inputs');
             
             // Immediately update header buttons if this is the current project
             if (parentWindow && parentWindow.currentProjectId === safeProjectId) {
@@ -300,7 +286,6 @@ export class ProjectManager {
                 }
                 // Update header buttons for the updated project
                 if (parentWindow._updateProjectButtonsDisplay) {
-                    console.log(`🔄 Updating header buttons after project settings change: ${safeName}`);
                     parentWindow._updateProjectButtonsDisplay(safeName);
                 }
             }
@@ -320,8 +305,7 @@ export class ProjectManager {
 
     deleteProject(projectId, parentWindow) {
         try {
-            console.log('Deleting project with ID:', projectId);
-            
+                
             // Validate project ID
             const idValidation = InputValidator.validateNumber(projectId, 1);
             if (!idValidation.valid) {
@@ -339,7 +323,6 @@ export class ProjectManager {
             const sql = `DELETE FROM Project WHERE id = ${safeProjectId}`;
             
             this.executeNonSelectCommand(this.dbConnection, sql);
-            console.log('Project deleted successfully with validation');
             
             // Reload projects
             if (parentWindow && parentWindow.projectsPageComponent) {
@@ -405,7 +388,6 @@ export class ProjectManager {
         
         autoButton.connect('clicked', () => {
             iconColorMode = 'auto';
-            console.log('Icon mode: Auto');
             // Update button styles
             autoButton.set_css_classes(['suggested-action']);
             lightButton.set_css_classes(['']);
@@ -414,7 +396,6 @@ export class ProjectManager {
         
         lightButton.connect('clicked', () => {
             iconColorMode = 'light';
-            console.log('Icon mode: Light (white icons)');
             // Update button styles
             autoButton.set_css_classes(['']);
             lightButton.set_css_classes(['suggested-action']);
@@ -423,7 +404,6 @@ export class ProjectManager {
         
         darkButton.connect('clicked', () => {
             iconColorMode = 'dark';
-            console.log('Icon mode: Dark (black icons)');
             // Update button styles
             autoButton.set_css_classes(['']);
             lightButton.set_css_classes(['']);
@@ -491,7 +471,6 @@ export class ProjectManager {
                 const nameValidation = InputValidator.validateProjectName(name);
                 
                 if (!nameValidation.valid) {
-                    console.log('❌ Project validation failed, blocking save');
                     InputValidator.showValidationTooltip(nameEntry, nameValidation.error, true);
                     return; // Don't close dialog
                 }
@@ -499,7 +478,6 @@ export class ProjectManager {
                 // Validate color
                 const colorValidation = InputValidator.validateColor(selectedColor.value);
                 if (!colorValidation.valid) {
-                    console.log('❌ Color validation failed, blocking save');
                     InputValidator.showValidationTooltip(nameEntry, colorValidation.error, true); // Show on nameEntry as it's most visible
                     return; // Don't close dialog
                 }
@@ -516,7 +494,6 @@ export class ProjectManager {
     }
 
     createEditProjectDialog(project, parentWindow) {
-        console.log('Creating edit project dialog for:', project.name);
         
         const dialog = new Adw.AlertDialog({
             heading: 'Edit Project',
@@ -530,7 +507,6 @@ export class ProjectManager {
             margin_top: 12
         });
         
-        console.log('MainBox created for edit dialog');
         
         // Icon color switcher (Light/Dark) - determine current mode from project data
         let iconColorMode = 'auto'; // Default
@@ -580,7 +556,6 @@ export class ProjectManager {
         
         autoButton.connect('clicked', () => {
             iconColorMode = 'auto';
-            console.log('Icon mode: Auto');
             // Update button styles
             autoButton.set_css_classes(['suggested-action']);
             lightButton.set_css_classes(['']);
@@ -589,7 +564,6 @@ export class ProjectManager {
         
         lightButton.connect('clicked', () => {
             iconColorMode = 'light';
-            console.log('Icon mode: Light (white icons)');
             // Update button styles
             autoButton.set_css_classes(['']);
             lightButton.set_css_classes(['suggested-action']);
@@ -598,7 +572,6 @@ export class ProjectManager {
         
         darkButton.connect('clicked', () => {
             iconColorMode = 'dark';
-            console.log('Icon mode: Dark (black icons)');
             // Update button styles
             autoButton.set_css_classes(['']);
             lightButton.set_css_classes(['']);
@@ -652,10 +625,8 @@ export class ProjectManager {
         form.append(colorGrid);
         
         // Add form to main container
-        console.log('Appending form to mainBox in edit dialog...');
         mainBox.append(form);
         
-        console.log('Setting mainBox as extra child in edit dialog...');
         dialog.set_extra_child(mainBox);
         dialog.add_response('cancel', 'Cancel');
         dialog.add_response('save', 'Save Changes');
@@ -669,7 +640,6 @@ export class ProjectManager {
                 const nameValidation = InputValidator.validateProjectName(name);
                 
                 if (!nameValidation.valid) {
-                    console.log('❌ Project EDIT validation failed, blocking save');
                     InputValidator.showValidationTooltip(nameEntry, nameValidation.error, true);
                     return; // Don't close dialog
                 }
@@ -677,7 +647,6 @@ export class ProjectManager {
                 // Validate color
                 const colorValidation = InputValidator.validateColor(selectedColor.value);
                 if (!colorValidation.valid) {
-                    console.log('❌ Color EDIT validation failed, blocking save');
                     InputValidator.showValidationTooltip(nameEntry, colorValidation.error, true);
                     return; // Don't close dialog
                 }
@@ -741,7 +710,6 @@ export class ProjectManager {
                 // Apply selection styling to clicked button
                 iconButton.add_css_class('selected-icon');
                 
-                console.log('Selected icon:', iconName);
             });
             
             const row = Math.floor(i / 6);
@@ -783,7 +751,6 @@ export class ProjectManager {
             
             colorButton.connect('clicked', () => {
                 colorSelection = color;
-                console.log('Selected color:', color.name, color.value);
                 
                 // Update visual selection for all color buttons
                 for (let j = 0; j < 16 && j < this.projectColors.length; j++) {
@@ -812,7 +779,6 @@ export class ProjectManager {
 
     // Main dialog methods for project management
     showCreateProjectDialog(parentWindow) {
-        console.log('Opening add project dialog...');
         
         const dialog = new Adw.AlertDialog({
             heading: 'Add New Project',
@@ -878,7 +844,6 @@ export class ProjectManager {
             
             iconButton.connect('clicked', () => {
                 selectedIcon = iconName;
-                console.log('Selected icon:', iconName);
             });
             
             const row = Math.floor(i / 6);
@@ -916,7 +881,6 @@ export class ProjectManager {
             
             colorButton.connect('clicked', () => {
                 selectedColor = color;
-                console.log('Selected color:', color.name, color.value);
             });
             
             const row = Math.floor(i / 8);
@@ -932,7 +896,6 @@ export class ProjectManager {
         dialog.set_response_appearance('create', Adw.ResponseAppearance.SUGGESTED);
         
         dialog.connect('response', (dialog, response) => {
-            console.log('Dialog response:', response);
             if (response === 'create') {
                 const name = nameEntry.get_text().trim();
                 
@@ -943,7 +906,6 @@ export class ProjectManager {
                     return; // Don't close dialog
                 }
                 
-                console.log('Creating project:', name, selectedColor.value, selectedIcon);
                 if (nameValidation.sanitized) {
                     this.createProject(nameValidation.sanitized, selectedColor.value, selectedIcon, parentWindow);
                 }
@@ -952,14 +914,12 @@ export class ProjectManager {
         });
         
         dialog.present(parentWindow);
-        console.log('Dialog presented');
     }
 
     showEditProjectDialog(projectId, parentWindow) {
         const project = parentWindow.allProjects.find(p => p.id === projectId);
         if (!project) return;
         
-        console.log('Opening edit project dialog for:', project.name);
         
         const dialog = new Adw.AlertDialog({
             heading: 'Edit Project',
@@ -1031,7 +991,6 @@ export class ProjectManager {
             
             iconButton.connect('clicked', () => {
                 selectedIcon = iconName;
-                console.log('Selected icon:', iconName);
                 
                 // Update visual selection
                 for (let j = 0; j < 12 && j < this.projectIcons.length; j++) {
@@ -1082,7 +1041,6 @@ export class ProjectManager {
             
             colorButton.connect('clicked', () => {
                 selectedColor = color;
-                console.log('Selected color:', color.name, color.value);
                 
                 // Update visual selection for all color buttons
                 for (let j = 0; j < 16 && j < this.projectColors.length; j++) {
@@ -1114,7 +1072,6 @@ export class ProjectManager {
         dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
         
         dialog.connect('response', (dialog, response) => {
-            console.log('Edit dialog response:', response);
             if (response === 'save') {
                 const name = nameEntry.get_text().trim();
                 
@@ -1125,7 +1082,6 @@ export class ProjectManager {
                     return; // Don't close dialog
                 }
                 
-                console.log('Updating project:', name, selectedColor.value, selectedIcon);
                 if (nameValidation.sanitized) {
                     this.updateProject(projectId, nameValidation.sanitized, selectedColor.value, selectedIcon, parentWindow);
                 }
@@ -1134,7 +1090,6 @@ export class ProjectManager {
         });
         
         dialog.present(parentWindow);
-        console.log('Edit dialog presented');
     }
 
     // Create an inline editable project name row
@@ -1193,7 +1148,6 @@ export class ProjectManager {
             }
 
             // Save the change
-            console.log(`Inline edit: Updating project "${project.name}" to "${validation.sanitized}"`);
             this.updateProject(project.id, validation.sanitized, project.color, project.icon, parentWindow);
             InputValidator.showValidationTooltip(nameEntry, null, false);
         };
@@ -1247,7 +1201,6 @@ export class ProjectManager {
         }
 
         const searchText = this.parentWindow._project_search.get_text().toLowerCase().trim();
-        console.log('Фильтр проектов:', searchText);
         
         // Очищаем существующие проекты
         while (this.parentWindow._project_list.get_first_child()) {
@@ -1277,7 +1230,6 @@ export class ProjectManager {
         const end = Math.min(start + this.parentWindow.projectsPerPage, this.parentWindow.filteredProjects.length);
         const paginatedProjects = this.parentWindow.filteredProjects.slice(start, end);
         
-        console.log(`Показываем ${paginatedProjects.length} из ${this.parentWindow.filteredProjects.length} проектов (страница ${this.parentWindow.currentProjectsPage + 1})`);
         
         // Отображаем проекты для текущей страницы
         paginatedProjects.forEach(project => {
@@ -1346,7 +1298,6 @@ export class ProjectManager {
         });
         
         labelRightClick.connect('pressed', (gesture, n_press, x, y) => {
-            console.log(`Right-click on label detected for project: ${project.name}`);
             this.parentWindow._toggleProjectSelection(project.id, row);
             
             // Предотвращаем появление контекстного меню
@@ -1611,7 +1562,6 @@ export class ProjectManager {
                 project.color = hexColor;
                 
             } catch (error) {
-                console.log('Цвет не был выбран');
             }
         });
     }
@@ -1871,13 +1821,11 @@ export class ProjectManager {
      * Show create project dialog using modular system
      */
     showCreateProjectDialogModular(parentWindow = null) {
-        console.log('Opening modular create project dialog...');
         
         const dialog = new ProjectDialog({
             mode: 'create',
             parentWindow: parentWindow || this.parentWindow,
             onProjectSave: (projectData, mode, dialog) => {
-                console.log('Modular project save:', projectData);
                 
                 const success = this.createProject(
                     projectData.name,
@@ -1904,14 +1852,12 @@ export class ProjectManager {
      * Show edit project dialog using modular system
      */
     showEditProjectDialogModular(project, parentWindow = null) {
-        console.log('Opening modular edit project dialog for:', project.name);
         
         const dialog = new ProjectDialog({
             mode: 'edit',
             project,
             parentWindow: parentWindow || this.parentWindow,
             onProjectSave: (projectData, mode, dialog) => {
-                console.log('Modular project update:', projectData);
                 
                 const success = this.updateProject(
                     projectData.id,
@@ -1963,7 +1909,6 @@ export class ProjectManager {
                     // Clean project data for creation (remove temporary fields)
                     const { id, tempId, isTemporary, ...createData } = projectData;
                     
-                    console.log('Creating project with temporary ID:', tempId, 'Data:', createData);
                     
                     try {
                         success = this.createProject(
@@ -1975,9 +1920,7 @@ export class ProjectManager {
                         );
                         
                         if (success) {
-                            console.log('Project created successfully, temporary ID', tempId, 'replaced with database ID');
                         } else {
-                            console.log('Project creation failed, removing temporary ID:', tempId);
                         }
                     } catch (error) {
                         console.error('Project creation error, removing temporary ID:', tempId, error);

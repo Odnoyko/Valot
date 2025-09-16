@@ -34,16 +34,8 @@ function getDbConnection() {
 
 export function saveTask(name, project, startTime, endTime, spentSeconds, projectId = 1, context = null) {
   try {
-    console.log(`=== Aufgabe speichern ===`);
-    console.log(`Name: ${name}`);
-    console.log(`Projekt: ${project}`); 
-    console.log(`Beginn: ${startTime}`);
-    console.log(`Ende: ${endTime}`);
-    console.log(`Verbrachte Zeit: ${spentSeconds} Sekunden`);
     
     if (context) {
-      console.log(`Client: ${context.client?.name} (ID: ${context.client?.id})`);
-      console.log(`Currency: ${context.currency?.symbol} ${context.currency?.code}`);
     }
     
     // Validate task name
@@ -101,7 +93,6 @@ export function saveTask(name, project, startTime, endTime, spentSeconds, projec
       VALUES ('${InputValidator.sanitizeForSQL(safeName)}', ${safeProjectId}, ${safeClientId}, '${startTime}', ${endTimeValue}, ${safeSpentSeconds}, CURRENT_TIMESTAMP)
     `;
 
-    console.log("SQL-Abfrage:", sql);
     
     const result = executeNonSelectCommand(conn, sql, null);
     
@@ -114,13 +105,11 @@ export function saveTask(name, project, startTime, endTime, spentSeconds, projec
           const savedTaskId = verifyResult.get_value_at(0, 0);
           const savedTaskName = verifyResult.get_value_at(1, 0);
         } else {
-          console.warn("⚠️ Task save reported success but verification failed");
         }
       } catch (verifyError) {
         console.error("❌ Error verifying saved task:", verifyError);
       }
     } else {
-      console.warn(`⚠️ Task save failed - 0 rows affected for "${safeName}"`);
     }
     
     return result;
@@ -134,10 +123,6 @@ export function saveTask(name, project, startTime, endTime, spentSeconds, projec
 
 export function updateTaskWhenTrackingStops(taskName, endTime, spentSeconds, context = null) {
   try {
-    console.log(`🚨 === updateTaskWhenTrackingStops CALLED ===`);
-    console.log(`🚨 Name: ${taskName}`);
-    console.log(`🚨 Ende: ${endTime}`);
-    console.log(`🚨 Zusätzliche verbrachte Zeit: ${spentSeconds} Sekunden`);
     
     // Validate inputs
     const nameValidation = InputValidator.validateTaskName(taskName);
@@ -182,7 +167,6 @@ export function updateTaskWhenTrackingStops(taskName, endTime, spentSeconds, con
       }
       
       if (!foundTaskId) {
-        console.log(`❌ No active task found with name "${safeName}"`);
         
         // Try to find ANY task with this name for debugging
         const debugSql = `SELECT id, name, start_time, end_time, time_spent FROM Task WHERE name = '${InputValidator.sanitizeForSQL(safeName)}' ORDER BY id DESC LIMIT 5`;
@@ -217,12 +201,10 @@ export function updateTaskWhenTrackingStops(taskName, endTime, spentSeconds, con
     // Now update the specific task by ID
     // Note: Don't add safeSpentSeconds to currentTimeSpent because updateActiveTaskInRealTime already keeps time_spent current
     const updateSql = `UPDATE Task SET end_time = '${endTime}', time_spent = ${safeSpentSeconds} WHERE id = ${foundTaskId}`;
-    console.log("💾 SQL-Update für Task ID", foundTaskId, ":", updateSql);
     
     const result = executeNonSelectCommand(conn, updateSql, null);
     
     if (result === 0) {
-      console.warn(`⚠️ No rows updated for task "${safeName}" - task may not exist or is not active`);
     }
     
     return result;
@@ -236,9 +218,6 @@ export function updateTaskWhenTrackingStops(taskName, endTime, spentSeconds, con
 
 export function updateActiveTaskInRealTime(taskName, currentSpentSeconds) {
   try {
-    console.log(`=== Real-time Aufgaben-Update ===`);
-    console.log(`Name: ${taskName}`);
-    console.log(`Aktuelle verbrachte Zeit: ${currentSpentSeconds} Sekunden`);
     
     // Validate inputs
     const nameValidation = InputValidator.validateTaskName(taskName);
@@ -271,12 +250,10 @@ export function updateActiveTaskInRealTime(taskName, currentSpentSeconds) {
       )
     `;
 
-    console.log("SQL-Abfrage für Real-time Update:", sql);
     
     const result = executeNonSelectCommand(conn, sql, null);
     
     if (result === 0) {
-      console.warn(`⚠️ No rows updated during real-time update for task "${safeName}"`);
     }
     
     return result;

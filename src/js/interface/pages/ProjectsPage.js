@@ -312,7 +312,6 @@ export class ProjectsPage {
         }
 
         if (!this.filteredProjects || this.filteredProjects.length === 0) {
-            console.log('No projects to display');
             return;
         }
 
@@ -445,15 +444,23 @@ export class ProjectsPage {
     }
 
     /**
+     * Generate unique project name
+     */
+    _generateUniqueProjectName() {
+        const now = new Date();
+        const index = now.getTime().toString().slice(-4); // Last 4 digits of timestamp
+        return `Default (${index})`;
+    }
+
+    /**
      * Show add project dialog
      */
     showAddProjectDialog() {
         if (this.modularDialogManager && this.projectManager) {
             // Get text from search input to use as initial project name
             const searchText = this.projectSearch ? this.projectSearch.get_text().trim() : '';
-            const initialName = searchText || 'Default';
+            const initialName = searchText || this._generateUniqueProjectName();
             
-            console.log('Creating project immediately with name:', initialName);
             
             // STEP 1: Create project immediately with default values
             const newProjectId = this.projectManager.createProjectAndGetId(
@@ -465,16 +472,12 @@ export class ProjectsPage {
             );
             
             if (!newProjectId) {
-                console.error('Failed to create project immediately');
                 return;
             }
-            
-            console.log('Project created with ID:', newProjectId);
             
             // STEP 2: Get the created project data
             const createdProject = this.projectManager.getProjectById(newProjectId);
             if (!createdProject) {
-                console.error('Failed to retrieve created project');
                 return;
             }
             
@@ -507,18 +510,12 @@ export class ProjectsPage {
                 },
                 onCancel: (dialog) => {
                     // CANCEL: Delete the project we just created
-                    console.log('Project creation cancelled, deleting project ID:', createdProject.id);
                     const deleteSuccess = this.projectManager.deleteProject(createdProject.id, this.parentWindow);
                     if (deleteSuccess) {
-                        console.log('Created project deleted successfully');
                         this.loadProjects(); // Refresh the project list
-                    } else {
-                        console.error('Failed to delete created project on cancel');
                     }
                 }
             });
-        } else {
-            console.error('ModularDialogManager not available');
         }
     }
 
@@ -610,9 +607,7 @@ export class ProjectsPage {
         // For now, just log the selection since we're using the template UI
         // Later can be enhanced to show selection info in UI
         if (selectedCount > 0) {
-            console.log(`${selectedCount} projects selected`);
         } else {
-            console.log('No projects selected');
         }
         
         // Could add a status bar or header info here later
@@ -729,7 +724,6 @@ export class ProjectsPage {
 
     async _fetchProjects() {
         if (!this.projectManager || !this.projectManager.dbConnection) {
-            console.warn('No database connection for projects');
             return [];
         }
 
@@ -850,7 +844,6 @@ export class ProjectsPage {
         if (newName.length < 1 || newName.length > 100) {
             // Revert to original name (using set_text for Gtk.EditableLabel)
             nameLabel.set_text(project.name);
-            console.warn('Invalid project name length');
             return;
         }
 
@@ -867,7 +860,6 @@ export class ProjectsPage {
         if (!success) {
             // Revert to original name (using set_label for Gtk.Label)
             nameLabel.set_label(project.name);
-            console.warn('Failed to update project name');
         } else {
             // Update the label with the new name
             nameLabel.set_label(newName);
@@ -933,7 +925,6 @@ export class ProjectsPage {
         }
 
         this._updateSelectionUI();
-        console.log(`Project ${projectId} selection toggled. Selected: ${Array.from(this.selectedProjects)}`);
     }
 
     /**
@@ -973,29 +964,24 @@ export class ProjectsPage {
 
         const keyController = new Gtk.EventControllerKey();
         keyController.connect('key-pressed', (controller, keyval, keycode, state) => {
-            console.log(`🔑 Key pressed: ${keyval} (state: ${state})`);
             
             // Delete key - delete selected projects
             if (keyval === 65535) { // Delete key
-                console.log(`🗑️ Delete key pressed, ${this.selectedProjects.size} projects selected`);
                 if (this.selectedProjects.size > 0) {
                     this._deleteSelectedProjects();
                     return true;
                 } else {
-                    console.log('No projects selected for deletion');
                 }
             }
             
             // Ctrl+A - select all projects
             if ((state & Gdk.ModifierType.CONTROL_MASK) && keyval === 97) { // Ctrl+A
-                console.log('🔄 Ctrl+A pressed - selecting all projects');
                 this._selectAllProjects();
                 return true;
             }
             
             // Escape - clear selection
             if (keyval === 65307) { // Escape
-                console.log('❌ Escape pressed - clearing selection');
                 this._clearSelection();
                 return true;
             }

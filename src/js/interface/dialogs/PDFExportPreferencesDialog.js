@@ -42,7 +42,6 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
         this._buildInterface();
         this._connectSignals();
         
-        console.log('📋 PDF Export Preferences Dialog created');
     }
 
     _buildInterface() {
@@ -142,7 +141,6 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
             const periods = ['week', 'month', 'year', 'custom'];
             this.exportConfig.timeRange = periods[periodRow.get_selected()];
             this._updateCustomDateVisibility();
-            console.log('📅 Time period changed to:', this.exportConfig.timeRange);
         });
 
         periodGroup.add(periodRow);
@@ -210,7 +208,6 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
         });
         analyticsRow.connect('notify::active', () => {
             this.exportConfig.includeAnalytics = analyticsRow.get_active();
-            console.log('📊 Analytics inclusion:', this.exportConfig.includeAnalytics);
         });
 
         // Charts switch
@@ -221,7 +218,6 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
         });
         chartsRow.connect('notify::active', () => {
             this.exportConfig.includeCharts = chartsRow.get_active();
-            console.log('📈 Charts inclusion:', this.exportConfig.includeCharts);
         });
 
         // Tasks switch
@@ -232,7 +228,6 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
         });
         tasksRow.connect('notify::active', () => {
             this.exportConfig.includeTasks = tasksRow.get_active();
-            console.log('📝 Tasks inclusion:', this.exportConfig.includeTasks);
         });
 
         // Projects switch
@@ -243,7 +238,6 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
         });
         projectsRow.connect('notify::active', () => {
             this.exportConfig.includeProjects = projectsRow.get_active();
-            console.log('📁 Projects inclusion:', this.exportConfig.includeProjects);
         });
 
         // Billing switch
@@ -254,7 +248,6 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
         });
         billingRow.connect('notify::active', () => {
             this.exportConfig.includeBilling = billingRow.get_active();
-            console.log('💰 Billing inclusion:', this.exportConfig.includeBilling);
         });
 
         sectionsGroup.add(analyticsRow);
@@ -322,7 +315,6 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
         this.projectFilterRow.connect('notify::selected', () => {
             const selectedIndex = this.projectFilterRow.get_selected();
             this.exportConfig.filterByProject = selectedIndex === 0 ? null : projects[selectedIndex - 1]?.id;
-            console.log('📁 Project filter changed to:', this.exportConfig.filterByProject);
         });
     }
 
@@ -340,7 +332,6 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
         this.clientFilterRow.connect('notify::selected', () => {
             const selectedIndex = this.clientFilterRow.get_selected();
             this.exportConfig.filterByClient = selectedIndex === 0 ? null : clients[selectedIndex - 1]?.id;
-            console.log('👤 Client filter changed to:', this.exportConfig.filterByClient);
         });
     }
 
@@ -352,12 +343,10 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
     _connectSignals() {
         // Date picker buttons
         this.startDateButton?.connect('clicked', () => {
-            console.log('📅 Start date picker clicked');
             // TODO: Implement date picker
         });
 
         this.endDateButton?.connect('clicked', () => {
-            console.log('📅 End date picker clicked');
             // TODO: Implement date picker
         });
     }
@@ -366,8 +355,6 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
      * Apply the configuration and start export
      */
     async applyAndExport() {
-        console.log('🚀 Applying export configuration and starting export...');
-        console.log('⚙️ Export config:', this.exportConfig);
 
         if (!this.reportExporter) {
             console.error('❌ No report exporter available');
@@ -431,12 +418,10 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
             }
 
             // Start the export
-            console.log('📄 Starting PDF export with configured settings...');
             await this.reportExporter.exportReport(this.parentWindow);
             
             // Close the dialog after successful export
             this.close();
-            console.log('✅ PDF export started successfully');
 
         } catch (error) {
             console.error('💥 Export configuration failed:', error);

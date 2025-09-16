@@ -191,7 +191,6 @@ export class TaskManager {
         `;
         
         try {
-            console.log('➕ TaskManager: Creating task:', { name, description, projectId });
             this.executeNonSelectCommand(this.dbConnection, sql);
             return true;
         } catch (error) {
@@ -246,7 +245,6 @@ export class TaskManager {
         }
         
         if (updates.length === 0) {
-            console.warn('⚠️ TaskManager: No updates provided for task');
             return false;
         }
         
@@ -281,7 +279,6 @@ export class TaskManager {
      */
     deleteTasks(taskIds) {
         if (!Array.isArray(taskIds) || taskIds.length === 0) {
-            console.warn('⚠️ TaskManager: No task IDs provided for deletion');
             return false;
         }
         

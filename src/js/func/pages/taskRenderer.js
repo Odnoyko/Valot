@@ -155,15 +155,11 @@ export class TaskRenderer {
     }
 
     _handleTaskTrackClick(task, taskGroupKey) {
-        console.log(`🎯 Task track button clicked: "${task.name}"`);
         const isCurrentlyThisTaskTracking = trackingStateManager.isTaskTracking(taskGroupKey);
-        console.log(`🎯 Is currently tracking: ${isCurrentlyThisTaskTracking}`);
 
         if (isCurrentlyThisTaskTracking) {
-            console.log(`🎯 Calling _stopCurrentTracking()`);
             this.parentWindow._stopCurrentTracking();
         } else {
-            console.log(`🎯 Calling _startTrackingFromTask()`);
             this.parentWindow._startTrackingFromTask(task);
         }
     }
@@ -414,7 +410,6 @@ export class TaskRenderer {
                 }
                 return false; // Let other handlers process the event
             } catch (error) {
-                console.warn('Error getting modifier state:', error.message);
                 return false;
             }
         });
@@ -512,7 +507,6 @@ export class TaskRenderer {
             const sql = `UPDATE Task SET name = '${safeName}' WHERE id = ${taskId}`;
 
             executeNonSelectCommand(this.parentWindow.dbConnection, sql);
-            console.log('Task name updated successfully');
 
             // Refresh the task list to show updated name
             if (typeof this.parentWindow._loadTasks === 'function') {
@@ -559,7 +553,6 @@ export class TaskRenderer {
         const count = this.activeTaskWidgets.size;
         this.activeTaskWidgets.clear();
         if (count > 0) {
-            console.log(`Gelöscht ${count} aktive Task-Widgets`);
         }
         
         // Also clear all template instances

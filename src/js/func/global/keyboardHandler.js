@@ -25,24 +25,18 @@ export function handleDeleteKey(window, pageComponents, currentPageName) {
             break;
             
         case 'projects':
-            console.log('🗑️ Delete key: projects page');
             if (pageComponents.projects && typeof pageComponents.projects._deleteSelectedProjects === 'function') {
-                console.log('🗑️ Calling projects._deleteSelectedProjects()');
                 pageComponents.projects._deleteSelectedProjects();
                 return true;
             } else {
-                console.log('❌ Projects page component or method not found');
             }
             break;
             
         case 'clients':
-            console.log('🗑️ Delete key: clients page');
             if (pageComponents.clients && typeof pageComponents.clients._deleteSelectedClients === 'function') {
-                console.log('🗑️ Calling clients._deleteSelectedClients()');
                 pageComponents.clients._deleteSelectedClients();
                 return true;
             } else {
-                console.log('❌ Clients page component or method not found');
             }
             break;
             

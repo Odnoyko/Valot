@@ -124,7 +124,6 @@ class TrackingStateManager {
 
         // Create group key for current tracking task
         const currentTaskGroupKey = `${this.currentTrackingTask.baseName}::${this.currentTrackingTask.projectName}::${this.currentTrackingTask.clientName}`;
-        console.log(`🔍 Checking isTaskTracking: "${currentTaskGroupKey}" === "${taskIdentifier}" ? ${currentTaskGroupKey === taskIdentifier}`);
         return currentTaskGroupKey === taskIdentifier;
     }
 
@@ -234,7 +233,6 @@ class TrackingStateManager {
 
             if (isThisTaskTracking || (isAnyTracking && !taskName)) {
                 // This specific task is being tracked OR it's a general button and something is tracking
-                console.log(`🔄 Setting STOP icon for button (taskName: "${taskName}", isAnyTracking: ${isAnyTracking})`);
                 button.set_icon_name('media-playback-stop-symbolic');
                 button.set_tooltip_text('Stop tracking');
 
@@ -249,7 +247,6 @@ class TrackingStateManager {
                 }
             } else {
                 // This task is not being tracked
-                console.log(`🔄 Setting START icon for button (taskName: "${taskName}", isAnyTracking: ${isAnyTracking})`);
                 button.set_icon_name('media-playback-start-symbolic');
                 button.set_tooltip_text('Start tracking');
 
@@ -344,7 +341,6 @@ class TrackingStateManager {
                 this.dbUpdateCounter++;
                 if (this.dbUpdateCounter >= 5) {
                     this.dbUpdateCounter = 0;
-                    console.log(`💾 Real-time database update: "${this.currentTrackingTask.name}" -> ${this.currentElapsedTime}s`);
                     updateActiveTaskInRealTime(this.currentTrackingTask.name, this.currentElapsedTime);
 
                     // Notify that database was updated
@@ -383,7 +379,6 @@ class TrackingStateManager {
             if (app && app.database_connection) {
                 dbConnection = app.database_connection;
             } else {
-                console.warn('📊 No database connection available from app for total time calculation');
                 return 0;
             }
 
@@ -474,7 +469,6 @@ class TrackingStateManager {
         // Get database time once and cache it to avoid multiple DB calls and prevent accumulation
         if (this.cachedDbTime === null) {
             this.cachedDbTime = await this.getTotalTaskTime(this.currentTrackingTask.name);
-            console.log(`💾 Cached database time for "${this.currentTrackingTask.name}": ${this.cachedDbTime}s`);
         }
 
         // Update individual task time labels (we know currentTrackingTask exists here)
@@ -483,7 +477,6 @@ class TrackingStateManager {
 
             if (!taskGroupKey) {
                 // Header timer (taskGroupKey = null) - always show current tracking time
-                console.log(`⏰ Updating header timer: ${timeStr}`);
                 label.set_text(timeStr);
             } else if (this.isTaskTracking(taskGroupKey)) {
                 // This specific task is being tracked - show total time (cached database + current session)
@@ -693,7 +686,6 @@ class TrackingStateManager {
                 }
             );
             
-            console.log(`✅ Created new task in database: "${taskInfo.name}"`);
         } catch (error) {
             console.error("❌ Error creating new task in database:", error);
         }
@@ -721,7 +713,6 @@ class TrackingStateManager {
                 currency: { code: 'EUR', symbol: '€' }
             });
             
-            console.log(`✅ Updated task in database: "${stoppedTask.name}" with ${elapsedSeconds}s`);
         } catch (error) {
             console.error("❌ Error updating task in database:", error);
         }

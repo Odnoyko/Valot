@@ -96,25 +96,20 @@ export class ReportHTML {
     }
 
     async _createReportsFolder(reportsDir) {
-        console.log(`Attempting to create reports directory: ${reportsDir}`);
 
         try {
             // Create Valot folder if it doesn't exist
             if (!GLib.file_test(reportsDir, GLib.FileTest.IS_DIR)) {
-                console.log(`Directory doesn't exist, creating: ${reportsDir}`);
                 const result = GLib.mkdir_with_parents(reportsDir, 0o755);
                 if (result !== 0) {
                     throw new Error(`Failed to create directory: ${reportsDir} (code: ${result})`);
                 }
-                console.log(`Successfully created directory: ${reportsDir}`);
             } else {
-                console.log(`Directory already exists: ${reportsDir}`);
             }
 
             // Generate filename and create file object
             const fileName = this._generateFileName();
             const filePath = GLib.build_filenamev([reportsDir, fileName]);
-            console.log(`Generated file path: ${filePath}`);
             return Gio.File.new_for_path(filePath);
         } catch (error) {
             console.error(`Error in _createReportsFolder: ${error.message}`);
@@ -155,7 +150,6 @@ export class ReportHTML {
     }
 
     _openFolder(folderPath) {
-        console.log(`Attempting to open folder: ${folderPath}`);
 
         try {
             const subprocess = Gio.Subprocess.new(
@@ -163,7 +157,6 @@ export class ReportHTML {
                 Gio.SubprocessFlags.NONE
             );
             subprocess.wait_async(null, null);
-            console.log('✓ Opened folder via xdg-open');
             return true;
         } catch (error) {
             console.error('Could not open folder:', error);
@@ -181,14 +174,11 @@ export class ReportHTML {
             subprocess.wait_async(null, (source, result) => {
                 try {
                     subprocess.wait_finish(result);
-                    console.log('✓ Opened HTML file in browser:', filepath);
                 } catch (error) {
-                    console.warn('Could not open HTML file in browser:', error);
                 }
             });
 
         } catch (error) {
-            console.warn('Failed to open HTML file:', error);
         }
     }
 
@@ -218,7 +208,6 @@ export class ReportHTML {
             outputStream.write_bytes(new GLib.Bytes(bytes), null);
             outputStream.close(null);
 
-            console.log('HTML exported successfully to:', filepath);
 
         } catch (error) {
             console.error('Error creating HTML from template:', error);

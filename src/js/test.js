@@ -5,7 +5,6 @@ export function showAllData() {
   const tables = ['Project', 'Task'];
 
   for (const table of tables) {
-    console.log(`\n=== ${table} ===`);
     const result = executeQuery(conn, `SELECT * FROM ${table}`);
     const cols = result.get_n_columns();
     const rows = result.get_n_rows();
@@ -20,7 +19,6 @@ export function showAllData() {
       for (let c = 0; c < cols; c++) {
         values.push(result.get_value_at(r, c));
       }
-      console.log(Object.fromEntries(names.map((n, i) => [n, values[i]])));
     }
   }
 }

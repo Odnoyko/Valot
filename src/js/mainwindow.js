@@ -157,7 +157,6 @@ export const ValotWindow = GObject.registerClass({
         if (app && app.database_connection) {
             this.dbConnection = app.database_connection;
         } else {
-            console.warn('⚠️ No database connection found in application, using fallback');
             try {
                 this.dbConnection = setupDatabase();
             } catch (error) {
@@ -304,11 +303,9 @@ export const ValotWindow = GObject.registerClass({
         if (this._export_pdf_btn) {
             // Connecting export PDF button
             this._export_pdf_btn.connect('clicked', () => {
-                console.log('🚀 Static UI PDF Export button clicked - opening preferences dialog');
                 this._showPDFExportPreferences();
             });
         } else {
-            console.warn('⚠️ export_pdf_btn not found in UI');
         }
 
         // Connect filter dropdowns to update ReportExporter
@@ -316,7 +313,6 @@ export const ValotWindow = GObject.registerClass({
             this._period_filter.connect('notify::selected', () => {
                 const periods = ['week', 'month', 'year'];
                 const selectedPeriod = periods[this._period_filter.get_selected()];
-                console.log('📅 Period filter changed to:', selectedPeriod);
                 if (this.reportExporter) {
                     this.reportExporter.configurePeriod(selectedPeriod);
                 }
@@ -401,7 +397,6 @@ export const ValotWindow = GObject.registerClass({
                 
                 // Created tracking widget
             } else {
-                console.warn(`⚠️ Could not find tracking container for ${name} page`);
             }
         });
 
@@ -464,7 +459,6 @@ export const ValotWindow = GObject.registerClass({
         
         // Synchronize compact tracker if it's open
         if (this.compactTrackerWindow) {
-            console.log(`🔄 Main window: syncing compact tracker for project: ${projectName}`);
             this.compactTrackerWindow.syncWithMainWindow();
         } else {
             // Compact tracker not open, skipping sync
@@ -479,7 +473,6 @@ export const ValotWindow = GObject.registerClass({
     _updateClientButtonsDisplay(clientName) {
         // Prevent infinite loops by checking if we're already updating
         if (this._isUpdatingClientButtons) {
-            console.log(`🔄 Skipping client button update - already in progress`);
             return;
         }
         
@@ -498,13 +491,10 @@ export const ValotWindow = GObject.registerClass({
         
         // Synchronize compact tracker if it's open
         if (this.compactTrackerWindow) {
-            console.log(`🔄 Main window: syncing compact tracker for client: ${clientName}`);
             this.compactTrackerWindow.syncWithMainWindow();
         } else {
-            console.log(`🔄 Main window: compact tracker not open for client sync`);
         }
         
-        console.log(`✅ Updated all client buttons to: ${clientName}`);
         this._isUpdatingClientButtons = false;
     }
 
@@ -564,7 +554,6 @@ export const ValotWindow = GObject.registerClass({
             this.allClients || [],
             this.currentClientId,
             (selectedClient) => {
-                console.log(`Client selected: ${selectedClient.name}`);
                 this.currentClientId = selectedClient.id;
                 this._updateClientButtonsDisplay(selectedClient.name);
             }
@@ -581,7 +570,6 @@ export const ValotWindow = GObject.registerClass({
 
     _showProjectSelector(triggerButton = null) {
         if (!this.allProjects) {
-            console.warn('Projects not loaded');
             return;
         }
 
@@ -815,7 +803,6 @@ export const ValotWindow = GObject.registerClass({
 
     _showClientSelector() {
         if (!this.allClients) {
-            console.warn('Clients not loaded');
             return;
         }
 
@@ -859,7 +846,6 @@ export const ValotWindow = GObject.registerClass({
                         this.currentClientId = selectedClient.id;
                         this._updateProjectClientButtons();
                         this._updateClientButtonsDisplay(selectedClient.name);
-                        console.log(`Selected client: ${selectedClient.name} with currency ${selectedClient.currency}`);
                     }
                 }
                 dialog.close();
@@ -1148,12 +1134,6 @@ export const ValotWindow = GObject.registerClass({
     }
 
     _testDeleteKeyFunction() {
-        console.log('🧪 TEST FUNCTION: Delete key test executed successfully!');
-        console.log('🧪 TEST FUNCTION: Current page components available:');
-        console.log('🧪 TEST FUNCTION: - tasksPageComponent:', !!this.tasksPageComponent);
-        console.log('🧪 TEST FUNCTION: - projectsPageComponent:', !!this.projectsPageComponent);
-        console.log('🧪 TEST FUNCTION: - clientsPageComponent:', !!this.clientsPageComponent);
-        console.log('🧪 TEST FUNCTION: - reportsPageComponent:', !!this.reportsPageComponent);
         
         // Try to show a simple alert if possible
         try {
@@ -1163,9 +1143,7 @@ export const ValotWindow = GObject.registerClass({
             });
             dialog.add_response('ok', 'OK');
             dialog.present(this);
-            console.log('🧪 TEST FUNCTION: Alert dialog shown');
         } catch (error) {
-            console.log('🧪 TEST FUNCTION: Could not show alert:', error.message);
         }
     }
 
@@ -1185,7 +1163,6 @@ export const ValotWindow = GObject.registerClass({
                 // Use your original replace method for instant navigation
                 this._main_content.replace([pages[pageName]]);
             } catch (error) {
-                console.log(`Navigation error for ${pageName}:`, error);
                 // Fallback: try to add page to stack first
                 try {
                     this._main_content.add(pages[pageName]);
@@ -1220,7 +1197,6 @@ export const ValotWindow = GObject.registerClass({
     }
 
     _showCompactTrackerOnHide() {
-        console.log('🔄 Main window hidden - showing compact tracker...');
         
         if (!this.compactTrackerWindow) {
             this.compactTrackerWindow = new CompactTrackerWindow(this.application, this);
@@ -1228,19 +1204,15 @@ export const ValotWindow = GObject.registerClass({
             // Handle window destruction properly
             this.compactTrackerWindow.connect('destroy', () => {
                 this.compactTrackerWindow = null;
-                console.log('🔄 Compact tracker destroyed, reference cleared');
             });
             
-            console.log('🔄 Compact tracker created for hidden window');
         }
         
         this.compactTrackerWindow.syncWithMainWindow();
         this.compactTrackerWindow.present();
-        console.log('🔄 Compact tracker shown');
     }
 
     _launchCompactTrackerDebug(shiftPressed = false) {
-        console.log(`🧪 Debug: Toggling compact tracker, shift: ${shiftPressed}`);
         
         if (!this.compactTrackerWindow) {
             this.compactTrackerWindow = new CompactTrackerWindow(this.application, this);
@@ -1251,29 +1223,23 @@ export const ValotWindow = GObject.registerClass({
             // Handle window destruction properly
             this.compactTrackerWindow.connect('destroy', () => {
                 this.compactTrackerWindow = null;
-                console.log('🧪 Compact tracker destroyed, reference cleared');
             });
             
-            console.log('🧪 Debug compact tracker created');
             this.compactTrackerWindow.syncWithMainWindow();
             this.compactTrackerWindow.present();
             
             // Hide main window only if shift not pressed
             if (!shiftPressed) {
                 this.set_visible(false);
-                console.log('🧪 Debug compact tracker shown, main window hidden');
             } else {
-                console.log('🧪 Debug compact tracker shown, main window stays visible (shift mode)');
             }
         } else {
             if (this.compactTrackerWindow.is_visible()) {
                 this.compactTrackerWindow.set_visible(false);
-                console.log('🧪 Debug compact tracker hidden');
                 // When hiding, show main window if it was hidden in normal mode
                 if (!this.compactTrackerWindow.shiftMode && !this.is_visible()) {
                     this.set_visible(true);
                     this.present();
-                    console.log('🧪 Main window restored after hiding compact tracker');
                 }
             } else {
                 // Update shift mode
@@ -1284,9 +1250,7 @@ export const ValotWindow = GObject.registerClass({
                 // Hide main window only if shift not pressed
                 if (!shiftPressed) {
                     this.set_visible(false);
-                    console.log('🧪 Debug compact tracker shown, main window hidden');
                 } else {
-                    console.log('🧪 Debug compact tracker shown, main window stays visible (shift mode)');
                 }
             }
         }
@@ -1461,7 +1425,6 @@ export const ValotWindow = GObject.registerClass({
             try {
                 result = this.clientManager.dbConnection.execute_select_command(sql);
             } catch (currencyColumnError) {
-                console.log('Currency column not found, trying without it:', currencyColumnError.message);
                 sql = `SELECT id, name, email, rate FROM Client ORDER BY name`;
                 result = this.clientManager.dbConnection.execute_select_command(sql);
             }
@@ -1556,7 +1519,6 @@ export const ValotWindow = GObject.registerClass({
      */
     _setupTrackingSubscriptions() {
         if (!this.trackingStateManager) {
-            console.warn('TrackingStateManager not available for subscriptions');
             return;
         }
 
@@ -1565,7 +1527,6 @@ export const ValotWindow = GObject.registerClass({
             try {
                 switch (event) {
                     case 'stop':
-                        console.log('📊 Tracking stopped, updating stats');
                         // Update weekly stats
                         this.updateWeeklyStats();
                         // Update project stats
@@ -1574,7 +1535,6 @@ export const ValotWindow = GObject.registerClass({
                         this._updateTaskStats();
                         break;
                     case 'start':
-                        console.log('📊 Tracking started');
                         break;
                     case 'updateTaskList':
                         // Update stats when task list changes
@@ -1665,7 +1625,6 @@ export const ValotWindow = GObject.registerClass({
      */
     _setupReportsChartFilters() {
         if (!this._period_filter || !this._project_filter || !this._client_filter) {
-            console.warn('Chart filter elements not found');
             return;
         }
         
@@ -1714,7 +1673,6 @@ export const ValotWindow = GObject.registerClass({
      */
     _setupReportsDeleteButton() {
         if (!this._reports_delete_selected_btn) {
-            console.warn('Reports delete button not found');
             return;
         }
 
@@ -1730,7 +1688,6 @@ export const ValotWindow = GObject.registerClass({
      */
     _deleteSelectedReportsTasks() {
         if (this.reportsSelectedTasks.size === 0 && this.reportsSelectedStacks.size === 0) {
-            console.log('No tasks selected for deletion');
             return;
         }
 
@@ -1778,7 +1735,6 @@ export const ValotWindow = GObject.registerClass({
                 stackTasks.forEach(task => taskIdsToDelete.add(task.id));
             }
 
-            console.log(`Deleting ${taskIdsToDelete.size} tasks from Reports selection`);
 
             // Delete each task
             for (const taskId of taskIdsToDelete) {
@@ -1797,7 +1753,6 @@ export const ValotWindow = GObject.registerClass({
             this._updateReportsStatistics();
             this._updateChart();
 
-            console.log(`✅ Successfully deleted ${taskIdsToDelete.size} tasks`);
 
         } catch (error) {
             console.error('❌ Failed to delete tasks:', error);
@@ -1903,7 +1858,6 @@ export const ValotWindow = GObject.registerClass({
      */
     _updateCurrencyCarousel(earningsByCurrency) {
         if (!this._reports_currency_carousel) {
-            console.warn('Currency carousel not found');
             return;
         }
 
@@ -2294,7 +2248,6 @@ export const ValotWindow = GObject.registerClass({
             // Delegate to TasksPage component which has the edit functionality
             this.tasksPageComponent._editTaskById(task);
         } else {
-            console.warn(`Task with ID ${taskId} not found for editing`);
         }
     }
 
@@ -2302,7 +2255,6 @@ export const ValotWindow = GObject.registerClass({
      * Start tracking from task - called by TaskRenderer
      */
     _startTrackingFromTask(task) {
-        console.log(`🎯 MainWindow: Starting tracking for task: "${task.name}"`);
         
         if (this.tasksPageComponent) {
             // Use TasksPage's tracking start logic
@@ -2318,7 +2270,6 @@ export const ValotWindow = GObject.registerClass({
      * Stop current tracking - called by TaskRenderer
      */
     _stopCurrentTracking() {
-        console.log('🎯 MainWindow: Stopping current tracking');
         
         if (this.tasksPageComponent) {
             // Use TasksPage's tracking stop logic
@@ -2399,7 +2350,6 @@ export const ValotWindow = GObject.registerClass({
      * Show PDF Export Preferences Dialog
      */
     _showPDFExportPreferences() {
-        console.log('📋 Opening PDF Export Preferences Dialog');
 
         if (!this.reportExporter) {
             console.error('❌ No report exporter available for preferences dialog');

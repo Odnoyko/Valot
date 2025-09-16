@@ -63,7 +63,6 @@ export class HeaderTrackingWidget {
             (selectedClient) => {
                 if (this.parentWindow) {
                     this.parentWindow.currentClientId = selectedClient.id;
-                    console.log(`HeaderTracker client selected: ${selectedClient.name}`);
                     if (this.parentWindow._updateClientButtonsDisplay) {
                         this.parentWindow._updateClientButtonsDisplay(selectedClient.name);
                     }
@@ -105,7 +104,6 @@ export class HeaderTrackingWidget {
         
         // Direct tracking control - no delegation
         this.trackButton.connect('clicked', () => {
-            console.log(`🔥 HeaderTrackingWidget CLICKED`);
             this._handleDirectTracking();
         });
 
@@ -114,7 +112,6 @@ export class HeaderTrackingWidget {
 
         // Add Enter key support for the task entry
         this.taskEntry.connect('activate', () => {
-            console.log(`🔥 ENTER KEY PRESSED in header tracker`);
             this.trackButton.emit('clicked');
         });
     }
@@ -123,7 +120,6 @@ export class HeaderTrackingWidget {
      * Handle direct tracking from header widget
      */
     _handleDirectTracking() {
-        console.log(`🔥 HeaderTrackingWidget: _handleDirectTracking called`);
         
         GlobalTracking.handleTrackingClick({
             input: this.taskEntry,
@@ -137,33 +133,25 @@ export class HeaderTrackingWidget {
      * Handle tracking button clicks from non-master widgets
      */
     _handleNonMasterTracking() {
-        console.log(`🔥 NON-MASTER BUTTON CLICKED`);
         const currentTracking = trackingStateManager.getCurrentTracking();
-        console.log(`🔥 Current tracking:`, currentTracking);
         
         if (currentTracking) {
             // Stop current tracking - delegate to master widget
-            console.log(`🔥 Stopping via master widget`);
             if (this.parentWindow && this.parentWindow.masterTrackingWidget) {
                 const masterWidgets = this.parentWindow.masterTrackingWidget.getRawWidgets();
                 if (masterWidgets.trackButton) {
                     masterWidgets.trackButton.emit('clicked');
-                    console.log(`🔥 Master button clicked for STOP`);
                 }
             }
         } else {
             // Start new tracking - validate input and delegate to master widget
             const taskName = this.taskEntry.get_text().trim();
-            console.log(`🔥 Starting tracking with task: "${taskName}"`);
             if (taskName.length === 0) {
-                console.log(`🔥 Empty task name, returning`);
                 return;
             }
             
             const validation = InputValidator.validateTaskName(taskName);
-            console.log(`🔥 Validation result:`, validation);
             if (!validation || !validation.valid) {
-                console.log(`🔥 Validation failed:`, validation?.error || 'No validation result');
                 if (validation?.error) {
                     InputValidator.showValidationTooltip(this.taskEntry, validation.error, true);
                 }
@@ -174,13 +162,10 @@ export class HeaderTrackingWidget {
             if (this.parentWindow && this.parentWindow.masterTrackingWidget) {
                 const masterWidgets = this.parentWindow.masterTrackingWidget.getRawWidgets();
                 if (masterWidgets.taskEntry && masterWidgets.trackButton) {
-                    console.log(`🔥 Setting master task name to: "${validation.sanitized}"`);
                     masterWidgets.taskEntry.set_text(validation.sanitized);
                     masterWidgets.trackButton.emit('clicked');
-                    console.log(`🔥 Master button clicked for START`);
                 }
             } else {
-                console.log(`🔥 No master widget found!`);
             }
         }
     }

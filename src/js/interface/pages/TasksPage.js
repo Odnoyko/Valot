@@ -173,9 +173,6 @@ export class TasksPage {
             });
             
         } else {
-            console.warn('⚠️ TasksPage: Cannot subscribe to tracking state - trackingStateManager not available');
-            console.warn('⚠️ TasksPage: parentWindow:', this.parentWindow);
-            console.warn('⚠️ TasksPage: trackingStateManager:', this.parentWindow?.trackingStateManager);
         }
     }
 
@@ -321,7 +318,6 @@ export class TasksPage {
     // Override tracking widget events
     _onTrackingTaskChanged(text, widget) {
         // Handle task name changes
-        console.log('TasksPage: Tracking task changed', text);
     }
 
     _onTrackingClick(widget) {
@@ -424,7 +420,6 @@ export class TasksPage {
         }
 
         if (!this.filteredTasks || this.filteredTasks.length === 0) {
-            console.log('No tasks to display');
             this._showEmptyState();
             return;
         }
@@ -539,46 +534,35 @@ export class TasksPage {
     }
 
     _startTrackingFromTask(task) {
-        console.log(`🎯 _startTrackingFromTask called for: "${task.name}"`);
         
         // Set the main tracking widget context from task
         if (this.parentWindow) {
-            console.log(`🎯 parentWindow exists`);
-            console.log(`🎯 parentWindow properties:`, Object.getOwnPropertyNames(this.parentWindow).filter(name => name.includes('task') || name.includes('track')));
             
             // Set current project/client from task data
             if (task.project_id) {
                 this.parentWindow.currentProjectId = task.project_id;
-                console.log(`🎯 Set currentProjectId: ${task.project_id}`);
             }
             if (task.client_id) {
                 this.parentWindow.currentClientId = task.client_id;
-                console.log(`🎯 Set currentClientId: ${task.client_id}`);
             }
             
             // Update project/client buttons to reflect task context
             if (this.parentWindow._updateProjectClientButtons) {
                 this.parentWindow._updateProjectClientButtons();
-                console.log(`🎯 Updated project/client buttons`);
             }
             
             // Set task name in main tracking widget
             if (this.parentWindow._task_name) {
                 this.parentWindow._task_name.set_text(task.name);
-                console.log(`🎯 Set task name: "${task.name}"`);
             } else {
-                console.log(`🎯 ERROR: _task_name not found`);
             }
             
             // Simulate clicking the main tracking button to start tracking
             if (this.parentWindow._track_button) {
-                console.log(`🎯 Emitting click on _track_button`);
                 this.parentWindow._track_button.emit('clicked');
             } else {
-                console.log(`🎯 ERROR: _track_button not found`);
             }
         } else {
-            console.log(`🎯 ERROR: parentWindow not found`);
         }
     }
 
@@ -592,7 +576,6 @@ export class TasksPage {
                 const endTime = new Date();
                 const elapsedSeconds = Math.floor((endTime - startTime) / 1000);
                 
-                console.log(`⏰ Elapsed time: ${elapsedSeconds} seconds`);
                 
                 // Stop tracking in state manager
                 const stoppedTask = this.parentWindow.trackingStateManager.stopTracking();
@@ -927,7 +910,6 @@ export class TasksPage {
         if (!date) return false;
         const today = new Date();
         const taskDate = new Date(date);
-        console.log('Today filter - date:', date, 'parsed:', taskDate, 'today:', today, 'match:', today.toDateString() === taskDate.toDateString());
         return today.toDateString() === taskDate.toDateString();
     }
     
@@ -948,7 +930,6 @@ export class TasksPage {
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         endOfWeek.setHours(23, 59, 59, 999);
         
-        console.log('Week filter - date:', date, 'parsed:', taskDate, 'start:', startOfWeek, 'end:', endOfWeek, 'match:', taskDate >= startOfWeek && taskDate <= endOfWeek);
         return taskDate >= startOfWeek && taskDate <= endOfWeek;
     }
     
@@ -958,11 +939,8 @@ export class TasksPage {
         const taskDate = new Date(date);
         const match = today.getFullYear() === taskDate.getFullYear() && 
                      today.getMonth() === taskDate.getMonth();
-        console.log('Month filter - date:', date, 'parsed:', taskDate, 'today:', today, 'match:', match);
         return match;
     }
-    _startTracking(data) { console.log('Start tracking:', data); }
-    _stopTracking() { console.log('Stop tracking'); }
     _editTaskObject(task) { 
         const dialog = new Adw.AlertDialog({
             heading: 'Edit Task',
@@ -1097,7 +1075,6 @@ export class TasksPage {
             selectedClient.id,
             (newSelectedClient) => {
                 selectedClient = newSelectedClient;
-                console.log(`TasksPage client selected: ${newSelectedClient.name}`);
                 if (this.parentWindow) {
                     this.parentWindow.currentClientId = newSelectedClient.id;
                     if (this.parentWindow._updateClientButtonsDisplay) {
@@ -1138,7 +1115,6 @@ export class TasksPage {
         if (task.start || task.start_time) {
             // Try both field names since database uses start_time
             const startTimeValue = task.start || task.start_time;
-            console.log(`🔧 Raw start time from DB: ${startTimeValue}`);
             
             // Parse as local time - database stores local time without timezone info
             if (startTimeValue.includes('T')) {
@@ -1155,8 +1131,6 @@ export class TasksPage {
                 const [hours, minutes, seconds] = (timePart || '00:00:00').split(':').map(Number);
                 startDate = new Date(year, month - 1, day, hours, minutes, seconds || 0);
             }
-            console.log(`🔧 Parsed start time as local: ${startDate.toLocaleString()}`);
-            console.log(`🔧 System timezone offset: ${startDate.getTimezoneOffset()} minutes`);
         }
         
         // Store current date for start time
@@ -1222,7 +1196,6 @@ export class TasksPage {
         if (task.end || task.end_time) {
             // Try both field names since database uses end_time
             const endTimeValue = task.end || task.end_time;
-            console.log(`🔧 Raw end time from DB: ${endTimeValue}`);
             
             // Parse as local time - database stores local time without timezone info
             if (endTimeValue.includes('T')) {
@@ -1239,7 +1212,6 @@ export class TasksPage {
                 const [hours, minutes, seconds] = (timePart || '00:00:00').split(':').map(Number);
                 endDate = new Date(year, month - 1, day, hours, minutes, seconds || 0);
             }
-            console.log(`🔧 Parsed end time as local: ${endDate.toLocaleString()}`);
         }
         
         // Store current date for end time
@@ -1934,7 +1906,6 @@ export class TasksPage {
             return;
         }
 
-        console.log('➕ Creating new task:', taskData);
         
         try {
             this.taskManager.createTask(taskData);

@@ -28,7 +28,6 @@ import Gtk from 'gi://Gtk?version=4.0';
 import { Config } from 'resource:///com/odnoyko/valot/config.js';
 
 export function showAboutDialog(parentWindow) {
-    console.log('Opening about dialog...');
 
     const aboutDialog = new Adw.AboutDialog({
         application_name: Config.PACKAGE_NAME,
@@ -39,7 +38,7 @@ export function showAboutDialog(parentWindow) {
             Config.DEVELOPER
         ],
         copyright: `© 2025 ${Config.DEVELOPER}`,
-        license_type: Gtk.License.GPL_3_0,
+        license_type: Gtk.License.MIT_X11,
         website: Config.WEBSITE,
         comments: 'A simple and elegant time tracking application for productivity and project management.',
     });

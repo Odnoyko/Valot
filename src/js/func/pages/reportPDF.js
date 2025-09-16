@@ -66,46 +66,25 @@ export class ReportPDF {
     }
 
     async exportToPDF(parentWindow) {
-        console.log('📄 ReportPDF.exportToPDF() started');
-        console.log('🏠 Parent window - type:', typeof parentWindow);
-        console.log('📊 Data available:', {
-            tasks: this.tasks?.length ?? 0,
-            projects: this.projects?.length ?? 0,
-            clients: this.clients?.length ?? 0
-        });
-        console.log('⚙️ Current configuration:', {
-            includeBilling: this.includeBilling,
-            filterPeriod: this.filterPeriod,
-            filterByProject: this.filterByProject,
-            filterByClient: this.filterByClient,
-            currentTemplate: this.currentTemplate,
-            sections: this.sections
-        });
         
         // Show progress dialog
-        console.log('📱 Creating progress dialog...');
         const progressDialog = new Adw.AlertDialog({
             heading: 'Exporting PDF',
             body: 'Preparing PDF export...\nPlease wait while your report is being generated.'
         });
         progressDialog.add_response('cancel', 'Cancel');
         progressDialog.present(parentWindow);
-        console.log('📱 Progress dialog presented');
         
         let exportCancelled = false;
         progressDialog.connect('response', () => {
             exportCancelled = true;
-            console.log('❌ PDF export cancelled by user');
         });
 
         try {
-            console.log('🚀 Starting PDF export process...');
             
             // Step 1: Create folder
-            console.log('📁 Step 1: Creating export folder...');
             this._updateProgress(progressDialog, 'Creating export folder...');
             const reportsDir = Config.getValotReportsDir();
-            console.log('📁 Reports directory from config:', reportsDir);
             const file = await this._createReportsFolder(reportsDir);
             
             if (exportCancelled) {
@@ -114,12 +93,9 @@ export class ReportPDF {
             }
             
             const filepath = file.get_path();
-            console.log(`✅ Export folder ready: ${reportsDir}`);
-            console.log(`📄 Target file path: ${filepath}`);
             
             if (filepath) {
                 // Step 2: Generate PDF
-                console.log('🔧 Step 2: Generating PDF from template...');
                 this._updateProgress(progressDialog, 'Generating PDF from template...\nThis may take a few moments.');
                 
                 await this._createPDFFromTemplate(filepath, parentWindow, progressDialog);
@@ -141,7 +117,6 @@ export class ReportPDF {
                 }
                 
                 // Success!
-                console.log('🎉 PDF export completed successfully!');
                 progressDialog.close();
                 this._showSuccessDialog(filepath, reportsDir, parentWindow);
             }
@@ -193,7 +168,6 @@ export class ReportPDF {
     }
 
     async _createReportsFolder(reportsDir) {
-        console.log(`Attempting to create reports directory: ${reportsDir}`);
         
         try {
             // Create Valot folder if it doesn't exist
@@ -203,15 +177,12 @@ export class ReportPDF {
                 if (result !== 0) {
                     throw new Error(`Failed to create directory: ${reportsDir} (code: ${result})`);
                 }
-                console.log(`Successfully created directory: ${reportsDir}`);
             } else {
-                console.log(`Directory already exists: ${reportsDir}`);
             }
             
             // Generate filename and create file object
             const fileName = this._generateFileName();
             const filePath = GLib.build_filenamev([reportsDir, fileName]);
-            console.log(`Generated file path: ${filePath}`);
             return Gio.File.new_for_path(filePath);
         } catch (error) {
             console.error(`Error in _createReportsFolder: ${error.message}`);
@@ -324,7 +295,6 @@ export class ReportPDF {
                 
                 // Generate HTML from template
                 const html = this.templateEngine.renderTemplate(this.currentTemplate, data, this.sections);
-                console.log(`📄 Generated HTML template (${html.length} characters)`);
                 
                 this._updateProgress(progressDialog, 'Loading template in WebKit...');
                 
@@ -333,8 +303,7 @@ export class ReportPDF {
                 
                 // Wait for content to load then print
                 webView.connect('load-changed', (webView, loadEvent) => {
-                    console.log(`🔄 WebKit load event: ${loadEvent}`);
-                    
+                        
                     if (loadEvent === WebKit.LoadEvent.STARTED) {
                         this._updateProgress(progressDialog, 'WebKit is rendering content...');
                     } else if (loadEvent === WebKit.LoadEvent.FINISHED) {
@@ -385,7 +354,6 @@ export class ReportPDF {
                 printSettings.set('output-file-format', 'pdf');
                 printSettings.set('output-uri', `file://${filepath}`);
                 
-                console.log(`📄 PDF will be saved to: ${filepath}`);
                 
                 // Set page setup
                 const pageSetup = Gtk.PageSetup.new();
@@ -497,7 +465,6 @@ export class ReportPDF {
                 startDate = monday;
                 endDate = sunday;
                 
-                console.log(`📅 Week filter: ${monday.toLocaleDateString('de-DE')} to ${sunday.toLocaleDateString('de-DE')}`);
             } else if (this.filterPeriod === 'month') {
                 startDate = new Date(now.getFullYear(), now.getMonth(), 1);
                 endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);

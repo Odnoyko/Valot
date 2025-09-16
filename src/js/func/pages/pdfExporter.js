@@ -107,7 +107,6 @@ export class PDFExporter {
             outputStream.write(reportContent, null);
             outputStream.close(null);
 
-            console.log('Report exported to:', filepath);
         } catch (error) {
             console.error('Error writing report file:', error);
             throw error;
@@ -214,7 +213,6 @@ export class PDFExporter {
         monday.setDate(today.getDate() - daysToMonday);
         monday.setHours(0, 0, 0, 0); // Start of Monday
 
-        console.log(`📅 Current week: Monday ${monday.toLocaleDateString('de-DE')} to Sunday`);
 
         // Generate data for Monday through Sunday
         for (let i = 0; i < 7; i++) {

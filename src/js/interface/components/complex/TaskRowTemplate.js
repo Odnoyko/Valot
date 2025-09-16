@@ -204,7 +204,6 @@ export class TaskRowTemplate {
                 }
                 return false;
             } catch (error) {
-                console.warn('Fehler beim Abrufen des Modifier-Status:', error.message);
                 return false;
             }
         });

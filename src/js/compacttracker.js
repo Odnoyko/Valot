@@ -27,12 +27,10 @@ export const CompactTrackerWindow = GObject.registerClass({
         this._setupSignals();
         this._updateFromMainWindow();
 
-        console.log('Compact tracker created programmatically');
     }
 
     setShiftMode(shiftMode) {
         this.shiftMode = shiftMode;
-        console.log(`🔧 Compact tracker shift mode set to: ${shiftMode}`);
     }
 
     _createWidgets() {
@@ -135,7 +133,6 @@ export const CompactTrackerWindow = GObject.registerClass({
             if (this.shiftMode) {
                 // In shift mode: just hide compact tracker, keep main window visible
                 this.set_visible(false);
-                console.log('🔄 Compact tracker hidden (shift mode), main window stays visible');
             } else {
                 // Normal mode: show main window and hide compact tracker
                 if (this.application && typeof this.application.openMainApplication === 'function') {
@@ -146,7 +143,6 @@ export const CompactTrackerWindow = GObject.registerClass({
                     this.mainWindow.set_visible(true);
                 }
                 this.set_visible(false);
-                console.log('🔄 Compact tracker hidden, main window shown');
             }
         });
 
@@ -164,7 +160,6 @@ export const CompactTrackerWindow = GObject.registerClass({
 
         // Add tracking click handler
         this._track_button.connect('clicked', () => {
-            console.log(`🔥 Compact tracker CLICKED`);
             GlobalTracking.handleTrackingClick({
                 input: this._task_input,
                 taskGroupKey: null,
@@ -190,7 +185,6 @@ export const CompactTrackerWindow = GObject.registerClass({
 
         // Add Enter key support
         this._task_input.connect('activate', () => {
-            console.log(`🔥 ENTER KEY PRESSED in compact tracker`);
             this._track_button.emit('clicked');
         });
 
@@ -225,18 +219,12 @@ export const CompactTrackerWindow = GObject.registerClass({
     }
 
     _updateProjectButton() {
-        console.log(`🔄 Compact tracker: updating project button`);
-        console.log(`🔄 mainWindow exists: ${!!this.mainWindow}`);
-        console.log(`🔄 allProjects exists: ${!!this.mainWindow?.allProjects}`);
-        console.log(`🔄 currentProjectId: ${this.mainWindow?.currentProjectId}`);
         
         if (!this.mainWindow || !this.mainWindow.allProjects) {
-            console.log(`🔄 Compact tracker: missing mainWindow or allProjects`);
             return;
         }
         
         const currentProject = this.mainWindow.allProjects.find(p => p.id === this.mainWindow.currentProjectId);
-        console.log(`🔄 Found currentProject:`, currentProject?.name);
         if (currentProject) {
             // Update tooltip
             this._project_button.set_tooltip_text(`Project: ${currentProject.name}`);
@@ -332,7 +320,6 @@ export const CompactTrackerWindow = GObject.registerClass({
             this.mainWindow.currentProjectId || 1,
             (project) => {
                 this.mainWindow.currentProjectId = project.id;
-                console.log(`Selected project: ${project.name} (ID: ${project.id})`);
                 this._updateProjectButton();
                 if (this.mainWindow._updateProjectButtonsDisplay) {
                     this.mainWindow._updateProjectButtonsDisplay(project.name);
@@ -356,7 +343,6 @@ export const CompactTrackerWindow = GObject.registerClass({
             this.mainWindow.currentClientId || 1,
             (client) => {
                 this.mainWindow.currentClientId = client.id;
-                console.log(`Selected client: ${client.name} (ID: ${client.id})`);
                 this._updateClientButton();
                 if (this.mainWindow._updateClientButtonsDisplay) {
                     this.mainWindow._updateClientButtonsDisplay(client.name);
@@ -383,7 +369,6 @@ export const CompactTrackerWindow = GObject.registerClass({
      * Synchronize with main window state - called by main window when state changes
      */
     syncWithMainWindow() {
-        console.log(`🔄 Compact tracker: syncing with main window`);
         this._updateFromMainWindow();
     }
 

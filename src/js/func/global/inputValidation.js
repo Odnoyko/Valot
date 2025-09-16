@@ -267,13 +267,11 @@ export class InputValidator {
                 // Add error styling only if not already present
                 if (!widget.has_css_class('error')) {
                     widget.add_css_class('error');
-                    console.log('🔴 Validation error shown:', message);
                 }
             } else {
                 // Remove error styling
                 if (widget.has_css_class('error')) {
                     widget.remove_css_class('error');
-                    console.log('🟢 Validation error cleared');
                 }
             }
             

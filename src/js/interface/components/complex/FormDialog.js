@@ -147,7 +147,6 @@ export class FormDialog {
                 break;
                 
             default:
-                console.warn(`Unsupported field type: ${type}`);
                 return null;
         }
 

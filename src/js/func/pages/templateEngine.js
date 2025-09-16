@@ -301,7 +301,6 @@ export class TemplateEngine {
             const barHeight = Math.max((hours / maxHours) * 80, 10);
             const color = projectColors[index % projectColors.length];
 
-            console.log(`Debug - Project ${projectId}: ${projectName}, Hours: ${hours}, Found: ${!!project}`);
 
             return `
                 <div style="display: flex; flex-direction: column; justify-content: flex-end; align-items: center; width: 60px; height: 140px;">

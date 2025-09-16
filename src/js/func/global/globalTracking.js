@@ -63,14 +63,12 @@ export class GlobalTracking {
         
         if (currentTracking) {
             // Stop current tracking
-            console.log(`🛑 Stopping tracking: ${currentTracking.name}`);
             await trackingStateManager.stopTracking();
         } else {
             // Start new tracking
             const taskName = input ? input.get_text().trim() : '';
             
             if (taskName.length === 0) {
-                console.log('⚠️ No task name provided');
                 return;
             }
 
@@ -83,11 +81,9 @@ export class GlobalTracking {
                 return;
             }
 
-            console.log(`▶️ Starting tracking: ${validation.sanitized}`);
             
             // Get context with DEBUG
             const context = this.getTrackingContext(parentWindow, sourceComponent);
-            console.log(`🔧 Final context:`, context);
             
             // Create baseName for grouping
             const baseName = validation.sanitized.match(/^(.+?)\s*(?:\(\d+\))?$/)?.[1]?.trim() || validation.sanitized;
@@ -98,7 +94,6 @@ export class GlobalTracking {
             const clientId = context.client?.id || context.clientId || 1;
             const clientName = context.client?.name || context.clientName || 'Default Client';
             
-            console.log(`🔧 Using: projectName="${projectName}", clientName="${clientName}"`);
             
             // Create local time string instead of UTC
             const now = new Date();
@@ -142,38 +137,30 @@ export class GlobalTracking {
             let clientName = 'Default Client';
             
             // Get current project using parentWindow methods directly
-            console.log(`🔧 DEBUG: getCurrentProjectName exists: ${typeof parentWindow.getCurrentProjectName === 'function'}`);
             if (typeof parentWindow.getCurrentProjectName === 'function') {
                 const currentProjectName = parentWindow.getCurrentProjectName();
-                console.log(`🔧 DEBUG: getCurrentProjectName() returned:`, currentProjectName);
                 if (currentProjectName) {
                     projectName = currentProjectName;
-                    console.log(`🔧 DEBUG: Set project name: ${projectName}`);
                 }
             }
             
             // Try to get project ID from currentProjectId property
             if (parentWindow.currentProjectId) {
                 projectId = parentWindow.currentProjectId;
-                console.log(`🔧 DEBUG: Set project ID from property: ${projectId}`);
             }
             
             // Get current client using parentWindow method directly
-            console.log(`🔧 DEBUG: getCurrentClient exists: ${typeof parentWindow.getCurrentClient === 'function'}`);
             if (typeof parentWindow.getCurrentClient === 'function') {
                 const currentClient = parentWindow.getCurrentClient();
-                console.log(`🔧 DEBUG: getCurrentClient() returned:`, currentClient);
                 if (currentClient) {
                     clientId = currentClient.id;
                     clientName = currentClient.name;
-                    console.log(`🔧 DEBUG: Set client: ${clientName} (${clientId})`);
                 }
             }
             
             // Try to get client ID from currentClientId property
             if (parentWindow.currentClientId) {
                 clientId = parentWindow.currentClientId;
-                console.log(`🔧 DEBUG: Set client ID from property: ${clientId}`);
             }
             
             return {
@@ -208,11 +195,9 @@ export class GlobalTracking {
         
         if (isCurrentlyTracking) {
             // Stop current tracking
-            console.log(`🛑 Stopping task tracking: ${task.name}`);
             await trackingStateManager.stopTracking();
         } else {
             // Start NEW task session with SAME name (will be grouped in stack automatically)
-            console.log(`▶️ Starting NEW session for: ${baseName}`);
             
             // Create local time string instead of UTC
             const now = new Date();

@@ -65,12 +65,10 @@ function initDatabase(conn) {
         try {
             const alterProjectSql = `ALTER TABLE Project ADD COLUMN client_id INTEGER DEFAULT 1`;
             executeNonSelectCommand(conn, alterProjectSql);
-            console.log("client_id column added to Project table");
         } catch (error) {
             if (error.message && error.message.includes('duplicate column name')) {
                 // client_id column already exists
             } else {
-                console.log("Error adding client_id column:", error.message);
             }
         }
 
@@ -126,13 +124,11 @@ function ensureProjectIconColumn(conn) {
     try {
         const alterSql = `ALTER TABLE Project ADD COLUMN icon TEXT DEFAULT 'folder-symbolic'`;
         executeNonSelectCommand(conn, alterSql);
-        console.log('Added icon column to Project table');
     } catch (error) {
         // Column already exists, ignore error
         if (error.message && error.message.includes('duplicate column name')) {
             // Icon column already exists
         } else {
-            console.log('Error adding icon column:', error.message);
         }
     }
 }
@@ -141,13 +137,11 @@ function ensureDarkIconsColumn(conn) {
     try {
         const alterSql = `ALTER TABLE Project ADD COLUMN dark_icons INTEGER DEFAULT 0`;
         executeNonSelectCommand(conn, alterSql);
-        console.log('Added dark_icons column to Project table');
     } catch (error) {
         // Column already exists, ignore error
         if (error.message && error.message.includes('duplicate column name')) {
             // dark_icons column already exists
         } else {
-            console.log('Error adding dark_icons column:', error.message);
         }
     }
 }
@@ -156,13 +150,11 @@ function ensureIconColorModeColumn(conn) {
     try {
         const alterSql = `ALTER TABLE Project ADD COLUMN icon_color_mode TEXT DEFAULT 'auto'`;
         executeNonSelectCommand(conn, alterSql);
-        console.log('Added icon_color_mode column to Project table');
     } catch (error) {
         // Column already exists, ignore error
         if (error.message && error.message.includes('duplicate column name')) {
             // icon_color_mode column already exists
         } else {
-            console.log('Error adding icon_color_mode column:', error.message);
         }
     }
 }
