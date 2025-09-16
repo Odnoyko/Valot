@@ -1,11 +1,11 @@
-console.log("timetracking.js verbunden");
+// timetracking.js verbunden
 
 import Adw from 'gi://Adw';
 import GLib from 'gi://GLib';
 import { saveTask, updateTaskWhenTrackingStops, updateActiveTaskInRealTime } from 'resource:///com/odnoyko/valot/js/func/global/addtask.js';
 import { trackingStateManager } from 'resource:///com/odnoyko/valot/js/func/global/trackingStateManager.js';
 import { InputValidator } from 'resource:///com/odnoyko/valot/js/func/global/inputValidation.js';
-console.log("Adw & GLib importiert");
+// Adw & GLib importiert
 
 // Use trackingStateManager instead of local isTracking variable
 // let isTracking = false; // REMOVED - now using trackingStateManager.getCurrentTracking()

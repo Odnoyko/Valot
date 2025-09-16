@@ -1,33 +1,39 @@
 /* window.js
  *
- * Copyright 2025 Unknown
+ * Copyright 2025 Vitaly Odnoiko
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  *
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-License-Identifier: MIT
  */
 
 import GObject from 'gi://GObject';
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
-import Gdk from 'gi://Gdk';
+import Gdk from 'gi://Gdk?version=4.0';
 import GLib from 'gi://GLib';
 import { setupDatabase } from 'resource:///com/odnoyko/valot/js/func/global/dbinitialisation.js';
 import { CompactTrackerWindow } from 'resource:///com/odnoyko/valot/js/compacttracker.js';
 import { ProjectManager } from 'resource:///com/odnoyko/valot/js/func/pages/projectManager.js';
 import { ClientManager } from 'resource:///com/odnoyko/valot/js/func/pages/clientManager.js';
 import { TaskManager } from 'resource:///com/odnoyko/valot/js/func/pages/taskManager.js';
+import { TaskRenderer } from 'resource:///com/odnoyko/valot/js/func/pages/taskRenderer.js';
 import { GlobalTracking } from 'resource:///com/odnoyko/valot/js/func/global/globalTracking.js';
 import { TimeUtils } from 'resource:///com/odnoyko/valot/js/func/global/timeUtils.js';
 import { SimpleChart } from 'resource:///com/odnoyko/valot/js/func/pages/simpleChart.js';
@@ -51,6 +57,7 @@ import { TasksPage } from 'resource:///com/odnoyko/valot/js/interface/pages/Task
 import { ProjectsPage } from 'resource:///com/odnoyko/valot/js/interface/pages/ProjectsPage.js';
 import { ClientsPage } from 'resource:///com/odnoyko/valot/js/interface/pages/ClientsPage.js';
 import { ReportsPage } from 'resource:///com/odnoyko/valot/js/interface/pages/ReportsPage.js';
+import { PDFExportPreferencesDialog } from 'resource:///com/odnoyko/valot/js/interface/dialogs/PDFExportPreferencesDialog.js';
 
 export const ValotWindow = GObject.registerClass({
     GTypeName: 'ValotWindow',
@@ -58,17 +65,29 @@ export const ValotWindow = GObject.registerClass({
     InternalChildren: [
         'split_view', 'main_content', 'sidebar_list',
         'sidebar_toggle_btn', 'menu_button',
-        'tasks_page', 'projects_page', 'clients_page', 'reports_page', 
-        'sidebar_compact_tracker', 'weekly_time_row',
+        'tasks_page', 'projects_page', 'clients_page', 'reports_page',
+        'export_pdf_btn', 'period_filter', 'project_filter', 'client_filter',
         'task_search', 'task_filter', 'task_list', 
         'prev_page_btn', 'next_page_btn', 'page_info', 'pagination_box',
         'project_search', 'add_project_btn', 'project_list',
         'client_search', 'add_client_btn', 'client_list',
+        // Sidebar stats
+        'weekly_time_row',
+        // Page-specific sidebar toggle buttons
+        'show_sidebar_btn', 'show_sidebar_btn2', 'show_sidebar_btn3', 'show_sidebar_btn5',
         // Tracking widgets for all pages
-        'tracking_widget', 'task_name', 'actual_time', 'track_button', 'project_context_btn', 'client_context_btn',
-        'tracking_widget_projects', 'task_name_projects', 'actual_time_projects', 'track_button_projects', 
-        'tracking_widget_clients', 'task_name_clients', 'actual_time_clients', 'track_button_clients',
-        'tracking_widget_reports', 'task_name_reports', 'actual_time_reports', 'track_button_reports'
+        'tracking_widget', 'task_name', 'actual_time', 'track_button', 'project_context_btn', 'client_context_btn', 'compact_tracker_btn',
+        'tracking_widget_projects', 'task_name_projects', 'actual_time_projects', 'track_button_projects', 'compact_tracker_btn_projects',
+        'tracking_widget_clients', 'task_name_clients', 'actual_time_clients', 'track_button_clients', 'compact_tracker_btn_clients',
+        'tracking_widget_reports', 'task_name_reports', 'actual_time_reports', 'track_button_reports', 'compact_tracker_btn_reports',
+        // Reports page chart elements  
+        'chart_placeholder', 'period_filter', 'project_filter', 'client_filter',
+        // Reports page statistics
+        'reports_total_time_value', 'reports_total_projects_value', 'reports_total_tasks_value',
+        // Currency carousel
+        'reports_currency_carousel', 'reports_carousel_indicators',
+        // Reports page recent tasks
+        'recent_tasks_list', 'reports_delete_selected_btn'
     ],
 }, class ValotWindow extends Adw.ApplicationWindow {
     constructor(application) {
@@ -99,6 +118,10 @@ export const ValotWindow = GObject.registerClass({
         this.taskRowMap = new Map();
         this.stackRowMap = new Map();
         
+        // Reports page selection state
+        this.reportsSelectedTasks = new Set();
+        this.reportsSelectedStacks = new Set();
+        
         // Initialize modular page components
         this._initializePages();
         
@@ -117,6 +140,15 @@ export const ValotWindow = GObject.registerClass({
         
         // Setup other keyboard shortcuts
         this._setupKeyboardShortcuts();
+        
+        // Subscribe to tracking events for updating stats
+        this._setupTrackingSubscriptions();
+        
+        // Initialize weekly stats (async)
+        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            this.updateWeeklyStats();
+            return false; // Remove from event loop
+        });
         
     }
 
@@ -195,9 +227,23 @@ export const ValotWindow = GObject.registerClass({
             (db, sql) => db.execute_non_select_command(sql)
         );
 
+        // Initialize TaskRenderer for Reports page recent tasks
+        this.reportsTaskRenderer = new TaskRenderer(
+            TimeUtils,
+            this.allProjects || [],
+            this
+        );
+        // Set Reports-specific selection state
+        this.reportsTaskRenderer.selectedTasks = this.reportsSelectedTasks;
+        this.reportsTaskRenderer.selectedStacks = this.reportsSelectedStacks;
+        // Set callback for selection changes
+        this.reportsTaskRenderer.onSelectionChanged = () => {
+            this._updateReportsDeleteButton();
+        };
+
         // Initialize other managers
         this.timeUtils = TimeUtils;
-        this.simpleChart = new SimpleChart();
+        this.simpleChart = new SimpleChart(this._chart_placeholder);
         this.reportExporter = new ReportExporter();
         
         // Make trackingStateManager available to child components
@@ -269,6 +315,52 @@ export const ValotWindow = GObject.registerClass({
             parentWindow: this
         });
 
+        // Connect existing UI export button to preferences dialog
+        if (this._export_pdf_btn) {
+            // Connecting export PDF button
+            this._export_pdf_btn.connect('clicked', () => {
+                console.log('🚀 Static UI PDF Export button clicked - opening preferences dialog');
+                this._showPDFExportPreferences();
+            });
+        } else {
+            console.warn('⚠️ export_pdf_btn not found in UI');
+        }
+
+        // Connect filter dropdowns to update ReportExporter
+        if (this._period_filter) {
+            this._period_filter.connect('notify::selected', () => {
+                const periods = ['week', 'month', 'year'];
+                const selectedPeriod = periods[this._period_filter.get_selected()];
+                console.log('📅 Period filter changed to:', selectedPeriod);
+                if (this.reportExporter) {
+                    this.reportExporter.configurePeriod(selectedPeriod);
+                }
+            });
+        }
+
+        if (this._project_filter) {
+            this._project_filter.connect('notify::selected', () => {
+                const selectedIndex = this._project_filter.get_selected();
+                const projectId = selectedIndex === 0 ? null : this._getProjectIdByFilterIndex(selectedIndex - 1);
+                // Project filter changed
+                if (this.reportExporter) {
+                    this.reportExporter.configureProjectFilter(projectId);
+                }
+            });
+        }
+
+        if (this._client_filter) {
+            this._client_filter.connect('notify::selected', () => {
+                const selectedIndex = this._client_filter.get_selected();
+                const clientId = selectedIndex === 0 ? null : this._getClientIdByFilterIndex(selectedIndex - 1);
+                // Client filter changed
+                if (this.reportExporter) {
+                    this.reportExporter.configureClientFilter(clientId);
+                }
+            });
+        }
+
+
         // Store page components for easy access
         this.pageComponents = {
             tasks: this.tasksPageComponent,
@@ -322,20 +414,20 @@ export const ValotWindow = GObject.registerClass({
                     isMaster: isMaster
                 });
                 
-                console.log(`✅ Created ${isMaster ? 'MASTER' : 'non-master'} tracking widget for ${name} page`);
+                // Created tracking widget
             } else {
                 console.warn(`⚠️ Could not find tracking container for ${name} page`);
             }
         });
 
         // All widgets are automatically synchronized through trackingStateManager
-        console.log(`✅ Created ${this.trackingWidgets.length} synchronized tracking widgets`);
+        // Created synchronized tracking widgets
         
         // Update project buttons after widgets are created
         if (this.allProjects && this.allProjects.length > 0 && this.currentProjectId) {
             const currentProject = this.allProjects.find(p => p.id === this.currentProjectId);
             if (currentProject) {
-                console.log(`🔄 Initial project button update for: ${currentProject.name}`);
+                // Initial project button update
                 this._updateProjectButtonsDisplay(currentProject.name);
             }
         }
@@ -349,10 +441,10 @@ export const ValotWindow = GObject.registerClass({
             if (masterWidgets.trackButton && masterWidgets.taskEntry && masterWidgets.timeLabel) {
                 // Call timeTrack like the original system
                 // HeaderTrackingWidget handles its own tracking now
-                console.log(`✅ Time tracking initialized on master widget`);
+                // Time tracking initialized
             }
             
-            console.log(`✅ Master tracking widget set for page: ${this.trackingWidgets[0].page}`);
+            // Master tracking widget set
         }
         
         // ВАЖНО: Также инициализировать основные template кнопки
@@ -390,10 +482,10 @@ export const ValotWindow = GObject.registerClass({
             console.log(`🔄 Main window: syncing compact tracker for project: ${projectName}`);
             this.compactTrackerWindow.syncWithMainWindow();
         } else {
-            console.log(`🔄 Main window: compact tracker not open, skipping sync`);
+            // Compact tracker not open, skipping sync
         }
         
-        console.log(`✅ Updated all project buttons to: ${projectName}`);
+        // Updated all project buttons
     }
 
     /**
@@ -557,7 +649,7 @@ export const ValotWindow = GObject.registerClass({
 
             // Project list
             const listBox = new Gtk.ListBox({
-                css_classes: ['boxed-list'],
+                css_classes: ['content-box'],
                 selection_mode: Gtk.SelectionMode.NONE
             });
 
@@ -610,7 +702,11 @@ export const ValotWindow = GObject.registerClass({
                 } else {
                     iconWidget = new Gtk.Image({
                         icon_name: project.icon || 'folder-symbolic',
-                        pixel_size: 14
+                        width_request: 20,
+                        height_request: 20,
+                        pixel_size: 14,
+                        halign: Gtk.Align.CENTER,
+                        valign: Gtk.Align.CENTER
                     });
                 }
 
@@ -701,7 +797,7 @@ export const ValotWindow = GObject.registerClass({
                     this.currentProjectId = selectedProject.id;
                     this._updateProjectClientButtons();
                     this._updateProjectButtonsDisplay(selectedProject.name);
-                    console.log(`Selected project: ${selectedProject.name} with color ${selectedProject.color}`);
+                    // Selected project with color
                 }
                 
                 popover.popdown();
@@ -860,7 +956,7 @@ export const ValotWindow = GObject.registerClass({
     _setupMainTrackingButtons() {
         // Основная кнопка Tasks page
         if (this._track_button && this._task_name && this._actual_time) {
-            console.log(`🔧 Инициализация основной кнопки _track_button`);
+            // Initializing main track button
             GlobalTracking.registerTrackingComponent(null, {
                 button: this._track_button,
                 input: this._task_name,
@@ -878,7 +974,7 @@ export const ValotWindow = GObject.registerClass({
         
         pageButtons.forEach(({ button, input, label, page }) => {
             if (button && input && label) {
-                console.log(`🔧 Инициализация кнопки трекинга для страницы: ${page}`);
+                // Initializing tracking button for page
                 GlobalTracking.registerTrackingComponent(null, {
                     button: button,
                     input: input,
@@ -888,12 +984,19 @@ export const ValotWindow = GObject.registerClass({
             }
         });
         
-        console.log(`✅ Инициализированы основные кнопки трекинга`);
+        // Main tracking buttons initialized
     }
 
     _connectPageComponents() {
         // Tasks page uses the existing template UI, so just connect the functionality
         // The TasksPage component connects to existing UI elements via _connectToExistingUI()
+        
+        
+        // Setup Reports page chart filters
+        this._setupReportsChartFilters();
+        
+        // Setup Reports page delete button
+        this._setupReportsDeleteButton();
         
         // For other pages, we can connect them to work with the existing template
         // or replace their content if needed
@@ -901,6 +1004,11 @@ export const ValotWindow = GObject.registerClass({
 
     _setupNavigation() {
         // Setup sidebar navigation using original working method
+        if (!this._sidebar_list) {
+            console.error('❌ sidebar_list is null - UI template may not be fully loaded');
+            return;
+        }
+        
         this._sidebar_list.connect('row-activated', (list, row) => {
             const index = row.get_index();
             switch (index) {
@@ -910,6 +1018,7 @@ export const ValotWindow = GObject.registerClass({
                         this.tasksPageComponent.refresh().catch(error => {
                             console.error('Failed to refresh tasks page:', error);
                         });
+                        this.updateWeeklyStats();
                     }
                     break;
                 case 1: 
@@ -935,9 +1044,11 @@ export const ValotWindow = GObject.registerClass({
                             console.error('Failed to refresh reports page:', error);
                         });
                     }
-                    break;
-                case 4: 
-                    // Compact tracker handled by _setupCompactTrackerButton()
+                    // Update chart and statistics when Reports page is shown
+                    this._refreshReportsChartFilters();
+                    this._updateChart();
+                    this._updateReportsStatistics();
+                    this._updateRecentTasksList();
                     break;
             }
         });
@@ -953,11 +1064,43 @@ export const ValotWindow = GObject.registerClass({
             this._split_view.set_show_sidebar(isOpen);
         });
 
+        // Setup responsive sidebar behavior
+        this._setupResponsiveSidebar();
+
     }
 
     _setupCompactTrackerButton() {
-        this._sidebar_compact_tracker.connect('activated', () => {
-            this._launchCompactTrackerDebug();
+        // Connect compact tracker buttons for all pages with shift-click detection
+        const buttons = [
+            this._compact_tracker_btn,
+            this._compact_tracker_btn_projects, 
+            this._compact_tracker_btn_clients,
+            this._compact_tracker_btn_reports
+        ];
+
+        buttons.forEach(button => {
+            if (button) {
+                // Add gesture controller to handle all clicks
+                const controller = new Gtk.GestureClick();
+                controller.connect('pressed', (gesture, n_press, x, y) => {
+                    const event = gesture.get_current_event();
+                    if (event) {
+                        const modifiers = event.get_modifier_state();
+                        const shiftPressed = (modifiers & Gdk.ModifierType.SHIFT_MASK) !== 0;
+                        
+                        // Claim the event to prevent normal button click
+                        gesture.set_state(Gtk.EventSequenceState.CLAIMED);
+                        
+                        // Call with appropriate shift state
+                        this._launchCompactTrackerDebug(shiftPressed);
+                    } else {
+                        // Fallback for normal click if no event
+                        gesture.set_state(Gtk.EventSequenceState.CLAIMED);
+                        this._launchCompactTrackerDebug(false);
+                    }
+                });
+                button.add_controller(controller);
+            }
         });
     }
 
@@ -982,6 +1125,7 @@ export const ValotWindow = GObject.registerClass({
                             this.tasksPageComponent.refresh().catch(error => {
                                 console.error('Failed to refresh tasks page:', error);
                             });
+                            this.updateWeeklyStats();
                         }
                         return true;
                     case 50: // Ctrl+2 - Projects
@@ -1007,6 +1151,8 @@ export const ValotWindow = GObject.registerClass({
                                 console.error('Failed to refresh reports page:', error);
                             });
                         }
+                        this._updateReportsStatistics();
+                        this._updateRecentTasksList();
                         return true;
                 }
             }
@@ -1046,6 +1192,9 @@ export const ValotWindow = GObject.registerClass({
             'reports': this._reports_page
         };
         
+        // Reports page uses static UI with connected functionality
+        // Showing page
+
         if (pages[pageName]) {
             try {
                 // Use your original replace method for instant navigation
@@ -1080,6 +1229,7 @@ export const ValotWindow = GObject.registerClass({
             this.tasksPageComponent.refresh().catch(error => {
                 console.error('Failed to load initial tasks data:', error);
             });
+            this.updateWeeklyStats();
         }
         
     }
@@ -1089,34 +1239,70 @@ export const ValotWindow = GObject.registerClass({
         
         if (!this.compactTrackerWindow) {
             this.compactTrackerWindow = new CompactTrackerWindow(this.application, this);
+            
+            // Handle window destruction properly
+            this.compactTrackerWindow.connect('destroy', () => {
+                this.compactTrackerWindow = null;
+                console.log('🔄 Compact tracker destroyed, reference cleared');
+            });
+            
             console.log('🔄 Compact tracker created for hidden window');
         }
         
-        // Force sync before presenting
         this.compactTrackerWindow.syncWithMainWindow();
         this.compactTrackerWindow.present();
         console.log('🔄 Compact tracker shown');
     }
 
-    _launchCompactTrackerDebug() {
-        console.log('🧪 Debug: Toggling compact tracker from sidebar...');
+    _launchCompactTrackerDebug(shiftPressed = false) {
+        console.log(`🧪 Debug: Toggling compact tracker, shift: ${shiftPressed}`);
         
         if (!this.compactTrackerWindow) {
             this.compactTrackerWindow = new CompactTrackerWindow(this.application, this);
+            
+            // Set shift mode on compact tracker
+            this.compactTrackerWindow.setShiftMode(shiftPressed);
+            
+            // Handle window destruction properly
+            this.compactTrackerWindow.connect('destroy', () => {
+                this.compactTrackerWindow = null;
+                console.log('🧪 Compact tracker destroyed, reference cleared');
+            });
+            
             console.log('🧪 Debug compact tracker created');
-            // Force sync before presenting
             this.compactTrackerWindow.syncWithMainWindow();
             this.compactTrackerWindow.present();
-            console.log('🧪 Debug compact tracker shown');
+            
+            // Hide main window only if shift not pressed
+            if (!shiftPressed) {
+                this.set_visible(false);
+                console.log('🧪 Debug compact tracker shown, main window hidden');
+            } else {
+                console.log('🧪 Debug compact tracker shown, main window stays visible (shift mode)');
+            }
         } else {
             if (this.compactTrackerWindow.is_visible()) {
                 this.compactTrackerWindow.set_visible(false);
                 console.log('🧪 Debug compact tracker hidden');
+                // When hiding, show main window if it was hidden in normal mode
+                if (!this.compactTrackerWindow.shiftMode && !this.is_visible()) {
+                    this.set_visible(true);
+                    this.present();
+                    console.log('🧪 Main window restored after hiding compact tracker');
+                }
             } else {
-                // Force sync before presenting
+                // Update shift mode
+                this.compactTrackerWindow.setShiftMode(shiftPressed);
                 this.compactTrackerWindow.syncWithMainWindow();
                 this.compactTrackerWindow.present();
-                console.log('🧪 Debug compact tracker shown');
+                
+                // Hide main window only if shift not pressed
+                if (!shiftPressed) {
+                    this.set_visible(false);
+                    console.log('🧪 Debug compact tracker shown, main window hidden');
+                } else {
+                    console.log('🧪 Debug compact tracker shown, main window stays visible (shift mode)');
+                }
             }
         }
     }
@@ -1252,13 +1438,13 @@ export const ValotWindow = GObject.registerClass({
             if (this.allProjects.length > 0 && (!this.currentProjectId || this.currentProjectId === 1)) {
                 this.currentProjectId = this.allProjects[0].id;
                 this._updateProjectButtonsDisplay(this.allProjects[0].name);
-                console.log(`Default project set: ${this.allProjects[0].name} (ID: ${this.currentProjectId})`);
+                // Default project set
             } else if (this.allProjects.length > 0 && this.currentProjectId) {
                 // Update header buttons for currently selected project after reload
                 const currentProject = this.allProjects.find(p => p.id === this.currentProjectId);
                 if (currentProject) {
                     this._updateProjectButtonsDisplay(currentProject.name);
-                    console.log(`Updated header buttons for current project: ${currentProject.name}`);
+                    // Updated header buttons for current project
                 }
             }
             
@@ -1316,7 +1502,7 @@ export const ValotWindow = GObject.registerClass({
             if (this.allClients.length > 0 && (!this.currentClientId || this.currentClientId === 1)) {
                 this.currentClientId = this.allClients[0].id;
                 this._updateClientButtonsDisplay(this.allClients[0].name);
-                console.log(`Default client set: ${this.allClients[0].name} (ID: ${this.currentClientId})`);
+                // Default client set
             }
             
         } catch (error) {
@@ -1326,17 +1512,920 @@ export const ValotWindow = GObject.registerClass({
     }
 
     /**
-     * Update weekly time display in real-time during tracking
+     * Update weekly statistics in sidebar
      */
-    async _updateWeeklyTimeRealTime(additionalSeconds) {
-        await this.timeUtils.updateWeeklyTimeDisplay(this._weekly_time_row, this.allTasks, additionalSeconds);
+    async updateWeeklyStats() {
+        if (!this.dbConnection || !this._weekly_time_row) {
+            return;
+        }
+
+        try {
+            // Get current week date range
+            const now = new Date();
+            const startOfWeek = new Date(now);
+            startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday as start of week
+            startOfWeek.setHours(0, 0, 0, 0);
+            
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            endOfWeek.setHours(23, 59, 59, 999);
+
+            const startDateStr = startOfWeek.toISOString().split('T')[0];
+            const endDateStr = endOfWeek.toISOString().split('T')[0];
+
+            // Query tasks for current week
+            const sql = `
+                SELECT COUNT(*) as task_count, SUM(time_spent) as total_time
+                FROM Task 
+                WHERE DATE(created_at) >= '${startDateStr}' 
+                AND DATE(created_at) <= '${endDateStr}'
+            `;
+
+            const result = this.dbConnection.execute_select_command(sql);
+            let taskCount = 0;
+            let totalSeconds = 0;
+
+            if (result && result.get_n_rows() > 0) {
+                taskCount = result.get_value_at(0, 0) || 0;
+                totalSeconds = result.get_value_at(1, 0) || 0;
+            }
+
+            // Format time as HH:MM:SS
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            // Update the UI
+            const subtitle = `${timeStr} • ${taskCount} tasks`;
+            this._weekly_time_row.set_subtitle(subtitle);
+
+        } catch (error) {
+            console.error('❌ Failed to update weekly stats:', error);
+            this._weekly_time_row.set_subtitle('Error loading stats');
+        }
     }
 
     /**
-     * Update weekly time display (called when switching pages, loading data, etc.)
+     * Setup tracking event subscriptions
      */
-    async updateWeeklyTime() {
-        await this.timeUtils.updateWeeklyTimeDisplay(this._weekly_time_row, this.allTasks);
+    _setupTrackingSubscriptions() {
+        if (!this.trackingStateManager) {
+            console.warn('TrackingStateManager not available for subscriptions');
+            return;
+        }
+
+        // Subscribe to tracking events
+        this.trackingStateManager.subscribe((event, taskInfo) => {
+            try {
+                switch (event) {
+                    case 'stop':
+                        console.log('📊 Tracking stopped, updating stats');
+                        // Update weekly stats
+                        this.updateWeeklyStats();
+                        // Update project stats
+                        this._updateProjectStats();
+                        // Update task list
+                        this._updateTaskStats();
+                        break;
+                    case 'start':
+                        console.log('📊 Tracking started');
+                        break;
+                    case 'updateTaskList':
+                        // Update stats when task list changes
+                        this.updateWeeklyStats();
+                        break;
+                }
+            } catch (error) {
+                console.error('❌ Error handling tracking event:', error);
+            }
+        });
+    }
+
+    /**
+     * Update project statistics (refresh projects page if visible)
+     */
+    _updateProjectStats() {
+        if (this.projectsPageComponent && typeof this.projectsPageComponent.loadProjects === 'function') {
+            this.projectsPageComponent.loadProjects().catch(error => {
+                console.error('❌ Failed to refresh project stats:', error);
+            });
+        }
+    }
+
+    /**
+     * Update task statistics (refresh tasks page if visible)
+     */
+    _updateTaskStats() {
+        if (this.tasksPageComponent && typeof this.tasksPageComponent.refresh === 'function') {
+            this.tasksPageComponent.refresh().catch(error => {
+                console.error('❌ Failed to refresh task stats:', error);
+            });
+        }
+    }
+
+    /**
+     * Setup responsive sidebar behavior for small screens
+     */
+    _setupResponsiveSidebar() {
+        // Connect all page-specific sidebar buttons
+        const sidebarButtons = [
+            this._show_sidebar_btn,     // Tasks page
+            this._show_sidebar_btn2,    // Projects page  
+            this._show_sidebar_btn3,    // Clients page
+            this._show_sidebar_btn5     // Reports page
+        ];
+
+        sidebarButtons.forEach(button => {
+            if (button) {
+                button.connect('clicked', () => {
+                    this._split_view.set_show_sidebar(true);
+                });
+            }
+        });
+
+        // Function to update page button visibility based on sidebar state
+        const updatePageButtonVisibility = () => {
+            const isCollapsed = this._split_view.get_collapsed();
+            const isVisible = this._split_view.get_show_sidebar();
+            
+            // Show page buttons when sidebar is hidden (either collapsed OR manually hidden)
+            const shouldShowButtons = isCollapsed || !isVisible;
+            
+            sidebarButtons.forEach(button => {
+                if (button) {
+                    button.set_visible(shouldShowButtons);
+                }
+            });
+
+            // Sidebar state updated
+        };
+
+        // Monitor split view collapsed state (responsive behavior)
+        this._split_view.connect('notify::collapsed', updatePageButtonVisibility);
+
+        // Monitor sidebar visibility changes (manual toggle)
+        this._split_view.connect('notify::show-sidebar', () => {
+            const isVisible = this._split_view.get_show_sidebar();
+            this._sidebar_toggle_btn.set_active(isVisible);
+            updatePageButtonVisibility();
+        });
+
+        // Initial state check
+        updatePageButtonVisibility();
+    }
+    
+    /**
+     * Setup chart filters for Reports page (like v0.2.5)
+     */
+    _setupReportsChartFilters() {
+        if (!this._period_filter || !this._project_filter || !this._client_filter) {
+            console.warn('Chart filter elements not found');
+            return;
+        }
+        
+        // Setup period filter
+        this._period_filter.connect('notify::selected', () => {
+            const selectedPeriod = this._period_filter.get_selected();
+            const periods = ['week', 'month', 'year'];
+            if (this.simpleChart && periods[selectedPeriod]) {
+                this.simpleChart.setPeriod(periods[selectedPeriod]);
+                this._updateChart();
+                this._updateReportsStatistics(); // Update statistics when period changes
+                this._updateRecentTasksList(); // Update recent tasks when period changes
+            }
+        });
+
+        // Setup project filter - populate with projects
+        this._refreshReportsChartFilters();
+
+        this._project_filter.connect('notify::selected', () => {
+            const selectedProject = this._project_filter.get_selected();
+            const projectId = selectedProject === 0 ? null : this.allProjects[selectedProject - 1]?.id;
+            if (this.simpleChart) {
+                this.simpleChart.setProjectFilter(projectId);
+                this._updateChart();
+                this._updateReportsStatistics(); // Update statistics when project changes
+                this._updateRecentTasksList(); // Update recent tasks when project changes
+            }
+        });
+
+        this._client_filter.connect('notify::selected', () => {
+            const selectedClient = this._client_filter.get_selected();
+            const clientId = selectedClient === 0 ? null : this.allClients[selectedClient - 1]?.id;
+            if (this.simpleChart) {
+                this.simpleChart.setClientFilter(clientId);
+                this._updateChart();
+                this._updateReportsStatistics(); // Update statistics when client changes
+                this._updateRecentTasksList(); // Update recent tasks when client changes
+            }
+        });
+        
+        // Reports chart filters setup completed
+    }
+
+    /**
+     * Setup Reports page delete button functionality
+     */
+    _setupReportsDeleteButton() {
+        if (!this._reports_delete_selected_btn) {
+            console.warn('Reports delete button not found');
+            return;
+        }
+
+        this._reports_delete_selected_btn.connect('clicked', () => {
+            this._deleteSelectedReportsTasks();
+        });
+        
+        // Reports delete button setup completed
+    }
+
+    /**
+     * Delete selected tasks from Reports page
+     */
+    _deleteSelectedReportsTasks() {
+        if (this.reportsSelectedTasks.size === 0 && this.reportsSelectedStacks.size === 0) {
+            console.log('No tasks selected for deletion');
+            return;
+        }
+
+        // Show confirmation dialog
+        const dialog = new Adw.AlertDialog({
+            heading: 'Delete Selected Tasks',
+            body: `Are you sure you want to delete ${this.reportsSelectedTasks.size} selected tasks? This action cannot be undone.`
+        });
+
+        dialog.add_response('cancel', 'Cancel');
+        dialog.add_response('delete', 'Delete');
+        dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
+        
+        dialog.connect('response', (dialog, response) => {
+            if (response === 'delete') {
+                this._performReportsTaskDeletion();
+            }
+        });
+
+        dialog.present(this);
+    }
+
+    /**
+     * Perform actual task deletion from Reports page selection
+     */
+    _performReportsTaskDeletion() {
+        if (!this.dbConnection || !this.taskManager) {
+            console.error('Database connection or TaskManager not available');
+            return;
+        }
+
+        try {
+            // Collect all task IDs to delete (from individual tasks and stacks)
+            const taskIdsToDelete = new Set([...this.reportsSelectedTasks]);
+            
+            // Add tasks from selected stacks
+            for (const stackKey of this.reportsSelectedStacks) {
+                const stackTasks = this.allTasks.filter(task => {
+                    const taskBaseName = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+                    const baseName = taskBaseName ? taskBaseName[1].trim() : task.name;
+                    const taskGroupKey = `${baseName}::${task.project_name || 'Unknown'}::${task.client_name || 'Default'}`;
+                    return taskGroupKey === stackKey;
+                });
+                
+                stackTasks.forEach(task => taskIdsToDelete.add(task.id));
+            }
+
+            console.log(`Deleting ${taskIdsToDelete.size} tasks from Reports selection`);
+
+            // Delete each task
+            for (const taskId of taskIdsToDelete) {
+                const sql = `DELETE FROM Task WHERE id = ${taskId}`;
+                this.dbConnection.execute_non_select_command(sql);
+            }
+
+            // Clear selections
+            this.reportsSelectedTasks.clear();
+            this.reportsSelectedStacks.clear();
+            this._updateReportsDeleteButton();
+
+            // Refresh data
+            this._loadTasks();
+            this._updateRecentTasksList();
+            this._updateReportsStatistics();
+            this._updateChart();
+
+            console.log(`✅ Successfully deleted ${taskIdsToDelete.size} tasks`);
+
+        } catch (error) {
+            console.error('❌ Failed to delete tasks:', error);
+        }
+    }
+
+    /**
+     * Update Reports delete button visibility and state
+     */
+    _updateReportsDeleteButton() {
+        if (!this._reports_delete_selected_btn) return;
+
+        const hasSelection = this.reportsSelectedTasks.size > 0 || this.reportsSelectedStacks.size > 0;
+        this._reports_delete_selected_btn.set_visible(hasSelection);
+        this._reports_delete_selected_btn.set_sensitive(hasSelection);
+
+        if (hasSelection) {
+            const totalCount = this.reportsSelectedTasks.size + this.reportsSelectedStacks.size;
+            this._reports_delete_selected_btn.set_tooltip_text(`Delete ${totalCount} selected items`);
+        }
+    }
+    
+    /**
+     * Update chart filter dropdowns with current data
+     */
+    _refreshReportsChartFilters() {
+        if (!this._project_filter || !this._client_filter) return;
+
+        // Update project filter dropdown
+        const projectStringList = new Gtk.StringList();
+        projectStringList.append('All Projects');
+        if (this.allProjects) {
+            this.allProjects.forEach(project => {
+                projectStringList.append(project.name);
+            });
+        }
+        this._project_filter.set_model(projectStringList);
+        this._project_filter.set_selected(0);
+
+        // Update client filter dropdown
+        const clientStringList = new Gtk.StringList();
+        clientStringList.append('All Clients');
+        if (this.allClients) {
+            this.allClients.forEach(client => {
+                clientStringList.append(client.name);
+            });
+        }
+        this._client_filter.set_model(clientStringList);
+        this._client_filter.set_selected(0);
+    }
+    
+    /**
+     * Update the Reports page chart
+     */
+    _updateChart() {
+        if (this.simpleChart) {
+            this.simpleChart.createChart(this.allTasks, this.allProjects, this.allClients);
+            // Chart updated in Reports page
+        }
+    }
+    
+    /**
+     * Update Reports page statistics based on current filters
+     */
+    _updateReportsStatistics() {
+        if (!this.allTasks || !this._reports_total_time_value) {
+            return;
+        }
+        
+        try {
+            // Get current filter settings
+            const periodIndex = this._period_filter ? this._period_filter.get_selected() : 0;
+            const projectIndex = this._project_filter ? this._project_filter.get_selected() : 0;
+            const clientIndex = this._client_filter ? this._client_filter.get_selected() : 0;
+            
+            // Get filter values
+            const periods = ['week', 'month', 'year'];
+            const currentPeriod = periods[periodIndex] || 'week';
+            const selectedProjectId = projectIndex === 0 ? null : this.allProjects[projectIndex - 1]?.id;
+            const selectedClientId = clientIndex === 0 ? null : this.allClients[clientIndex - 1]?.id;
+            
+            // Filter tasks based on current settings
+            const filteredTasks = this._getFilteredTasksForReports(currentPeriod, selectedProjectId, selectedClientId);
+            
+            // Calculate statistics
+            const stats = this._calculateFilteredStatistics(filteredTasks, selectedProjectId, selectedClientId);
+            
+            // Update UI
+            this._reports_total_time_value.set_label(this._formatTime(stats.totalTime));
+            this._reports_total_projects_value.set_label(stats.activeProjects.toString());
+            this._updateCurrencyCarousel(stats.totalEarnings);
+            this._reports_total_tasks_value.set_label(stats.totalTasks.toString());
+            
+            // Reports statistics updated
+            
+        } catch (error) {
+            console.error('❌ Failed to update Reports statistics:', error);
+        }
+    }
+
+    /**
+     * Update the currency carousel with earnings from different currencies
+     */
+    _updateCurrencyCarousel(earningsByCurrency) {
+        if (!this._reports_currency_carousel) {
+            console.warn('Currency carousel not found');
+            return;
+        }
+
+        try {
+            // Clear existing carousel pages
+            let child = this._reports_currency_carousel.get_first_child();
+            while (child) {
+                const next = child.get_next_sibling();
+                this._reports_currency_carousel.remove(child);
+                child = next;
+            }
+
+            // Add pages for each currency
+            for (const [currency, amount] of earningsByCurrency) {
+                const currencySymbol = this._getCurrencySymbol(currency);
+                const formattedAmount = `${currencySymbol}${amount.toFixed(2)}`;
+                
+                // Create a page for this currency
+                const currencyPage = new Gtk.Box({
+                    orientation: Gtk.Orientation.VERTICAL,
+                    valign: Gtk.Align.CENTER,
+                    halign: Gtk.Align.CENTER,
+                    spacing: 4
+                });
+
+                // Main amount label
+                const amountLabel = new Gtk.Label({
+                    label: formattedAmount,
+                    css_classes: ['title-1'],
+                    halign: Gtk.Align.CENTER
+                });
+
+                // Currency code label (smaller)
+                const currencyLabel = new Gtk.Label({
+                    label: currency,
+                    css_classes: ['caption', 'dim-label'],
+                    halign: Gtk.Align.CENTER
+                });
+
+                currencyPage.append(amountLabel);
+                currencyPage.append(currencyLabel);
+
+                this._reports_currency_carousel.append(currencyPage);
+            }
+
+            // Show/hide indicators based on number of currencies
+            if (this._reports_carousel_indicators) {
+                this._reports_carousel_indicators.set_visible(earningsByCurrency.size > 1);
+            }
+
+            // Updated currency carousel
+
+        } catch (error) {
+            console.error('❌ Failed to update currency carousel:', error);
+        }
+    }
+
+    /**
+     * Update Recent Tasks list in Reports page with TaskRenderer
+     */
+    _updateRecentTasksList() {
+        if (!this._recent_tasks_list || !this.reportsTaskRenderer) {
+            return;
+        }
+
+        try {
+            // Updating Recent Tasks list
+
+            // Get current filter settings
+            const selectedPeriod = this._period_filter?.get_selected() || 0;
+            const periods = ['week', 'month', 'year'];
+            const period = periods[selectedPeriod];
+
+            const selectedProjectIndex = this._project_filter?.get_selected() || 0;
+            const projectId = selectedProjectIndex > 0 ? this.allProjects[selectedProjectIndex - 1]?.id : null;
+
+            const selectedClientIndex = this._client_filter?.get_selected() || 0;
+            const clientId = selectedClientIndex > 0 ? this.allClients[selectedClientIndex - 1]?.id : null;
+
+            // Get filtered tasks based on current Reports page filters
+            const filteredTasks = this._getFilteredTasksForReports(period, projectId, clientId);
+
+            // Sort by created_at descending and limit to recent 10 tasks
+            const recentTasks = filteredTasks
+                .sort((a, b) => new Date(b.created_at || b.start_time) - new Date(a.created_at || a.start_time))
+                .slice(0, 10);
+
+            // Found recent tasks to display
+
+            // Clear existing tasks
+            let child = this._recent_tasks_list.get_first_child();
+            while (child) {
+                const next = child.get_next_sibling();
+                this._recent_tasks_list.remove(child);
+                child = next;
+            }
+
+            // Clear task renderer state for recent tasks
+            if (this.reportsTaskRenderer) {
+                this.reportsTaskRenderer.clearAllActiveTaskTracking();
+            }
+
+            if (recentTasks.length === 0) {
+                // Show empty state
+                const emptyRow = new Adw.ActionRow({
+                    title: 'No recent tasks',
+                    subtitle: 'Tasks matching your filters will appear here',
+                    sensitive: false
+                });
+                
+                const icon = new Gtk.Image({
+                    icon_name: 'view-list-symbolic',
+                    pixel_size: 16,
+                    css_classes: ['dim-label']
+                });
+                emptyRow.add_prefix(icon);
+                
+                this._recent_tasks_list.append(emptyRow);
+                return;
+            }
+
+            // Group similar tasks for stacking
+            const taskGroups = this._groupSimilarTasksForRecent(recentTasks);
+
+            // Render using TaskRenderer
+            taskGroups.forEach(group => {
+                if (group.tasks.length === 1) {
+                    // Single task
+                    const row = this.reportsTaskRenderer.renderSingleTask(group.tasks[0]);
+                    this._recent_tasks_list.append(row);
+                } else {
+                    // Multiple tasks (stack) - limit to 5 tasks per group for recent tasks
+                    group.tasks = group.tasks.slice(0, 5);
+                    const groupRow = this.reportsTaskRenderer.renderTaskGroup(group);
+                    this._recent_tasks_list.append(groupRow);
+                }
+            });
+
+            // Update delete button visibility
+            this._updateReportsDeleteButton();
+            
+            // Recent Tasks list updated successfully
+
+        } catch (error) {
+            console.error('❌ Failed to update Recent Tasks list:', error);
+        }
+    }
+
+    /**
+     * Group similar tasks for Recent Tasks (simplified grouping for reports)
+     */
+    _groupSimilarTasksForRecent(tasks) {
+        const groups = new Map();
+        
+        tasks.forEach(task => {
+            // Get base name by removing numbers in parentheses
+            const baseNameMatch = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+            const baseName = baseNameMatch ? baseNameMatch[1].trim() : task.name;
+            
+            // Create unique key combining base name, project, and client
+            const groupKey = `${baseName}::${task.project_name || 'Unknown'}::${task.client_name || 'Default'}`;
+            
+            if (!groups.has(groupKey)) {
+                groups.set(groupKey, {
+                    groupKey: groupKey,
+                    baseName: baseName,
+                    tasks: [],
+                    totalDuration: 0,
+                    totalCost: 0,
+                    hasActive: false,
+                    latestTask: null
+                });
+            }
+            
+            const group = groups.get(groupKey);
+            group.tasks.push(task);
+            group.totalDuration += task.duration || 0;
+            
+            // Calculate cost if client rate exists
+            const clientRate = task.client_rate || 0;
+            group.totalCost += (task.duration / 3600) * clientRate;
+            
+            if (task.is_active) {
+                group.hasActive = true;
+            }
+            
+            // Keep track of the most recent task
+            if (!group.latestTask || new Date(task.created_at) > new Date(group.latestTask.created_at)) {
+                group.latestTask = task;
+            }
+        });
+        
+        return Array.from(groups.values());
+    }
+    
+    /**
+     * Get filtered tasks based on Reports page filter settings
+     */
+    _getFilteredTasksForReports(period, projectId, clientId) {
+        if (!this.allTasks) return [];
+        
+        // Get date range for period
+        const dateRange = this._getDateRangeForPeriod(period);
+        
+        return this.allTasks.filter(task => {
+            // Date filter
+            const taskDate = new Date(task.created_at || task.start_time);
+            if (taskDate < dateRange.start || taskDate > dateRange.end) {
+                return false;
+            }
+            
+            // Project filter
+            if (projectId && task.project_id !== projectId) {
+                return false;
+            }
+            
+            // Client filter  
+            if (clientId && task.client_id !== clientId) {
+                return false;
+            }
+            
+            return true;
+        });
+    }
+    
+    /**
+     * Get date range for a given period (like v0.2.5 logic)
+     */
+    _getDateRangeForPeriod(period) {
+        const now = new Date();
+        let start, end;
+        
+        switch (period) {
+            case 'week':
+                start = new Date(now);
+                start.setDate(now.getDate() - now.getDay()); // Start of week
+                start.setHours(0, 0, 0, 0);
+                end = new Date(start);
+                end.setDate(start.getDate() + 6); // End of week
+                end.setHours(23, 59, 59, 999);
+                break;
+                
+            case 'month':
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+                end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                end.setHours(23, 59, 59, 999);
+                break;
+                
+            case 'year':
+                start = new Date(now.getFullYear(), 0, 1);
+                end = new Date(now.getFullYear(), 11, 31);
+                end.setHours(23, 59, 59, 999);
+                break;
+                
+            default:
+                // Default to week
+                start = new Date(now);
+                start.setDate(now.getDate() - now.getDay());
+                start.setHours(0, 0, 0, 0);
+                end = new Date(start);
+                end.setDate(start.getDate() + 6);
+                end.setHours(23, 59, 59, 999);
+        }
+        
+        return { start, end };
+    }
+    
+    /**
+     * Calculate statistics from filtered tasks
+     */
+    _calculateFilteredStatistics(tasks, selectedProjectId, selectedClientId) {
+        // Calculating statistics for tasks
+        // Sample task data available
+        
+        const totalTime = tasks.reduce((sum, task) => {
+            const taskTime = task.duration || task.time_spent || 0;
+            // Task time calculated
+            return sum + taskTime;
+        }, 0);
+        const totalTasks = tasks.length;
+        
+        // Total calculated time
+        
+        // Count unique projects
+        const projectIds = new Set();
+        if (selectedProjectId) {
+            // If project filter is applied, count only that project
+            projectIds.add(selectedProjectId);
+        } else {
+            // Count all unique projects in filtered tasks
+            tasks.forEach(task => {
+                if (task.project_id) {
+                    projectIds.add(task.project_id);
+                }
+            });
+        }
+        const activeProjects = projectIds.size;
+        
+        // Calculate earnings by currency
+        const earningsByCurrency = new Map();
+        
+        if (this.allClients) {
+            tasks.forEach(task => {
+                const client = this.allClients.find(c => c.id === task.client_id);
+                if (client && client.rate) {
+                    const taskTime = task.duration || task.time_spent || 0;
+                    const currency = client.currency || 'USD';
+                    const earnings = taskTime * (client.rate / 3600); // rate per hour
+                    
+                    if (earningsByCurrency.has(currency)) {
+                        earningsByCurrency.set(currency, earningsByCurrency.get(currency) + earnings);
+                    } else {
+                        earningsByCurrency.set(currency, earnings);
+                    }
+                }
+            });
+        }
+        
+        // If no earnings, show default
+        if (earningsByCurrency.size === 0) {
+            earningsByCurrency.set('USD', 0);
+        }
+        
+        const totalEarnings = earningsByCurrency;
+        
+        return {
+            totalTime,
+            activeProjects,
+            totalEarnings,
+            totalTasks
+        };
+    }
+    
+    /**
+     * Get currency symbol (simple implementation)
+     */
+    _getCurrencySymbol(currency) {
+        const symbols = {
+            'USD': '$',
+            'EUR': '€',
+            'GBP': '£',
+            'JPY': '¥',
+            'CHF': 'Fr.',
+            'CAD': 'C$',
+            'AUD': 'A$',
+            'CNY': '¥',
+            'INR': '₹',
+            'KRW': '₩',
+            'BRL': 'R$',
+            'RUB': '₽',
+            'SEK': 'kr',
+            'NOK': 'kr',
+            'DKK': 'kr',
+            'PLN': 'zł',
+            'CZK': 'Kč',
+            'HUF': 'Ft',
+            'TRY': '₺',
+            'ZAR': 'R',
+            'MXN': '$',
+            'SGD': 'S$',
+            'HKD': 'HK$',
+            'NZD': 'NZ$'
+        };
+        return symbols[currency] || currency;
+    }
+    
+    /**
+     * Format time in seconds to HH:MM:SS
+     */
+    _formatTime(seconds) {
+        if (!seconds || seconds < 0) return '00:00:00';
+        
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+        
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // TaskRenderer compatibility methods
+
+    /**
+     * Edit task by ID - called by TaskRenderer
+     */
+    _editTask(taskId) {
+        const task = this.allTasks?.find(t => t.id === taskId);
+        if (task && this.tasksPageComponent) {
+            // Delegate to TasksPage component which has the edit functionality
+            this.tasksPageComponent._editTaskById(task);
+        } else {
+            console.warn(`Task with ID ${taskId} not found for editing`);
+        }
+    }
+
+    /**
+     * Start tracking from task - called by TaskRenderer
+     */
+    _startTrackingFromTask(task) {
+        console.log(`🎯 MainWindow: Starting tracking for task: "${task.name}"`);
+        
+        if (this.tasksPageComponent) {
+            // Use TasksPage's tracking start logic
+            this.tasksPageComponent._startTrackingFromTask(task);
+        } else {
+            // Fallback implementation
+            this._setTrackingContext(task.project_id, task.client_id);
+            this._startTracking(task.name);
+        }
+    }
+
+    /**
+     * Stop current tracking - called by TaskRenderer
+     */
+    _stopCurrentTracking() {
+        console.log('🎯 MainWindow: Stopping current tracking');
+        
+        if (this.tasksPageComponent) {
+            // Use TasksPage's tracking stop logic
+            this.tasksPageComponent._stopCurrentTracking();
+        } else {
+            // Fallback implementation
+            this._stopTracking();
+        }
+    }
+
+    /**
+     * Set tracking context (project/client) - helper method
+     */
+    _setTrackingContext(projectId, clientId) {
+        if (projectId) this.currentProjectId = projectId;
+        if (clientId) this.currentClientId = clientId;
+        
+        // Update UI selectors if available
+        this._updateProjectClientSelectors();
+    }
+
+    /**
+     * Start tracking with task name - simplified implementation
+     */
+    _startTracking(taskName) {
+        if (this.globalTracking) {
+            this.globalTracking.startTracking({
+                name: taskName,
+                projectId: this.currentProjectId,
+                clientId: this.currentClientId
+            });
+        }
+    }
+
+    /**
+     * Stop tracking - simplified implementation
+     */
+    _stopTracking() {
+        if (this.globalTracking) {
+            this.globalTracking.stopTracking();
+        }
+    }
+
+    /**
+     * Update project/client UI selectors - helper method
+     */
+    _updateProjectClientSelectors() {
+        // Update project context button
+        const project = this.allProjects?.find(p => p.id === this.currentProjectId);
+        if (project && this._project_context_btn) {
+            this._project_context_btn.set_label(project.name);
+        }
+
+        // Update client context button  
+        const client = this.allClients?.find(c => c.id === this.currentClientId);
+        if (client && this._client_context_btn) {
+            this._client_context_btn.set_label(client.name);
+        }
+    }
+
+    /**
+     * Get project ID by filter dropdown index
+     */
+    _getProjectIdByFilterIndex(index) {
+        const projects = this.allProjects || [];
+        return projects[index]?.id || null;
+    }
+
+    /**
+     * Get client ID by filter dropdown index
+     */
+    _getClientIdByFilterIndex(index) {
+        const clients = this.allClients || [];
+        return clients[index]?.id || null;
+    }
+
+    /**
+     * Show PDF Export Preferences Dialog
+     */
+    _showPDFExportPreferences() {
+        console.log('📋 Opening PDF Export Preferences Dialog');
+
+        if (!this.reportExporter) {
+            console.error('❌ No report exporter available for preferences dialog');
+            return;
+        }
+
+        try {
+            PDFExportPreferencesDialog.show(this, this.reportExporter);
+        } catch (error) {
+            console.error('💥 Error opening PDF Export Preferences Dialog:', error);
+        }
     }
 
 });

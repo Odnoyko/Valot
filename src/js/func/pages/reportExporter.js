@@ -81,23 +81,40 @@ export class ReportExporter {
      * Smart export: Always tries PDF first, falls back to HTML if PDF fails
      */
     async exportReport(parentWindow) {
+        console.log('🎯 ReportExporter.exportReport() called');
+        console.log('🏠 Parent window received - type:', typeof parentWindow);
+        console.log('📄 PDF Exporter available:', !!this.pdfExporter);
+        console.log('🌐 HTML Exporter available:', !!this.htmlExporter);
+        console.log('📊 Current data counts:', {
+            tasks: this.tasks?.length ?? 0,
+            projects: this.projects?.length ?? 0,
+            clients: this.clients?.length ?? 0
+        });
         
         try {
             // STEP 1: Always try PDF export first
+            console.log('📄 Attempting PDF export...');
             await this.pdfExporter.exportToPDF(parentWindow);
+            console.log('✅ PDF export completed successfully!');
             
         } catch (pdfError) {
             console.warn('❌ PDF export failed:', pdfError.message);
+            console.warn('📍 PDF error stack:', pdfError.stack);
             console.log('🔄 Falling back to HTML export...');
             
             try {
                 // STEP 2: PDF failed, export HTML with fallback message
+                console.log('🌐 Attempting HTML export fallback...');
                 await this.htmlExporter.exportToHTML(parentWindow, 'fallback');
+                console.log('✅ HTML export fallback completed successfully!');
                 
             } catch (htmlError) {
-                console.error('💥 Both PDF and HTML export failed:', htmlError);
+                console.error('💥 Both PDF and HTML export failed!');
+                console.error('📍 HTML error:', htmlError.message);
+                console.error('📍 HTML error stack:', htmlError.stack);
                 
                 // Show error dialog if both fail
+                console.log('🚨 Showing error dialog to user...');
                 const errorDialog = new Gtk.AlertDialog({
                     message: 'Export Failed',
                     detail: `Both PDF and HTML export failed.\n\nPDF Error: ${pdfError.message}\nHTML Error: ${htmlError.message}`

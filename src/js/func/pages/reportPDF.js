@@ -66,58 +66,93 @@ export class ReportPDF {
     }
 
     async exportToPDF(parentWindow) {
+        console.log('📄 ReportPDF.exportToPDF() started');
+        console.log('🏠 Parent window - type:', typeof parentWindow);
+        console.log('📊 Data available:', {
+            tasks: this.tasks?.length ?? 0,
+            projects: this.projects?.length ?? 0,
+            clients: this.clients?.length ?? 0
+        });
+        console.log('⚙️ Current configuration:', {
+            includeBilling: this.includeBilling,
+            filterPeriod: this.filterPeriod,
+            filterByProject: this.filterByProject,
+            filterByClient: this.filterByClient,
+            currentTemplate: this.currentTemplate,
+            sections: this.sections
+        });
+        
         // Show progress dialog
+        console.log('📱 Creating progress dialog...');
         const progressDialog = new Adw.AlertDialog({
             heading: 'Exporting PDF',
             body: 'Preparing PDF export...\nPlease wait while your report is being generated.'
         });
         progressDialog.add_response('cancel', 'Cancel');
         progressDialog.present(parentWindow);
+        console.log('📱 Progress dialog presented');
         
         let exportCancelled = false;
         progressDialog.connect('response', () => {
             exportCancelled = true;
-            console.log('PDF export cancelled by user');
+            console.log('❌ PDF export cancelled by user');
         });
 
         try {
+            console.log('🚀 Starting PDF export process...');
             
             // Step 1: Create folder
+            console.log('📁 Step 1: Creating export folder...');
             this._updateProgress(progressDialog, 'Creating export folder...');
             const reportsDir = Config.getValotReportsDir();
+            console.log('📁 Reports directory from config:', reportsDir);
             const file = await this._createReportsFolder(reportsDir);
             
-            if (exportCancelled) throw new Error('Export cancelled by user');
+            if (exportCancelled) {
+                console.log('❌ Export cancelled after folder creation');
+                throw new Error('Export cancelled by user');
+            }
             
             const filepath = file.get_path();
-            console.log(`✓ Export folder ready: ${reportsDir}`);
+            console.log(`✅ Export folder ready: ${reportsDir}`);
+            console.log(`📄 Target file path: ${filepath}`);
             
             if (filepath) {
                 // Step 2: Generate PDF
+                console.log('🔧 Step 2: Generating PDF from template...');
                 this._updateProgress(progressDialog, 'Generating PDF from template...\nThis may take a few moments.');
                 
                 await this._createPDFFromTemplate(filepath, parentWindow, progressDialog);
                 
                 if (exportCancelled) {
+                    console.log('❌ Export cancelled after PDF generation attempt');
                     // Clean up partial file
                     try {
                         if (GLib.file_test(filepath, GLib.FileTest.EXISTS)) {
+                            console.log('🧹 Cleaning up partial file...');
                             const file = Gio.File.new_for_path(filepath);
                             file.delete(null);
+                            console.log('🧹 Partial file cleaned up');
                         }
                     } catch (cleanupError) {
-                        console.warn('Could not clean up partial file:', cleanupError);
+                        console.warn('⚠️ Could not clean up partial file:', cleanupError);
                     }
                     throw new Error('Export cancelled by user');
                 }
                 
                 // Success!
+                console.log('🎉 PDF export completed successfully!');
                 progressDialog.close();
                 this._showSuccessDialog(filepath, reportsDir, parentWindow);
             }
         } catch (error) {
             progressDialog.close();
             console.error('💥 PDF export failed:', error);
+            console.error('📍 Error details:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
             
             let errorMessage = error.message;
             let errorDetail = '';
@@ -126,19 +161,25 @@ export class ReportPDF {
             if (error.message.includes('WebKit')) {
                 errorMessage = 'PDF Generation Failed';
                 errorDetail = 'WebKit rendering engine failed. This usually happens in sandboxed environments like Flatpak.\n\nTry using the HTML export option instead.';
+                console.error('🌐 WebKit-related error detected');
             } else if (error.message.includes('print')) {
                 errorMessage = 'Print System Unavailable';  
                 errorDetail = 'Cannot access system printer/PDF export functionality.\n\nThis feature may not be available in your environment.';
+                console.error('🖨️ Print system error detected');
             } else if (error.message.includes('timeout')) {
                 errorMessage = 'Export Timeout';
                 errorDetail = 'PDF generation took too long and was cancelled.\n\nTry reducing the amount of data in your report or try again.';
+                console.error('⏰ Timeout error detected');
             } else if (error.message.includes('cancelled')) {
+                console.log('👤 User cancellation detected - not showing error dialog');
                 // Don't show error for user cancellation
                 return;
             } else {
+                console.error('❓ Unknown error type detected');
                 errorDetail = `Technical details: ${error.message}`;
             }
             
+            console.log('🚨 Showing error dialog to user...');
             const errorDialog = new Gtk.AlertDialog({
                 message: errorMessage,
                 detail: errorDetail
@@ -146,6 +187,7 @@ export class ReportPDF {
             errorDialog.show(parentWindow);
             
             // Re-throw for fallback system
+            console.log('🔄 Re-throwing error for fallback system');
             throw error;
         }
     }
@@ -441,8 +483,11 @@ export class ReportPDF {
                 startDate = this.customDateRange.from;
                 endDate = this.customDateRange.to;
             } else if (this.filterPeriod === 'week') {
+                // Calculate Monday of current week (ISO week standard)
                 const monday = new Date(now);
-                monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+                const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+                const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days
+                monday.setDate(now.getDate() - daysToMonday);
                 monday.setHours(0, 0, 0, 0);
                 
                 const sunday = new Date(monday);
@@ -451,6 +496,8 @@ export class ReportPDF {
                 
                 startDate = monday;
                 endDate = sunday;
+                
+                console.log(`📅 Week filter: ${monday.toLocaleDateString('de-DE')} to ${sunday.toLocaleDateString('de-DE')}`);
             } else if (this.filterPeriod === 'month') {
                 startDate = new Date(now.getFullYear(), now.getMonth(), 1);
                 endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);

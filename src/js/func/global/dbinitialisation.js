@@ -8,7 +8,7 @@ function openDatabase() {
         'valot.db'
     ]);
 
-    console.log(`Datenbank wird erstellt unter Pfad: ${dbPath}`);
+    // Database will be created at path
 
     // Ensure directory exists
     GLib.mkdir_with_parents(GLib.path_get_dirname(dbPath), 0o755);
@@ -24,7 +24,7 @@ function openDatabase() {
             Gda.ConnectionOptions.NONE
         );
         
-        console.log("Datenbank erfolgreich verbunden");
+        // Database successfully connected
         return connection;
     } catch (error) {
         console.error('Fehler bei der Datenbankverbindung:', error.message);
@@ -34,7 +34,7 @@ function openDatabase() {
 
 function initDatabase(conn) {
     try {
-        console.log("Datenbankschema wird initialisiert...");
+        // Database schema initializing
         
         // Create Project table
         const createProjectTable = `
@@ -46,7 +46,7 @@ function initDatabase(conn) {
             )`;
         
         executeNonSelectCommand(conn, createProjectTable);
-        console.log("Tabelle Project erstellt");
+        // Project table created
 
         // Create Client table
         const createClientTable = `
@@ -59,7 +59,7 @@ function initDatabase(conn) {
             )`;
         
         executeNonSelectCommand(conn, createClientTable);
-        console.log("Tabelle Client erstellt");
+        // Client table created
 
         // Add client_id to Project table if it doesn't exist
         try {
@@ -68,7 +68,7 @@ function initDatabase(conn) {
             console.log("client_id column added to Project table");
         } catch (error) {
             if (error.message && error.message.includes('duplicate column name')) {
-                console.log("client_id column already exists in Project table");
+                // client_id column already exists
             } else {
                 console.log("Error adding client_id column:", error.message);
             }
@@ -91,7 +91,7 @@ function initDatabase(conn) {
             )`;
         
         executeNonSelectCommand(conn, createTaskTable);
-        console.log("Tabelle Task erstellt");
+        // Task table created
 
         // Create default project
         const defaultProjectSql = `
@@ -99,7 +99,7 @@ function initDatabase(conn) {
             VALUES (1, 'Default', '#cccccc', 0)`;
         
         executeNonSelectCommand(conn, defaultProjectSql);
-        console.log("Standard-Projekt erstellt");
+        // Default project created
 
         // Create default client
         const defaultClientSql = `
@@ -107,14 +107,14 @@ function initDatabase(conn) {
             VALUES (1, 'Default Client', '', 0.0, 'USD')`;
         
         executeNonSelectCommand(conn, defaultClientSql);
-        console.log("Standard-Client erstellt");
+        // Default client created
 
         // Ensure additional columns exist (for existing databases)
         ensureProjectIconColumn(conn);
         ensureDarkIconsColumn(conn);
         ensureIconColorModeColumn(conn);
 
-        console.log('Datenbankschema erfolgreich initialisiert');
+        // Database schema successfully initialized
 
     } catch (error) {
         console.error('Fehler bei der Datenbankinitialisierung:', error);
@@ -130,7 +130,7 @@ function ensureProjectIconColumn(conn) {
     } catch (error) {
         // Column already exists, ignore error
         if (error.message && error.message.includes('duplicate column name')) {
-            console.log('Icon column already exists in Project table');
+            // Icon column already exists
         } else {
             console.log('Error adding icon column:', error.message);
         }
@@ -145,7 +145,7 @@ function ensureDarkIconsColumn(conn) {
     } catch (error) {
         // Column already exists, ignore error
         if (error.message && error.message.includes('duplicate column name')) {
-            console.log('dark_icons column already exists in Project table');
+            // dark_icons column already exists
         } else {
             console.log('Error adding dark_icons column:', error.message);
         }
@@ -160,7 +160,7 @@ function ensureIconColorModeColumn(conn) {
     } catch (error) {
         // Column already exists, ignore error
         if (error.message && error.message.includes('duplicate column name')) {
-            console.log('icon_color_mode column already exists in Project table');
+            // icon_color_mode column already exists
         } else {
             console.log('Error adding icon_color_mode column:', error.message);
         }
@@ -192,10 +192,10 @@ export function executeQuery(conn, sql, params = null) {
 
 // Helper function for executing non-select commands (INSERT, UPDATE, DELETE)
 export function executeNonSelectCommand(conn, sql, params = null) {
-    console.log("SQL ausführen:", sql);
+    // Executing SQL
     
     // Use direct execution method to avoid GObject type issues
     const result = conn.execute_non_select_command(sql);
-    console.log("Direktes Ausführungsergebnis:", result);
+    // Direct execution result
     return result;
 }

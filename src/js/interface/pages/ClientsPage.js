@@ -64,9 +64,7 @@ export class ClientsPage {
         this.clientList = this.parentWindow._client_list;
         
         // Debug: проверяем что нашли
-        console.log('🔍 ClientsPage init - clientSearch found:', !!this.clientSearch);
-        console.log('🔍 ClientsPage init - addClientBtn found:', !!this.addClientBtn);
-        console.log('🔍 ClientsPage init - clientList found:', !!this.clientList);
+        // ClientsPage init - elements found
         
     }
 
@@ -84,12 +82,12 @@ export class ClientsPage {
 
         // Connect add client button
         if (this.addClientBtn) {
-            console.log('🔧 Подключаем кнопку Add Client к нашему методу');
+            // Connecting Add Client button
             this.addClientBtn.connect('clicked', () => {
                 console.log('🔥 КНОПКА ADD CLIENT НАЖАТА - вызываем ClientsPage.showAddClientDialogNEW()');
                 this.showAddClientDialogNEW();
             });
-            console.log('✅ Кнопка Add Client подключена');
+            // Add Client button connected
         } else {
             console.log('❌ Кнопка Add Client НЕ НАЙДЕНА');
         }
@@ -139,9 +137,9 @@ export class ClientsPage {
             body: 'Add a new client with name and currency'
         });
 
-        // Create inline form layout
+        // Create inline form layout with 2 rows
         const form = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
+            orientation: Gtk.Orientation.VERTICAL,
             spacing: 12,
             width_request: 400,
             margin_top: 12,
@@ -150,16 +148,65 @@ export class ClientsPage {
             margin_end: 12
         });
 
-        // Client name input (left side, takes most space)
+        // ROW 1: Client name input only
         const nameEntry = new Gtk.Entry({
             placeholder_text: 'Client name',
             text: initialName,
             hexpand: true
         });
 
-        // Currency dropdown (right side, fixed width)
-        const currencyButton = new Gtk.Button({
+        // ROW 2: Rate input with +/- buttons + Currency
+        const rateRow = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12
+        });
+
+        // Rate box with +/- buttons
+        const rateBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 0,
+            css_classes: ['hour-price-input'],
+            width_request: 120
+        });
+
+        const rateMinusBtn = new Gtk.Button({
+            label: '−',
             css_classes: ['flat'],
+            width_request: 30
+        });
+
+        const rateEntry = new Gtk.Entry({
+            text: '0',
+            width_request: 60,
+            input_purpose: Gtk.InputPurpose.NUMBER
+        });
+
+        const ratePlusBtn = new Gtk.Button({
+            label: '+',
+            css_classes: ['flat'],
+            width_request: 30
+        });
+
+        // Rate adjustment handlers
+        rateMinusBtn.connect('clicked', () => {
+            const currentValue = parseFloat(rateEntry.get_text()) || 0;
+            const newValue = Math.max(0, currentValue - 1);
+            rateEntry.set_text(newValue.toString());
+        });
+
+        ratePlusBtn.connect('clicked', () => {
+            const currentValue = parseFloat(rateEntry.get_text()) || 0;
+            const newValue = currentValue + 1;
+            rateEntry.set_text(newValue.toString());
+        });
+
+        rateBox.append(rateMinusBtn);
+        rateBox.append(rateEntry);
+        rateBox.append(ratePlusBtn);
+
+        // Currency dropdown
+        const currencyButton = new Gtk.Button({
+            css_classes: ['flat', 'currency-button'],
             width_request: 100,
             tooltip_text: 'Select currency'
         });
@@ -184,8 +231,13 @@ export class ClientsPage {
             });
         });
 
+        // Assemble the rate row
+        rateRow.append(rateBox);
+        rateRow.append(currencyButton);
+
+        // Add both rows to form
         form.append(nameEntry);
-        form.append(currencyButton);
+        form.append(rateRow);
 
         dialog.set_extra_child(form);
         dialog.add_response('cancel', 'Cancel');
@@ -202,12 +254,13 @@ export class ClientsPage {
         dialog.connect('response', (dialog, response) => {
             if (response === 'create') {
                 const clientName = nameEntry.get_text().trim();
+                const clientRate = parseFloat(rateEntry.get_text()) || 0;
                 if (clientName && this.clientManager) {
-                    // Use clientManager to create client with name and currency
+                    // Use clientManager to create client with name, rate and currency
                     const success = this.clientManager.createClient(
                         clientName,
                         '', // email
-                        0, // rate
+                        clientRate, // rate from input
                         selectedCurrency.code,
                         this.parentWindow
                     );
@@ -356,7 +409,7 @@ export class ClientsPage {
             this.clients = await this._fetchClients();
             this.filteredClients = [...this.clients];
             this._updateClientsDisplay();
-            console.log('ClientsPage: Clients loaded successfully', this.clients.length);
+            // Clients loaded successfully
         } catch (error) {
             console.error('Error loading clients:', error);
             this.showError('Load Error', 'Failed to load clients');
@@ -402,7 +455,7 @@ export class ClientsPage {
             return;
         }
 
-        console.log(`Displaying ${this.filteredClients.length} clients`);
+        // Displaying filtered clients
 
         // Add clients using your specific requirements
         this.filteredClients.forEach(client => {
@@ -643,7 +696,7 @@ export class ClientsPage {
             const currencyButton = new Gtk.Button({
                 width_request: 70,
                 height_request: 40,
-                css_classes: ['flat'],
+                css_classes: ['flat', 'currency-button'],
                 tooltip_text: currency.name
             });
             
@@ -896,7 +949,7 @@ export class ClientsPage {
             this.clients = await this._fetchClients();
             this.filteredClients = [...this.clients];
             this._updateClientsDisplay();
-            console.log('ClientsPage: Clients loaded successfully', this.clients.length);
+            // Clients loaded successfully
         } catch (error) {
             console.error('Error loading clients:', error);
             this.showError('Load Error', 'Failed to load clients');
@@ -938,14 +991,14 @@ export class ClientsPage {
      * Show loading state
      */
     showLoading(message = 'Loading...') {
-        console.log(`ClientsPage: ${message}`);
+        // ClientsPage loading message
     }
 
     /**
      * Hide loading state
      */
     hideLoading() {
-        console.log('ClientsPage: Loading finished');
+        // ClientsPage loading finished
     }
 
     /**
@@ -1032,7 +1085,7 @@ export class ClientsPage {
      * Show loading state
      */
     showLoading(message = 'Loading...') {
-        console.log(`ClientsPage: ${message}`);
+        // ClientsPage loading message
         // Could show spinner in UI if needed
     }
 
@@ -1040,7 +1093,7 @@ export class ClientsPage {
      * Hide loading state
      */
     hideLoading() {
-        console.log('ClientsPage: Loading finished');
+        // ClientsPage loading finished
         // Could hide spinner in UI if needed
     }
 
@@ -1199,7 +1252,7 @@ export class ClientsPage {
                 }
             }
 
-            console.log(`ClientsPage: Loaded ${clients.length} clients from database`);
+            // Loaded clients from database
             return clients;
         } catch (error) {
             console.error('Error loading clients:', error);

@@ -275,7 +275,7 @@ export class ThemeLoader {
                     borderColor: "lightGray",
                     accentColor: "accent",
                     accentHeight: 0,
-                    iconSize: 0,
+                    iconSize: 16,
                     showIcons: false,
                     showBorder: false
                 },

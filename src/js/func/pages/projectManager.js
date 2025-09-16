@@ -96,7 +96,7 @@ export class ProjectManager {
         } catch (error) {
             // Column already exists, ignore error
             if (error.message && error.message.includes('duplicate column name')) {
-                console.log('dark_icons column already exists in Project table');
+                // dark_icons column already exists
             } else {
                 console.log('Error adding dark_icons column:', error.message);
             }
@@ -111,7 +111,7 @@ export class ProjectManager {
         } catch (error) {
             // Column already exists, ignore error
             if (error.message && error.message.includes('duplicate column name')) {
-                console.log('icon_color_mode column already exists in Project table');
+                // icon_color_mode column already exists
             } else {
                 console.log('Error adding icon_color_mode column:', error.message);
             }
@@ -126,10 +126,121 @@ export class ProjectManager {
         } catch (error) {
             // Column already exists, ignore error
             if (error.message && error.message.includes('duplicate column name')) {
-                console.log('icon_color column already exists in Project table');
+                // icon_color column already exists
             } else {
                 console.log('Error adding icon_color column:', error.message);
             }
+        }
+    }
+
+    /**
+     * Create project and return the new project ID
+     * Used for the new creation flow where we need the ID immediately
+     */
+    createProjectAndGetId(name, color, icon, parentWindow, iconColorMode = 'auto') {
+        try {
+            console.log('Creating project and returning ID:', name, color, icon, 'Icon color mode:', iconColorMode);
+            
+            // Validate inputs
+            const nameValidation = InputValidator.validateProjectName(name);
+            if (!nameValidation.valid) {
+                console.error('Project validation failed:', nameValidation.error);
+                this._showError(parentWindow, 'Validation Error', nameValidation.error);
+                return null;
+            }
+
+            const colorValidation = InputValidator.validateColor(color);
+            if (!colorValidation.valid) {
+                console.error('Color validation failed:', colorValidation.error);
+                this._showError(parentWindow, 'Validation Error', colorValidation.error);
+                return null;
+            }
+            
+            // Use validated inputs
+            const safeName = InputValidator.sanitizeForSQL(nameValidation.sanitized);
+            const safeColor = colorValidation.sanitized;
+            const safeIcon = icon || 'folder-symbolic';
+            const safeIconColorMode = iconColorMode || 'auto';
+            
+            // Calculate icon color
+            const calculatedIconColor = getProjectIconColor({
+                color: safeColor,
+                icon_color_mode: safeIconColorMode
+            });
+            
+            // Ensure columns exist
+            this._ensureDarkIconsColumn();
+            this._ensureIconColorModeColumn();
+            this._ensureIconColorColumn();
+            
+            // Check for duplicate project names
+            if (this._projectNameExists(safeName)) {
+                this._showError(parentWindow, 'Duplicate Project', 'A project with this name already exists');
+                return null;
+            }
+            
+            // Create project and get the new ID
+            const sql = `INSERT INTO Project (name, color, icon, total_time, icon_color_mode, icon_color) VALUES ('${safeName}', '${safeColor}', '${safeIcon}', 0, '${safeIconColorMode}', '${calculatedIconColor}')`;
+            
+            this.executeNonSelectCommand(this.dbConnection, sql);
+            console.log('Project inserted, now retrieving ID...');
+            
+            // Get the newly created project by name (since name is unique)
+            const getIdSql = `SELECT id FROM Project WHERE name = '${safeName}' ORDER BY id DESC LIMIT 1`;
+            const result = this.executeQuery(this.dbConnection, getIdSql);
+            
+            console.log('Query result for new project ID:', result);
+            
+            if (result && result.get_n_rows() > 0) {
+                const newProjectId = result.get_value_at(0, 0); // column 0, row 0
+                console.log('Project created successfully with ID:', newProjectId);
+                
+                // Reload projects in parent window
+                if (parentWindow && parentWindow.projectsPageComponent) {
+                    parentWindow.projectsPageComponent.loadProjects();
+                }
+                
+                return newProjectId;
+            } else {
+                console.error('Failed to get new project ID, query returned rows:', result ? result.get_n_rows() : 'null');
+                return null;
+            }
+            
+        } catch (error) {
+            console.error('Error creating project:', error);
+            this._showError(parentWindow, 'Database Error', `Failed to create project: ${error.message}`);
+            return null;
+        }
+    }
+
+    /**
+     * Get project by ID
+     */
+    getProjectById(projectId) {
+        try {
+            const sql = `SELECT * FROM Project WHERE id = ${projectId}`;
+            const result = this.executeQuery(this.dbConnection, sql);
+            
+            if (result && result.get_n_rows() > 0) {
+                // Build project object from recordset - assuming column order: id, name, color, total_time, icon, dark_icons, icon_color_mode, icon_color
+                const project = {
+                    id: result.get_value_at(0, 0),
+                    name: String(result.get_value_at(1, 0) || ''),
+                    color: String(result.get_value_at(2, 0) || '#cccccc'),
+                    total_time: result.get_value_at(3, 0) || 0,
+                    icon: String(result.get_value_at(4, 0) || 'folder-symbolic'),
+                    dark_icons: result.get_value_at(5, 0) || 0,
+                    icon_color_mode: String(result.get_value_at(6, 0) || 'auto'),
+                    icon_color: String(result.get_value_at(7, 0) || 'white')
+                };
+                return project;
+            } else {
+                console.error('Project not found with ID:', projectId);
+                return null;
+            }
+        } catch (error) {
+            console.error('Error getting project by ID:', error);
+            return null;
         }
     }
 
@@ -1270,34 +1381,43 @@ export class ProjectManager {
         this.parentWindow._project_list.append(row);
     }
 
-    _showProjectAppearanceDialog(project) {
+    _showProjectAppearanceDialog(project, callback = null) {
         const dialog = new Adw.AlertDialog({
             heading: 'Project Appearance',
             body: `Configure color and icon for "${project.name}"`
         });
 
-        // Создаём главный контейнер
+        // Создаём главный контейнер с 2-колоночным макетом
         const mainBox = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 16,
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 24,
             margin_top: 16,
             margin_bottom: 16,
             margin_start: 16,
-            margin_end: 16
+            margin_end: 16,
+            homogeneous: true
         });
 
-        // === СЕКЦИЯ ЦВЕТА ===
-        const colorSection = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
+        // === ЛЕВАЯ КОЛОНКА - ЦВЕТ ===
+        const colorColumn = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
             spacing: 12,
-            homogeneous: false
+            hexpand: true
         });
 
-        // Левая часть - превью цвета
+        const colorLabel = new Gtk.Label({
+            label: 'Project Color:',
+            halign: Gtk.Align.START,
+            css_classes: ['heading']
+        });
+
+        // Превью цвета - кликабельное
         const colorPreview = new Gtk.Button({
             width_request: 48,
             height_request: 48,
-            css_classes: ['flat', 'color-preview']
+            css_classes: ['flat', 'color-preview'],
+            halign: Gtk.Align.CENTER,
+            tooltip_text: 'Click to change color'
         });
 
         // Применяем текущий цвет проекта
@@ -1310,36 +1430,39 @@ export class ProjectManager {
             }
             .color-preview:hover {
                 filter: brightness(1.1);
+                transform: scale(1.05);
             }
         `);
         colorPreview.get_style_context().add_provider(colorProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
 
-        // Правая часть - кнопка выбора цвета
-        const colorButton = new Gtk.Button({
-            label: 'Select Color...',
-            hexpand: true
-        });
-
-        // Обработчик выбора цвета с ColorDialog
-        colorButton.connect('clicked', () => {
+        // Обработчик выбора цвета - прямо на превью
+        colorPreview.connect('clicked', () => {
             this._showColorPicker(project, colorPreview, colorProvider);
         });
 
-        colorSection.append(colorPreview);
-        colorSection.append(colorButton);
+        colorColumn.append(colorLabel);
+        colorColumn.append(colorPreview);
 
-        // === СЕКЦИЯ ИКОНОК ===
-        const iconSection = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
+        // === ПРАВАЯ КОЛОНКА - ИКОНКА ===
+        const iconColumn = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
             spacing: 12,
-            homogeneous: false
+            hexpand: true
         });
 
-        // Левая часть - превью иконки
+        const iconLabel = new Gtk.Label({
+            label: 'Project Icon:',
+            halign: Gtk.Align.START,
+            css_classes: ['heading']
+        });
+
+        // Превью иконки - кликабельное
         const iconPreview = new Gtk.Button({
             width_request: 48,
             height_request: 48,
-            css_classes: ['flat', 'icon-preview']
+            css_classes: ['flat', 'icon-preview'],
+            halign: Gtk.Align.CENTER,
+            tooltip_text: 'Click to change icon'
         });
 
         let previewIconWidget;
@@ -1357,86 +1480,75 @@ export class ProjectManager {
         }
         iconPreview.set_child(previewIconWidget);
 
-        // Правая часть - переключатели типа иконки
-        const iconTypeBox = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 8,
-            hexpand: true
-        });
-
-        // Переключатели для типа иконки - grouped стиль
+        // Переключатели для типа иконки с иконками
         const iconTypeGroup = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 0,
-            css_classes: ['linked'],
+            css_classes: ['toggle-project-icon-box'],
             halign: Gtk.Align.CENTER
         });
 
+        // Кнопка Icons с иконкой
+        const iconsButtonBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 6
+        });
+        const iconsIcon = new Gtk.Image({
+            icon_name: 'applications-graphics-symbolic',
+            pixel_size: 16
+        });
+        iconsButtonBox.append(iconsIcon);
+
         const iconsButton = new Gtk.ToggleButton({
-            label: 'Icons',
-            active: true
+            child: iconsButtonBox,
+            active: !project.icon || !project.icon.startsWith('emoji:')
         });
 
+        // Кнопка Emoji с эмодзи
+        const emojiButtonBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 6
+        });
+        const emojiIcon = new Gtk.Label({
+            label: '😀',
+            css_classes: ['emoji-display']
+        });
+        emojiButtonBox.append(emojiIcon);
+
         const emojiButton = new Gtk.ToggleButton({
-            label: 'Emoji'
+            child: emojiButtonBox,
+            active: project.icon && project.icon.startsWith('emoji:')
         });
 
         // Группировка переключателей
         iconsButton.connect('toggled', () => {
             if (iconsButton.get_active()) {
                 emojiButton.set_active(false);
-                updateButtonText();
             }
         });
 
         emojiButton.connect('toggled', () => {
             if (emojiButton.get_active()) {
                 iconsButton.set_active(false);
-                updateButtonText();
             }
         });
 
         iconTypeGroup.append(iconsButton);
         iconTypeGroup.append(emojiButton);
 
-        // Кнопка выбора иконки
-        const selectIconButton = new Gtk.Button({
-            label: 'Select Icon...',
-            margin_top: 8
-        });
-
-        // Функция обновления текста кнопки
-        const updateButtonText = () => {
-            const isEmoji = emojiButton.get_active();
-            selectIconButton.set_label(isEmoji ? 'Select Emoji...' : 'Select Icon...');
-        };
-
-        selectIconButton.connect('clicked', () => {
+        // Обработчик клика по превью иконки - открывает picker в зависимости от выбранного типа
+        iconPreview.connect('clicked', () => {
             const isEmoji = emojiButton.get_active();
             this._showIconPicker(project, iconPreview, previewIconWidget, isEmoji);
         });
 
-        iconTypeBox.append(iconTypeGroup);
-        iconTypeBox.append(selectIconButton);
+        iconColumn.append(iconLabel);
+        iconColumn.append(iconPreview);
+        iconColumn.append(iconTypeGroup);
 
-        iconSection.append(iconPreview);
-        iconSection.append(iconTypeBox);
-
-        // Собираем всё
-        mainBox.append(new Gtk.Label({
-            label: 'Project Color:',
-            halign: Gtk.Align.START,
-            css_classes: ['heading']
-        }));
-        mainBox.append(colorSection);
-
-        mainBox.append(new Gtk.Label({
-            label: 'Project Icon:',
-            halign: Gtk.Align.START,
-            css_classes: ['heading'],
-            margin_top: 8
-        }));
-        mainBox.append(iconSection);
+        // Собираем колонки
+        mainBox.append(colorColumn);
+        mainBox.append(iconColumn);
 
         dialog.set_extra_child(mainBox);
         dialog.add_response('cancel', 'Cancel');
@@ -1447,8 +1559,16 @@ export class ProjectManager {
             if (response === 'save') {
                 // Сохраняем изменения - цвет уже обновлен в project.color
                 // Иконка уже обновлена в project.icon
-                this.updateProject(project.id, project.name, project.color, project.icon, this.parentWindow);
-                // Header обновится автоматически через _loadProjects
+                if (project.id) {
+                    // For existing projects, update in database
+                    this.updateProject(project.id, project.name, project.color, project.icon, this.parentWindow, project.icon_color_mode);
+                    // Header обновится автоматически через _loadProjects
+                }
+                
+                // Call callback if provided (for ProjectDialog integration)
+                if (callback && typeof callback === 'function') {
+                    callback(project);
+                }
             }
             dialog.close();
         });
@@ -1840,14 +1960,35 @@ export class ProjectManager {
                 // Default behavior
                 let success;
                 if (mode === 'create') {
-                    success = this.createProject(
-                        projectData.name,
-                        projectData.color,
-                        projectData.icon,
-                        parentWindow || this.parentWindow,
-                        projectData.iconColorMode
-                    );
+                    // Clean project data for creation (remove temporary fields)
+                    const { id, tempId, isTemporary, ...createData } = projectData;
+                    
+                    console.log('Creating project with temporary ID:', tempId, 'Data:', createData);
+                    
+                    try {
+                        success = this.createProject(
+                            createData.name,
+                            createData.color,
+                            createData.icon,
+                            parentWindow || this.parentWindow,
+                            createData.iconColorMode
+                        );
+                        
+                        if (success) {
+                            console.log('Project created successfully, temporary ID', tempId, 'replaced with database ID');
+                        } else {
+                            console.log('Project creation failed, removing temporary ID:', tempId);
+                        }
+                    } catch (error) {
+                        console.error('Project creation error, removing temporary ID:', tempId, error);
+                        success = false;
+                    }
                 } else if (mode === 'edit') {
+                    // Ensure we have a valid ID for edit mode
+                    if (!projectData.id || projectData.id < 1) {
+                        console.error('Invalid project ID for edit mode:', projectData.id);
+                        return false;
+                    }
                     success = this.updateProject(
                         projectData.id,
                         projectData.name,

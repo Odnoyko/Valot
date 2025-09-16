@@ -3,6 +3,7 @@ import Gdk from 'gi://Gdk';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import { TimeUtils } from 'resource:///com/odnoyko/valot/js/func/global/timeUtils.js';
+import { Config } from 'resource:///com/odnoyko/valot/config.js';
 
 export class PDFExporter {
     constructor(tasks, projects, clients, currentPeriod = 'week', selectedProjectId = null, selectedClientId = null) {
@@ -24,9 +25,8 @@ export class PDFExporter {
             title: 'Export Time Report (Text)'
         });
 
-        // Set initial folder to user documents
-        const homeDir = GLib.get_home_dir();
-        const documentsDir = GLib.build_filenamev([homeDir, 'Documents']);
+        // Set initial folder to user documents (localized)
+        const documentsDir = Config.getDocumentsDir();
         let initialDir = documentsDir;
 
         if (GLib.file_test(documentsDir, GLib.FileTest.IS_DIR)) {
@@ -34,8 +34,8 @@ export class PDFExporter {
             dialog.set_initial_folder(file);
         } else {
             // Fallback to home directory
-            initialDir = homeDir;
-            const file = Gio.File.new_for_path(homeDir);
+            initialDir = GLib.get_home_dir();
+            const file = Gio.File.new_for_path(initialDir);
             dialog.set_initial_folder(file);
         }
 
@@ -207,10 +207,20 @@ export class PDFExporter {
         const data = [];
         const today = new Date();
 
-        for (let i = 6; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            const dayName = days[date.getDay() === 0 ? 6 : date.getDay() - 1];
+        // Calculate Monday of current week (ISO week standard)
+        const monday = new Date(today);
+        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days
+        monday.setDate(today.getDate() - daysToMonday);
+        monday.setHours(0, 0, 0, 0); // Start of Monday
+
+        console.log(`📅 Current week: Monday ${monday.toLocaleDateString('de-DE')} to Sunday`);
+
+        // Generate data for Monday through Sunday
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(monday);
+            date.setDate(monday.getDate() + i);
+            const dayName = days[i];
 
             let totalSeconds = 0;
             tasks.forEach(task => {

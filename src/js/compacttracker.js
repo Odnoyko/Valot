@@ -22,11 +22,17 @@ export const CompactTrackerWindow = GObject.registerClass({
             decorated: true
         });
         this.mainWindow = mainWindow;
+        this.shiftMode = false; // Track if opened with shift key
         this._createWidgets();
         this._setupSignals();
         this._updateFromMainWindow();
 
         console.log('Compact tracker created programmatically');
+    }
+
+    setShiftMode(shiftMode) {
+        this.shiftMode = shiftMode;
+        console.log(`🔧 Compact tracker shift mode set to: ${shiftMode}`);
     }
 
     _createWidgets() {
@@ -126,10 +132,28 @@ export const CompactTrackerWindow = GObject.registerClass({
     _setupSignals() {
         // Connect close/open button
         this._close_open_btn.connect('clicked', () => {
-            if (this.application && typeof this.application.openMainApplication === 'function') {
-                this.application.openMainApplication();
+            if (this.shiftMode) {
+                // In shift mode: just hide compact tracker, keep main window visible
+                this.set_visible(false);
+                console.log('🔄 Compact tracker hidden (shift mode), main window stays visible');
+            } else {
+                // Normal mode: show main window and hide compact tracker
+                if (this.application && typeof this.application.openMainApplication === 'function') {
+                    this.application.openMainApplication();
+                }
+                if (this.mainWindow) {
+                    this.mainWindow.present();
+                    this.mainWindow.set_visible(true);
+                }
+                this.set_visible(false);
+                console.log('🔄 Compact tracker hidden, main window shown');
             }
-            this.close();
+        });
+
+        // Handle window close request - hide instead of destroy
+        this.connect('close-request', () => {
+            this.set_visible(false);
+            return true; // Prevent actual window destruction
         });
 
         // Register track button with tracking state manager

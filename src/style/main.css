@@ -1,31 +1,14 @@
 /* Top Tracker Design */
 
-.toptracker {
-  background: @window_bg_color;
-  border-radius: 10px;
-  padding: 2px;
-  box-shadow: 0px 0px 5px 2px alpha(@shadow_color, 0.02);
-  border: 1px solid @border_color;
-  color: @window_fg_color;
-  margin: 6px 160px 6px 10px;
+/* Custom color variables for light and dark themes */
+@define-color subtitle_light_color #959595;
+@define-color subtitle_dark_color #7B7B7B;
+
+.content-box{
+	background: white;
+	border-radius: 12px;
 }
-.tasksHeader {
-  background: @secondary_sidebar_bg_color;
-}
-.headernameinput {
-  padding-left: 20px;
-  font-size: 17px;
-  min-width: 200px;
-}
-.headertimeinput {
-  font-size: 17px;
-  margin: 0px 16px;
-  font-weight: 700;
-}
-entry,
-.headerNamebtn {
-  background: @window_bg_color;
-}
+
 .headerbtn {
   font-size: 14px;
   background: @headerbar_shade_color;
@@ -52,7 +35,7 @@ entry.itemNameEntry {
 /* Project selection and styling */
 .selected-project {
   background-color: alpha(@accent_bg_color, 0.1);
-  border-left: 3px solid @accent_bg_color;
+  border-left: 2px solid @accent_bg_color;
 }
 
 .project-settings-button {
@@ -82,7 +65,7 @@ entry.itemNameEntry {
 /* Client selection styling */
 .selected-client {
   background-color: alpha(@accent_bg_color, 0.1);
-  border-left: 3px solid @accent_bg_color;
+  border-left: 2px solid @accent_bg_color;
 }
 
 .client-name-label {
@@ -198,13 +181,18 @@ entry.itemNameEntry {
 }
 
 /* Use system accent colors for all elements */
+row:hover {
+  background: alpha(@window_fg_color, 0.05);
+}
 .selected-task {
-  background: alpha(@accent_bg_color, 0.2);
-  border-left: 3px solid @accent_bg_color;
+  background: alpha(@accent_bg_color, 0.15);
+  border-left: 2px solid @accent_bg_color;
 }
 
-.selected-task:hover {
-  background: alpha(@accent_bg_color, 0.3);
+.selected-task:hover,
+.selected-project:hover,
+.selected-client:hover{
+  background: alpha(@accent_bg_color, 0.25);
 }
 
 /* Active tracking task styling */
@@ -228,13 +216,9 @@ entry.itemNameEntry {
 
 .selected-project {
   background: alpha(@success_color, 0.1);
-  border-left: 3px solid @success_color;
+  border-left: 1px solid @success_color;
 }
 
-.selected-client {
-  background: alpha(@warning_color, 0.1);
-  border-left: 3px solid @warning_color;
-}
 
 /* Project icon and color selector styles */
 .icon-selector {
@@ -264,22 +248,22 @@ entry.itemNameEntry {
 
 /* Client context button styling - clean flat appearance */
 #client_context_btn {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  outline: none !important;
-  border-radius: 0 !important;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  outline: none;
+  border-radius: 0;
 }
 
 #client_context_btn:hover {
-  background: alpha(@window_fg_color, 0.1) !important;
-  border-radius: 6px !important;
-  border: none !important;
-  box-shadow: none !important;
+  background: alpha(@window_fg_color, 0.1);
+  border-radius: 6px;
+  border: none;
+  box-shadow: none;
 }
 
 #client_context_btn:active {
-  background: alpha(@window_fg_color, 0.15) !important;
+  background: alpha(@window_fg_color, 0.15);
 }
 
 /* Input Validation Error Styling */
@@ -291,9 +275,9 @@ entry.error {
 
 /* Also style text entry boxes */
 .error {
-  border: 2px solid #e01b24 !important;
-  background: rgba(224, 27, 36, 0.1) !important;
-  border-radius: 6px !important;
+  border: 2px solid #e01b24;
+  background: rgba(224, 27, 36, 0.1);
+  border-radius: 6px;
 }
 
 /* Inline editable labels - clean appearance */
@@ -453,8 +437,82 @@ entry.inline-editable:focus {
 	min-width: 300px;
 }
 .project-appearance-btn {
-	max-width: 10px;
-	max-height: 10px;
-	height: 10px;
-	width: 10px;
+	min-width: 10px;
+	min-height: 10px;
+}
+
+/* Custom project button styles */
+.tracking-widget-project-button {
+  padding:0px;
+}
+
+.widget-factory-project-button {
+  padding:0px;
+}
+
+.header-tracking-project-button {
+  padding:0px;
+}
+
+.project-color-settings-button {
+  padding:0px;
+}
+
+/* Override subtitle opacity to make project dots more visible */
+.subtitle {
+  opacity: 1;
+  color: @subtitle_light_color; /* Default for light theme */
+}
+
+/* Default subtitle color (light theme) */
+.subtitle {
+    color: @subtitle_light_color;
+}
+
+/* Dark theme support - GTK will automatically apply this when Adwaita-dark is used */
+.subtitle:backdrop,
+window.dark .subtitle {
+    color: @subtitle_dark_color;
+}
+.toggle-project-icon-box button:nth-child(1),
+.search-button-box entry,
+.hour-price-input button:nth-child(1){
+	border-radius: 10px 0px 0px 10px;
+}
+.toggle-project-icon-box button:nth-child(2),
+.search-button-box button,
+.hour-price-input button:nth-child(3){
+	border-radius: 0px 10px 10px 0px;
+}
+.hour-price-input entry {
+	border-radius: 0px;
+}
+.search-button-box button,.hour-price-input button{
+ 	background: alpha(@subtitle_dark_color, 0.24);
+}
+.search-button-box button:hover,.hour-price-input button:hover{
+ 	background: alpha(@subtitle_dark_color, 0.4);
+}
+.chart-summary-label {
+ 	color: alpha(@window_fg_color, 0.6);
+ 	font-size: 14px;
+}
+.chart-period-label {
+ 	color: alpha(@window_fg_color, 0.6);
+ 	font-size: 12px;
+}
+.chart-hours-label {
+ 	color: alpha(@window_fg_color, 0.8);
+ 	font-size: 14px;
+}
+.currency-button {
+	background: alpha(@window_fg_color, 0.12);
+	border-radius: 12px;
+}
+.currency-button:hover {
+	background: alpha(@window_fg_color, 0.16);
+	border-radius: 12px;
+}
+.currency-button:hover stack row {
+	background: alpha(@window_fg_color, 0);
 }

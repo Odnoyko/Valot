@@ -34,7 +34,7 @@ import { setupDatabase } from './js/dbinitialisation.js';
 function on_activate(app) {
     try {
         const conn = setupDatabase();
-        print("Datenbank erfolgreich verbunden");
+        // Database successfully connected
 
         // Store connection for later use
         app.database_connection = conn;

@@ -204,7 +204,7 @@ export class TaskManager {
      * Update task
      */
     updateTask(taskId, taskData) {
-        const { name, description, projectId } = taskData;
+        const { name, description, projectId, project_id, client_id, start, end, duration } = taskData;
         
         const updates = [];
         
@@ -220,6 +220,29 @@ export class TaskManager {
         
         if (projectId !== undefined) {
             updates.push(`project_id = ${projectId}`);
+        }
+        
+        // Support both projectId and project_id for consistency
+        if (project_id !== undefined) {
+            updates.push(`project_id = ${project_id}`);
+        }
+        
+        if (client_id !== undefined) {
+            updates.push(`client_id = ${client_id}`);
+        }
+        
+        if (start !== undefined) {
+            const safeStart = start.replace(/'/g, "''");
+            updates.push(`start_time = '${safeStart}'`);
+        }
+        
+        if (end !== undefined) {
+            const safeEnd = end.replace(/'/g, "''");
+            updates.push(`end_time = '${safeEnd}'`);
+        }
+        
+        if (duration !== undefined) {
+            updates.push(`time_spent = ${duration}`);
         }
         
         if (updates.length === 0) {

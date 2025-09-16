@@ -22,8 +22,7 @@ export class HeaderTrackingWidget {
         const trackingBox = new Gtk.Box({
             spacing: 8,
             hexpand: true,
-            hexpand_set: true,
-            margin_end: 30
+            hexpand_set: true
         });
 
         // Task name entry
@@ -39,7 +38,7 @@ export class HeaderTrackingWidget {
             height_request: 36,
             halign: Gtk.Align.CENTER,
             valign: Gtk.Align.CENTER,
-            css_classes: ['flat'],
+            css_classes: ['flat', 'header-tracking-project-button'],
             tooltip_text: 'Project'
         });
 
@@ -100,7 +99,7 @@ export class HeaderTrackingWidget {
 
     _setupTracking() {
         // All widgets register directly with tracking state manager (no master/non-master)
-        console.log(`🔥 Setting up HeaderTrackingWidget`);
+        // Setting up HeaderTrackingWidget
         trackingStateManager.registerTrackingButton(this.trackButton, null, this.taskEntry);
         trackingStateManager.registerTimeLabel(this.timeLabel);
         

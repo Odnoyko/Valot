@@ -86,7 +86,7 @@ export const ValotApplication = GObject.registerClass(
                     application_name: 'valot',
                     application_icon: 'com.odnoyko.valot',
                     developer_name: 'Odnoyko',
-                    version: '0.3.0',
+                    version: '0.5.0',
                     developers: [
                         'Odnoyko'
                     ],
@@ -115,7 +115,7 @@ export const ValotApplication = GObject.registerClass(
         _initializeDatabase() {
             try {
                 this.database_connection = setupDatabase();
-                print("Datenbank erfolgreich verbunden");
+                // Database successfully connected
                 return true;
             } catch (error) {
                 print(`Fehler bei der Datenbankverbindung: ${error.message}`);

@@ -21,7 +21,9 @@ export class TaskRowTemplate {
     _createTaskWidget() {
         // Calculate cost
         const cost = (this.task.duration / 3600) * (this.task.client_rate || 0);
-        const costText = cost > 0 ? ` • €${cost.toFixed(2)}` : '';
+        const currency = this.task.currency || 'EUR';
+        const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
+        const costText = cost > 0 ? ` • ${currencySymbol}${cost.toFixed(2)}` : '';
 
         // Find project color
         const projectsArray = this.parentWindow.allProjects || this.allProjects || [];
@@ -39,14 +41,15 @@ export class TaskRowTemplate {
 
         const isCurrentlyTracking = trackingStateManager.isTaskTracking(this.taskGroupKey);
         const subtitle = isCurrentlyTracking
-            ? `<span color="${dotColor}">●</span> ${projectName} • ${clientName} • <b>Zurzeit Tracking</b> • ${this.timeUtils.formatDate(this.task.start)}`
-            : `<span color="${dotColor}">●</span> ${projectName} • ${clientName} • ${this.timeUtils.formatDate(this.task.start)}`;
+            ? `<span foreground="${dotColor}">●</span> ${projectName} • ${clientName} • <b>Zurzeit Tracking</b> • ${this.timeUtils.formatDate(this.task.start)}`
+            : `<span foreground="${dotColor}">●</span> ${projectName} • ${clientName} • ${this.timeUtils.formatDate(this.task.start)}`;
 
         // Create main row
         const row = new Adw.ActionRow({
             title: InputValidator.escapeForGTKMarkup(this.task.name),
             subtitle: subtitle,
-            use_markup: true
+            use_markup: true,
+            css_classes: ['bright-subtitle']
         });
 
         // Apply tracking state styling
@@ -96,7 +99,9 @@ export class TaskRowTemplate {
 
         // Prepare separate money text
         if (cost > 0) {
-            moneyText = `€${cost.toFixed(2)}`;
+            const currency = this.task.currency || 'EUR';
+            const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
+            moneyText = `${currencySymbol}${cost.toFixed(2)}`;
         }
 
         const { suffixBox, timeLabel, moneyLabel } = WidgetFactory.createTaskSuffixBox({

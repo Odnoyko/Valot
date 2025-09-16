@@ -37,7 +37,7 @@ export class TaskRenderer {
 
         // Always use TaskRowTemplate - it will adapt based on tracking state
         const templateInstance = new TaskRowTemplate(task, this.timeUtils, this.allProjects, this.parentWindow);
-        console.log(`Verwendung von TaskRowTemplate für Aufgabe: ${task.name} (tracking: ${isCurrentlyTracking})`);
+        // Using TaskRowTemplate
 
         // Store template instance for cleanup
         this.taskTemplates.set(`task_${task.id}`, templateInstance);
@@ -54,7 +54,7 @@ export class TaskRenderer {
 
         // Always use TaskStackTemplate - it will adapt based on tracking state
         const templateInstance = new TaskStackTemplate(group, this.timeUtils, this.allProjects, this.parentWindow);
-        console.log(`Verwendung von TaskStackTemplate für Stack: ${group.baseName} (tracking: ${isCurrentlyTracking})`);
+        // Using TaskStackTemplate
 
         // Store template instance for cleanup
         this.taskTemplates.set(`stack_${group.groupKey}`, templateInstance);
@@ -423,13 +423,21 @@ export class TaskRenderer {
     }
 
     _toggleTaskSelection(row, task) {
-        if (this.parentWindow.selectedTasks) {
-            if (this.parentWindow.selectedTasks.has(task.id)) {
-                this.parentWindow.selectedTasks.delete(task.id);
+        // Use the selectedTasks set from the renderer (could be main page or reports page)
+        const selectedTasks = this.selectedTasks || this.parentWindow.selectedTasks;
+        
+        if (selectedTasks) {
+            if (selectedTasks.has(task.id)) {
+                selectedTasks.delete(task.id);
                 row.remove_css_class('selected-task');
             } else {
-                this.parentWindow.selectedTasks.add(task.id);
+                selectedTasks.add(task.id);
                 row.add_css_class('selected-task');
+            }
+            
+            // Call selection changed callback if available
+            if (this.onSelectionChanged) {
+                this.onSelectionChanged();
             }
         }
     }
@@ -455,27 +463,36 @@ export class TaskRenderer {
             // Ensure this is treated as a stack selection event
             gesture.set_state(Gtk.EventSequenceState.CLAIMED);
 
-            if (this.parentWindow.selectedStacks && this.parentWindow.selectedTasks) {
-                if (this.parentWindow.selectedStacks.has(group.groupKey)) {
+            // Use the selected sets from the renderer (could be main page or reports page)
+            const selectedStacks = this.selectedStacks || this.parentWindow.selectedStacks;
+            const selectedTasks = this.selectedTasks || this.parentWindow.selectedTasks;
+            
+            if (selectedStacks && selectedTasks) {
+                if (selectedStacks.has(group.groupKey)) {
                     // DESELECT stack and all its tasks
-                    this.parentWindow.selectedStacks.delete(group.groupKey);
+                    selectedStacks.delete(group.groupKey);
                     row.remove_css_class('selected-task');
 
                     // Remove all tasks from this stack from selectedTasks using allTasks lookup
                     stackTasks.forEach(task => {
-                        this.parentWindow.selectedTasks.delete(task.id);
+                        selectedTasks.delete(task.id);
                     });
 
                 } else {
                     // SELECT stack and all its tasks
-                    this.parentWindow.selectedStacks.add(group.groupKey);
+                    selectedStacks.add(group.groupKey);
                     row.add_css_class('selected-task');
 
                     // Add all tasks from this stack to selectedTasks using allTasks lookup
                     stackTasks.forEach(task => {
-                        this.parentWindow.selectedTasks.add(task.id);
+                        selectedTasks.add(task.id);
                     });
 
+                }
+                
+                // Call selection changed callback if available
+                if (this.onSelectionChanged) {
+                    this.onSelectionChanged();
                 }
             }
         });
@@ -565,7 +582,7 @@ export class TaskRenderer {
      * Clear all template instances
      */
     clearAllTemplates() {
-        console.log(`Bereinige ${this.taskTemplates.size} Template-Instanzen`);
+        // Cleaning template instances
         
         // Destroy all template instances
         this.taskTemplates.forEach((template, templateId) => {
