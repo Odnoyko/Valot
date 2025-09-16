@@ -66,6 +66,11 @@ export class ReportsPage {
             console.warn('⚠️ Reports page failed to load completely');
         } finally {
             this.hideLoading();
+            
+            // Update weekly time in sidebar after loading reports
+            if (this.parentWindow && typeof this.parentWindow.updateWeeklyTime === 'function') {
+                await this.parentWindow.updateWeeklyTime();
+            }
         }
     }
 

@@ -249,6 +249,18 @@ export const ValotWindow = GObject.registerClass({
         // Make trackingStateManager available to child components
         this.trackingStateManager = trackingStateManager;
 
+        // Register sidebar elements for real-time updates
+        if (this._weekly_time_row) {
+            trackingStateManager.registerSidebarElement('weeklyTime', this._weekly_time_row);
+        }
+
+        // Subscribe to tracking events for weekly time updates
+        trackingStateManager.subscribe((event, eventData) => {
+            if (event === 'updateWeeklyTime') {
+                this._updateWeeklyTimeRealTime(eventData.additionalTime);
+            }
+        });
+
         // Initialize modular dialog manager
         this.modularDialogManager = new ModularDialogManager(this, this.application);
 
@@ -256,6 +268,9 @@ export const ValotWindow = GObject.registerClass({
         // Load initial data
         this._loadProjects();
         this._loadClients();
+        
+        // Update weekly time after initial data load
+        setTimeout(() => this.updateWeeklyTime(), 1000);
     }
 
     /**

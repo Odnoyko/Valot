@@ -50,4 +50,70 @@ export class TimeUtils {
         }
         return 0;
     }
+
+    /**
+     * Update weekly time display element with current data
+     * @param {Gtk.Widget} weeklyTimeElement - The weekly time row element
+     * @param {Array} allTasks - Array of all tasks
+     * @param {number} additionalSeconds - Additional tracking seconds (optional)
+     */
+    static async updateWeeklyTimeDisplay(weeklyTimeElement, allTasks = [], additionalSeconds = 0) {
+        if (!weeklyTimeElement) return;
+
+        try {
+            // Calculate current week (Sunday to Saturday)
+            const now = new Date();
+            const startOfWeek = new Date(now);
+            startOfWeek.setDate(now.getDate() - now.getDay());
+            startOfWeek.setHours(0, 0, 0, 0);
+            
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            endOfWeek.setHours(23, 59, 59, 999);
+
+            let weekTime = 0;
+            let weekTasks = 0;
+
+            // Calculate week time from existing tasks
+            for (const task of allTasks) {
+                if (!task.start) continue;
+                
+                const taskDate = new Date(task.start);
+                if (taskDate >= startOfWeek && taskDate <= endOfWeek) {
+                    weekTime += task.duration || 0;
+                    weekTasks++;
+                }
+            }
+
+            // Add additional tracking time
+            weekTime += additionalSeconds;
+
+            // Update display
+            const timeText = TimeUtils.formatDuration(weekTime);
+            const tasksText = weekTasks === 1 ? '1 task' : `${weekTasks} tasks`;
+            weeklyTimeElement.set_subtitle(`${timeText} • ${tasksText}`);
+
+            console.log(`📊 Weekly time updated: ${timeText} (${weekTasks} tasks)`);
+
+        } catch (error) {
+            console.error('❌ Error updating weekly time display:', error);
+        }
+    }
+
+    /**
+     * Get current week's start and end dates
+     * @returns {Object} {startOfWeek, endOfWeek}
+     */
+    static getCurrentWeekRange() {
+        const now = new Date();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+
+        return { startOfWeek, endOfWeek };
+    }
 }
