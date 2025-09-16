@@ -269,10 +269,24 @@ export const ValotWindow = GObject.registerClass({
             trackingStateManager.registerSidebarElement('weeklyTime', this._weekly_time_row);
         }
 
-        // Subscribe to tracking events for weekly time updates
+        // Subscribe to tracking events for weekly time updates and project sync
         trackingStateManager.subscribe((event, eventData) => {
             if (event === 'updateWeeklyTime') {
                 this._updateWeeklyTimeRealTime(eventData.additionalTime);
+            } else if (event === 'start') {
+                // Update project/client when tracking starts from task list
+                if (eventData.projectId) {
+                    this.currentProjectId = eventData.projectId;
+                    if (eventData.projectName) {
+                        this._updateProjectButtonsDisplay(eventData.projectName);
+                    }
+                }
+                if (eventData.clientId) {
+                    this.currentClientId = eventData.clientId;
+                    if (eventData.clientName) {
+                        this._updateClientButtonsDisplay(eventData.clientName);
+                    }
+                }
             }
         });
 
@@ -507,12 +521,14 @@ export const ValotWindow = GObject.registerClass({
      */
     _updateProjectButtonsDisplay(projectName) {
         const project = this.allProjects?.find(p => p.name === projectName);
-        if (!project || !this.trackingWidgets) return;
+        if (!project) return;
         
         // Update all project buttons across all tracking widgets
-        this.trackingWidgets.forEach(({ widget }) => {
-            widget.updateProjectDisplay(project);
-        });
+        if (this.trackingWidgets && this.trackingWidgets.length > 0) {
+            this.trackingWidgets.forEach(({ widget }) => {
+                widget.updateProjectDisplay(project);
+            });
+        }
         
         // Synchronize compact tracker if it's open
         if (this.compactTrackerWindow) {

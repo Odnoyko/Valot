@@ -538,29 +538,20 @@ export class TasksPage {
         // Set the main tracking widget context from task
         if (this.parentWindow) {
             
-            // Set current project/client from task data
-            if (task.project_id) {
-                this.parentWindow.currentProjectId = task.project_id;
-            }
-            if (task.client_id) {
-                this.parentWindow.currentClientId = task.client_id;
-            }
+            // Start tracking through trackingStateManager - it will handle all synchronization
+            const currentProject = this.parentWindow.allProjects?.find(p => p.id === task.project_id);
+            const currentClient = this.parentWindow.allClients?.find(c => c.id === task.client_id);
             
-            // Update project/client buttons to reflect task context
-            if (this.parentWindow._updateProjectClientButtons) {
-                this.parentWindow._updateProjectClientButtons();
-            }
-            
-            // Set task name in main tracking widget
-            if (this.parentWindow._task_name) {
-                this.parentWindow._task_name.set_text(task.name);
-            } else {
-            }
-            
-            // Simulate clicking the main tracking button to start tracking
-            if (this.parentWindow._track_button) {
-                this.parentWindow._track_button.emit('clicked');
-            } else {
+            if (this.parentWindow.trackingStateManager) {
+                this.parentWindow.trackingStateManager.startTracking({
+                    name: task.name,
+                    baseName: task.name.match(/^(.+?)\s*(?:\(\d+\))?$/)?.[1]?.trim() || task.name,
+                    projectId: task.project_id,
+                    projectName: task.project_name || currentProject?.name || 'Default Project',
+                    clientId: task.client_id,
+                    clientName: task.client_name || currentClient?.name || 'Default Client',
+                    startTime: new Date().toISOString()
+                });
             }
         } else {
         }
