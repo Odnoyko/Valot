@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.3] - 16.09.2025
+
+### 🐛 Bug Fixes
+- Compact mode bug fixes
+
+---
+
 ## [0.4.0] - 11.09.2025
 
 ### 🏗️ Architecture

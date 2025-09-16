@@ -144,6 +144,16 @@ export const ValotWindow = GObject.registerClass({
         // Setup application-wide keyboard handler using func logic
         setupApplicationKeyboardHandler(this.application, this);
         
+        // Handle window close - ensure application quits properly
+        this.connect('close-request', () => {
+            // If compact tracker is open, close it too
+            if (this.compactTrackerWindow && this.compactTrackerWindow.is_visible()) {
+                this.compactTrackerWindow.close();
+            }
+            this.application.quit();
+            return false; // Allow window destruction
+        });
+        
         // Setup other keyboard shortcuts
         this._setupKeyboardShortcuts();
         
@@ -817,6 +827,12 @@ export const ValotWindow = GObject.registerClass({
                     this.currentProjectId = selectedProject.id;
                     this._updateProjectClientButtons();
                     this._updateProjectButtonsDisplay(selectedProject.name);
+                    
+                    // Update compact tracker if it's open
+                    if (this.compactTrackerWindow && this.compactTrackerWindow.is_visible()) {
+                        this.compactTrackerWindow._updateProjectButton();
+                    }
+                    
                     // Selected project with color
                 }
                 

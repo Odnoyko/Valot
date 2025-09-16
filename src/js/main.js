@@ -144,8 +144,26 @@ export const ValotApplication = GObject.registerClass(
             }
 
             if (this.compactMode) {
-                // Launch only compact tracker
-                this._launchCompactTracker();
+                // Create main window in background but keep it hidden
+                const mainWindow = new ValotWindow(this);
+                this.add_window(mainWindow);
+                // Don't present it, keep hidden
+                
+                // Ensure data is loaded for compact tracker
+                setTimeout(() => {
+                    if (mainWindow._loadProjects) mainWindow._loadProjects();
+                    if (mainWindow._loadClients) mainWindow._loadClients();
+                }, 100);
+                
+                // Launch compact tracker with reference to main window
+                this._launchCompactTracker(mainWindow);
+                
+                // Set compact tracker reference in main window for updates (after compact window is created)
+                setTimeout(() => {
+                    if (this.compactWindow) {
+                        mainWindow.compactTrackerWindow = this.compactWindow;
+                    }
+                }, 200);
             } else {
                 // Launch full application
                 let {active_window} = this;
@@ -158,17 +176,31 @@ export const ValotApplication = GObject.registerClass(
             }
         }
 
-        _launchCompactTracker() {
+        _launchCompactTracker(mainWindow = null) {
             if (!this.compactWindow) {
-                // Create standalone compact tracker
-                this.compactWindow = new CompactTrackerWindow(this, null);
+                // Create compact tracker with reference to main window
+                this.compactWindow = new CompactTrackerWindow(this, mainWindow);
                 
-                // Make it always on top and persistent
-                this.compactWindow.set_keep_above(true);
-                this.compactWindow.stick();
+                // Make it always on top and persistent (with fallback for different environments)
+                try {
+                    if (typeof this.compactWindow.set_keep_above === 'function') {
+                        this.compactWindow.set_keep_above(true);
+                    }
+                    if (typeof this.compactWindow.stick === 'function') {
+                        this.compactWindow.stick();
+                    }
+                } catch (error) {
+                    console.log('Note: Some window positioning features not available in this environment');
+                }
                 
                 // Set window properties for always-on-top behavior
-                this.compactWindow.set_type_hint(Gdk.WindowTypeHint.UTILITY);
+                try {
+                    if (typeof this.compactWindow.set_type_hint === 'function') {
+                        this.compactWindow.set_type_hint(Gdk.WindowTypeHint.UTILITY);
+                    }
+                } catch (error) {
+                    console.log('Note: Window type hint not available in this environment');
+                }
                 
                 // Handle close event - minimize instead of closing
                 this.compactWindow.connect('close-request', () => {
@@ -187,9 +219,13 @@ export const ValotApplication = GObject.registerClass(
             let {active_window} = this;
             if (!active_window) {
                 active_window = new ValotWindow(this);
+                this.add_window(active_window);
             }
             
+            // Ensure window is visible and presented properly
+            active_window.set_visible(true);
             active_window.present();
+            active_window.unminimize(); // Force unminimize if it was minimized
         }
 
         vfunc_shutdown() {

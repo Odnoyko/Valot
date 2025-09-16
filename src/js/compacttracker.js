@@ -7,6 +7,7 @@ import { GlobalTracking } from 'resource:///com/odnoyko/valot/js/func/global/glo
 import { SelectorFactory } from 'resource:///com/odnoyko/valot/js/interface/components/selectorFactory.js';
 import { WidgetFactory } from 'resource:///com/odnoyko/valot/js/interface/components/widgetFactory.js';
 import { ClientDropdown } from 'resource:///com/odnoyko/valot/js/interface/components/clientDropdown.js';
+import { getProjectIconColor } from 'resource:///com/odnoyko/valot/js/func/global/colorUtils.js';
 
 export const CompactTrackerWindow = GObject.registerClass({
     GTypeName: 'CompactTrackerWindow'
@@ -146,10 +147,17 @@ export const CompactTrackerWindow = GObject.registerClass({
             }
         });
 
-        // Handle window close request - hide instead of destroy
+        // Handle window close request - close application instead of hiding
         this.connect('close-request', () => {
-            this.set_visible(false);
-            return true; // Prevent actual window destruction
+            // If this is the only window or main app is not visible, quit the application
+            if (!this.mainWindow || !this.mainWindow.is_visible()) {
+                this.application.quit();
+                return false; // Allow window destruction
+            } else {
+                // If main window is visible, just hide compact tracker
+                this.set_visible(false);
+                return true; // Prevent destruction, just hide
+            }
         });
 
         // Register track button with tracking state manager
@@ -211,7 +219,7 @@ export const CompactTrackerWindow = GObject.registerClass({
             // Update track button icon based on current tracking state
             this._updateTrackingButtonState();
 
-            // Update project button
+            // Update project button - always update to get latest project selection
             this._updateProjectButton();
 
             // Update client dropdown
@@ -270,7 +278,7 @@ export const CompactTrackerWindow = GObject.registerClass({
             }
             
             // Apply background color and icon color - same logic as HeaderTrackingWidget
-            const iconColor = this._getProjectIconColor(currentProject);
+            const iconColor = getProjectIconColor(currentProject);
             const provider = new Gtk.CssProvider();
             provider.load_from_string(
                 `button { 
@@ -304,24 +312,6 @@ export const CompactTrackerWindow = GObject.registerClass({
             provider.load_from_string('button { background-color: transparent; }');
             this._project_button.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
         }
-    }
-    
-    _getProjectIconColor(project) {
-        // Same logic as HeaderTrackingWidget
-        const backgroundColor = project.color;
-        if (!backgroundColor) return '#333333';
-        
-        // Convert hex to RGB
-        const hex = backgroundColor.replace('#', '');
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
-        
-        // Calculate relative luminance
-        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        
-        // Use white text for dark backgrounds, dark text for light backgrounds
-        return luminance > 0.5 ? '#333333' : '#ffffff';
     }
 
     // Client button update is handled by ClientDropdown component
