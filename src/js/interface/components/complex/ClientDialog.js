@@ -1,3 +1,4 @@
+import Gtk from 'gi://Gtk';
 import { FormDialog } from './FormDialog.js';
 import { InputValidator } from '../../../func/global/inputValidation.js';
 
@@ -17,80 +18,16 @@ export class ClientDialog extends FormDialog {
         
         const dialogConfig = {
             title: isEdit ? 'Edit Client' : 'Create New Client',
-            subtitle: isEdit ? 'Update client information' : 'Add a new client with contact details and billing rates',
-            width: 500,
+            subtitle: isEdit ? 'Update client information' : 'Add a new client with billing rates',
+            width: 400,
             submitLabel: isEdit ? 'Save Changes' : 'Create Client',
             fields: [
+                // Dummy field to ensure form container is created
                 {
                     type: 'entry',
-                    name: 'name',
-                    label: 'Client Name',
-                    placeholder: 'Enter client name...',
-                    required: true,
-                    validator: InputValidator.validateClientName,
-                    value: isEdit ? client.name : '',
-                    maxLength: InputValidator.MAX_NAME_LENGTH
-                },
-                {
-                    type: 'entry',
-                    name: 'email',
-                    label: 'Email Address',
-                    placeholder: 'client@example.com',
-                    validator: InputValidator.validateEmail,
-                    value: isEdit ? (client.email || '') : ''
-                },
-                {
-                    type: 'entry',
-                    name: 'phone',
-                    label: 'Phone Number',
-                    placeholder: '+1 (555) 123-4567',
-                    value: isEdit ? (client.phone || '') : ''
-                },
-                {
-                    type: 'entry',
-                    name: 'company',
-                    label: 'Company',
-                    placeholder: 'Company name...',
-                    value: isEdit ? (client.company || '') : ''
-                },
-                {
-                    type: 'textarea',
-                    name: 'address',
-                    label: 'Address',
-                    placeholder: 'Client address...',
-                    value: isEdit ? (client.address || '') : '',
-                    height: 60
-                },
-                {
-                    type: 'number',
-                    name: 'rate',
-                    label: 'Hourly Rate',
-                    min: 0,
-                    max: 10000,
-                    step: 0.01,
-                    digits: 2,
-                    validator: InputValidator.validateRate,
-                    value: isEdit ? (client.rate || 0) : 0
-                },
-                {
-                    type: 'dropdown',
-                    name: 'currency',
-                    label: 'Currency',
-                    options: [
-                        { value: 'USD', label: 'USD ($)' },
-                        { value: 'EUR', label: 'EUR (€)' },
-                        { value: 'GBP', label: 'GBP (£)' },
-                        { value: 'JPY', label: 'JPY (¥)' },
-                        { value: 'CAD', label: 'CAD (C$)' },
-                        { value: 'AUD', label: 'AUD (A$)' }
-                    ],
-                    value: isEdit ? (client.currency || 'USD') : 'USD'
-                },
-                {
-                    type: 'toggle',
-                    name: 'active',
-                    label: 'Active Client',
-                    value: isEdit ? (client.active !== false) : true
+                    name: 'dummy',
+                    label: 'Dummy',
+                    value: ''
                 }
             ],
             onSubmit: (formData, dialog) => {
@@ -104,24 +41,176 @@ export class ClientDialog extends FormDialog {
         this.mode = mode;
         this.client = client;
         this.onClientSave = onClientSave;
+        
+        // Create custom layout after form is ready
+        setTimeout(() => {
+            this._setupCustomLayout(isEdit, client);
+        }, 0);
+    }
+
+    _setupCustomLayout(isEdit, client) {
+        // Create the custom content and add it to the existing form container
+        const customContent = this._createCustomContent(isEdit, client);
+        
+        // The FormDialog creates a vertical box container as extra_child
+        const formContainer = this.widget.get_extra_child();
+        if (formContainer) {
+            // Clear any existing children and add our custom content
+            let child = formContainer.get_first_child();
+            while (child) {
+                const next = child.get_next_sibling();
+                formContainer.remove(child);
+                child = next;
+            }
+            formContainer.append(customContent);
+        }
+    }
+
+    _createCustomContent(isEdit, client) {
+        // Main vertical container
+        const mainBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 16,
+            margin_top: 16,
+            margin_bottom: 16,
+            margin_start: 16,
+            margin_end: 16
+        });
+
+        // ROW 1: Client Name only
+        const nameLabel = new Gtk.Label({
+            label: 'Client Name',
+            halign: Gtk.Align.START,
+            css_classes: ['heading']
+        });
+        
+        this.nameEntry = new Gtk.Entry({
+            placeholder_text: 'Enter client name...',
+            text: isEdit ? (client.name || '') : '',
+            hexpand: true
+        });
+        
+        const nameRow = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 6
+        });
+        nameRow.append(nameLabel);
+        nameRow.append(this.nameEntry);
+
+        // ROW 2: Rate input with +/- buttons + Currency
+        const rateLabel = new Gtk.Label({
+            label: 'Hourly Rate & Currency',
+            halign: Gtk.Align.START,
+            css_classes: ['heading']
+        });
+
+        const rateControlsBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 6
+        });
+
+        // Rate box with +/- buttons (similar to clientManager)
+        const rateBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 0,
+            css_classes: ['hour-price-input'],
+            width_request: 120
+        });
+
+        const rateMinusBtn = new Gtk.Button({
+            label: '−',
+            css_classes: ['flat'],
+            width_request: 30
+        });
+
+        this.rateEntry = new Gtk.Entry({
+            text: isEdit ? (client.rate || 0).toString() : '0',
+            width_request: 60,
+            input_purpose: Gtk.InputPurpose.NUMBER
+        });
+
+        const ratePlusBtn = new Gtk.Button({
+            label: '+',
+            css_classes: ['flat'],
+            width_request: 30
+        });
+
+        // Rate adjustment handlers
+        rateMinusBtn.connect('clicked', () => {
+            const currentValue = parseFloat(this.rateEntry.get_text()) || 0;
+            const newValue = Math.max(0, currentValue - 1);
+            this.rateEntry.set_text(newValue.toString());
+        });
+
+        ratePlusBtn.connect('clicked', () => {
+            const currentValue = parseFloat(this.rateEntry.get_text()) || 0;
+            const newValue = currentValue + 1;
+            this.rateEntry.set_text(newValue.toString());
+        });
+
+        rateBox.append(rateMinusBtn);
+        rateBox.append(this.rateEntry);
+        rateBox.append(ratePlusBtn);
+
+        // Currency dropdown
+        this.currencyDropdown = new Gtk.DropDown({
+            model: new Gtk.StringList({
+                strings: ['USD ($)', 'EUR (€)', 'GBP (£)', 'JPY (¥)', 'CAD (C$)', 'AUD (A$)']
+            }),
+            selected: this._getCurrencyIndex(isEdit ? (client.currency || 'USD') : 'USD')
+        });
+
+        rateControlsBox.append(rateBox);
+        rateControlsBox.append(this.currencyDropdown);
+
+        const rateRow = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 6
+        });
+        rateRow.append(rateLabel);
+        rateRow.append(rateControlsBox);
+
+        // Add both rows to main container
+        mainBox.append(nameRow);
+        mainBox.append(rateRow);
+
+        return mainBox;
+    }
+
+    _getCurrencyIndex(currency) {
+        const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD'];
+        const index = currencies.indexOf(currency);
+        return index >= 0 ? index : 0;
+    }
+
+    _getCurrencyFromIndex(index) {
+        const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD'];
+        return currencies[index] || 'USD';
     }
 
     _handleClientSave(formData, dialog) {
+        // Get data from custom inputs
+        const customData = {
+            name: this.nameEntry ? this.nameEntry.get_text() : '',
+            rate: this.rateEntry ? parseFloat(this.rateEntry.get_text()) || 0 : 0,
+            currency: this.currencyDropdown ? this._getCurrencyFromIndex(this.currencyDropdown.get_selected()) : 'USD'
+        };
+        
         // Additional validation
-        if (!this._validateClientData(formData)) {
+        if (!this._validateClientData(customData)) {
             return false; // Keep dialog open
         }
 
         // Prepare client data
         const clientData = {
-            name: formData.name.trim(),
-            email: formData.email?.trim() || '',
-            phone: formData.phone?.trim() || '',
-            company: formData.company?.trim() || '',
-            address: formData.address?.trim() || '',
-            rate: parseFloat(formData.rate) || 0,
-            currency: formData.currency || 'USD',
-            active: formData.active !== false
+            name: customData.name.trim(),
+            email: '', // Not included in simplified dialog
+            phone: '', // Not included in simplified dialog
+            company: '', // Not included in simplified dialog
+            address: '', // Not included in simplified dialog
+            rate: customData.rate,
+            currency: customData.currency,
+            active: true // Default to true for simplified dialog
         };
 
         // Add ID for edit mode

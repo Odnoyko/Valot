@@ -8,30 +8,13 @@ import { Label } from '../components/primitive/Label.js';
  */
 export class ReportsPage {
     constructor(config = {}) {
-        this.config = {
-            title: 'Reports',
-            subtitle: 'View statistics and export reports',
-            showTrackingWidget: true,
-            actions: [
-                {
-                    icon: 'document-save-symbolic',
-                    tooltip: 'Export PDF Report',
-                    cssClasses: ['suggested-action'],
-                    onClick: (page) => page.exportPDFReport()
-                }
-            ],
-            ...config
-        };
-
+        // ReportsPage constructor
+        
         // Base page properties
         this.app = config.app;
         this.parentWindow = config.parentWindow;
-        this.isLoading = false;
-        this.currentPage = 0;
-        this.itemsPerPage = 10;
         
-        // Report-specific state
-        this.reportData = null;
+        // Report-specific state - will be updated from UI filters
         this.chartFilters = {
             period: 'week',
             project: null,
@@ -43,282 +26,29 @@ export class ReportsPage {
         this.simpleChart = config.simpleChart;
         this.timeUtils = config.timeUtils;
         
-        // Create the main widget
-        this.widget = this._createMainContent();
+        // Component assignments
+        
+        if (!this.reportExporter) {
+            console.warn('⚠️ WARNING: reportExporter not provided in config!');
+        } else {
+            // reportExporter found
+        }
+        
+        // ReportsPage constructor completed
     }
 
     /**
-     * Get the main widget for this page
+     * Update chart filters (called by main window when UI filters change)
      */
-    getWidget() {
-        return this.widget;
+    updateFilters(period, projectId, clientId) {
+        console.log('📊 Updating ReportsPage filters:', { period, projectId, clientId });
+        this.chartFilters = {
+            period: period || 'week',
+            project: projectId,
+            client: clientId
+        };
     }
 
-    _createMainContent() {
-        const mainContent = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 12,
-            hexpand: true,
-            vexpand: true
-        });
-
-        // Statistics cards
-        this._createStatsSection(mainContent);
-
-        // Chart filters and visualization
-        this._createChartSection(mainContent);
-
-        // Recent tasks summary
-        this._createRecentTasksSection(mainContent);
-
-        return mainContent;
-    }
-
-    _createStatsSection(container) {
-        const statsBox = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 12,
-            homogeneous: true,
-            margin_bottom: 12
-        });
-
-        // Today stats
-        const todayCard = this._createStatCard(
-            'Today',
-            'Today\'s work summary',
-            [
-                { label: 'Time Tracked', value: '0h 0m', id: 'today-time' },
-                { label: 'Tasks Completed', value: '0', id: 'today-tasks' }
-            ]
-        );
-
-        // Week stats
-        const weekCard = this._createStatCard(
-            'This Week',
-            'Weekly work summary',
-            [
-                { label: 'Time Tracked', value: '0h 0m', id: 'week-time' },
-                { label: 'Tasks Completed', value: '0', id: 'week-tasks' }
-            ]
-        );
-
-        // Month stats
-        const monthCard = this._createStatCard(
-            'This Month',
-            'Monthly work summary',
-            [
-                { label: 'Time Tracked', value: '0h 0m', id: 'month-time' },
-                { label: 'Tasks Completed', value: '0', id: 'month-tasks' }
-            ]
-        );
-
-        statsBox.append(todayCard);
-        statsBox.append(weekCard);
-        statsBox.append(monthCard);
-
-        container.append(statsBox);
-    }
-
-    _createStatCard(title, subtitle, stats) {
-        const card = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 8,
-            css_classes: ['card'],
-            margin_start: 6,
-            margin_end: 6,
-            margin_top: 6,
-            margin_bottom: 6
-        });
-
-        const headerBox = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 4,
-            margin_start: 12,
-            margin_end: 12,
-            margin_top: 12
-        });
-
-        const titleLabel = new Gtk.Label({
-            label: title,
-            css_classes: ['title-3'],
-            halign: Gtk.Align.START
-        });
-
-        const subtitleLabel = new Gtk.Label({
-            label: subtitle,
-            css_classes: ['dim-label'],
-            halign: Gtk.Align.START
-        });
-
-        headerBox.append(titleLabel);
-        headerBox.append(subtitleLabel);
-        card.append(headerBox);
-
-        // Stats rows
-        const statsBox = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 6,
-            margin_start: 12,
-            margin_end: 12,
-            margin_bottom: 12
-        });
-
-        stats.forEach(stat => {
-            const statRow = new Gtk.Box({
-                orientation: Gtk.Orientation.HORIZONTAL,
-                spacing: 6
-            });
-
-            const labelWidget = new Gtk.Label({
-                label: stat.label,
-                hexpand: true,
-                halign: Gtk.Align.START
-            });
-
-            const valueWidget = new Gtk.Label({
-                label: stat.value,
-                css_classes: ['monospace', 'accent'],
-                halign: Gtk.Align.END
-            });
-
-            statRow.append(labelWidget);
-            statRow.append(valueWidget);
-            statsBox.append(statRow);
-
-            // Store reference for updates
-            if (stat.id) {
-                this[stat.id] = { getWidget: () => valueWidget, setText: (text) => valueWidget.set_label(text) };
-            }
-        });
-
-        card.append(statsBox);
-        return card;
-    }
-
-    _createChartSection(container) {
-        const chartSection = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 12,
-            css_classes: ['card'],
-            margin_start: 6,
-            margin_end: 6,
-            margin_top: 6,
-            margin_bottom: 6
-        });
-
-        // Chart header with filters
-        const headerBox = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 12,
-            margin_start: 12,
-            margin_end: 12,
-            margin_top: 12
-        });
-
-        const titleLabel = new Gtk.Label({
-            label: 'Time Distribution Chart',
-            css_classes: ['title-3'],
-            hexpand: true,
-            halign: Gtk.Align.START
-        });
-
-        // Filters
-        const filtersBox = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 6
-        });
-
-        // Period filter
-        const periodDropdown = new Gtk.DropDown({
-            model: new Gtk.StringList({ strings: ['Week', 'Month', 'Year'] }),
-            selected: 0
-        });
-        periodDropdown.connect('notify::selected', () => {
-            const periods = ['week', 'month', 'year'];
-            this.chartFilters.period = periods[periodDropdown.get_selected()];
-            this._updateChart();
-        });
-
-        filtersBox.append(new Gtk.Label({ label: 'Period:' }));
-        filtersBox.append(periodDropdown);
-
-        headerBox.append(titleLabel);
-        headerBox.append(filtersBox);
-        chartSection.append(headerBox);
-
-        // Chart placeholder
-        this.chartPlaceholder = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 12,
-            height_request: 300,
-            margin_start: 12,
-            margin_end: 12,
-            margin_bottom: 12
-        });
-
-        const chartLabel = new Gtk.Label({
-            label: 'Chart will be displayed here',
-            css_classes: ['dim-label'],
-            halign: Gtk.Align.CENTER,
-            valign: Gtk.Align.CENTER
-        });
-
-        this.chartPlaceholder.append(chartLabel);
-        chartSection.append(this.chartPlaceholder);
-
-        container.append(chartSection);
-    }
-
-    _createRecentTasksSection(container) {
-        const recentSection = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 12,
-            css_classes: ['card'],
-            margin_start: 6,
-            margin_end: 6,
-            margin_top: 6,
-            margin_bottom: 6
-        });
-
-        // Header
-        const headerLabel = new Gtk.Label({
-            label: 'Recent Tasks',
-            css_classes: ['title-3'],
-            halign: Gtk.Align.START,
-            margin_start: 12,
-            margin_end: 12,
-            margin_top: 12
-        });
-
-        recentSection.append(headerLabel);
-
-        // Tasks list container
-        this.recentTasksList = new Gtk.ListBox({
-            css_classes: ['boxed-list'],
-            margin_start: 12,
-            margin_end: 12,
-            margin_bottom: 12
-        });
-
-        // Empty state
-        const emptyRow = new Gtk.ListBoxRow({
-            activatable: false,
-            selectable: false
-        });
-
-        const emptyLabel = new Gtk.Label({
-            label: 'No recent tasks',
-            css_classes: ['dim-label'],
-            margin_top: 12,
-            margin_bottom: 12
-        });
-
-        emptyRow.set_child(emptyLabel);
-        this.recentTasksList.append(emptyRow);
-
-        recentSection.append(this.recentTasksList);
-        container.append(recentSection);
-    }
 
     /**
      * Load and update all report data
@@ -330,10 +60,10 @@ export class ReportsPage {
             await this._updateReports();
             await this._updateWeeklyTime();
             this._updateChart();
-            console.log('ReportsPage: Reports loaded successfully', this.reportData);
+            // Reports loaded successfully
         } catch (error) {
             console.error('Error loading reports:', error);
-            this.showError('Load Error', 'Failed to load reports');
+            console.warn('⚠️ Reports page failed to load completely');
         } finally {
             this.hideLoading();
         }
@@ -383,7 +113,7 @@ export class ReportsPage {
         this['month-time']?.setText(this._formatDuration(monthTime));
         this['month-tasks']?.setText(monthTasks.length.toString());
 
-        console.log('Reports updated with current statistics');
+        // Reports updated with current statistics
     }
 
     /**
@@ -391,7 +121,7 @@ export class ReportsPage {
      */
     async _updateWeeklyTime() {
         // This would integrate with the weekly time calculation logic
-        console.log('Weekly time updated');
+        // Weekly time updated
     }
 
     /**
@@ -408,14 +138,116 @@ export class ReportsPage {
     }
 
     /**
-     * Export PDF report
+     * Export PDF report with current filter settings
      */
     exportPDFReport() {
-        if (this.reportExporter) {
-            console.log('Exporting PDF report...');
-            this.reportExporter.exportToPDF(this.reportData);
-        } else {
+        console.log('🚀 PDF Export button clicked!');
+        
+        if (!this.reportExporter) {
+            console.error('❌ Report exporter not available - this.reportExporter is null/undefined');
+            console.log('📊 Available properties:', Object.keys(this));
+            return;
+        }
+
+        console.log('✅ Report exporter found:', this.reportExporter);
+
+        try {
+            console.log('🔧 Configuring PDF export with current settings...');
+            console.log('📊 Current chart filters:', this.chartFilters);
+            
+            // Update the report exporter with current data
+            console.log('🔄 Updating report exporter data...');
+            this._updateReportExporterData();
+            
+            // Configure filters based on current chart filters
+            console.log('⚙️ Configuring period filter:', this.chartFilters.period);
+            this.reportExporter.configurePeriod(this.chartFilters.period);
+            
+            if (this.chartFilters.project) {
+                console.log('📁 Configuring project filter:', this.chartFilters.project);
+                this.reportExporter.configureProjectFilter(this.chartFilters.project);
+            } else {
+                console.log('📁 No project filter applied');
+            }
+            
+            if (this.chartFilters.client) {
+                console.log('👤 Configuring client filter:', this.chartFilters.client);
+                this.reportExporter.configureClientFilter(this.chartFilters.client);
+            } else {
+                console.log('👤 No client filter applied');
+            }
+
+            // Configure sections based on UI switches
+            const sections = {
+                showAnalytics: this.includeAnalyticsSwitch?.get_active() ?? true,
+                showCharts: this.includeChartsSwitch?.get_active() ?? true,
+                showTasks: this.includeTasksSwitch?.get_active() ?? true,
+                showProjects: this.includeProjectsSwitch?.get_active() ?? true,
+                showBilling: this.includeBillingSwitch?.get_active() ?? false
+            };
+            
+            console.log('📋 Configured sections:', sections);
+            
+            this.reportExporter.configureSections(sections);
+            this.reportExporter.configureBilling(sections.showBilling);
+
+            // Export the report
+            console.log('🎯 Starting PDF export with parent window - type:', typeof this.parentWindow);
+            console.log('🏠 Parent window available:', !!this.parentWindow);
+            
+            this.reportExporter.exportReport(this.parentWindow);
+            console.log('📤 PDF export method called successfully');
+            
+        } catch (error) {
+            console.error('💥 Error configuring PDF export:', error);
+            console.error('📍 Error stack:', error.stack);
+        }
+    }
+
+    /**
+     * Export HTML report with current filter settings
+     */
+    exportHTMLReport() {
+        if (!this.reportExporter) {
             console.error('Report exporter not available');
+            return;
+        }
+
+        try {
+            console.log('Configuring HTML export with current settings...');
+            
+            // Update the report exporter with current data
+            this._updateReportExporterData();
+            
+            // Configure filters based on current chart filters
+            this.reportExporter.configurePeriod(this.chartFilters.period);
+            
+            if (this.chartFilters.project) {
+                this.reportExporter.configureProjectFilter(this.chartFilters.project);
+            }
+            
+            if (this.chartFilters.client) {
+                this.reportExporter.configureClientFilter(this.chartFilters.client);
+            }
+
+            // Configure sections with default values (can be enhanced later with UI switches)
+            const sections = {
+                showAnalytics: true,
+                showCharts: true,
+                showTasks: true,
+                showProjects: true,
+                showBilling: false
+            };
+            
+            this.reportExporter.configureSections(sections);
+            this.reportExporter.configureBilling(sections.showBilling);
+
+            // Export HTML report
+            console.log('Starting HTML export...');
+            this.reportExporter.exportHTML(this.parentWindow);
+            
+        } catch (error) {
+            console.error('Error configuring HTML export:', error);
         }
     }
 
@@ -434,7 +266,7 @@ export class ReportsPage {
      * Show loading state
      */
     showLoading(message = 'Loading...') {
-        console.log(`ReportsPage: ${message}`);
+        // ReportsPage loading message
         // Could show spinner in UI if needed
     }
 
@@ -442,7 +274,7 @@ export class ReportsPage {
      * Hide loading state
      */
     hideLoading() {
-        console.log('ReportsPage: Loading finished');
+        // ReportsPage loading finished
         // Could hide spinner in UI if needed
     }
 
@@ -460,6 +292,68 @@ export class ReportsPage {
         } else {
             return `${minutes}m`;
         }
+    }
+
+    /**
+     * Update report exporter with current task data
+     */
+    _updateReportExporterData() {
+        console.log('🔄 _updateReportExporterData called');
+        
+        if (!this.reportExporter) {
+            console.error('❌ No report exporter available in _updateReportExporterData');
+            return;
+        }
+        
+        if (!this.parentWindow) {
+            console.error('❌ No parent window available in _updateReportExporterData');
+            return;
+        }
+
+        console.log('🏠 Parent window found, extracting data...');
+        const tasks = this.parentWindow.allTasks || [];
+        const projects = this.parentWindow.allProjects || [];
+        const clients = this.parentWindow.allClients || [];
+
+        console.log('📊 Data extracted:', {
+            tasks: tasks.length,
+            projects: projects.length,
+            clients: clients.length
+        });
+
+        // Update the data in both PDF and HTML exporters
+        console.log('🔄 Updating main report exporter data...');
+        this.reportExporter.tasks = tasks;
+        this.reportExporter.projects = projects;
+        this.reportExporter.clients = clients;
+
+        // Update the underlying exporters
+        if (this.reportExporter.pdfExporter) {
+            console.log('📄 Updating PDF exporter data...');
+            this.reportExporter.pdfExporter.tasks = tasks;
+            this.reportExporter.pdfExporter.projects = projects;
+            this.reportExporter.pdfExporter.clients = clients;
+        } else {
+            console.warn('⚠️ PDF exporter not found in report exporter');
+        }
+
+        if (this.reportExporter.htmlExporter) {
+            console.log('🌐 Updating HTML exporter data...');
+            this.reportExporter.htmlExporter.tasks = tasks;
+            this.reportExporter.htmlExporter.projects = projects;
+            this.reportExporter.htmlExporter.clients = clients;
+        } else {
+            console.warn('⚠️ HTML exporter not found in report exporter');
+        }
+
+        console.log('✅ Report exporter data update completed successfully');
+    }
+
+    /**
+     * Show error message (simplified version)
+     */
+    showError(title, message) {
+        console.error(`${title}: ${message}`);
     }
 
     /**

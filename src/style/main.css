@@ -1,5 +1,14 @@
 /* Top Tracker Design */
 
+/* Custom color variables for light and dark themes */
+@define-color subtitle_light_color #959595;
+@define-color subtitle_dark_color #7B7B7B;
+
+.content-box{
+	background: white;
+	border-radius: 12px;
+}
+
 .headerbtn {
   font-size: 14px;
   background: @headerbar_shade_color;
@@ -26,7 +35,7 @@ entry.itemNameEntry {
 /* Project selection and styling */
 .selected-project {
   background-color: alpha(@accent_bg_color, 0.1);
-  border-left: 3px solid @accent_bg_color;
+  border-left: 2px solid @accent_bg_color;
 }
 
 .project-settings-button {
@@ -56,7 +65,7 @@ entry.itemNameEntry {
 /* Client selection styling */
 .selected-client {
   background-color: alpha(@accent_bg_color, 0.1);
-  border-left: 3px solid @accent_bg_color;
+  border-left: 2px solid @accent_bg_color;
 }
 
 .client-name-label {
@@ -172,13 +181,18 @@ entry.itemNameEntry {
 }
 
 /* Use system accent colors for all elements */
+row:hover {
+  background: alpha(@window_fg_color, 0.05);
+}
 .selected-task {
-  background: alpha(@accent_bg_color, 0.2);
-  border-left: 3px solid @accent_bg_color;
+  background: alpha(@accent_bg_color, 0.15);
+  border-left: 2px solid @accent_bg_color;
 }
 
-.selected-task:hover {
-  background: alpha(@accent_bg_color, 0.3);
+.selected-task:hover,
+.selected-project:hover,
+.selected-client:hover{
+  background: alpha(@accent_bg_color, 0.25);
 }
 
 /* Active tracking task styling */
@@ -202,7 +216,7 @@ entry.itemNameEntry {
 
 .selected-project {
   background: alpha(@success_color, 0.1);
-  border-left: 3px solid @success_color;
+  border-left: 1px solid @success_color;
 }
 
 
@@ -442,4 +456,63 @@ entry.inline-editable:focus {
 
 .project-color-settings-button {
   padding:0px;
+}
+
+/* Override subtitle opacity to make project dots more visible */
+.subtitle {
+  opacity: 1;
+  color: @subtitle_light_color; /* Default for light theme */
+}
+
+/* Default subtitle color (light theme) */
+.subtitle {
+    color: @subtitle_light_color;
+}
+
+/* Dark theme support - GTK will automatically apply this when Adwaita-dark is used */
+.subtitle:backdrop,
+window.dark .subtitle {
+    color: @subtitle_dark_color;
+}
+.toggle-project-icon-box button:nth-child(1),
+.search-button-box entry,
+.hour-price-input button:nth-child(1){
+	border-radius: 10px 0px 0px 10px;
+}
+.toggle-project-icon-box button:nth-child(2),
+.search-button-box button,
+.hour-price-input button:nth-child(3){
+	border-radius: 0px 10px 10px 0px;
+}
+.hour-price-input entry {
+	border-radius: 0px;
+}
+.search-button-box button,.hour-price-input button{
+ 	background: alpha(@subtitle_dark_color, 0.24);
+}
+.search-button-box button:hover,.hour-price-input button:hover{
+ 	background: alpha(@subtitle_dark_color, 0.4);
+}
+.chart-summary-label {
+ 	color: alpha(@window_fg_color, 0.6);
+ 	font-size: 14px;
+}
+.chart-period-label {
+ 	color: alpha(@window_fg_color, 0.6);
+ 	font-size: 12px;
+}
+.chart-hours-label {
+ 	color: alpha(@window_fg_color, 0.8);
+ 	font-size: 14px;
+}
+.currency-button {
+	background: alpha(@window_fg_color, 0.12);
+	border-radius: 12px;
+}
+.currency-button:hover {
+	background: alpha(@window_fg_color, 0.16);
+	border-radius: 12px;
+}
+.currency-button:hover stack row {
+	background: alpha(@window_fg_color, 0);
 }

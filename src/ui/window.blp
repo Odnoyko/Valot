@@ -214,7 +214,7 @@ template $ValotWindow: Adw.ApplicationWindow {
               hscrollbar-policy: never;
 
               ListBox task_list {
-                css-classes: ["boxed-list"];
+                css-classes: ["content-box"];
                 selection-mode: none;
               }
             }
@@ -316,7 +316,7 @@ template $ValotWindow: Adw.ApplicationWindow {
             Box search_add_box {
               spacing: 0;
               margin-bottom: 12;
-              css-classes: ["linked"];
+              css-classes: ["search-button-box"];
 
               SearchEntry project_search {
                 placeholder-text: _("Search projects...");
@@ -347,7 +347,7 @@ template $ValotWindow: Adw.ApplicationWindow {
               hscrollbar-policy: never;
 
               ListBox project_list {
-                css-classes: ["boxed-list"];
+                css-classes: ["content-box"];
                 selection-mode: single;
               }
             }
@@ -430,7 +430,7 @@ template $ValotWindow: Adw.ApplicationWindow {
             Box search_add_box_clients {
               spacing: 0;
               margin-bottom: 12;
-              css-classes: ["linked"];
+              css-classes: ["search-button-box"];
 
               SearchEntry client_search {
                 placeholder-text: _("Search clients...");
@@ -461,7 +461,7 @@ template $ValotWindow: Adw.ApplicationWindow {
               hscrollbar-policy: never;
 
               ListBox client_list {
-                css-classes: ["boxed-list"];
+                css-classes: ["content-box"];
                 selection-mode: single;
               }
             }
@@ -768,7 +768,7 @@ template $ValotWindow: Adw.ApplicationWindow {
                 }
 
                 ListBox recent_tasks_list {
-                  css-classes: ["boxed-list"];
+                  css-classes: ["content-box"];
                   selection-mode: none;
 
                   Adw.ActionRow {
@@ -782,6 +782,7 @@ template $ValotWindow: Adw.ApplicationWindow {
           };
         }
       }
+
 
     };
   };

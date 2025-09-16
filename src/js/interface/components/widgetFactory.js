@@ -148,7 +148,8 @@ export class WidgetFactory {
         }));
 
         addButtonBox.append(new Gtk.Image({
-            icon_name: addButtonIcon
+            icon_name: addButtonIcon,
+            pixel_size: 16
         }));
 
         addButton.set_child(addButtonBox);

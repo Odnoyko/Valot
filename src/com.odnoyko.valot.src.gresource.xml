@@ -60,6 +60,9 @@
     <file>js/interface/pages/ClientsPage.js</file>
     <file>js/interface/pages/ReportsPage.js</file>
 
+    <!-- Interface Components - Dialogs -->
+    <file>js/interface/dialogs/PDFExportPreferencesDialog.js</file>
+
     <!-- Interface Components - Complex -->
     <file>js/interface/components/complex/TrackingWidget.js</file>
     <file>js/interface/components/complex/HeaderTrackingWidget.js</file>

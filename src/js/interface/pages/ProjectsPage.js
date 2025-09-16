@@ -269,7 +269,7 @@ export class ProjectsPage {
             this.projects = await this._fetchProjects();
             this.filteredProjects = [...this.projects];
             this._updateProjectsDisplay();
-            console.log('ProjectsPage: Projects loaded successfully', this.projects.length);
+            // Projects loaded successfully
         } catch (error) {
             console.error('Error loading projects:', error);
             this.showError('Load Error', 'Failed to load projects');
@@ -316,7 +316,7 @@ export class ProjectsPage {
             return;
         }
 
-        console.log(`Displaying ${this.filteredProjects.length} projects`);
+        // Displaying filtered projects
 
         // Add projects using your specific requirements
         this.filteredProjects.forEach(project => {
@@ -375,6 +375,7 @@ export class ProjectsPage {
                         color: ${iconColor}; 
                         min-width: 40px;
                         min-height: 40px;
+                        padding: 0;
                     }
                     .project-settings-button:hover {
                         filter: brightness(1.1);
@@ -447,18 +448,46 @@ export class ProjectsPage {
      * Show add project dialog
      */
     showAddProjectDialog() {
-        if (this.modularDialogManager) {
+        if (this.modularDialogManager && this.projectManager) {
             // Get text from search input to use as initial project name
             const searchText = this.projectSearch ? this.projectSearch.get_text().trim() : '';
+            const initialName = searchText || 'Default';
             
-            // Use the new modular dialog system with inline layout
+            console.log('Creating project immediately with name:', initialName);
+            
+            // STEP 1: Create project immediately with default values
+            const newProjectId = this.projectManager.createProjectAndGetId(
+                initialName,
+                '#3584e4', // Default blue color
+                'folder-symbolic', // Default icon
+                this.parentWindow,
+                'auto' // Default icon color mode
+            );
+            
+            if (!newProjectId) {
+                console.error('Failed to create project immediately');
+                return;
+            }
+            
+            console.log('Project created with ID:', newProjectId);
+            
+            // STEP 2: Get the created project data
+            const createdProject = this.projectManager.getProjectById(newProjectId);
+            if (!createdProject) {
+                console.error('Failed to retrieve created project');
+                return;
+            }
+            
+            // STEP 3: Show "editing" dialog for the newly created project
             this.modularDialogManager.showProjectDialog({
-                mode: 'create',
-                initialName: searchText, // Pass search text as initial name
+                mode: 'edit', // This is now an EDIT dialog internally
+                project: createdProject, // Pass the real project with ID
+                forceCreateAppearance: true, // But make it LOOK like a create dialog
                 onSave: (projectData, mode, dialog) => {
-                    // Use project manager to create the project
+                    // Save changes to the existing project
                     if (this.projectManager) {
-                        const success = this.projectManager.createProject(
+                        const success = this.projectManager.updateProject(
+                            createdProject.id,
                             projectData.name,
                             projectData.color,
                             projectData.icon,
@@ -470,12 +499,22 @@ export class ProjectsPage {
                             this.loadProjects();
                             return true; // Close dialog
                         } else {
-                            // Show error in dialog
-                            dialog.showDuplicateError();
+                            dialog.showFieldError('name', 'Failed to save project changes');
                             return false; // Keep dialog open
                         }
                     }
                     return false;
+                },
+                onCancel: (dialog) => {
+                    // CANCEL: Delete the project we just created
+                    console.log('Project creation cancelled, deleting project ID:', createdProject.id);
+                    const deleteSuccess = this.projectManager.deleteProject(createdProject.id, this.parentWindow);
+                    if (deleteSuccess) {
+                        console.log('Created project deleted successfully');
+                        this.loadProjects(); // Refresh the project list
+                    } else {
+                        console.error('Failed to delete created project on cancel');
+                    }
                 }
             });
         } else {
@@ -603,7 +642,7 @@ export class ProjectsPage {
                 if (this.parentWindow.currentProjectId && this.parentWindow.allProjects) {
                     const currentProject = this.parentWindow.allProjects.find(p => p.id === this.parentWindow.currentProjectId);
                     if (currentProject && this.parentWindow._updateProjectButtonsDisplay) {
-                        console.log(`🔄 Refreshing header buttons for: ${currentProject.name}`);
+                        // Refreshing header buttons
                         this.parentWindow._updateProjectButtonsDisplay(currentProject.name);
                     }
                 }
@@ -617,7 +656,7 @@ export class ProjectsPage {
      * Show loading state
      */
     showLoading(message = 'Loading...') {
-        console.log(`ProjectsPage: ${message}`);
+        // ProjectsPage loading message
         // Could show spinner in UI if needed
     }
 
@@ -625,7 +664,7 @@ export class ProjectsPage {
      * Hide loading state
      */
     hideLoading() {
-        console.log('ProjectsPage: Loading finished');
+        // ProjectsPage loading finished
         // Could hide spinner in UI if needed
     }
 
@@ -728,7 +767,7 @@ export class ProjectsPage {
                 }
             }
 
-            console.log(`ProjectsPage: Loaded ${projects.length} projects from database`);
+            // Loaded projects from database
             return projects;
         } catch (error) {
             console.error('Error loading projects:', error);

@@ -99,7 +99,7 @@ export class HeaderTrackingWidget {
 
     _setupTracking() {
         // All widgets register directly with tracking state manager (no master/non-master)
-        console.log(`🔥 Setting up HeaderTrackingWidget`);
+        // Setting up HeaderTrackingWidget
         trackingStateManager.registerTrackingButton(this.trackButton, null, this.taskEntry);
         trackingStateManager.registerTimeLabel(this.timeLabel);
         

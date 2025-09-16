@@ -37,7 +37,7 @@ export class TaskRenderer {
 
         // Always use TaskRowTemplate - it will adapt based on tracking state
         const templateInstance = new TaskRowTemplate(task, this.timeUtils, this.allProjects, this.parentWindow);
-        console.log(`Verwendung von TaskRowTemplate für Aufgabe: ${task.name} (tracking: ${isCurrentlyTracking})`);
+        // Using TaskRowTemplate
 
         // Store template instance for cleanup
         this.taskTemplates.set(`task_${task.id}`, templateInstance);
@@ -54,7 +54,7 @@ export class TaskRenderer {
 
         // Always use TaskStackTemplate - it will adapt based on tracking state
         const templateInstance = new TaskStackTemplate(group, this.timeUtils, this.allProjects, this.parentWindow);
-        console.log(`Verwendung von TaskStackTemplate für Stack: ${group.baseName} (tracking: ${isCurrentlyTracking})`);
+        // Using TaskStackTemplate
 
         // Store template instance for cleanup
         this.taskTemplates.set(`stack_${group.groupKey}`, templateInstance);
@@ -582,7 +582,7 @@ export class TaskRenderer {
      * Clear all template instances
      */
     clearAllTemplates() {
-        console.log(`Bereinige ${this.taskTemplates.size} Template-Instanzen`);
+        // Cleaning template instances
         
         // Destroy all template instances
         this.taskTemplates.forEach((template, templateId) => {

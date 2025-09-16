@@ -284,6 +284,7 @@ export class SelectorFactory {
             row.add_css_class('selected-project');
             const checkIcon = new Gtk.Image({
                 icon_name: 'emblem-ok-symbolic',
+                pixel_size: 16,
                 css_classes: ['accent']
             });
             row.add_suffix(checkIcon);
@@ -317,6 +318,7 @@ export class SelectorFactory {
             row.add_css_class('selected-client');
             const checkIcon = new Gtk.Image({
                 icon_name: 'emblem-ok-symbolic',
+                pixel_size: 16,
                 css_classes: ['accent']
             });
             row.add_suffix(checkIcon);

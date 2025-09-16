@@ -57,6 +57,7 @@ import { TasksPage } from 'resource:///com/odnoyko/valot/js/interface/pages/Task
 import { ProjectsPage } from 'resource:///com/odnoyko/valot/js/interface/pages/ProjectsPage.js';
 import { ClientsPage } from 'resource:///com/odnoyko/valot/js/interface/pages/ClientsPage.js';
 import { ReportsPage } from 'resource:///com/odnoyko/valot/js/interface/pages/ReportsPage.js';
+import { PDFExportPreferencesDialog } from 'resource:///com/odnoyko/valot/js/interface/dialogs/PDFExportPreferencesDialog.js';
 
 export const ValotWindow = GObject.registerClass({
     GTypeName: 'ValotWindow',
@@ -65,6 +66,7 @@ export const ValotWindow = GObject.registerClass({
         'split_view', 'main_content', 'sidebar_list',
         'sidebar_toggle_btn', 'menu_button',
         'tasks_page', 'projects_page', 'clients_page', 'reports_page',
+        'export_pdf_btn', 'period_filter', 'project_filter', 'client_filter',
         'task_search', 'task_filter', 'task_list', 
         'prev_page_btn', 'next_page_btn', 'page_info', 'pagination_box',
         'project_search', 'add_project_btn', 'project_list',
@@ -298,6 +300,51 @@ export const ValotWindow = GObject.registerClass({
             parentWindow: this
         });
 
+        // Connect existing UI export button to preferences dialog
+        if (this._export_pdf_btn) {
+            // Connecting export PDF button
+            this._export_pdf_btn.connect('clicked', () => {
+                console.log('🚀 Static UI PDF Export button clicked - opening preferences dialog');
+                this._showPDFExportPreferences();
+            });
+        } else {
+            console.warn('⚠️ export_pdf_btn not found in UI');
+        }
+
+        // Connect filter dropdowns to update ReportExporter
+        if (this._period_filter) {
+            this._period_filter.connect('notify::selected', () => {
+                const periods = ['week', 'month', 'year'];
+                const selectedPeriod = periods[this._period_filter.get_selected()];
+                console.log('📅 Period filter changed to:', selectedPeriod);
+                if (this.reportExporter) {
+                    this.reportExporter.configurePeriod(selectedPeriod);
+                }
+            });
+        }
+
+        if (this._project_filter) {
+            this._project_filter.connect('notify::selected', () => {
+                const selectedIndex = this._project_filter.get_selected();
+                const projectId = selectedIndex === 0 ? null : this._getProjectIdByFilterIndex(selectedIndex - 1);
+                // Project filter changed
+                if (this.reportExporter) {
+                    this.reportExporter.configureProjectFilter(projectId);
+                }
+            });
+        }
+
+        if (this._client_filter) {
+            this._client_filter.connect('notify::selected', () => {
+                const selectedIndex = this._client_filter.get_selected();
+                const clientId = selectedIndex === 0 ? null : this._getClientIdByFilterIndex(selectedIndex - 1);
+                // Client filter changed
+                if (this.reportExporter) {
+                    this.reportExporter.configureClientFilter(clientId);
+                }
+            });
+        }
+
 
         // Store page components for easy access
         this.pageComponents = {
@@ -352,20 +399,20 @@ export const ValotWindow = GObject.registerClass({
                     isMaster: isMaster
                 });
                 
-                console.log(`✅ Created ${isMaster ? 'MASTER' : 'non-master'} tracking widget for ${name} page`);
+                // Created tracking widget
             } else {
                 console.warn(`⚠️ Could not find tracking container for ${name} page`);
             }
         });
 
         // All widgets are automatically synchronized through trackingStateManager
-        console.log(`✅ Created ${this.trackingWidgets.length} synchronized tracking widgets`);
+        // Created synchronized tracking widgets
         
         // Update project buttons after widgets are created
         if (this.allProjects && this.allProjects.length > 0 && this.currentProjectId) {
             const currentProject = this.allProjects.find(p => p.id === this.currentProjectId);
             if (currentProject) {
-                console.log(`🔄 Initial project button update for: ${currentProject.name}`);
+                // Initial project button update
                 this._updateProjectButtonsDisplay(currentProject.name);
             }
         }
@@ -379,10 +426,10 @@ export const ValotWindow = GObject.registerClass({
             if (masterWidgets.trackButton && masterWidgets.taskEntry && masterWidgets.timeLabel) {
                 // Call timeTrack like the original system
                 // HeaderTrackingWidget handles its own tracking now
-                console.log(`✅ Time tracking initialized on master widget`);
+                // Time tracking initialized
             }
             
-            console.log(`✅ Master tracking widget set for page: ${this.trackingWidgets[0].page}`);
+            // Master tracking widget set
         }
         
         // ВАЖНО: Также инициализировать основные template кнопки
@@ -420,10 +467,10 @@ export const ValotWindow = GObject.registerClass({
             console.log(`🔄 Main window: syncing compact tracker for project: ${projectName}`);
             this.compactTrackerWindow.syncWithMainWindow();
         } else {
-            console.log(`🔄 Main window: compact tracker not open, skipping sync`);
+            // Compact tracker not open, skipping sync
         }
         
-        console.log(`✅ Updated all project buttons to: ${projectName}`);
+        // Updated all project buttons
     }
 
     /**
@@ -587,7 +634,7 @@ export const ValotWindow = GObject.registerClass({
 
             // Project list
             const listBox = new Gtk.ListBox({
-                css_classes: ['boxed-list'],
+                css_classes: ['content-box'],
                 selection_mode: Gtk.SelectionMode.NONE
             });
 
@@ -640,7 +687,11 @@ export const ValotWindow = GObject.registerClass({
                 } else {
                     iconWidget = new Gtk.Image({
                         icon_name: project.icon || 'folder-symbolic',
-                        pixel_size: 14
+                        width_request: 20,
+                        height_request: 20,
+                        pixel_size: 14,
+                        halign: Gtk.Align.CENTER,
+                        valign: Gtk.Align.CENTER
                     });
                 }
 
@@ -731,7 +782,7 @@ export const ValotWindow = GObject.registerClass({
                     this.currentProjectId = selectedProject.id;
                     this._updateProjectClientButtons();
                     this._updateProjectButtonsDisplay(selectedProject.name);
-                    console.log(`Selected project: ${selectedProject.name} with color ${selectedProject.color}`);
+                    // Selected project with color
                 }
                 
                 popover.popdown();
@@ -890,7 +941,7 @@ export const ValotWindow = GObject.registerClass({
     _setupMainTrackingButtons() {
         // Основная кнопка Tasks page
         if (this._track_button && this._task_name && this._actual_time) {
-            console.log(`🔧 Инициализация основной кнопки _track_button`);
+            // Initializing main track button
             GlobalTracking.registerTrackingComponent(null, {
                 button: this._track_button,
                 input: this._task_name,
@@ -908,7 +959,7 @@ export const ValotWindow = GObject.registerClass({
         
         pageButtons.forEach(({ button, input, label, page }) => {
             if (button && input && label) {
-                console.log(`🔧 Инициализация кнопки трекинга для страницы: ${page}`);
+                // Initializing tracking button for page
                 GlobalTracking.registerTrackingComponent(null, {
                     button: button,
                     input: input,
@@ -918,7 +969,7 @@ export const ValotWindow = GObject.registerClass({
             }
         });
         
-        console.log(`✅ Инициализированы основные кнопки трекинга`);
+        // Main tracking buttons initialized
     }
 
     _connectPageComponents() {
@@ -1126,6 +1177,9 @@ export const ValotWindow = GObject.registerClass({
             'reports': this._reports_page
         };
         
+        // Reports page uses static UI with connected functionality
+        // Showing page
+
         if (pages[pageName]) {
             try {
                 // Use your original replace method for instant navigation
@@ -1369,13 +1423,13 @@ export const ValotWindow = GObject.registerClass({
             if (this.allProjects.length > 0 && (!this.currentProjectId || this.currentProjectId === 1)) {
                 this.currentProjectId = this.allProjects[0].id;
                 this._updateProjectButtonsDisplay(this.allProjects[0].name);
-                console.log(`Default project set: ${this.allProjects[0].name} (ID: ${this.currentProjectId})`);
+                // Default project set
             } else if (this.allProjects.length > 0 && this.currentProjectId) {
                 // Update header buttons for currently selected project after reload
                 const currentProject = this.allProjects.find(p => p.id === this.currentProjectId);
                 if (currentProject) {
                     this._updateProjectButtonsDisplay(currentProject.name);
-                    console.log(`Updated header buttons for current project: ${currentProject.name}`);
+                    // Updated header buttons for current project
                 }
             }
             
@@ -1433,7 +1487,7 @@ export const ValotWindow = GObject.registerClass({
             if (this.allClients.length > 0 && (!this.currentClientId || this.currentClientId === 1)) {
                 this.currentClientId = this.allClients[0].id;
                 this._updateClientButtonsDisplay(this.allClients[0].name);
-                console.log(`Default client set: ${this.allClients[0].name} (ID: ${this.currentClientId})`);
+                // Default client set
             }
             
         } catch (error) {
@@ -1589,7 +1643,7 @@ export const ValotWindow = GObject.registerClass({
                 }
             });
 
-            console.log(`Sidebar collapsed: ${isCollapsed}, visible: ${isVisible} - page buttons: ${shouldShowButtons ? 'visible' : 'hidden'}`);
+            // Sidebar state updated
         };
 
         // Monitor split view collapsed state (responsive behavior)
@@ -1652,7 +1706,7 @@ export const ValotWindow = GObject.registerClass({
             }
         });
         
-        console.log('✅ Reports chart filters setup completed');
+        // Reports chart filters setup completed
     }
 
     /**
@@ -1668,7 +1722,7 @@ export const ValotWindow = GObject.registerClass({
             this._deleteSelectedReportsTasks();
         });
         
-        console.log('✅ Reports delete button setup completed');
+        // Reports delete button setup completed
     }
 
     /**
@@ -1801,7 +1855,7 @@ export const ValotWindow = GObject.registerClass({
     _updateChart() {
         if (this.simpleChart) {
             this.simpleChart.createChart(this.allTasks, this.allProjects, this.allClients);
-            console.log('📊 Chart updated in Reports page');
+            // Chart updated in Reports page
         }
     }
     
@@ -1837,7 +1891,7 @@ export const ValotWindow = GObject.registerClass({
             this._updateCurrencyCarousel(stats.totalEarnings);
             this._reports_total_tasks_value.set_label(stats.totalTasks.toString());
             
-            console.log('📊 Reports statistics updated:', stats);
+            // Reports statistics updated
             
         } catch (error) {
             console.error('❌ Failed to update Reports statistics:', error);
@@ -1900,7 +1954,7 @@ export const ValotWindow = GObject.registerClass({
                 this._reports_carousel_indicators.set_visible(earningsByCurrency.size > 1);
             }
 
-            console.log(`💰 Updated currency carousel with ${earningsByCurrency.size} currencies`);
+            // Updated currency carousel
 
         } catch (error) {
             console.error('❌ Failed to update currency carousel:', error);
@@ -1916,7 +1970,7 @@ export const ValotWindow = GObject.registerClass({
         }
 
         try {
-            console.log('🔄 Updating Recent Tasks list...');
+            // Updating Recent Tasks list
 
             // Get current filter settings
             const selectedPeriod = this._period_filter?.get_selected() || 0;
@@ -1937,7 +1991,7 @@ export const ValotWindow = GObject.registerClass({
                 .sort((a, b) => new Date(b.created_at || b.start_time) - new Date(a.created_at || a.start_time))
                 .slice(0, 10);
 
-            console.log(`Found ${recentTasks.length} recent tasks to display`);
+            // Found recent tasks to display
 
             // Clear existing tasks
             let child = this._recent_tasks_list.get_first_child();
@@ -1962,6 +2016,7 @@ export const ValotWindow = GObject.registerClass({
                 
                 const icon = new Gtk.Image({
                     icon_name: 'view-list-symbolic',
+                    pixel_size: 16,
                     css_classes: ['dim-label']
                 });
                 emptyRow.add_prefix(icon);
@@ -1990,7 +2045,7 @@ export const ValotWindow = GObject.registerClass({
             // Update delete button visibility
             this._updateReportsDeleteButton();
             
-            console.log('✅ Recent Tasks list updated successfully');
+            // Recent Tasks list updated successfully
 
         } catch (error) {
             console.error('❌ Failed to update Recent Tasks list:', error);
@@ -2120,17 +2175,17 @@ export const ValotWindow = GObject.registerClass({
      * Calculate statistics from filtered tasks
      */
     _calculateFilteredStatistics(tasks, selectedProjectId, selectedClientId) {
-        console.log('📊 Calculating statistics for', tasks.length, 'tasks');
-        console.log('📊 Sample task data:', tasks.length > 0 ? tasks[0] : 'No tasks');
+        // Calculating statistics for tasks
+        // Sample task data available
         
         const totalTime = tasks.reduce((sum, task) => {
             const taskTime = task.duration || task.time_spent || 0;
-            console.log(`📊 Task "${task.name}": ${taskTime} seconds`);
+            // Task time calculated
             return sum + taskTime;
         }, 0);
         const totalTasks = tasks.length;
         
-        console.log('📊 Total calculated time:', totalTime, 'seconds');
+        // Total calculated time
         
         // Count unique projects
         const projectIds = new Set();
@@ -2321,6 +2376,40 @@ export const ValotWindow = GObject.registerClass({
         const client = this.allClients?.find(c => c.id === this.currentClientId);
         if (client && this._client_context_btn) {
             this._client_context_btn.set_label(client.name);
+        }
+    }
+
+    /**
+     * Get project ID by filter dropdown index
+     */
+    _getProjectIdByFilterIndex(index) {
+        const projects = this.allProjects || [];
+        return projects[index]?.id || null;
+    }
+
+    /**
+     * Get client ID by filter dropdown index
+     */
+    _getClientIdByFilterIndex(index) {
+        const clients = this.allClients || [];
+        return clients[index]?.id || null;
+    }
+
+    /**
+     * Show PDF Export Preferences Dialog
+     */
+    _showPDFExportPreferences() {
+        console.log('📋 Opening PDF Export Preferences Dialog');
+
+        if (!this.reportExporter) {
+            console.error('❌ No report exporter available for preferences dialog');
+            return;
+        }
+
+        try {
+            PDFExportPreferencesDialog.show(this, this.reportExporter);
+        } catch (error) {
+            console.error('💥 Error opening PDF Export Preferences Dialog:', error);
         }
     }
 

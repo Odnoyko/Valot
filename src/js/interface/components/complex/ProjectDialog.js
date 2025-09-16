@@ -13,15 +13,17 @@ export class ProjectDialog extends FormDialog {
             mode = 'create',
             project = null,
             onProjectSave = null,
+            forceCreateAppearance = false, // New parameter to force "create" appearance
             ...formConfig
         } = config;
 
         const isEdit = mode === 'edit' && project;
+        const showAsCreate = !isEdit || forceCreateAppearance;
         
         const dialogConfig = {
-            title: isEdit ? 'Edit Project' : 'Create New Project',
-            subtitle: isEdit ? 'Update project name and appearance' : 'Create a new project',
-            submitLabel: isEdit ? 'Save Changes' : 'Create Project',
+            title: showAsCreate ? 'Create New Project' : 'Edit Project',
+            subtitle: showAsCreate ? 'Create a new project' : 'Update project name and appearance',
+            submitLabel: showAsCreate ? 'Create Project' : 'Save Changes',
             fields: [],  // No form fields - we'll create custom content later
             onSubmit: (formData, dialog) => {
                 return this._handleProjectSave(formData, dialog);
@@ -72,11 +74,17 @@ export class ProjectDialog extends FormDialog {
             margin_end: 12
         });
 
-        // Project appearance button (similar to the one in project list)
-        this.projectButton = new Button({
-            cssClasses: ['project-button', 'project-appearance-btn', 'inline-dialog-btn'],
-            onClick: () => this._openProjectAppearanceDialog()
+        // Project appearance button (same as project-settings-button)
+        this.projectButton = new Gtk.Button({
+            width_request: 40,
+            height_request: 40,
+            halign: Gtk.Align.CENTER,
+            valign: Gtk.Align.CENTER,
+            css_classes: ['project-settings-button', 'flat'],
+            tooltip_text: 'Change project appearance'
         });
+        
+        this.projectButton.connect('clicked', () => this._openProjectAppearanceDialog());
 
         // Update button appearance based on current project data
         this._updateProjectButton();
@@ -92,7 +100,7 @@ export class ProjectDialog extends FormDialog {
         });
 
         // Add widgets to inline box
-        inlineBox.append(this.projectButton.widget);
+        inlineBox.append(this.projectButton);
         inlineBox.append(this.nameEntry);
 
         return inlineBox;
@@ -101,64 +109,57 @@ export class ProjectDialog extends FormDialog {
     _updateProjectButton() {
         if (!this.projectButton) return;
 
-        // Create icon widget similar to the one in ProjectsPage
-        const iconWidget = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 0,
-            valign: Gtk.Align.CENTER,
-            halign: Gtk.Align.CENTER
-        });
-
-        // Handle emoji vs icon
-        if (this.currentIcon && this.currentIcon.length <= 4 && /[\u{1F000}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u.test(this.currentIcon)) {
-            // It's an emoji
-            const emojiLabel = new Gtk.Label({
-                label: this.currentIcon,
-                css_classes: ['emoji-icon'],
-                valign: Gtk.Align.CENTER,
-                halign: Gtk.Align.CENTER
-            });
-            iconWidget.append(emojiLabel);
-        } else {
-            // It's an icon name
-            const tempProject = {
-                color: this.currentColor,
-                icon_color_mode: this.currentIconColorMode || 'auto'
-            };
-            const iconColor = getProjectIconColor(tempProject);
-            
-            const icon = new Gtk.Image({
-                icon_name: this.currentIcon || 'folder-symbolic',
-                icon_size: Gtk.IconSize.NORMAL,
-                valign: Gtk.Align.CENTER,
-                halign: Gtk.Align.CENTER
-            });
-            
-            // Apply color styling based on the calculated icon color
-            if (iconColor === 'white') {
-                icon.add_css_class('icon-light');
-            } else {
-                icon.add_css_class('icon-dark');
-            }
-            
-            iconWidget.append(icon);
+        // Remove old CSS provider if exists
+        if (this.cssProvider) {
+            this.projectButton.get_style_context().remove_provider(this.cssProvider);
         }
 
-        // Apply CSS styling for the button
-        const provider = new Gtk.CssProvider();
-        provider.load_from_string(
-            `.project-button { 
-                background: ${this.currentColor}; 
-                border-radius: 9px; 
-                min-width: 42px; 
-                min-height: 42px; 
+        // Create icon widget (handle both emoji and system icons)
+        let iconWidget;
+        if (this.currentIcon && this.currentIcon.startsWith('emoji:')) {
+            const emoji = this.currentIcon.substring(6);
+            iconWidget = new Gtk.Label({
+                label: emoji,
+                css_classes: ['emoji-icon'],
+                halign: Gtk.Align.CENTER,
+                valign: Gtk.Align.CENTER
+            });
+        } else {
+            iconWidget = new Gtk.Image({
+                icon_name: this.currentIcon || 'folder-symbolic',
+                pixel_size: 20
+            });
+        }
+        
+        // Apply background color and icon color (same as project list)
+        const tempProject = {
+            color: this.currentColor,
+            icon_color_mode: this.currentIconColorMode || 'auto'
+        };
+        const iconColor = getProjectIconColor(tempProject);
+        
+        // Create new CSS provider and store reference
+        this.cssProvider = new Gtk.CssProvider();
+        this.cssProvider.load_from_string(
+            `.project-settings-button { 
+                background-color: ${this.currentColor}; 
+                border-radius: 6px; 
+                color: ${iconColor}; 
+                min-width: 40px;
+                min-height: 40px;
+                padding: 0;
+            }
+            .project-settings-button:hover {
+                filter: brightness(1.1);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             }
             .emoji-icon {
                 font-size: 18px;
             }`
         );
-        this.projectButton.widget.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
-        this.projectButton.widget.set_child(iconWidget);
+        this.projectButton.get_style_context().add_provider(this.cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+        
+        this.projectButton.set_child(iconWidget);
     }
 
     _openProjectAppearanceDialog() {
@@ -207,27 +208,34 @@ export class ProjectDialog extends FormDialog {
             iconColorMode: customFormData.iconColorMode
         };
 
-        // Add ID for edit mode
+        // Add ID based on mode
         if (this.mode === 'edit' && this.project) {
             projectData.id = this.project.id;
+        } else if (this.mode === 'create') {
+            // Generate temporary ID for validation purposes
+            projectData.tempId = Date.now(); // Temporary ID that will be replaced by DB auto-increment
+            projectData.isTemporary = true; // Flag to indicate this is a temporary ID
         }
 
         // Call the save handler
         if (this.onProjectSave) {
             try {
+                console.log('ProjectDialog: Calling save handler with data:', projectData, 'mode:', this.mode);
                 const result = this.onProjectSave(projectData, this.mode, this);
                 
                 // If save handler returns false, keep dialog open
                 if (result === false) {
+                    console.log('ProjectDialog: Save handler returned false, keeping dialog open');
                     return false;
                 }
                 
                 // Emit success event
                 this._emit('projectSaved', { data: projectData, mode: this.mode });
+                console.log('ProjectDialog: Project saved successfully');
                 return true; // Close dialog
                 
             } catch (error) {
-                console.error('Error saving project:', error);
+                console.error('ProjectDialog: Error saving project:', error);
                 this.showFieldError('name', 'Failed to save project. Please try again.');
                 return false;
             }
@@ -360,4 +368,5 @@ export class ProjectDialog extends FormDialog {
             ...config
         });
     }
+
 }

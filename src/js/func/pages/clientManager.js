@@ -1,4 +1,4 @@
-console.log("clientManager.js loaded");
+// clientManager.js loaded
 
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
@@ -13,7 +13,7 @@ export class ClientManager {
         this.executeNonSelectCommand = executeNonSelectCommand;
         this.currencies = currencies || getAllCurrencies();
         this.parentWindow = null;
-        console.log("ClientManager initialized with currencies:", this.currencies.length);
+        // ClientManager initialized
     }
 
     setParentWindow(parentWindow) {
@@ -134,10 +134,10 @@ export class ClientManager {
         try {
             const alterSql = `ALTER TABLE Client ADD COLUMN currency TEXT DEFAULT 'USD'`;
             this.executeNonSelectCommand(this.dbConnection, alterSql);
-            console.log('Added currency column to Client table');
+            // Added currency column to Client table
         } catch (error) {
             if (error.message && error.message.includes('duplicate column name')) {
-                console.log('currency column already exists in Client table');
+                // currency column already exists
             } else {
                 console.log('Error adding currency column:', error.message);
             }
@@ -185,21 +185,21 @@ export class ClientManager {
             body: 'Add a new client with name and currency'
         });
 
-        // Create inline form layout (horizontal)
+        // Create inline form layout (2 rows vertical)
         const form = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
+            orientation: Gtk.Orientation.VERTICAL,
             spacing: 12,
-            width_request: 500,
+            width_request: 400,
             margin_top: 12,
             margin_bottom: 12,
             margin_start: 12,
             margin_end: 12
         });
 
-        // Client name input (left side, takes most space) - same as projects
+        // ROW 1: Client name input only
         const nameEntry = new Gtk.Entry({
             placeholder_text: 'Client name',
-            text: prefillName,  // Direct assignment like projects
+            text: prefillName,
             hexpand: true
         });
         
@@ -210,11 +210,17 @@ export class ClientManager {
             nameEntry.set_tooltip_text('');
         });
 
-        // Rate input with +/- buttons (middle)
+        // ROW 2: Rate input with +/- buttons + Currency
+        const rateRow = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12
+        });
+
+        // Rate input with +/- buttons
         const rateBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 0,
-            css_classes: ['linked'],
+            css_classes: ['hour-price-input'],
             width_request: 120
         });
 
@@ -254,7 +260,8 @@ export class ClientManager {
         // Currency dropdown with search (right side, fixed width)
         const currencyDropdown = new Gtk.DropDown({
             width_request: 120,
-            tooltip_text: 'Select currency'
+            tooltip_text: 'Select currency',
+            css_classes: ['currency-button']
         });
 
         // Get currency data from data folder
@@ -281,9 +288,13 @@ export class ClientManager {
             console.log('Selected currency:', selectedCurrency.code);
         });
 
+        // Assemble the rate row
+        rateRow.append(rateBox);
+        rateRow.append(currencyDropdown);
+
+        // Add both rows to form
         form.append(nameEntry);
-        form.append(rateBox);
-        form.append(currencyDropdown);
+        form.append(rateRow);
 
         dialog.set_extra_child(form);
         dialog.add_response('cancel', 'Cancel');
@@ -993,7 +1004,7 @@ export class ClientManager {
         const rateBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 0,
-            css_classes: ['linked'],
+            css_classes: ['hour-price-input'],
             width_request: 120
         });
 
@@ -1033,7 +1044,8 @@ export class ClientManager {
         // Currency dropdown with search (right side)
         const currencyDropdown = new Gtk.DropDown({
             width_request: 120,
-            tooltip_text: 'Select currency'
+            tooltip_text: 'Select currency',
+            css_classes: ['currency-button']
         });
 
         // Get currency data

@@ -83,7 +83,7 @@ export class SimpleChart {
         const barsBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 8,
-            halign: Gtk.Align.CENTER,ass
+            halign: Gtk.Align.CENTER,
             height_request: 120
         });
         
@@ -112,7 +112,7 @@ export class SimpleChart {
         
         const summaryLabel = new Gtk.Label({
             label: summaryText,
-            css_classes: ['caption'],
+            css_classes: ['chart-summary-label'],
             halign: Gtk.Align.CENTER,
             margin_top: 8
         });
@@ -219,7 +219,7 @@ export class SimpleChart {
         // Period label (day/week/month)
         const periodLabel = new Gtk.Label({
             label: dayData.label,
-            css_classes: ['caption'],
+            css_classes: ['chart-period-label'],
             halign: Gtk.Align.CENTER
         });
         barContainer.append(periodLabel);
@@ -227,7 +227,7 @@ export class SimpleChart {
         // Hours label
         const hoursLabel = new Gtk.Label({
             label: dayData.hours > 0 ? `${dayData.hours.toFixed(1)}h` : '0h',
-            css_classes: ['caption', 'dim-label'],
+            css_classes: ['chart-hours-label'],
             halign: Gtk.Align.CENTER
         });
         barContainer.append(hoursLabel);
@@ -282,10 +282,21 @@ export class SimpleChart {
         const data = [];
         
         const today = new Date();
-        for (let i = 6; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            const dayName = days[date.getDay() === 0 ? 6 : date.getDay() - 1];
+        
+        // Calculate Monday of current week (ISO week standard)
+        const monday = new Date(today);
+        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days
+        monday.setDate(today.getDate() - daysToMonday);
+        monday.setHours(0, 0, 0, 0); // Start of Monday
+
+        // Chart showing week period
+
+        // Generate data for Monday through Sunday
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(monday);
+            date.setDate(monday.getDate() + i);
+            const dayName = days[i];
             
             let totalSeconds = 0;
             const projectHours = new Map(); // Track time per project for this day

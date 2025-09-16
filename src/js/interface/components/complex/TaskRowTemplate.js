@@ -41,14 +41,15 @@ export class TaskRowTemplate {
 
         const isCurrentlyTracking = trackingStateManager.isTaskTracking(this.taskGroupKey);
         const subtitle = isCurrentlyTracking
-            ? `<span color="${dotColor}">●</span> ${projectName} • ${clientName} • <b>Zurzeit Tracking</b> • ${this.timeUtils.formatDate(this.task.start)}`
-            : `<span color="${dotColor}">●</span> ${projectName} • ${clientName} • ${this.timeUtils.formatDate(this.task.start)}`;
+            ? `<span foreground="${dotColor}">●</span> ${projectName} • ${clientName} • <b>Zurzeit Tracking</b> • ${this.timeUtils.formatDate(this.task.start)}`
+            : `<span foreground="${dotColor}">●</span> ${projectName} • ${clientName} • ${this.timeUtils.formatDate(this.task.start)}`;
 
         // Create main row
         const row = new Adw.ActionRow({
             title: InputValidator.escapeForGTKMarkup(this.task.name),
             subtitle: subtitle,
-            use_markup: true
+            use_markup: true,
+            css_classes: ['bright-subtitle']
         });
 
         // Apply tracking state styling

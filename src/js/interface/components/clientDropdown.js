@@ -62,7 +62,7 @@ export class ClientDropdown {
 
         // Create list box for clients
         this.clientList = new Gtk.ListBox({
-            css_classes: ['boxed-list'],
+            css_classes: ['content-box'],
             selection_mode: Gtk.SelectionMode.NONE
         });
 

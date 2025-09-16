@@ -2,7 +2,7 @@
  * Global keyboard event handling logic
  */
 
-console.log("keyboardHandler.js verbunden");
+// keyboardHandler.js verbunden
 
 import Gdk from 'gi://Gdk';
 import Gtk from 'gi://Gtk';

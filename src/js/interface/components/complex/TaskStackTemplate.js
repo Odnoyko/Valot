@@ -33,8 +33,8 @@ export class TaskStackTemplate {
         const groupDotColor = this.group.latestTask.project_color || (project ? project.color : '#9a9996');
 
         const groupSubtitle = isCurrentlyTracking
-            ? `<span color="${groupDotColor}">●</span> ${groupProjectName} • ${groupClientName} • <b>Zurzeit Tracking</b>`
-            : `<span color="${groupDotColor}">●</span> ${groupProjectName} • ${groupClientName}`;
+            ? `<span foreground="${groupDotColor}">●</span> ${groupProjectName} • ${groupClientName} • <b>Zurzeit Tracking</b>`
+            : `<span foreground="${groupDotColor}">●</span> ${groupProjectName} • ${groupClientName}`;
 
         // Create main expander row
         const groupRow = new Adw.ExpanderRow({

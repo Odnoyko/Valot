@@ -263,8 +263,11 @@ export class TemplatePDFGenerator {
                 startDate = this.customDateRange.from;
                 endDate = this.customDateRange.to;
             } else if (this.filterPeriod === 'week') {
+                // Calculate Monday of current week (ISO week standard)
                 const monday = new Date(now);
-                monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+                const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+                const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days
+                monday.setDate(now.getDate() - daysToMonday);
                 monday.setHours(0, 0, 0, 0);
                 
                 const sunday = new Date(monday);

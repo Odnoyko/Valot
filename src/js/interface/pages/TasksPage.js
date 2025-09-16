@@ -118,15 +118,7 @@ export class TasksPage {
         this.pageInfo = this.parentWindow._page_info;
         this.paginationBox = this.parentWindow._pagination_box;
         
-        console.log('TasksPage UI elements:', {
-            taskSearch: !!this.taskSearch,
-            taskFilter: !!this.taskFilter,
-            taskList: !!this.taskList,
-            prevPageBtn: !!this.prevPageBtn,
-            nextPageBtn: !!this.nextPageBtn,
-            pageInfo: !!this.pageInfo,
-            paginationBox: !!this.paginationBox
-        });
+        // TasksPage UI elements initialized
         
         // Connect event handlers to existing UI elements
         this._connectEventHandlers();
@@ -143,7 +135,10 @@ export class TasksPage {
         
         if (this.taskFilter) {
             this.taskFilter.connect('notify::selected', () => {
-                this.activeFilter = this.taskFilter.get_selected();
+                const selectedIndex = this.taskFilter.get_selected();
+                // Map dropdown indices to filter strings
+                const filterMap = ['all', 'today', 'week', 'month'];
+                this.activeFilter = filterMap[selectedIndex] || 'all';
                 this._filterTasks();
             });
         }
@@ -391,6 +386,8 @@ export class TasksPage {
                     return this._isToday(task.date);
                 case 'week':
                     return this._isThisWeek(task.date);
+                case 'month':
+                    return this._isThisMonth(task.date);
                 case 'active':
                     return task.is_active;
                 default:
@@ -432,7 +429,7 @@ export class TasksPage {
             return;
         }
 
-        console.log(`Displaying ${this.filteredTasks.length} tasks`);
+        // Displaying tasks
 
         // Store as allTasks for taskRenderer compatibility
         this.allTasks = [...this.filteredTasks];
@@ -902,7 +899,7 @@ export class TasksPage {
      * Show loading state
      */
     showLoading(message = 'Loading...') {
-        console.log(`TasksPage: ${message}`);
+        // TasksPage loading message
         // Could show spinner in UI if needed
     }
 
@@ -910,7 +907,7 @@ export class TasksPage {
      * Hide loading state
      */
     hideLoading() {
-        console.log('TasksPage: Loading finished');
+        // TasksPage loading finished
         // Could hide spinner in UI if needed
     }
 
@@ -926,8 +923,44 @@ export class TasksPage {
     _fetchTasks() { return Promise.resolve([]); }
     _formatDate(date) { return new Date(date).toLocaleDateString(); }
     _formatDuration(seconds) { return `${Math.floor(seconds/60)}m`; }
-    _isToday(date) { return false; }
-    _isThisWeek(date) { return false; }
+    _isToday(date) {
+        if (!date) return false;
+        const today = new Date();
+        const taskDate = new Date(date);
+        console.log('Today filter - date:', date, 'parsed:', taskDate, 'today:', today, 'match:', today.toDateString() === taskDate.toDateString());
+        return today.toDateString() === taskDate.toDateString();
+    }
+    
+    _isThisWeek(date) {
+        if (!date) return false;
+        const today = new Date();
+        const taskDate = new Date(date);
+        
+        // Get start of week (Monday)
+        const startOfWeek = new Date(today);
+        const day = today.getDay();
+        const diff = today.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is Sunday
+        startOfWeek.setDate(diff);
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        // Get end of week (Sunday)
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+        
+        console.log('Week filter - date:', date, 'parsed:', taskDate, 'start:', startOfWeek, 'end:', endOfWeek, 'match:', taskDate >= startOfWeek && taskDate <= endOfWeek);
+        return taskDate >= startOfWeek && taskDate <= endOfWeek;
+    }
+    
+    _isThisMonth(date) {
+        if (!date) return false;
+        const today = new Date();
+        const taskDate = new Date(date);
+        const match = today.getFullYear() === taskDate.getFullYear() && 
+                     today.getMonth() === taskDate.getMonth();
+        console.log('Month filter - date:', date, 'parsed:', taskDate, 'today:', today, 'match:', match);
+        return match;
+    }
     _startTracking(data) { console.log('Start tracking:', data); }
     _stopTracking() { console.log('Stop tracking'); }
     _editTaskObject(task) { 
