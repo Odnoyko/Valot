@@ -275,6 +275,11 @@ export class ProjectsPage {
             this.showError('Load Error', 'Failed to load projects');
         } finally {
             this.hideLoading();
+            
+            // Update weekly time in sidebar after loading projects
+            if (this.parentWindow && typeof this.parentWindow.updateWeeklyTime === 'function') {
+                await this.parentWindow.updateWeeklyTime();
+            }
         }
     }
 
