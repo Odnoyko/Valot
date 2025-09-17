@@ -29,6 +29,7 @@
     <file>js/func/pages/simpleChart.js</file>
     <file>js/func/pages/reportExporter.js</file>
     <file>js/func/pages/reportPDF.js</file>
+    <file>js/func/pages/reportHTML.js</file>
     <file>js/func/pages/pdfExporter.js</file>
     <file>js/func/pages/templateEngine.js</file>
     <file>js/func/pages/templatePDFGenerator.js</file>
