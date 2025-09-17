@@ -363,11 +363,67 @@ class TrackingStateManager {
     }
 
     /**
+     * Get project ID by name from database
+     * @param {string} projectName - Project name
+     * @returns {number} Project ID or 1 if not found
+     */
+    async getProjectIdByName(projectName) {
+        try {
+            const app = Gio.Application.get_default();
+            if (!app || !app.database_connection) {
+                return 1;
+            }
+            
+            const sanitizedName = projectName.replace(/'/g, "''");
+            const sql = `SELECT id FROM Project WHERE name = '${sanitizedName}' LIMIT 1`;
+            
+            const result = app.database_connection.execute_select_command(sql);
+            if (result.get_n_rows() > 0) {
+                const idValue = result.get_value_at(0, 0);
+                return parseInt(idValue.toString()) || 1;
+            }
+            return 1;
+        } catch (error) {
+            console.error(`Error getting project ID for "${projectName}":`, error);
+            return 1;
+        }
+    }
+
+    /**
+     * Get client ID by name from database
+     * @param {string} clientName - Client name
+     * @returns {number} Client ID or 1 if not found
+     */
+    async getClientIdByName(clientName) {
+        try {
+            const app = Gio.Application.get_default();
+            if (!app || !app.database_connection) {
+                return 1;
+            }
+            
+            const sanitizedName = clientName.replace(/'/g, "''");
+            const sql = `SELECT id FROM Client WHERE name = '${sanitizedName}' LIMIT 1`;
+            
+            const result = app.database_connection.execute_select_command(sql);
+            if (result.get_n_rows() > 0) {
+                const idValue = result.get_value_at(0, 0);
+                return parseInt(idValue.toString()) || 1;
+            }
+            return 1;
+        } catch (error) {
+            console.error(`Error getting client ID for "${clientName}":`, error);
+            return 1;
+        }
+    }
+
+    /**
      * Get total accumulated time for a task (from database + current session)
      * @param {string} taskName - Name of the task
+     * @param {number} projectId - Project ID (optional, defaults to current tracking project)
+     * @param {number} clientId - Client ID (optional, defaults to current tracking client)
      * @returns {number} Total seconds
      */
-    async getTotalTaskTime(taskName) {
+    async getTotalTaskTime(taskName, projectId = null, clientId = null) {
         try {
             // Get existing time from database for this task
             // Use same pattern as addtask.js - get from main application
@@ -379,8 +435,20 @@ class TrackingStateManager {
                 return 0;
             }
 
+            // Use current tracking task context if no IDs provided
+            if (projectId === null && this.currentTrackingTask) {
+                projectId = this.currentTrackingTask.projectId;
+            }
+            if (clientId === null && this.currentTrackingTask) {
+                clientId = this.currentTrackingTask.clientId;
+            }
+
+            // Default to 1 if still null
+            projectId = projectId || 1;
+            clientId = clientId || 1;
+
             const sanitizedName = taskName.replace(/'/g, "''"); // Escape single quotes for SQL
-            const sql = `SELECT SUM(time_spent) as total_time FROM Task WHERE name = '${sanitizedName}'`;
+            const sql = `SELECT SUM(time_spent) as total_time FROM Task WHERE name = '${sanitizedName}' AND project_id = ${projectId} AND client_id = ${clientId}`;
 
             try {
                 const result = dbConnection.execute_select_command(sql);
@@ -437,9 +505,11 @@ class TrackingStateManager {
                     // Task label - extract task name from group key and show total duration
                     try {
                         // Group key format: "taskName::projectName::clientName"
-                        const taskName = taskGroupKey.split('::')[0];
-                        if (taskName) {
-                            const totalTime = await this.getTotalTaskTime(taskName);
+                        const [taskName, projectName, clientName] = taskGroupKey.split('::');
+                        if (taskName && projectName && clientName) {
+                            const projectId = await this.getProjectIdByName(projectName);
+                            const clientId = await this.getClientIdByName(clientName);
+                            const totalTime = await this.getTotalTaskTime(taskName, projectId, clientId);
                             const formattedTime = this._formatElapsedTime(totalTime);
                             label.set_text(formattedTime);
                         }
@@ -465,7 +535,7 @@ class TrackingStateManager {
 
         // Get database time once and cache it to avoid multiple DB calls and prevent accumulation
         if (this.cachedDbTime === null) {
-            this.cachedDbTime = await this.getTotalTaskTime(this.currentTrackingTask.name);
+            this.cachedDbTime = await this.getTotalTaskTime(this.currentTrackingTask.name, this.currentTrackingTask.projectId, this.currentTrackingTask.clientId);
         }
 
         // Update individual task time labels (we know currentTrackingTask exists here)
@@ -535,7 +605,7 @@ class TrackingStateManager {
 
         // Use cached database time for earnings calculation
         if (this.cachedDbTime === null) {
-            this.cachedDbTime = await this.getTotalTaskTime(this.currentTrackingTask.name);
+            this.cachedDbTime = await this.getTotalTaskTime(this.currentTrackingTask.name, this.currentTrackingTask.projectId, this.currentTrackingTask.clientId);
         }
         
         // Update money labels
