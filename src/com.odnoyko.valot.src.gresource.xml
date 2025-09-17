@@ -3,7 +3,6 @@
   <gresource prefix="/com/odnoyko/valot">
     <!-- Base Application Files -->
     <file>js/main.js</file>
-    <file>js/test.js</file>
     <file>js/mainwindow.js</file>
     <file>js/compacttracker.js</file>
     <file>config.js</file>
@@ -30,20 +29,12 @@
     <file>js/func/pages/simpleChart.js</file>
     <file>js/func/pages/reportExporter.js</file>
     <file>js/func/pages/reportPDF.js</file>
-    <file>js/func/pages/reportHTML.js</file>
     <file>js/func/pages/pdfExporter.js</file>
     <file>js/func/pages/templateEngine.js</file>
     <file>js/func/pages/templatePDFGenerator.js</file>
     <file>js/func/pages/themeLoader.js</file>
-    <file>js/func/pages/dialogManager.js</file>
-    <file>js/func/pages/searchManager.js</file>
-    <file>js/func/pages/windowManagers.js</file>
     <file>js/func/pages/ProjectsPageBehavior.js</file>
     <file>js/func/pages/textCharts.js</file>
-    <file>js/func/pages/drawingCharts.js</file>
-    <file>js/func/pages/webCharts.js</file>
-    <file>js/func/pages/cssCharts.js</file>
-    <file>js/func/pages/legacyCharts.js</file>
     <file>js/func/pages/templates/professional-report.html</file>
 
     <!-- Component Functionality -->
