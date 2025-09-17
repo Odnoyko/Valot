@@ -5,6 +5,7 @@ gnome = import('gnome')
 blueprints = custom_target('blueprints',
   input: files(
     'ui/window.blp',
+    'ui/compact-tracker.blp',
   ),
   output: '.',
   command: [find_program('blueprint-compiler'), 'batch-compile', '@OUTPUT@', '@CURRENT_SOURCE_DIR@', '@INPUT@'],
@@ -30,7 +31,7 @@ bin_conf.set('resource_path', '/com/odnoyko/valot')
 
 # Generate config.js with version info
 config_js = configure_file(
-  input: 'js/global/config.js.in',
+  input: 'js/func/global/config.js.in',
   output: 'config.js',
   configuration: bin_conf,
 )

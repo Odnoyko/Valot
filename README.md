@@ -47,7 +47,7 @@ Requirements:
 - Meson >= 1.0.0
 - GTK4
 - libadwaita
-- libgda
+- libgda6
 - blueprint-compiler
 - gjs
 
@@ -62,6 +62,10 @@ meson install -C _build
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT license. See the LICENSE file for details.
 
 ## Support
 

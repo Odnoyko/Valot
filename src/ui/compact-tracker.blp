@@ -1,0 +1,73 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $CompactTrackerWindow: Adw.Window {
+  title: _("Compact Tracker");
+  default-width: 500;
+  default-height: 50;
+  height-request: 50;
+  resizable: false;
+
+  content: Gtk.WindowHandle {
+    child: Box main_box {
+      spacing: 4;
+      margin-top: 2;
+      margin-bottom: 2;
+      margin-start: 4;
+      margin-end: 4;
+      valign: center;
+
+      Button close_open_btn {
+        icon-name: "go-previous-symbolic";
+        css-classes: ["flat"];
+        tooltip-text: _("Close compact tracker and open main window");
+        width-request: 20;
+        height-request: 20;
+      }
+
+      Box tracking_box {
+        spacing: 4;
+        hexpand: true;
+        halign: fill;
+        valign: center;
+
+        Entry task_input {
+          placeholder-text: _("Task name");
+          width-request: 160;
+          height-request: 24;
+        }
+
+        Button project_button {
+          icon-name: "folder-symbolic";
+          css-classes: ["flat"];
+          tooltip-text: _("Project");
+          width-request: 20;
+          height-request: 20;
+        }
+
+        Button client_button {
+          icon-name: "contact-new-symbolic";
+          css-classes: ["flat"];
+          tooltip-text: _("Client");
+          width-request: 20;
+          height-request: 20;
+        }
+
+        Label time_display {
+          label: "00:00:00";
+          css-classes: ["title-4"];
+          margin-start: 4;
+          margin-end: 4;
+        }
+
+        Button track_button {
+          icon-name: "media-playback-start-symbolic";
+          css-classes: ["suggested-action", "circular"];
+          tooltip-text: _("Start tracking");
+          width-request: 24;
+          height-request: 24;
+        }
+      }
+    };
+  };
+}
