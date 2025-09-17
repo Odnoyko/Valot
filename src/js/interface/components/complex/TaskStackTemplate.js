@@ -98,7 +98,7 @@ export class TaskStackTemplate {
 
         // Prepare separate money text
         if (this.group.totalCost > 0) {
-            const currency = this.group.latestTask.currency || 'EUR';
+            const currency = this.group.latestTask.client_currency || 'EUR';
             const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
             moneyText = `${currencySymbol}${this.group.totalCost.toFixed(2)}`;
         }
@@ -120,7 +120,7 @@ export class TaskStackTemplate {
         if (this.moneyLabel && this.group.latestTask.client_rate > 0) {
             const clientInfo = {
                 rate: this.group.latestTask.client_rate || 0,
-                currency: this.group.latestTask.currency || 'EUR'
+                currency: this.group.latestTask.client_currency || 'EUR'
             };
             trackingStateManager.registerMoneyLabel(this.moneyLabel, this.group.groupKey, clientInfo);
         }
@@ -211,7 +211,7 @@ export class TaskStackTemplate {
             });
 
             if (cost > 0) {
-                const currency = task.currency || 'EUR';
+                const currency = task.client_currency || 'EUR';
                 const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
                 taskTimeLabel.set_label(`${this.timeUtils.formatDuration(task.duration)} • ${currencySymbol}${cost.toFixed(2)}`);
             }

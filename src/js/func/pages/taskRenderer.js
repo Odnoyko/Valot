@@ -6,6 +6,7 @@ import { InputValidator } from 'resource:///com/odnoyko/valot/js/func/global/inp
 import { executeNonSelectCommand } from 'resource:///com/odnoyko/valot/js/func/global/dbinitialisation.js';
 import { WidgetFactory } from 'resource:///com/odnoyko/valot/js/interface/components/widgetFactory.js';
 import { Button } from 'resource:///com/odnoyko/valot/js/interface/components/primitive/Button.js';
+import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/js/data/currencies.js';
 
 // Import template components
 import { TaskRowTemplate } from 'resource:///com/odnoyko/valot/js/interface/components/complex/TaskRowTemplate.js';
@@ -83,7 +84,9 @@ export class TaskRenderer {
             // For completed tasks, show final duration
             timeText = this.timeUtils.formatDuration(task.duration);
             if (cost > 0) {
-                timeText += ` • €${cost.toFixed(2)}`;
+                const currency = task.client_currency || 'EUR';
+                const currencySymbol = getCurrencySymbol(currency);
+                timeText += ` • ${currencySymbol}${cost.toFixed(2)}`;
             }
         }
 
@@ -254,7 +257,9 @@ export class TaskRenderer {
 
     _renderIndividualTaskInGroup(task) {
         const cost = (task.duration / 3600) * (task.client_rate || 0);
-        const costText = cost > 0 ? ` • €${cost.toFixed(2)}` : '';
+        const currency = task.client_currency || 'EUR';
+        const currencySymbol = getCurrencySymbol(currency);
+        const costText = cost > 0 ? ` • ${currencySymbol}${cost.toFixed(2)}` : '';
 
         const taskRow = new Adw.ActionRow({
             title: InputValidator.escapeForGTKMarkup(task.name),
@@ -279,7 +284,9 @@ export class TaskRenderer {
             });
 
             if (cost > 0) {
-                taskTimeLabel.set_label(`${this.timeUtils.formatDuration(task.duration)} • €${cost.toFixed(2)}`);
+                const currency = task.client_currency || 'EUR';
+                const currencySymbol = getCurrencySymbol(currency);
+                taskTimeLabel.set_label(`${this.timeUtils.formatDuration(task.duration)} • ${currencySymbol}${cost.toFixed(2)}`);
             }
 
             taskSuffixBox.append(taskTimeLabel);
