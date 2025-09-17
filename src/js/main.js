@@ -86,7 +86,7 @@ export const ValotApplication = GObject.registerClass(
                     application_name: 'valot',
                     application_icon: 'com.odnoyko.valot',
                     developer_name: 'Odnoyko',
-                    version: '0.5.2',
+                    version: '0.6.1',
                     developers: [
                         'Odnoyko'
                     ],

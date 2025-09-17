@@ -250,18 +250,15 @@ class TrackingStateManager {
                 button.set_icon_name('media-playback-start-symbolic');
                 button.set_tooltip_text('Start tracking');
 
-                // FIXED: Only clear input field if it was previously synced with tracking data
-                // Don't clear user input that wasn't related to tracking
-                if (input && !isAnyTracking && !taskName) {
+                // KEEP LATEST TRACKED NAME: Don't clear input field when tracking stops
+                // This allows users to see and reuse the last tracked task name
+                if (input && !isAnyTracking && !taskName && this._lastSyncedTaskName) {
                     try {
-                        // Only clear if the input contains tracking-related data
-                        const currentText = input.get_text();
-                        if (currentText && this._lastSyncedTaskName && currentText === this._lastSyncedTaskName) {
-                            input.set_text('');
-                        }
-                        this._lastSyncedTaskName = null;
+                        // Keep the last tracked task name in the input field
+                        input.set_text(this._lastSyncedTaskName);
+                        // Don't clear _lastSyncedTaskName so it persists
                     } catch (error) {
-                        console.error('📊 TrackingStateManager: Error clearing input field:', error);
+                        console.error('📊 TrackingStateManager: Error keeping input field:', error);
                     }
                 }
             }
