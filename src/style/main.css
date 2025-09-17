@@ -37,6 +37,16 @@ entry.itemNameEntry {
   background-color: alpha(@accent_bg_color, 0.15);
 }
 
+/* Ensure consistent sizing between project icon and text in dropdowns */
+.boxed-list row .row-title {
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.selected-project .row-title {
+  font-weight: 500;
+}
+
 .project-settings-button {
   transition: all 0.2s ease-in-out;
 }

@@ -117,7 +117,7 @@ export class TaskRenderer {
                     const currentTracking = trackingStateManager.getCurrentTracking();
                     if (currentTracking && currentTracking.name === task.name) {
                         // Get database time and add current elapsed time for total
-                        trackingStateManager.getTotalTaskTime(task.name).then(dbTime => {
+                        trackingStateManager.getTotalTaskTime(task.name, task.project_id, task.client_id).then(dbTime => {
                             const elapsedTime = trackingStateManager.currentElapsedTime || 0;
                             const totalTime = dbTime + elapsedTime;
                             const totalTimeStr = this._formatElapsedTime(totalTime);
