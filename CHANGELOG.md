@@ -11,6 +11,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Future features and improvements will be listed here
 
 ---
+## [0.6.1 - 0.6.2] - 17.09.2025
+
+### 🐛 Bug Fixes
+
+---
+
+## [0.6.0] - 16.09.2025
+
+### 🚀 New Version
+- Version bump to 0.6.0
+
+---
+
+## [0.5.4] - 16.09.2025
+
+### 🐛 Bug Fixes
+- Task list tracking widget synchronization
+
+---
+
+## [0.5.3] - 16.09.2025
+
+### 🐛 Bug Fixes
+- Compact mode bug fixes
+
+---
+
+## [0.4.0] - 11.09.2025
+
+### 🏗️ Architecture
+- **New App Architecture**: Completely redesigned application architecture with modular component system
+- **Small Changes**: Various UI improvements and code optimizations
+
+---
 
 ## [0.2.5] - 2025-09-05
 
@@ -87,7 +121,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.2.0] - 2025-01-09
+## [0.2.0] - 2025-09-03
 
 ### 🐛 Bug Fixes
 - **Fixed Project Icon Centering**: Resolved issue where project icons in the project list were not properly centered using Gtk.Grid with homogeneous properties
@@ -103,7 +137,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.1.1] - 2025-01-09
+## [0.1.1] - 2025-08-26
 
 ### 🎯 Major Features Added
 - **Task Stack Selection & Deletion**: Right-click on task stacks to select and delete entire groups of related tasks

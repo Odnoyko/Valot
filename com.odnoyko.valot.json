@@ -12,7 +12,7 @@
 	"--socket=wayland",
 	"--socket=fallback-x11",
 	"--device=dri",
-	"--filesystem=~/valot:create",
+	"--filesystem=xdg-documents:create",
 	"--socket=cups",
 	"--filesystem=xdg-config/kdeglobals:ro",
 	"--env=QT_QPA_PLATFORM=wayland"
@@ -75,7 +75,7 @@
                 {
                     "type" : "git",
                     "url" : "https://gitlab.com/Valo27/valot.git",
-                    "tag" : "v0.2.5"
+                    "tag" : "v0.6.2"
                 }
             ]
         }

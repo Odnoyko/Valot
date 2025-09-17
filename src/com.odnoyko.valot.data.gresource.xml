@@ -3,6 +3,7 @@
   <gresource prefix="/com/odnoyko/valot">
     <file preprocess="xml-stripblanks">gtk/help-overlay.ui</file>
     <file>ui/window.ui</file>
+    <file>ui/compact-tracker.ui</file>
     <file>style/main.css</file>
     <file preprocess="xml-stripblanks" alias="scalable/actions/document-edit-symbolic.svg">../data/icons/interface/document-edit-symbolic.svg</file>
     <file preprocess="xml-stripblanks" alias="scalable/actions/document-open-recent-symbolic.svg">../data/icons/interface/document-open-recent-symbolic.svg</file>
