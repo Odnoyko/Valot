@@ -8,44 +8,46 @@ msgstr ""
 "Project-Id-Version: valot 0.6.3\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-09-20 00:42+0200\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: Automatically generated\n"
-"Language-Team: none\n"
+"PO-Revision-Date: 2025-09-19 23:12+0000\n"
+"Last-Translator: Vitalii  Odnoiko <kontakt@odnoyko.com>\n"
+"Language-Team: Ukrainian <https://hosted.weblate.org/projects/valot/valot/uk/"
+">\n"
 "Language: uk\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
-"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"X-Generator: Weblate 5.14-dev\n"
 
 #. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
 #: src/js/main.js:94
 msgid "translator-credits"
-msgstr ""
+msgstr "Перекладачі"
 
 #: src/js/mainwindow.js:2012
 msgid "All Projects"
-msgstr ""
+msgstr "Усі проекти"
 
 #: src/js/mainwindow.js:2023
 msgid "All Clients"
-msgstr ""
+msgstr "Усі клієнти"
 
 #: src/js/interface/pages/ProjectsPage.js:130 src/ui/window.blp:322
 msgid "Search projects..."
-msgstr ""
+msgstr "Пошук проектів..."
 
 #: src/js/interface/pages/ProjectsPage.js:161
 msgid "Delete Selected"
-msgstr ""
+msgstr "Видалити вибране"
 
 #: src/js/interface/pages/ProjectsPage.js:204
 msgid "No projects found"
-msgstr ""
+msgstr "Проектів не знайдено"
 
 #: src/js/interface/pages/ProjectsPage.js:210
 msgid "Create your first project to get started"
-msgstr ""
+msgstr "Створіть свій перший проєкт, щоб розпочати"
 
 #: src/js/interface/pages/ProjectsPage.js:237
 msgid "Previous page"
