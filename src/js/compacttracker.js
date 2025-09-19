@@ -179,6 +179,13 @@ export const CompactTrackerWindow = GObject.registerClass({
         // Task input validation
         this._task_input.connect('changed', () => {
             const text = this._task_input.get_text().trim();
+            
+            // Sync with main window tracking widgets
+            if (this.mainWindow && this.mainWindow._syncAllInputsFromCurrentWidget) {
+                this.mainWindow._syncAllInputsFromCurrentWidget(text, this);
+            }
+            
+            // Validation
             if (text.length > 0) {
                 const validation = InputValidator.validateTaskName(text);
                 if (!validation.isValid) {

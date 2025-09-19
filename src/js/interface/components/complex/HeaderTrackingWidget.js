@@ -114,6 +114,26 @@ export class HeaderTrackingWidget {
         this.taskEntry.connect('activate', () => {
             this.trackButton.emit('clicked');
         });
+
+        // Connect input change events for synchronization
+        this.taskEntrySignalId = this.taskEntry.connect('changed', () => {
+            const currentText = this.taskEntry.get_text().trim();
+            if (this.parentWindow && this.parentWindow._syncAllInputsFromCurrentWidget) {
+                this.parentWindow._syncAllInputsFromCurrentWidget(currentText, this);
+            }
+            
+            // Validate input
+            if (currentText.length > 0) {
+                const validation = InputValidator.validateTaskName(currentText);
+                if (!validation.isValid) {
+                    InputValidator.showValidationTooltip(this.taskEntry, validation.error, true);
+                } else {
+                    InputValidator.showValidationTooltip(this.taskEntry, null, false);
+                }
+            } else {
+                InputValidator.showValidationTooltip(this.taskEntry, null, false);
+            }
+        });
     }
 
     /**

@@ -503,9 +503,33 @@ export const ValotWindow = GObject.registerClass({
     }
 
     /**
-     * Synchronize all tracking widget inputs when one changes
+     * Synchronize all tracking widget inputs when one changes (debounced)
      */
     _syncAllInputsFromCurrentWidget(text, sourceWidget) {
+        if (!this.trackingWidgets) return;
+        
+        // Clear any existing debounce timeout
+        if (this._syncDebounceTimeout) {
+            clearTimeout(this._syncDebounceTimeout);
+        }
+        
+        // Store the latest sync parameters
+        this._pendingSync = { text, sourceWidget };
+        
+        // Debounce synchronization to avoid excessive updates while typing
+        this._syncDebounceTimeout = setTimeout(() => {
+            if (this._pendingSync) {
+                this._performSync(this._pendingSync.text, this._pendingSync.sourceWidget);
+            }
+            this._syncDebounceTimeout = null;
+            this._pendingSync = null;
+        }, 300); // 300ms delay after user stops typing
+    }
+
+    /**
+     * Perform the actual synchronization of tracking widget inputs
+     */
+    _performSync(text, sourceWidget) {
         if (!this.trackingWidgets) return;
         
         // Sync text to all other widgets except the source
@@ -514,6 +538,49 @@ export const ValotWindow = GObject.registerClass({
                 widget.setTaskTextSilent(text);
             }
         });
+        
+        // Also sync with compact tracker if it's open
+        if (this.compactTrackerWindow && this.compactTrackerWindow.setTaskTextSilent) {
+            const compactText = this.compactTrackerWindow.getTaskText();
+            if (compactText !== text) {
+                this.compactTrackerWindow.setTaskTextSilent(text);
+            }
+        }
+    }
+
+    /**
+     * Force immediate synchronization of all tracking widget inputs
+     * (used when page changes to ensure all fields show the same data)
+     */
+    _forceSyncAllInputs() {
+        if (!this.trackingWidgets || this.trackingWidgets.length === 0) return;
+        
+        // Cancel any pending debounced sync
+        if (this._syncDebounceTimeout) {
+            clearTimeout(this._syncDebounceTimeout);
+            this._syncDebounceTimeout = null;
+        }
+        
+        // Get text from the first widget (master widget)
+        const masterWidget = this.trackingWidgets[0].widget;
+        if (!masterWidget) return;
+        
+        const masterText = masterWidget.getTaskText();
+        
+        // Sync to all other widgets
+        this.trackingWidgets.forEach(({ widget }, index) => {
+            if (index > 0 && widget.getTaskText() !== masterText) {
+                widget.setTaskTextSilent(masterText);
+            }
+        });
+        
+        // Also sync with compact tracker if it's open
+        if (this.compactTrackerWindow && this.compactTrackerWindow.setTaskTextSilent) {
+            const compactText = this.compactTrackerWindow.getTaskText();
+            if (compactText !== masterText) {
+                this.compactTrackerWindow.setTaskTextSilent(masterText);
+            }
+        }
     }
 
     /**
@@ -1065,6 +1132,9 @@ export const ValotWindow = GObject.registerClass({
             // Clear selections when navigating away from Projects and Clients pages
             this._clearPageSelections(index);
             
+            // Force synchronization of all task name inputs when page changes
+            this._forceSyncAllInputs();
+            
             switch (index) {
                 case 0: 
                     this._showPage('tasks'); 
@@ -1197,6 +1267,7 @@ export const ValotWindow = GObject.registerClass({
                 switch (keyval) {
                     case 49: // Ctrl+1 - Tasks
                         this._clearPageSelections(0);
+                        this._forceSyncAllInputs();
                         this._showPage('tasks');
                         if (this.tasksPageComponent) {
                             this.tasksPageComponent.refresh().catch(error => {
@@ -1207,6 +1278,7 @@ export const ValotWindow = GObject.registerClass({
                         return true;
                     case 50: // Ctrl+2 - Projects
                         this._clearPageSelections(1);
+                        this._forceSyncAllInputs();
                         this._showPage('projects');
                         if (this.projectsPageComponent) {
                             this.projectsPageComponent.refresh().catch(error => {
@@ -1216,6 +1288,7 @@ export const ValotWindow = GObject.registerClass({
                         return true;
                     case 51: // Ctrl+3 - Clients
                         this._clearPageSelections(2);
+                        this._forceSyncAllInputs();
                         this._showPage('clients');
                         if (this.clientsPageComponent) {
                             this.clientsPageComponent.refresh().catch(error => {
@@ -1225,6 +1298,7 @@ export const ValotWindow = GObject.registerClass({
                         return true;
                     case 52: // Ctrl+4 - Reports
                         this._clearPageSelections(3);
+                        this._forceSyncAllInputs();
                         this._showPage('reports');
                         if (this.reportsPageComponent) {
                             this.reportsPageComponent.refresh().catch(error => {
