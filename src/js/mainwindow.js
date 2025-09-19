@@ -498,14 +498,38 @@ export const ValotWindow = GObject.registerClass({
             // Master tracking widget set
         }
         
-        // ВАЖНО: Также инициализировать основные template кнопки
+        // IMPORTANT: Also initialize main template buttons
         this._setupMainTrackingButtons();
     }
 
     /**
-     * Synchronize all tracking widget inputs when one changes
+     * Synchronize all tracking widget inputs when one changes (debounced)
      */
     _syncAllInputsFromCurrentWidget(text, sourceWidget) {
+        if (!this.trackingWidgets) return;
+        
+        // Clear any existing debounce timeout
+        if (this._syncDebounceTimeout) {
+            clearTimeout(this._syncDebounceTimeout);
+        }
+        
+        // Store the latest sync parameters
+        this._pendingSync = { text, sourceWidget };
+        
+        // Debounce synchronization to avoid excessive updates while typing
+        this._syncDebounceTimeout = setTimeout(() => {
+            if (this._pendingSync) {
+                this._performSync(this._pendingSync.text, this._pendingSync.sourceWidget);
+            }
+            this._syncDebounceTimeout = null;
+            this._pendingSync = null;
+        }, 300); // 300ms delay after user stops typing
+    }
+
+    /**
+     * Perform the actual synchronization of tracking widget inputs
+     */
+    _performSync(text, sourceWidget) {
         if (!this.trackingWidgets) return;
         
         // Sync text to all other widgets except the source
@@ -514,6 +538,49 @@ export const ValotWindow = GObject.registerClass({
                 widget.setTaskTextSilent(text);
             }
         });
+        
+        // Also sync with compact tracker if it's open
+        if (this.compactTrackerWindow && this.compactTrackerWindow.setTaskTextSilent) {
+            const compactText = this.compactTrackerWindow.getTaskText();
+            if (compactText !== text) {
+                this.compactTrackerWindow.setTaskTextSilent(text);
+            }
+        }
+    }
+
+    /**
+     * Force immediate synchronization of all tracking widget inputs
+     * (used when page changes to ensure all fields show the same data)
+     */
+    _forceSyncAllInputs() {
+        if (!this.trackingWidgets || this.trackingWidgets.length === 0) return;
+        
+        // Cancel any pending debounced sync
+        if (this._syncDebounceTimeout) {
+            clearTimeout(this._syncDebounceTimeout);
+            this._syncDebounceTimeout = null;
+        }
+        
+        // Get text from the first widget (master widget)
+        const masterWidget = this.trackingWidgets[0].widget;
+        if (!masterWidget) return;
+        
+        const masterText = masterWidget.getTaskText();
+        
+        // Sync to all other widgets
+        this.trackingWidgets.forEach(({ widget }, index) => {
+            if (index > 0 && widget.getTaskText() !== masterText) {
+                widget.setTaskTextSilent(masterText);
+            }
+        });
+        
+        // Also sync with compact tracker if it's open
+        if (this.compactTrackerWindow && this.compactTrackerWindow.setTaskTextSilent) {
+            const compactText = this.compactTrackerWindow.getTaskText();
+            if (compactText !== masterText) {
+                this.compactTrackerWindow.setTaskTextSilent(masterText);
+            }
+        }
     }
 
     /**
@@ -1004,7 +1071,7 @@ export const ValotWindow = GObject.registerClass({
      * Setup main template tracking buttons (from UI template)
      */
     _setupMainTrackingButtons() {
-        // Основная кнопка Tasks page
+        // Main Tasks page button
         if (this._track_button && this._task_name && this._actual_time) {
             // Initializing main track button
             GlobalTracking.registerTrackingComponent(null, {
@@ -1015,7 +1082,7 @@ export const ValotWindow = GObject.registerClass({
             });
         }
         
-        // Кнопки других страниц
+        // Other page buttons
         const pageButtons = [
             { button: this._track_button_projects, input: this._task_name_projects, label: this._actual_time_projects, page: 'projects' },
             { button: this._track_button_clients, input: this._task_name_clients, label: this._actual_time_clients, page: 'clients' },
@@ -1064,6 +1131,9 @@ export const ValotWindow = GObject.registerClass({
             
             // Clear selections when navigating away from Projects and Clients pages
             this._clearPageSelections(index);
+            
+            // Force synchronization of all task name inputs when page changes
+            this._forceSyncAllInputs();
             
             switch (index) {
                 case 0: 
@@ -1197,6 +1267,7 @@ export const ValotWindow = GObject.registerClass({
                 switch (keyval) {
                     case 49: // Ctrl+1 - Tasks
                         this._clearPageSelections(0);
+                        this._forceSyncAllInputs();
                         this._showPage('tasks');
                         if (this.tasksPageComponent) {
                             this.tasksPageComponent.refresh().catch(error => {
@@ -1207,6 +1278,7 @@ export const ValotWindow = GObject.registerClass({
                         return true;
                     case 50: // Ctrl+2 - Projects
                         this._clearPageSelections(1);
+                        this._forceSyncAllInputs();
                         this._showPage('projects');
                         if (this.projectsPageComponent) {
                             this.projectsPageComponent.refresh().catch(error => {
@@ -1216,6 +1288,7 @@ export const ValotWindow = GObject.registerClass({
                         return true;
                     case 51: // Ctrl+3 - Clients
                         this._clearPageSelections(2);
+                        this._forceSyncAllInputs();
                         this._showPage('clients');
                         if (this.clientsPageComponent) {
                             this.clientsPageComponent.refresh().catch(error => {
@@ -1225,6 +1298,7 @@ export const ValotWindow = GObject.registerClass({
                         return true;
                     case 52: // Ctrl+4 - Reports
                         this._clearPageSelections(3);
+                        this._forceSyncAllInputs();
                         this._showPage('reports');
                         if (this.reportsPageComponent) {
                             this.reportsPageComponent.refresh().catch(error => {
@@ -1306,24 +1380,27 @@ export const ValotWindow = GObject.registerClass({
     }
 
     _showCompactTrackerOnHide() {
-        
-        if (!this.compactTrackerWindow) {
-            this.compactTrackerWindow = new CompactTrackerWindow(this.application, this);
-            
-            // Handle window destruction properly
-            this.compactTrackerWindow.connect('destroy', () => {
-                this.compactTrackerWindow = null;
-            });
-            
+        // Enforce single instance: close existing compact tracker if it exists
+        if (this.compactTrackerWindow) {
+            this.compactTrackerWindow.close();
+            this.compactTrackerWindow = null;
         }
+        
+        // Create new compact tracker window
+        this.compactTrackerWindow = new CompactTrackerWindow(this.application, this);
+        
+        // Handle window destruction properly
+        this.compactTrackerWindow.connect('destroy', () => {
+            this.compactTrackerWindow = null;
+        });
         
         this.compactTrackerWindow.syncWithMainWindow();
         this.compactTrackerWindow.present();
     }
 
     _launchCompactTrackerDebug(shiftPressed = false) {
-        
         if (!this.compactTrackerWindow) {
+            // Enforce single instance: close existing compact tracker if it exists
             this.compactTrackerWindow = new CompactTrackerWindow(this.application, this);
             
             // Set shift mode on compact tracker
@@ -1340,7 +1417,6 @@ export const ValotWindow = GObject.registerClass({
             // Hide main window only if shift not pressed
             if (!shiftPressed) {
                 this.set_visible(false);
-            } else {
             }
         } else {
             if (this.compactTrackerWindow.is_visible()) {
@@ -1359,7 +1435,6 @@ export const ValotWindow = GObject.registerClass({
                 // Hide main window only if shift not pressed
                 if (!shiftPressed) {
                     this.set_visible(false);
-                } else {
                 }
             }
         }
@@ -1934,7 +2009,7 @@ export const ValotWindow = GObject.registerClass({
 
         // Update project filter dropdown
         const projectStringList = new Gtk.StringList();
-        projectStringList.append('All Projects');
+        projectStringList.append(_('All Projects'));
         if (this.allProjects) {
             this.allProjects.forEach(project => {
                 projectStringList.append(project.name);
@@ -1945,7 +2020,7 @@ export const ValotWindow = GObject.registerClass({
 
         // Update client filter dropdown
         const clientStringList = new Gtk.StringList();
-        clientStringList.append('All Clients');
+        clientStringList.append(_('All Clients'));
         if (this.allClients) {
             this.allClients.forEach(client => {
                 clientStringList.append(client.name);

@@ -1,0 +1,8 @@
+[translation]
+filename = po/valot.pot
+template = po/valot.pot
+base = po/valot.pot
+new_lang = add
+
+[gettext]
+template = po/valot.pot

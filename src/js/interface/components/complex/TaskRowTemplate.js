@@ -21,7 +21,7 @@ export class TaskRowTemplate {
     _createTaskWidget() {
         // Calculate cost
         const cost = (this.task.duration / 3600) * (this.task.client_rate || 0);
-        const currency = this.task.currency || 'EUR';
+        const currency = this.task.client_currency || 'EUR';
         const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
         const costText = cost > 0 ? ` • ${currencySymbol}${cost.toFixed(2)}` : '';
 
@@ -99,7 +99,7 @@ export class TaskRowTemplate {
 
         // Prepare separate money text
         if (cost > 0) {
-            const currency = this.task.currency || 'EUR';
+            const currency = this.task.client_currency || 'EUR';
             const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
             moneyText = `${currencySymbol}${cost.toFixed(2)}`;
         }
@@ -122,7 +122,7 @@ export class TaskRowTemplate {
         if (this.moneyLabel && this.task.client_rate > 0) {
             const clientInfo = {
                 rate: this.task.client_rate || 0,
-                currency: this.task.currency || 'EUR'
+                currency: this.task.client_currency || 'EUR'
             };
             trackingStateManager.registerMoneyLabel(this.moneyLabel, this.taskGroupKey, clientInfo);
         }

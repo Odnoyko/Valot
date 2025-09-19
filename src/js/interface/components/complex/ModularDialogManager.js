@@ -200,10 +200,10 @@ export class ModularDialogManager {
      */
     showConfirmDialog(config = {}) {
         const {
-            title = 'Confirm Action',
-            message = 'Are you sure?',
-            confirmLabel = 'Confirm',
-            cancelLabel = 'Cancel',
+            title = _('Confirm Action'),
+            message = _('Are you sure?'),
+            confirmLabel = _('Confirm'),
+            cancelLabel = _('Cancel'),
             destructive = false,
             onConfirm = null,
             onCancel = null,

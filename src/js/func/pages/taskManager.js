@@ -29,6 +29,7 @@ export class TaskManager {
                 p.color as project_color,
                 c.name as client_name,
                 c.rate as client_rate,
+                c.currency as client_currency,
                 CASE WHEN t.end_time IS NULL AND t.start_time IS NOT NULL THEN 1 ELSE 0 END as is_active
             FROM Task t
             LEFT JOIN Project p ON t.project_id = p.id
@@ -75,6 +76,7 @@ export class TaskManager {
                 p.color as project_color,
                 c.name as client_name,
                 c.rate as client_rate,
+                c.currency as client_currency,
                 CASE WHEN t.end_time IS NULL AND t.start_time IS NOT NULL THEN 1 ELSE 0 END as is_active
             FROM Task t
             LEFT JOIN Project p ON t.project_id = p.id
@@ -154,6 +156,7 @@ export class TaskManager {
                 p.color as project_color,
                 c.name as client_name,
                 c.rate as client_rate,
+                c.currency as client_currency,
                 CASE WHEN t.end_time IS NULL AND t.start_time IS NOT NULL THEN 1 ELSE 0 END as is_active
             FROM Task t
             LEFT JOIN Project p ON t.project_id = p.id
@@ -383,7 +386,8 @@ export class TaskManager {
                         project_color: result.get_value_at(10, i),
                         client_name: result.get_value_at(11, i),
                         client_rate: result.get_value_at(12, i) || 0,
-                        is_active: result.get_value_at(13, i) || 0
+                        client_currency: result.get_value_at(13, i) || 'EUR',
+                        is_active: result.get_value_at(14, i) || 0
                     };
 
                     tasks.push(task);

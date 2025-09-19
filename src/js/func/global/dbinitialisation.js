@@ -111,6 +111,7 @@ function initDatabase(conn) {
         ensureProjectIconColumn(conn);
         ensureDarkIconsColumn(conn);
         ensureIconColorModeColumn(conn);
+        ensureClientCurrencyColumn(conn);
 
         // Database schema successfully initialized
 
@@ -154,6 +155,20 @@ function ensureIconColorModeColumn(conn) {
         // Column already exists, ignore error
         if (error.message && error.message.includes('duplicate column name')) {
             // icon_color_mode column already exists
+        } else {
+        }
+    }
+}
+
+function ensureClientCurrencyColumn(conn) {
+    try {
+        // Add currency column if it doesn't exist
+        const alterSql = `ALTER TABLE Client ADD COLUMN currency TEXT DEFAULT 'USD'`;
+        executeNonSelectCommand(conn, alterSql);
+    } catch (error) {
+        // Column already exists, ignore error
+        if (error.message && error.message.includes('duplicate column name')) {
+            // currency column already exists
         } else {
         }
     }
