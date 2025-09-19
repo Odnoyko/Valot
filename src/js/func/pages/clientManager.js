@@ -188,7 +188,7 @@ export class ClientManager {
 
         // ROW 1: Client name input only
         const nameEntry = new Gtk.Entry({
-            placeholder_text: 'Client name',
+            placeholder_text: _('Client name'),
             text: prefillName,
             hexpand: true
         });
@@ -302,30 +302,30 @@ export class ClientManager {
                 const name = nameEntry.get_text().trim();
                 const rate = parseFloat(rateEntry.get_text()) || 0;
                 
-                // Валидация имени клиента с визуальной обратной связью
+                // Client name validation with visual feedback
                 if (!name) {
                     nameEntry.add_css_class('error');
-                    nameEntry.set_tooltip_text('Имя клиента обязательно');
+                    nameEntry.set_tooltip_text('Client name is required');
                     return;
                 }
                 
                 if (name.length < 2) {
                     nameEntry.add_css_class('error');
-                    nameEntry.set_tooltip_text('Имя клиента должно содержать минимум 2 символа');
+                    nameEntry.set_tooltip_text('Client name must contain at least 2 characters');
                     return;
                 }
                 
                 if (name.length > 100) {
                     nameEntry.add_css_class('error');
-                    nameEntry.set_tooltip_text('Имя клиента не должно превышать 100 символов');
+                    nameEntry.set_tooltip_text('Client name must not exceed 100 characters');
                     return;
                 }
                 
-                // Убираем класс ошибки если валидация прошла
+                // Remove error class if validation passed
                 nameEntry.remove_css_class('error');
                 nameEntry.set_tooltip_text('');
                 
-                // Создаем клиента
+                // Create client
                 const success = this.createClient(
                     name,
                     '', // email
@@ -341,7 +341,7 @@ export class ClientManager {
                         parentWindow._loadClients();
                     }
                     
-                    // Обновляем страницу клиентов
+                    // Update clients page
                     if (parentWindow.clientsPageComponent && parentWindow.clientsPageComponent.refresh) {
                         parentWindow.clientsPageComponent.refresh();
                     } else if (parentWindow.pageComponents && parentWindow.pageComponents.clients) {
@@ -361,7 +361,7 @@ export class ClientManager {
                         }
                     }, 200);
                     
-                    // Очищаем поле поиска если был prefill
+                    // Clear search field if there was prefill
                     if (prefillName) {
                         setTimeout(() => {
                             if (parentWindow.clientsPageComponent && parentWindow.clientsPageComponent.clientSearch) {
@@ -370,7 +370,7 @@ export class ClientManager {
                         }, 100);
                     }
                 } else {
-                    return; // Не закрываем диалог при ошибке
+                    return; // Don't close dialog on error
                 }
             }
             dialog.close();

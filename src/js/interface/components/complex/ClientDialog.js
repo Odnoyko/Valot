@@ -286,9 +286,9 @@ export class ClientDialog extends FormDialog {
         this.mode = 'edit';
         
         // Update dialog title
-        this.config.title = 'Edit Client';
-        this.config.subtitle = 'Update client information';
-        this.config.submitLabel = 'Save Changes';
+        this.config.title = _('Edit Client');
+        this.config.subtitle = _('Update client information');
+        this.config.submitLabel = _('Save Changes');
         
         // Update form data
         this.setFormData({
@@ -311,9 +311,9 @@ export class ClientDialog extends FormDialog {
         this.mode = 'create';
         
         // Update dialog title
-        this.config.title = 'Create New Client';
-        this.config.subtitle = 'Add a new client with contact details and billing rates';
-        this.config.submitLabel = 'Create Client';
+        this.config.title = _('Create New Client');
+        this.config.subtitle = _('Add a new client with contact details and billing rates');
+        this.config.submitLabel = _('Create Client');
         
         // Clear form data
         this.setFormData({

@@ -498,7 +498,7 @@ export const ValotWindow = GObject.registerClass({
             // Master tracking widget set
         }
         
-        // ВАЖНО: Также инициализировать основные template кнопки
+        // IMPORTANT: Also initialize main template buttons
         this._setupMainTrackingButtons();
     }
 
@@ -1071,7 +1071,7 @@ export const ValotWindow = GObject.registerClass({
      * Setup main template tracking buttons (from UI template)
      */
     _setupMainTrackingButtons() {
-        // Основная кнопка Tasks page
+        // Main Tasks page button
         if (this._track_button && this._task_name && this._actual_time) {
             // Initializing main track button
             GlobalTracking.registerTrackingComponent(null, {
@@ -1082,7 +1082,7 @@ export const ValotWindow = GObject.registerClass({
             });
         }
         
-        // Кнопки других страниц
+        // Other page buttons
         const pageButtons = [
             { button: this._track_button_projects, input: this._task_name_projects, label: this._actual_time_projects, page: 'projects' },
             { button: this._track_button_clients, input: this._task_name_clients, label: this._actual_time_clients, page: 'clients' },
@@ -1380,24 +1380,27 @@ export const ValotWindow = GObject.registerClass({
     }
 
     _showCompactTrackerOnHide() {
-        
-        if (!this.compactTrackerWindow) {
-            this.compactTrackerWindow = new CompactTrackerWindow(this.application, this);
-            
-            // Handle window destruction properly
-            this.compactTrackerWindow.connect('destroy', () => {
-                this.compactTrackerWindow = null;
-            });
-            
+        // Enforce single instance: close existing compact tracker if it exists
+        if (this.compactTrackerWindow) {
+            this.compactTrackerWindow.close();
+            this.compactTrackerWindow = null;
         }
+        
+        // Create new compact tracker window
+        this.compactTrackerWindow = new CompactTrackerWindow(this.application, this);
+        
+        // Handle window destruction properly
+        this.compactTrackerWindow.connect('destroy', () => {
+            this.compactTrackerWindow = null;
+        });
         
         this.compactTrackerWindow.syncWithMainWindow();
         this.compactTrackerWindow.present();
     }
 
     _launchCompactTrackerDebug(shiftPressed = false) {
-        
         if (!this.compactTrackerWindow) {
+            // Enforce single instance: close existing compact tracker if it exists
             this.compactTrackerWindow = new CompactTrackerWindow(this.application, this);
             
             // Set shift mode on compact tracker
@@ -1414,7 +1417,6 @@ export const ValotWindow = GObject.registerClass({
             // Hide main window only if shift not pressed
             if (!shiftPressed) {
                 this.set_visible(false);
-            } else {
             }
         } else {
             if (this.compactTrackerWindow.is_visible()) {
@@ -1433,7 +1435,6 @@ export const ValotWindow = GObject.registerClass({
                 // Hide main window only if shift not pressed
                 if (!shiftPressed) {
                     this.set_visible(false);
-                } else {
                 }
             }
         }
@@ -2008,7 +2009,7 @@ export const ValotWindow = GObject.registerClass({
 
         // Update project filter dropdown
         const projectStringList = new Gtk.StringList();
-        projectStringList.append('All Projects');
+        projectStringList.append(_('All Projects'));
         if (this.allProjects) {
             this.allProjects.forEach(project => {
                 projectStringList.append(project.name);
@@ -2019,7 +2020,7 @@ export const ValotWindow = GObject.registerClass({
 
         // Update client filter dropdown
         const clientStringList = new Gtk.StringList();
-        clientStringList.append('All Clients');
+        clientStringList.append(_('All Clients'));
         if (this.allClients) {
             this.allClients.forEach(client => {
                 clientStringList.append(client.name);

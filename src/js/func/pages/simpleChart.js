@@ -44,7 +44,7 @@ export class SimpleChart {
 
     _showPlaceholder() {
         const placeholderLabel = new Gtk.Label({
-            label: '📊 No data yet\nStart tracking time to see your productivity chart',
+            label: _('📊 No data yet\nStart tracking time to see your productivity chart'),
             css_classes: ['dim-label'],
             justify: Gtk.Justification.CENTER,
             halign: Gtk.Align.CENTER,
@@ -63,13 +63,13 @@ export class SimpleChart {
         });
         
         // Chart title - dynamic based on period with German week numbering
-        let titleText = '📊 Weekly Activity';
+        let titleText = _('📊 Weekly Activity');
         if (this.currentPeriod === 'week') {
             const currentWeek = this._getGermanWeekNumber(new Date());
-            titleText = `📊 Weekly Activity (KW ${currentWeek})`;
+            titleText = _('📊 Weekly Activity (KW %d)').replace('%d', currentWeek);
         }
-        if (this.currentPeriod === 'month') titleText = '📊 Monthly Activity (4 weeks)';
-        if (this.currentPeriod === 'year') titleText = '📊 Yearly Activity (12 months)';
+        if (this.currentPeriod === 'month') titleText = _('📊 Monthly Activity (4 weeks)');
+        if (this.currentPeriod === 'year') titleText = _('📊 Yearly Activity (12 months)');
         
         const titleLabel = new Gtk.Label({
             label: titleText,

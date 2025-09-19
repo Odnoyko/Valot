@@ -127,7 +127,7 @@ export class ProjectsPage {
         });
 
         const searchEntry = new Gtk.SearchEntry({
-            placeholder_text: 'Search projects...',
+            placeholder_text: _('Search projects...'),
             hexpand: true
         });
 
@@ -158,7 +158,7 @@ export class ProjectsPage {
 
         const deleteSelectedBtn = new Button({
             iconName: 'edit-delete-symbolic',
-            label: 'Delete Selected',
+            label: _('Delete Selected'),
             cssClasses: ['flat', 'destructive-action'],
             onClick: () => this._deleteSelectedProjects()
         });
@@ -201,13 +201,13 @@ export class ProjectsPage {
         });
 
         const emptyLabel = new Gtk.Label({
-            label: 'No projects found',
+            label: _('No projects found'),
             css_classes: ['title-2'],
             halign: Gtk.Align.CENTER
         });
 
         const emptySubLabel = new Gtk.Label({
-            label: 'Create your first project to get started',
+            label: _('Create your first project to get started'),
             css_classes: ['dim-label'],
             halign: Gtk.Align.CENTER
         });
@@ -234,19 +234,19 @@ export class ProjectsPage {
 
         this.prevProjectsButton = new Button({
             iconName: 'go-previous-symbolic',
-            tooltipText: 'Previous page',
+            tooltipText: _('Previous page'),
             cssClasses: ['circular'],
             onClick: () => this._previousPage()
         });
 
         this.projectsPageInfo = new Label({
-            text: 'Page 1 of 1',
+            text: _('Page 1 of 1'),
             cssClasses: ['monospace']
         });
 
         this.nextProjectsButton = new Button({
             iconName: 'go-next-symbolic',
-            tooltipText: 'Next page',
+            tooltipText: _('Next page'),
             cssClasses: ['circular'],
             onClick: () => this._nextPage()
         });
@@ -349,7 +349,7 @@ export class ProjectsPage {
                     halign: Gtk.Align.CENTER,
                     valign: Gtk.Align.CENTER,
                     css_classes: ['project-settings-button', 'flat'],
-                    tooltip_text: 'Project settings - Change color and icon'
+                    tooltip_text: _('Project settings - Change color and icon')
                 });
                 
                 // Create icon widget (handle both emoji and system icons)
@@ -576,12 +576,12 @@ export class ProjectsPage {
 
         // Create simple confirmation dialog
         const dialog = new Adw.AlertDialog({
-            heading: 'Delete Projects',
-            body: `Are you sure you want to delete ${this.selectedProjects.size} selected project(s)? This cannot be undone.`
+            heading: _('Delete Projects'),
+            body: _('Are you sure you want to delete %d selected project(s)? This cannot be undone.').replace('%d', this.selectedProjects.size)
         });
 
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('delete', 'Delete');
+        dialog.add_response('cancel', _('Cancel'));
+        dialog.add_response('delete', _('Delete'));
         dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
 
         dialog.connect('response', (dialog, response) => {
@@ -801,8 +801,8 @@ export class ProjectsPage {
         }
 
         const dialog = new Adw.AlertDialog({
-            heading: 'Edit Project Name',
-            body: `Change the name of "${project.name}"`
+            heading: _('Edit Project Name'),
+            body: _('Change the name of "%s"').replace('%s', project.name)
         });
 
         const entry = new Gtk.Entry({
@@ -811,8 +811,8 @@ export class ProjectsPage {
         });
 
         dialog.set_extra_child(entry);
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('save', 'Save');
+        dialog.add_response('cancel', _('Cancel'));
+        dialog.add_response('save', _('Save'));
         dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
 
         dialog.connect('response', (dialog, response) => {

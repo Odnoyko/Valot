@@ -63,7 +63,7 @@ export class ClientsPage {
         this.addClientBtn = this.parentWindow._add_client_btn;
         this.clientList = this.parentWindow._client_list;
         
-        // Debug: проверяем что нашли
+        // Debug: check what we found
         // ClientsPage init - elements found
         
     }
@@ -105,7 +105,7 @@ export class ClientsPage {
     showAddClientDialogNEW() {
         try {
             
-            // Get text from search input directly - простой способ
+            // Get text from search input directly - simple way
             const searchText = this.clientSearch ? this.clientSearch.get_text().trim() : '';
             
             if (this.clientManager) {
@@ -114,11 +114,11 @@ export class ClientsPage {
                 console.error('❌ ClientManager not available');
             }
         } catch (error) {
-            console.error('❌ Ошибка в showAddClientDialogNEW():', error);
+            console.error('❌ Error in showAddClientDialogNEW():', error);
         }
     }
 
-    // Старый метод для совместимости
+    // Legacy method for compatibility
     showAddClientDialog() {
         this.showAddClientDialogNEW();
     }

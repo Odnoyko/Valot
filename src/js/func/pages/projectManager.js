@@ -20,7 +20,7 @@ export class ProjectManager {
         this.executeNonSelectCommand = executeNonSelectCommand;
         this.projectColors = projectColors;
         this.projectIcons = projectIcons;
-        this.parentWindow = null; // Будет установлено при инициализации
+        this.parentWindow = null; // Will be set during initialization
     }
 
     setParentWindow(parentWindow) {
@@ -1179,10 +1179,10 @@ export class ProjectManager {
         return { row, nameEntry };
     }
 
-    // ====== МЕТОДЫ ОТОБРАЖЕНИЯ ПРОЕКТОВ ======
+    // ====== PROJECT DISPLAY METHODS ======
 
     updateProjectsList() {
-        // Используем функцию фильтрации для отображения всех проектов (пустой поиск = показать все)
+        // Use filtering function to display all projects (empty search = show all)
         this.filterProjects();
     }
 
@@ -1202,17 +1202,17 @@ export class ProjectManager {
 
         const searchText = this.parentWindow._project_search.get_text().toLowerCase().trim();
         
-        // Очищаем существующие проекты
+        // Clear existing projects
         while (this.parentWindow._project_list.get_first_child()) {
             this.parentWindow._project_list.remove(this.parentWindow._project_list.get_first_child());
         }
         
-        // Инициализируем множество выбранных проектов если не существует
+        // Initialize selected projects set if it doesn't exist
         if (!this.parentWindow.selectedProjects) {
             this.parentWindow.selectedProjects = new Set();
         }
         
-        // Фильтруем проекты по тексту поиска
+        // Filter projects by search text
         this.parentWindow.filteredProjects = searchText.length === 0 
             ? this.parentWindow.allProjects 
             : this.parentWindow.allProjects.filter(project => 
@@ -1231,15 +1231,15 @@ export class ProjectManager {
         const paginatedProjects = this.parentWindow.filteredProjects.slice(start, end);
         
         
-        // Отображаем проекты для текущей страницы
+        // Display projects for current page
         paginatedProjects.forEach(project => {
             this.renderProjectRow(project);
         });
         
-        // Обновляем пагинацию
+        // Update pagination
         this.parentWindow._updateProjectsPaginationControls();
         
-        // Обновляем UI выбора
+        // Update selection UI
         this.parentWindow._updateProjectSelectionUI();
     }
 
@@ -1249,13 +1249,13 @@ export class ProjectManager {
             return;
         }
 
-        // Создаём ListBoxRow с пользовательским содержимым
+        // Create ListBoxRow with custom content
         const row = new Gtk.ListBoxRow({
             activatable: false,
             selectable: false
         });
         
-        // Создаём главный горизонтальный контейнер
+        // Create main horizontal container
         const mainBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 12,
@@ -1276,14 +1276,14 @@ export class ProjectManager {
         const iconWidget = WidgetFactory.createProjectIconWidget(project);
         iconButton.set_child(iconWidget);
         
-        // Редактируемое название проекта
+        // Editable project name
         const nameLabel = new Gtk.EditableLabel({
             text: project.name,
             hexpand: true,
             valign: Gtk.Align.CENTER
         });
         
-        // Обрабатываем изменения названия
+        // Handle name changes
         nameLabel.connect('changed', () => {
             const newName = nameLabel.get_text().trim();
             if (newName && newName !== project.name) {
@@ -1291,23 +1291,23 @@ export class ProjectManager {
             }
         });
         
-        // Добавляем правый клик к редактируемому ярлыку для выбора (без контекстного меню)
+        // Add right click to editable label for selection (without context menu)
         const labelRightClick = new Gtk.GestureClick({
-            button: 3, // Правая кнопка мыши
+            button: 3, // Right mouse button
             propagation_phase: Gtk.PropagationPhase.CAPTURE
         });
         
         labelRightClick.connect('pressed', (gesture, n_press, x, y) => {
             this.parentWindow._toggleProjectSelection(project.id, row);
             
-            // Предотвращаем появление контекстного меню
+            // Prevent context menu from appearing
             gesture.set_state(Gtk.EventSequenceState.CLAIMED);
             return Gdk.EVENT_STOP;
         });
         
         nameLabel.add_controller(labelRightClick);
         
-        // Информация о времени справа
+        // Time information on the right
         const timeLabel = new Gtk.Label({
             label: this.parentWindow._formatDuration(project.totalTime),
             css_classes: ['time-display', 'monospace', 'title-4'],
@@ -1315,18 +1315,18 @@ export class ProjectManager {
             halign: Gtk.Align.END
         });
         
-        // Собираем всё
+        // Assemble everything
         mainBox.append(iconButton);
         mainBox.append(nameLabel);
         mainBox.append(timeLabel);
         row.set_child(mainBox);
         
-        // Добавляем логику выбора (правый клик для выбора/отмены выбора)
+        // Add selection logic (right click for select/deselect)
         this.parentWindow._addProjectSelectionHandlers(row, project);
         
-        // Применяем стиль выбора если выбран
+        // Apply selection style if selected
         if (this.parentWindow.selectedProjects.has(project.id)) {
-            row.add_css_class('selected-task'); // Используем тот же класс что и для задач
+            row.add_css_class('selected-task'); // Use same class as for tasks
         }
         
         this.parentWindow._project_list.append(row);
@@ -1338,7 +1338,7 @@ export class ProjectManager {
             body: `Configure color and icon for "${project.name}"`
         });
 
-        // Создаём главный контейнер с 2-колоночным макетом
+        // Create main container with 2-column layout
         const mainBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 24,
@@ -1349,7 +1349,7 @@ export class ProjectManager {
             homogeneous: true
         });
 
-        // === ЛЕВАЯ КОЛОНКА - ЦВЕТ ===
+        // === LEFT COLUMN - COLOR ===
         const colorColumn = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
             spacing: 12,
@@ -1362,7 +1362,7 @@ export class ProjectManager {
             css_classes: ['heading']
         });
 
-        // Превью цвета - кликабельное
+        // Color preview - clickable
         const colorPreview = new Gtk.Button({
             width_request: 48,
             height_request: 48,
@@ -1371,7 +1371,7 @@ export class ProjectManager {
             tooltip_text: 'Click to change color'
         });
 
-        // Применяем текущий цвет проекта
+        // Apply current project color
         const colorProvider = new Gtk.CssProvider();
         colorProvider.load_from_string(`
             .color-preview {
@@ -1386,7 +1386,7 @@ export class ProjectManager {
         `);
         colorPreview.get_style_context().add_provider(colorProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
 
-        // Обработчик выбора цвета - прямо на превью
+        // Color selection handler - directly on preview
         colorPreview.connect('clicked', () => {
             this._showColorPicker(project, colorPreview, colorProvider);
         });
@@ -1394,7 +1394,7 @@ export class ProjectManager {
         colorColumn.append(colorLabel);
         colorColumn.append(colorPreview);
 
-        // === ПРАВАЯ КОЛОНКА - ИКОНКА ===
+        // === RIGHT COLUMN - ICON ===
         const iconColumn = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
             spacing: 12,
@@ -1407,7 +1407,7 @@ export class ProjectManager {
             css_classes: ['heading']
         });
 
-        // Превью иконки - кликабельное
+        // Icon preview - clickable
         const iconPreview = new Gtk.Button({
             width_request: 48,
             height_request: 48,
@@ -1431,7 +1431,7 @@ export class ProjectManager {
         }
         iconPreview.set_child(previewIconWidget);
 
-        // Переключатели для типа иконки с иконками
+        // Icon type toggles with icons
         const iconTypeGroup = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 0,
@@ -1439,7 +1439,7 @@ export class ProjectManager {
             halign: Gtk.Align.CENTER
         });
 
-        // Кнопка Icons с иконкой
+        // Icons button with icon
         const iconsButtonBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 6
@@ -1455,7 +1455,7 @@ export class ProjectManager {
             active: !project.icon || !project.icon.startsWith('emoji:')
         });
 
-        // Кнопка Emoji с эмодзи
+        // Emoji button with emoji
         const emojiButtonBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 6
@@ -1471,7 +1471,7 @@ export class ProjectManager {
             active: project.icon && project.icon.startsWith('emoji:')
         });
 
-        // Группировка переключателей
+        // Group toggles
         iconsButton.connect('toggled', () => {
             if (iconsButton.get_active()) {
                 emojiButton.set_active(false);
@@ -1487,7 +1487,7 @@ export class ProjectManager {
         iconTypeGroup.append(iconsButton);
         iconTypeGroup.append(emojiButton);
 
-        // Обработчик клика по превью иконки - открывает picker в зависимости от выбранного типа
+        // Icon preview click handler - opens picker based on selected type
         iconPreview.connect('clicked', () => {
             const isEmoji = emojiButton.get_active();
             this._showIconPicker(project, iconPreview, previewIconWidget, isEmoji);
@@ -1497,7 +1497,7 @@ export class ProjectManager {
         iconColumn.append(iconPreview);
         iconColumn.append(iconTypeGroup);
 
-        // Собираем колонки
+        // Assemble columns
         mainBox.append(colorColumn);
         mainBox.append(iconColumn);
 
@@ -1508,12 +1508,12 @@ export class ProjectManager {
 
         dialog.connect('response', (dialog, response) => {
             if (response === 'save') {
-                // Сохраняем изменения - цвет уже обновлен в project.color
-                // Иконка уже обновлена в project.icon
+                // Save changes - color already updated in project.color
+                // Icon already updated in project.icon
                 if (project.id) {
                     // For existing projects, update in database
                     this.updateProject(project.id, project.name, project.color, project.icon, this.parentWindow, project.icon_color_mode);
-                    // Header обновится автоматически через _loadProjects
+                    // Header will update automatically via _loadProjects
                 }
                 
                 // Call callback if provided (for ProjectDialog integration)
@@ -1528,17 +1528,17 @@ export class ProjectManager {
     }
 
     _showColorPicker(project, previewButton, cssProvider) {
-        // Используем GTK4 ColorDialog
+        // Use GTK4 ColorDialog
         const colorDialog = new Gtk.ColorDialog({
             title: 'Select Project Color',
             modal: true,
             with_alpha: false
         });
 
-        // Парсим текущий цвет
+        // Parse current color
         const currentColor = new Gdk.RGBA();
         if (!currentColor.parse(project.color)) {
-            currentColor.parse('#cccccc'); // Fallback цвет
+            currentColor.parse('#cccccc'); // Fallback color
         }
 
         colorDialog.choose_rgba(this.parentWindow, currentColor, null, (source_object, result) => {
