@@ -63,6 +63,10 @@ meson install -C _build
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+### Translations
+
+Valot uses [Weblate](https://hosted.weblate.org/) for translations. You can help translate Valot into your language by contributing on our Weblate project. This helps make Valot accessible to users worldwide.
+
 ## License
 
 This project is licensed under the MIT license. See the LICENSE file for details.
