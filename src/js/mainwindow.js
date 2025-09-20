@@ -48,6 +48,7 @@ import { handleDeleteKey, getCurrentPageName, setupApplicationKeyboardHandler } 
 // New modular UI components
 import { ModularDialogManager } from 'resource:///com/odnoyko/valot/js/interface/components/complex/ModularDialogManager.js';
 import { TrackingWidget } from 'resource:///com/odnoyko/valot/js/interface/components/complex/TrackingWidget.js';
+import { DateRangeSelector } from 'resource:///com/odnoyko/valot/js/interface/components/complex/DateRangeSelector.js';
 import { HeaderTrackingWidget } from 'resource:///com/odnoyko/valot/js/interface/components/complex/HeaderTrackingWidget.js';
 import { WidgetFactory } from 'resource:///com/odnoyko/valot/js/interface/components/widgetFactory.js';
 import { Button } from 'resource:///com/odnoyko/valot/js/interface/components/primitive/Button.js';
@@ -1853,13 +1854,35 @@ export const ValotWindow = GObject.registerClass({
         if (!this._period_filter || !this._project_filter || !this._client_filter) {
             return;
         }
+
+        // Create and setup Date Range Selector
+        this._setupDateRangeSelector();
         
         // Setup period filter
         this._period_filter.connect('notify::selected', () => {
             const selectedPeriod = this._period_filter.get_selected();
-            const periods = ['week', 'month', 'year'];
+            const periods = ['week', 'month', 'year', 'custom'];
+            
             if (this.simpleChart && periods[selectedPeriod]) {
-                this.simpleChart.setPeriod(periods[selectedPeriod]);
+                if (periods[selectedPeriod] === 'custom') {
+                    // Show/enable the date range selector
+                    if (this.dateRangeSelector) {
+                        this.dateRangeSelector.getWidget().set_visible(true);
+                        // If custom range is already set, keep it; otherwise use current week
+                        if (!this.simpleChart.customDateRange) {
+                            const currentRange = this.dateRangeSelector.getDateRange();
+                            this.simpleChart.setCustomDateRange(currentRange.fromDate, currentRange.toDate);
+                        }
+                    }
+                } else {
+                    // Hide the date range selector for predefined periods
+                    if (this.dateRangeSelector) {
+                        this.dateRangeSelector.getWidget().set_visible(false);
+                    }
+                    this.simpleChart.clearCustomDateRange();
+                    this.simpleChart.setPeriod(periods[selectedPeriod]);
+                }
+                
                 this._updateChart();
                 this._updateReportsStatistics(); // Update statistics when period changes
                 this._updateRecentTasksList(); // Update recent tasks when period changes
@@ -1892,6 +1915,57 @@ export const ValotWindow = GObject.registerClass({
         });
         
         // Reports chart filters setup completed
+    }
+
+    /**
+     * Setup Date Range Selector for custom date filtering
+     */
+    _setupDateRangeSelector() {
+        if (!this._chart_placeholder) {
+            return;
+        }
+
+        // Create date range selector
+        this.dateRangeSelector = new DateRangeSelector({
+            showTimeControls: false,
+            showQuickFilters: false, // Disabled to avoid duplication with existing filters
+            onDateRangeChanged: (dateRange) => {
+                // When custom date range is selected, update chart
+                if (this.simpleChart) {
+                    this.simpleChart.setCustomDateRange(dateRange.fromDate, dateRange.toDate);
+                    this._updateChart();
+                    this._updateReportsStatistics();
+                    this._updateRecentTasksList();
+                }
+            }
+        });
+
+        // Insert the date range selector above the chart
+        const parentBox = this._chart_placeholder.get_parent();
+        if (parentBox && parentBox instanceof Gtk.Box) {
+            // Get the chart placeholder index
+            let chartIndex = 0;
+            let child = parentBox.get_first_child();
+            while (child && child !== this._chart_placeholder) {
+                chartIndex++;
+                child = child.get_next_sibling();
+            }
+
+            // Insert date range selector before chart (no separator needed)
+            parentBox.insert_child_after(this.dateRangeSelector.getWidget(), 
+                chartIndex > 0 ? parentBox.get_first_child() : null);
+        }
+
+        // Add a "Custom Range" option to the period filter if it doesn't exist
+        if (this._period_filter && this._period_filter.get_model()) {
+            const model = this._period_filter.get_model();
+            if (model instanceof Gtk.StringList && model.get_n_items() === 3) {
+                model.append('Custom Range');
+            }
+        }
+
+        // Initially hide the date range selector (shown only when "Custom Range" is selected)
+        this.dateRangeSelector.getWidget().set_visible(false);
     }
 
     /**
