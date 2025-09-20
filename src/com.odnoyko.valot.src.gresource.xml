@@ -65,6 +65,7 @@
     <file>js/interface/components/complex/ClientDialog.js</file>
     <file>js/interface/components/complex/ModularDialogManager.js</file>
     <file>js/interface/components/complex/TaskTemplateDialog.js</file>
+    <file>js/interface/components/complex/DateRangeSelector.js</file>
 
     <!-- Interface Components - Primitive -->
     <file>js/interface/components/primitive/Button.js</file>

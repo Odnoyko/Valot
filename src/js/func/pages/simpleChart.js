@@ -4,10 +4,11 @@ import Gtk from 'gi://Gtk';
 export class SimpleChart {
     constructor(placeholder) {
         this.placeholder = placeholder;
-        this.currentPeriod = 'week'; // week, month, year
+        this.currentPeriod = 'week'; // week, month, year, custom
         this.selectedProjectId = null; // null = all projects
         this.selectedClientId = null; // null = all clients
         this.allProjects = []; // Store projects for color mapping
+        this.customDateRange = null; // For custom date range filtering
     }
 
     createChart(allTasks, allProjects = [], allClients = []) {
@@ -42,6 +43,18 @@ export class SimpleChart {
         this.selectedClientId = clientId;
     }
 
+    setCustomDateRange(fromDate, toDate) {
+        this.customDateRange = { fromDate, toDate };
+        this.currentPeriod = 'custom';
+    }
+
+    clearCustomDateRange() {
+        this.customDateRange = null;
+        if (this.currentPeriod === 'custom') {
+            this.currentPeriod = 'week';
+        }
+    }
+
     _showPlaceholder() {
         const placeholderLabel = new Gtk.Label({
             label: _('📊 No data yet\nStart tracking time to see your productivity chart'),
@@ -70,6 +83,11 @@ export class SimpleChart {
         }
         if (this.currentPeriod === 'month') titleText = _('📊 Monthly Activity (4 weeks)');
         if (this.currentPeriod === 'year') titleText = _('📊 Yearly Activity (12 months)');
+        if (this.currentPeriod === 'custom' && this.customDateRange) {
+            const fromDate = this.customDateRange.fromDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const toDate = this.customDateRange.toDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            titleText = `📊 Custom Range (${fromDate} - ${toDate})`;
+        }
         
         const titleLabel = new Gtk.Label({
             label: titleText,
@@ -79,23 +97,70 @@ export class SimpleChart {
         });
         chartBox.append(titleLabel);
         
+        // Calculate chart dimensions
+        const minBarWidth = 48; // 40px bar + 8px spacing
+        const calculatedWidth = chartData.length * minBarWidth;
+        const maxWidthForCentering = 400; // Maximum width before switching to scrollable mode
+        
+        // Find max value for scaling
+        const maxHours = Math.max(...chartData.map(d => d.hours), 1);
+        
         // Create bars container
         const barsBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 8,
-            halign: Gtk.Align.CENTER,
             height_request: 120
         });
-        
-        // Find max value for scaling
-        const maxHours = Math.max(...chartData.map(d => d.hours), 1);
         
         // Create bars for each day
         chartData.forEach(dayData => {
             this._createBar(barsBox, dayData, maxHours);
         });
         
-        chartBox.append(barsBox);
+        // Decide layout based on content width
+        if (calculatedWidth <= maxWidthForCentering) {
+            // Few elements - center them without scrolling
+            barsBox.set_halign(Gtk.Align.CENTER);
+            chartBox.append(barsBox);
+        } else {
+            // Many elements - use scrollable container with dragging
+            const scrolledWindow = new Gtk.ScrolledWindow({
+                hscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
+                vscrollbar_policy: Gtk.PolicyType.NEVER,
+                height_request: 140, // Slightly larger to accommodate scrollbar
+                margin_start: 12,
+                margin_end: 12,
+                kinetic_scrolling: true, // Enable smooth kinetic scrolling/dragging
+                overlay_scrolling: true  // Use overlay scrollbars for cleaner look
+            });
+            
+            barsBox.set_halign(Gtk.Align.START);
+            barsBox.set_size_request(calculatedWidth, -1);
+            
+            scrolledWindow.set_child(barsBox);
+            chartBox.append(scrolledWindow);
+            
+            // Add touch/drag gesture support for better dragging experience
+            const dragGesture = new Gtk.GestureDrag();
+            dragGesture.set_button(1); // Primary mouse button
+            
+            let startScrollX = 0;
+            let startDragX = 0;
+            
+            dragGesture.connect('drag-begin', (gesture, startX, startY) => {
+                const adjustment = scrolledWindow.get_hadjustment();
+                startScrollX = adjustment.get_value();
+                startDragX = startX;
+            });
+            
+            dragGesture.connect('drag-update', (gesture, offsetX, offsetY) => {
+                const adjustment = scrolledWindow.get_hadjustment();
+                const newValue = startScrollX - offsetX;
+                adjustment.set_value(Math.max(0, Math.min(newValue, adjustment.get_upper() - adjustment.get_page_size())));
+            });
+            
+            scrolledWindow.add_controller(dragGesture);
+        }
         
         // Total summary with period-specific text
         const totalHours = chartData.reduce((sum, d) => sum + d.hours, 0);
@@ -108,6 +173,10 @@ export class SimpleChart {
             summaryText = `Total: ${totalHours.toFixed(1)} hours in last 4 weeks`;
         } else if (this.currentPeriod === 'year') {
             summaryText = `Total: ${totalHours.toFixed(1)} hours this year`;
+        } else if (this.currentPeriod === 'custom' && this.customDateRange) {
+            const fromDate = this.customDateRange.fromDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const toDate = this.customDateRange.toDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            summaryText = `Total: ${totalHours.toFixed(1)} hours (${fromDate} - ${toDate})`;
         }
         
         const summaryLabel = new Gtk.Label({
@@ -256,6 +325,9 @@ export class SimpleChart {
                 break;
             case 'year':
                 data = this._getYearData(filteredTasks);
+                break;
+            case 'custom':
+                data = this._getCustomRangeData(filteredTasks);
                 break;
             default:
                 data = this._getWeekData(filteredTasks);
@@ -437,6 +509,126 @@ export class SimpleChart {
                 date: date,
                 projectSegments: projectSegments
             });
+        }
+        
+        return data;
+    }
+
+    _getCustomRangeData(tasks) {
+        if (!this.customDateRange) {
+            return this._getWeekData(tasks);
+        }
+
+        const data = [];
+        const { fromDate, toDate } = this.customDateRange;
+        
+        // Calculate the number of days in the range
+        const timeDiff = toDate.getTime() - fromDate.getTime();
+        const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+
+        // If range is too long (>30 days), group by weeks
+        if (daysDiff > 30) {
+            return this._getCustomRangeWeeklyData(tasks, fromDate, toDate);
+        }
+
+        // Generate data for each day in the range
+        for (let i = 0; i < daysDiff; i++) {
+            const date = new Date(fromDate);
+            date.setDate(fromDate.getDate() + i);
+            
+            let totalSeconds = 0;
+            const projectHours = new Map();
+            
+            tasks.forEach(task => {
+                if (task.start) {
+                    const taskDate = new Date(task.start);
+                    if (taskDate.toDateString() === date.toDateString()) {
+                        const duration = task.duration || 0;
+                        totalSeconds += duration;
+                        
+                        const projectId = task.project_id || 1;
+                        projectHours.set(projectId, (projectHours.get(projectId) || 0) + duration);
+                    }
+                }
+            });
+            
+            // Convert to project segments
+            const projectSegments = [];
+            for (const [projectId, duration] of projectHours) {
+                projectSegments.push({
+                    projectId: projectId,
+                    hours: duration / 3600
+                });
+            }
+            
+            projectSegments.sort((a, b) => b.hours - a.hours);
+            
+            data.push({
+                label: date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }),
+                hours: totalSeconds / 3600,
+                date: date,
+                projectSegments: projectSegments
+            });
+        }
+        
+        return data;
+    }
+
+    _getCustomRangeWeeklyData(tasks, fromDate, toDate) {
+        const data = [];
+        
+        // Start from Monday of the week containing fromDate
+        const startDate = new Date(fromDate);
+        const startDayOfWeek = startDate.getDay();
+        const daysToMonday = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+        startDate.setDate(startDate.getDate() - daysToMonday);
+        
+        // Generate weekly data until we cover the toDate
+        let currentWeekStart = new Date(startDate);
+        
+        while (currentWeekStart <= toDate) {
+            const weekEnd = new Date(currentWeekStart);
+            weekEnd.setDate(currentWeekStart.getDate() + 6);
+            
+            let totalSeconds = 0;
+            const projectHours = new Map();
+            
+            tasks.forEach(task => {
+                if (task.start) {
+                    const taskDate = new Date(task.start);
+                    if (taskDate >= currentWeekStart && taskDate <= weekEnd && 
+                        taskDate >= fromDate && taskDate <= toDate) {
+                        const duration = task.duration || 0;
+                        totalSeconds += duration;
+                        
+                        const projectId = task.project_id || 1;
+                        projectHours.set(projectId, (projectHours.get(projectId) || 0) + duration);
+                    }
+                }
+            });
+            
+            // Convert to project segments
+            const projectSegments = [];
+            for (const [projectId, duration] of projectHours) {
+                projectSegments.push({
+                    projectId: projectId,
+                    hours: duration / 3600
+                });
+            }
+            
+            projectSegments.sort((a, b) => b.hours - a.hours);
+            
+            const germanWeekNumber = this._getGermanWeekNumber(currentWeekStart);
+            data.push({
+                label: `KW${germanWeekNumber}`,
+                hours: totalSeconds / 3600,
+                date: currentWeekStart,
+                projectSegments: projectSegments
+            });
+            
+            // Move to next week
+            currentWeekStart = new Date(currentWeekStart);
+            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
         }
         
         return data;
