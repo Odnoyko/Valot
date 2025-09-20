@@ -523,7 +523,7 @@ export const ValotWindow = GObject.registerClass({
             }
             this._syncDebounceTimeout = null;
             this._pendingSync = null;
-        }, 300); // 300ms delay after user stops typing
+        }, 50); // 50ms delay after user stops typing
     }
 
     /**

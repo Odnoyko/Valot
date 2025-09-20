@@ -10,7 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Future features and improvements will be listed here
 
-## [0.7.1 - 0.7.2] - 20.09.2025
+## [0.7.4] - 20.09.2025
+
+### 🚀 Fix Flatpak manifest: add blueprint-compiler cleanup, use shared intltool module, remove Qt-specific permissions
+
+---
+
+
+## [0.7.1 - 0.7.3] - 20.09.2025
 
 ### 🐛 Bug Fixes
 

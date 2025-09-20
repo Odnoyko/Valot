@@ -117,14 +117,15 @@ export class HeaderTrackingWidget {
 
         // Connect input change events for synchronization
         this.taskEntrySignalId = this.taskEntry.connect('changed', () => {
-            const currentText = this.taskEntry.get_text().trim();
+            const currentText = this.taskEntry.get_text();
             if (this.parentWindow && this.parentWindow._syncAllInputsFromCurrentWidget) {
                 this.parentWindow._syncAllInputsFromCurrentWidget(currentText, this);
             }
             
-            // Validate input
-            if (currentText.length > 0) {
-                const validation = InputValidator.validateTaskName(currentText);
+            // Validate input (trim only for validation, not for sync)
+            const trimmedText = currentText.trim();
+            if (trimmedText.length > 0) {
+                const validation = InputValidator.validateTaskName(trimmedText);
                 if (!validation.isValid) {
                     InputValidator.showValidationTooltip(this.taskEntry, validation.error, true);
                 } else {
@@ -285,6 +286,14 @@ export class HeaderTrackingWidget {
      * Set task text without triggering sync (to avoid infinite loops)
      */
     setTaskTextSilent(text) {
+        // Check if the text is actually different to avoid unnecessary updates
+        if (this.taskEntry.get_text() === text) {
+            return;
+        }
+        
+        // Store current cursor position
+        const cursorPosition = this.taskEntry.get_position();
+        
         // Temporarily disconnect the changed signal
         if (this.taskEntrySignalId) {
             this.taskEntry.disconnect(this.taskEntrySignalId);
@@ -292,18 +301,27 @@ export class HeaderTrackingWidget {
         
         this.taskEntry.set_text(text);
         
+        // Restore cursor position if it's still valid for the new text
+        if (cursorPosition <= text.length) {
+            this.taskEntry.set_position(cursorPosition);
+        } else {
+            // If cursor was beyond new text length, put it at the end
+            this.taskEntry.set_position(text.length);
+        }
+        
         // Reconnect the signal
         if (this.taskEntrySignalId) {
             this.taskEntrySignalId = this.taskEntry.connect('changed', () => {
                 // Same logic as in _setupTracking
-                const currentText = this.taskEntry.get_text().trim();
+                const currentText = this.taskEntry.get_text();
                 if (this.parentWindow && this.parentWindow._syncAllInputsFromCurrentWidget) {
                     this.parentWindow._syncAllInputsFromCurrentWidget(currentText, this);
                 }
                 
-                // Validate input
-                if (currentText.length > 0) {
-                    const validation = InputValidator.validateTaskName(currentText);
+                // Validate input (trim only for validation, not for sync)
+                const trimmedText = currentText.trim();
+                if (trimmedText.length > 0) {
+                    const validation = InputValidator.validateTaskName(trimmedText);
                     if (!validation.isValid) {
                         InputValidator.showValidationTooltip(this.taskEntry, validation.error, true);
                     } else {
