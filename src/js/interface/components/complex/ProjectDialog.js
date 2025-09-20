@@ -280,9 +280,9 @@ export class ProjectDialog extends FormDialog {
         this.mode = 'edit';
         
         // Update dialog title
-        this.config.title = 'Edit Project';
-        this.config.subtitle = 'Update project name and appearance';
-        this.config.submitLabel = 'Save Changes';
+        this.config.title = _('Edit Project');
+        this.config.subtitle = _('Update project name and appearance');
+        this.config.submitLabel = _('Save Changes');
         
         // Update custom inputs
         if (this.nameEntry) {
@@ -302,9 +302,9 @@ export class ProjectDialog extends FormDialog {
         this.mode = 'create';
         
         // Update dialog title
-        this.config.title = 'Create New Project';
-        this.config.subtitle = 'Create a new project';
-        this.config.submitLabel = 'Create Project';
+        this.config.title = _('Create New Project');
+        this.config.subtitle = _('Create a new project');
+        this.config.submitLabel = _('Create Project');
         
         // Clear custom inputs
         if (this.nameEntry) {

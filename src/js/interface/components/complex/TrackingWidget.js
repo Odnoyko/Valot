@@ -203,6 +203,15 @@ export class TrackingWidget {
     }
 
     /**
+     * Set task text without triggering onChange events (for synchronization)
+     */
+    setTaskTextSilent(text) {
+        if (this.taskEntry) {
+            this.taskEntry.setText(text, true); // preserveCursor = true
+        }
+    }
+
+    /**
      * Get validated task text
      */
     getValidatedTaskText() {

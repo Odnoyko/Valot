@@ -52,7 +52,7 @@ export const ValotApplication = GObject.registerClass(
         constructor() {
             super({
                 application_id: 'com.odnoyko.valot',
-                flags: Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
+                flags: Gio.ApplicationFlags.HANDLES_COMMAND_LINE | Gio.ApplicationFlags.REPLACE,
                 resource_base_path: '/com/odnoyko/valot'
             });
 
@@ -86,7 +86,7 @@ export const ValotApplication = GObject.registerClass(
                     application_name: 'valot',
                     application_icon: 'com.odnoyko.valot',
                     developer_name: 'Odnoyko',
-                    version: '0.6.2',
+                    version: '0.7.4',
                     developers: [
                         'Odnoyko'
                     ],
@@ -144,6 +144,9 @@ export const ValotApplication = GObject.registerClass(
             }
 
             if (this.compactMode) {
+                // Enforce single instance: Close any existing main windows
+                this._closeAllMainWindows();
+
                 // Create main window in background but keep it hidden
                 const mainWindow = new ValotWindow(this);
                 this.add_window(mainWindow);
@@ -165,49 +168,83 @@ export const ValotApplication = GObject.registerClass(
                     }
                 }, 200);
             } else {
+                // Enforce single instance: Close any existing windows first
+                this._closeAllWindows();
+
                 // Launch full application
-                let {active_window} = this;
-
-                if (!active_window) {
-                    active_window = new ValotWindow(this);
-                }
-
-                active_window.present();
+                const mainWindow = new ValotWindow(this);
+                this.add_window(mainWindow);
+                mainWindow.present();
             }
         }
 
-        _launchCompactTracker(mainWindow = null) {
-            if (!this.compactWindow) {
-                // Create compact tracker with reference to main window
-                this.compactWindow = new CompactTrackerWindow(this, mainWindow);
-                
-                // Make it always on top and persistent (with fallback for different environments)
-                try {
-                    if (typeof this.compactWindow.set_keep_above === 'function') {
-                        this.compactWindow.set_keep_above(true);
-                    }
-                    if (typeof this.compactWindow.stick === 'function') {
-                        this.compactWindow.stick();
-                    }
-                } catch (error) {
-                    console.log('Note: Some window positioning features not available in this environment');
-                }
-                
-                // Set window properties for always-on-top behavior
-                try {
-                    if (typeof this.compactWindow.set_type_hint === 'function') {
-                        this.compactWindow.set_type_hint(Gdk.WindowTypeHint.UTILITY);
-                    }
-                } catch (error) {
-                    console.log('Note: Window type hint not available in this environment');
-                }
-                
-                // Handle close event - minimize instead of closing
-                this.compactWindow.connect('close-request', () => {
-                    this.compactWindow.set_visible(false);
-                    return true; // Prevent actual close
-                });
+        /**
+         * Close all existing windows (for single instance enforcement)
+         */
+        _closeAllWindows() {
+            // Close existing compact tracker window
+            if (this.compactWindow) {
+                this.compactWindow.close();
+                this.compactWindow = null;
             }
+
+            // Close all main windows
+            this._closeAllMainWindows();
+        }
+
+        /**
+         * Close all main windows (for single instance enforcement)
+         */
+        _closeAllMainWindows() {
+            // Get all windows and close ValotWindow instances
+            const windows = this.get_windows();
+            windows.forEach(window => {
+                if (window.constructor.name === 'ValotWindow') {
+                    // Clean up compact tracker reference if it exists
+                    if (window.compactTrackerWindow) {
+                        window.compactTrackerWindow = null;
+                    }
+                    window.close();
+                }
+            });
+        }
+
+        _launchCompactTracker(mainWindow = null) {
+            // Close existing compact tracker window first (single instance)
+            if (this.compactWindow) {
+                this.compactWindow.close();
+                this.compactWindow = null;
+            }
+
+            // Create compact tracker with reference to main window
+            this.compactWindow = new CompactTrackerWindow(this, mainWindow);
+
+            // Make it always on top and persistent (with fallback for different environments)
+            try {
+                if (typeof this.compactWindow.set_keep_above === 'function') {
+                    this.compactWindow.set_keep_above(true);
+                }
+                if (typeof this.compactWindow.stick === 'function') {
+                    this.compactWindow.stick();
+                }
+            } catch (error) {
+                console.log('Note: Some window positioning features not available in this environment');
+            }
+
+            // Set window properties for always-on-top behavior
+            try {
+                if (typeof this.compactWindow.set_type_hint === 'function') {
+                    this.compactWindow.set_type_hint(Gdk.WindowTypeHint.UTILITY);
+                }
+            } catch (error) {
+                console.log('Note: Window type hint not available in this environment');
+            }
+
+            // Handle close event - minimize instead of closing
+            this.compactWindow.connect('close-request', () => {
+                this.compactWindow.set_visible(false);
+                return true; // Prevent actual close
+            });
 
             this.compactWindow.present();
         }

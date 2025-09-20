@@ -178,9 +178,17 @@ export const CompactTrackerWindow = GObject.registerClass({
 
         // Task input validation
         this._task_input.connect('changed', () => {
-            const text = this._task_input.get_text().trim();
-            if (text.length > 0) {
-                const validation = InputValidator.validateTaskName(text);
+            const text = this._task_input.get_text();
+            
+            // Sync with main window tracking widgets
+            if (this.mainWindow && this.mainWindow._syncAllInputsFromCurrentWidget) {
+                this.mainWindow._syncAllInputsFromCurrentWidget(text, this);
+            }
+            
+            // Validation (trim only for validation, not for sync)
+            const trimmedText = text.trim();
+            if (trimmedText.length > 0) {
+                const validation = InputValidator.validateTaskName(trimmedText);
                 if (!validation.isValid) {
                     InputValidator.showValidationTooltip(this._task_input, validation.error, true);
                 } else {
@@ -389,8 +397,24 @@ export const CompactTrackerWindow = GObject.registerClass({
      * Update task input silently to avoid triggering sync loops
      */
     setTaskTextSilent(text) {
+        // Check if the text is actually different to avoid unnecessary updates
+        if (this._task_input.get_text() === text) {
+            return;
+        }
+        
+        // Store current cursor position
+        const cursorPosition = this._task_input.get_position();
+        
         // Temporarily disconnect any change handlers to avoid loops
         this._task_input.set_text(text);
+        
+        // Restore cursor position if it's still valid for the new text
+        if (cursorPosition <= text.length) {
+            this._task_input.set_position(cursorPosition);
+        } else {
+            // If cursor was beyond new text length, put it at the end
+            this._task_input.set_position(text.length);
+        }
     }
 
     /**

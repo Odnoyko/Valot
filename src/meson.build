@@ -1,7 +1,7 @@
 pkgdatadir = get_option('datadir') / meson.project_name()
 gnome = import('gnome')
 
-# Компилируем .blp в .ui
+# Compile .blp to .ui
 blueprints = custom_target('blueprints',
   input: files(
     'ui/window.blp',
