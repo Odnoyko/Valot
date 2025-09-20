@@ -16,7 +16,7 @@ export class InputValidator {
     
     // Dangerous characters that could cause issues
     static DANGEROUS_CHARS = /[<>"'&;\\]/g;
-    static SQL_INJECTION_PATTERNS = /('|(\\')|(;)|(\\)|(\-\-)|(\s+(or|and|union|select|insert|update|delete|drop|create|alter|exec|execute)\s+))/i;
+    static SQL_INJECTION_PATTERNS = /(';|'\\s*(union|select|insert|update|delete|drop|create|alter|exec|execute)\\s+|--|\/\\*|\\*\/)/i;
     
     /**
      * Basic name validation for all types (projects, clients, tasks)

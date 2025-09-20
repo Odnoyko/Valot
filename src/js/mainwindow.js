@@ -809,14 +809,14 @@ export const ValotWindow = GObject.registerClass({
                     iconWidget = new Gtk.Label({
                         label: emoji,
                         css_classes: ['emoji-icon'],
-                        width_request: 28,
-                        height_request: 28
+                        width_request: 22,
+                        height_request: 23
                     });
                 } else {
                     iconWidget = new Gtk.Image({
                         icon_name: project.icon || 'folder-symbolic',
-                        width_request: 20,
-                        height_request: 20,
+                        width_request: 23,
+                        height_request: 23,
                         pixel_size: 14,
                         halign: Gtk.Align.CENTER,
                         valign: Gtk.Align.CENTER

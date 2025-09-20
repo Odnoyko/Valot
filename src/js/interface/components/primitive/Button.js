@@ -75,25 +75,29 @@ export class Button {
         if (this.config.iconName && !this.config.label && !this.config.emoji && !this.config.currency) {
             const icon = new Gtk.Image({
                 icon_name: this.config.iconName,
-                pixel_size: this.config.iconSize || 16
+                pixel_size: Math.max(1, this.config.iconSize || 16)
             });
             button.set_child(icon);
             button.set_label('');
             return;
         }
         
-        // For multiple elements, use Box
+        // For multiple elements, use Box (Label inside button)
         const box = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 4,
-            halign: Gtk.Align.CENTER
+            halign: Gtk.Align.CENTER,
+            width_request: 22,
+            height_request: 23
         });
 
-        // Add icon if specified
+        // Add icon if specified (Icon inside label)
         if (this.config.iconName) {
             const icon = new Gtk.Image({
                 icon_name: this.config.iconName,
-                pixel_size: this.config.iconSize || 16
+                pixel_size: Math.max(1, this.config.iconSize || 16),
+                width_request: 23,
+                height_request: 23
             });
             box.append(icon);
         }
@@ -279,7 +283,7 @@ export class Button {
         if (this.config.iconName) {
             const icon = new Gtk.Image({
                 icon_name: this.config.iconName,
-                pixel_size: this.config.iconSize || 16
+                pixel_size: Math.max(1, this.config.iconSize || 16)
             });
             box.append(icon);
         }
