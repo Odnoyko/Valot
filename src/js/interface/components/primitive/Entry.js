@@ -117,9 +117,32 @@ export class Entry {
     /**
      * Set text value
      */
-    setText(text) {
-        this.widget.set_text(text || '');
-        this.config.text = text || '';
+    setText(text, preserveCursor = false) {
+        const newText = text || '';
+        
+        // Check if the text is actually different to avoid unnecessary updates
+        if (this.widget.get_text() === newText) {
+            return;
+        }
+        
+        let cursorPosition = 0;
+        if (preserveCursor) {
+            // Store current cursor position
+            cursorPosition = this.widget.get_position();
+        }
+        
+        this.widget.set_text(newText);
+        this.config.text = newText;
+        
+        if (preserveCursor) {
+            // Restore cursor position if it's still valid for the new text
+            if (cursorPosition <= newText.length) {
+                this.widget.set_position(cursorPosition);
+            } else {
+                // If cursor was beyond new text length, put it at the end
+                this.widget.set_position(newText.length);
+            }
+        }
         
         // Validate after setting text
         if (this.config.validator && this.config.realTimeValidation) {

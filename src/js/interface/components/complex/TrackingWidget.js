@@ -207,7 +207,7 @@ export class TrackingWidget {
      */
     setTaskTextSilent(text) {
         if (this.taskEntry) {
-            this.taskEntry.setText(text);
+            this.taskEntry.setText(text, true); // preserveCursor = true
         }
     }
 
