@@ -2128,9 +2128,15 @@ export const ValotWindow = GObject.registerClass({
             const projectIndex = this._project_filter ? this._project_filter.get_selected() : 0;
             const clientIndex = this._client_filter ? this._client_filter.get_selected() : 0;
             
-            // Get filter values
-            const periods = ['week', 'month', 'year'];
-            const currentPeriod = periods[periodIndex] || 'week';
+            // Get filter values - check if custom range is active
+            let currentPeriod;
+            if (this.simpleChart && this.simpleChart.currentPeriod === 'custom') {
+                currentPeriod = 'custom';
+            } else {
+                const periods = ['week', 'month', 'year'];
+                currentPeriod = periods[periodIndex] || 'week';
+            }
+            
             const selectedProjectId = projectIndex === 0 ? null : this.allProjects[projectIndex - 1]?.id;
             const selectedClientId = clientIndex === 0 ? null : this.allClients[clientIndex - 1]?.id;
             
@@ -2228,8 +2234,15 @@ export const ValotWindow = GObject.registerClass({
 
             // Get current filter settings
             const selectedPeriod = this._period_filter?.get_selected() || 0;
-            const periods = ['week', 'month', 'year'];
-            const period = periods[selectedPeriod];
+            
+            // Check if custom range is active
+            let period;
+            if (this.simpleChart && this.simpleChart.currentPeriod === 'custom') {
+                period = 'custom';
+            } else {
+                const periods = ['week', 'month', 'year'];
+                period = periods[selectedPeriod];
+            }
 
             const selectedProjectIndex = this._project_filter?.get_selected() || 0;
             const projectId = selectedProjectIndex > 0 ? this.allProjects[selectedProjectIndex - 1]?.id : null;
@@ -2410,6 +2423,23 @@ export const ValotWindow = GObject.registerClass({
                 start = new Date(now.getFullYear(), 0, 1);
                 end = new Date(now.getFullYear(), 11, 31);
                 end.setHours(23, 59, 59, 999);
+                break;
+                
+            case 'custom':
+                // Use custom date range from simpleChart
+                if (this.simpleChart && this.simpleChart.customDateRange) {
+                    start = new Date(this.simpleChart.customDateRange.fromDate);
+                    end = new Date(this.simpleChart.customDateRange.toDate);
+                    end.setHours(23, 59, 59, 999);
+                } else {
+                    // Fallback to week if no custom range
+                    start = new Date(now);
+                    start.setDate(now.getDate() - now.getDay());
+                    start.setHours(0, 0, 0, 0);
+                    end = new Date(start);
+                    end.setDate(start.getDate() + 6);
+                    end.setHours(23, 59, 59, 999);
+                }
                 break;
                 
             default:
