@@ -90,4 +90,26 @@ cc<?xml version="1.0" encoding="UTF-8"?>
     <keyword>tasks</keyword>
     <keyword>projects</keyword>
   </keywords>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://gitlab.com/Valo27/valot/-/raw/main/data/screenshots/1.png</image>
+      <caption>Main task tracking interface with active timer and comprehensive task management</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://gitlab.com/Valo27/valot/-/raw/main/data/screenshots/3.png</image>
+      <caption>Projects management with easy project creation and colorful organization</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://gitlab.com/Valo27/valot/-/raw/main/data/screenshots/4.png</image>
+      <caption>Client management with billing rates and currency support</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://gitlab.com/Valo27/valot/-/raw/main/data/screenshots/5.png</image>
+      <caption>Create new clients with custom hourly rates and currency settings</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://gitlab.com/Valo27/valot/-/raw/main/data/screenshots/6.png</image>
+      <caption>Comprehensive reports with interactive charts, statistics, and time analytics</caption>
+    </screenshot>
+  </screenshots>
 </component>

@@ -1,5 +1,5 @@
 project('valot',
-          version: '0.7.5',
+          version: '0.7.6',
     meson_version: '>= 1.0.0',
   default_options: [ 'warning_level=2', 'werror=false', ],
 )
