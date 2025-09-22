@@ -47,6 +47,11 @@ export class ReportsPage {
             project: projectId,
             client: clientId
         };
+        
+        // Update reports immediately when filters change - delegate to main window
+        if (this.parentWindow && typeof this.parentWindow._updateReportsStatistics === 'function') {
+            this.parentWindow._updateReportsStatistics();
+        }
     }
 
 
@@ -57,7 +62,10 @@ export class ReportsPage {
         this.showLoading('Loading reports...');
         
         try {
-            await this._updateReports();
+            // Delegate to main window for statistics update
+            if (this.parentWindow && typeof this.parentWindow._updateReportsStatistics === 'function') {
+                this.parentWindow._updateReportsStatistics();
+            }
             await this._updateWeeklyTime();
             this._updateChart();
             // Reports loaded successfully
@@ -75,7 +83,7 @@ export class ReportsPage {
     }
 
     /**
-     * Update report statistics
+     * Update report statistics based on current chart filters
      */
     async _updateReports() {
         if (!this.parentWindow || !this.parentWindow.allTasks) {
@@ -83,42 +91,55 @@ export class ReportsPage {
         }
 
         const tasks = this.parentWindow.allTasks || [];
-        const now = new Date();
+        const projects = this.parentWindow.allProjects || [];
         
-        // Calculate today's stats
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const todayTasks = tasks.filter(task => 
-            new Date(task.created_date) >= todayStart && !task.isActive
-        );
+        // Get filtered tasks based on current chart filters
+        const filteredTasks = this._getFilteredTasks(tasks);
         
-        const todayTime = todayTasks.reduce((sum, task) => sum + (task.duration || 0), 0);
-        this['today-time']?.setText(this._formatDuration(todayTime));
-        this['today-tasks']?.setText(todayTasks.length.toString());
+        // Calculate total time for filtered tasks
+        const totalTime = filteredTasks.reduce((sum, task) => sum + (task.duration || 0), 0);
+        
+        // Update Total Time UI
+        if (this.parentWindow._reports_total_time_value) {
+            this.parentWindow._reports_total_time_value.set_label(this._formatDuration(totalTime));
+        }
+        
+        // Calculate active projects (projects that have tasks in the filtered period)
+        const activeProjectIds = new Set(filteredTasks.map(task => task.project_id).filter(id => id));
+        const activeProjectsCount = activeProjectIds.size;
+        
+        // Update Active Projects UI
+        if (this.parentWindow._reports_total_projects_value) {
+            this.parentWindow._reports_total_projects_value.set_label(activeProjectsCount.toString());
+        }
+        
+        // Calculate total tracked tasks (excluding active tasks)
+        const completedTasks = filteredTasks.filter(task => !task.isActive);
+        
+        // Update Tracked Tasks UI
+        if (this.parentWindow._reports_total_tasks_value) {
+            this.parentWindow._reports_total_tasks_value.set_label(completedTasks.length.toString());
+        }
+        
+        // Calculate earnings (if task has hourly rate)
+        let totalEarnings = 0;
+        const currencyTotals = new Map(); // Track earnings by currency
+        
+        filteredTasks.forEach(task => {
+            if (task.hourly_rate && task.duration) {
+                const hours = task.duration / 3600;
+                const earnings = hours * task.hourly_rate;
+                const currency = task.currency || 'USD';
+                
+                totalEarnings += earnings;
+                currencyTotals.set(currency, (currencyTotals.get(currency) || 0) + earnings);
+            }
+        });
+        
+        // Update Currency Carousel with earnings
+        this._updateCurrencyCarousel(currencyTotals);
 
-        // Calculate week's stats
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - now.getDay());
-        weekStart.setHours(0, 0, 0, 0);
-        
-        const weekTasks = tasks.filter(task => 
-            new Date(task.created_date) >= weekStart && !task.isActive
-        );
-        
-        const weekTime = weekTasks.reduce((sum, task) => sum + (task.duration || 0), 0);
-        this['week-time']?.setText(this._formatDuration(weekTime));
-        this['week-tasks']?.setText(weekTasks.length.toString());
-
-        // Calculate month's stats
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const monthTasks = tasks.filter(task => 
-            new Date(task.created_date) >= monthStart && !task.isActive
-        );
-        
-        const monthTime = monthTasks.reduce((sum, task) => sum + (task.duration || 0), 0);
-        this['month-time']?.setText(this._formatDuration(monthTime));
-        this['month-tasks']?.setText(monthTasks.length.toString());
-
-        // Reports updated with current statistics
+        // Reports updated with current filter-based statistics
     }
 
     /**
@@ -352,6 +373,167 @@ export class ReportsPage {
         }
 
         console.log('✅ Report exporter data update completed successfully');
+    }
+
+    /**
+     * Get tasks filtered by current chart filters (period, project, client)
+     */
+    _getFilteredTasks(tasks) {
+        let filteredTasks = tasks.filter(task => !task.isActive); // Exclude active tasks
+        
+        // Apply project filter
+        if (this.chartFilters.project) {
+            filteredTasks = filteredTasks.filter(task => task.project_id === this.chartFilters.project);
+        }
+        
+        // Apply client filter
+        if (this.chartFilters.client) {
+            filteredTasks = filteredTasks.filter(task => task.client_id === this.chartFilters.client);
+        }
+        
+        // Apply period filter
+        filteredTasks = this._filterTasksByPeriod(filteredTasks, this.chartFilters.period);
+        
+        return filteredTasks;
+    }
+    
+    /**
+     * Filter tasks by time period (same logic as chart uses)
+     */
+    _filterTasksByPeriod(tasks, period) {
+        const now = new Date();
+        
+        switch (period) {
+            case 'week': {
+                // Current week (Monday to Sunday)
+                const monday = new Date(now);
+                const dayOfWeek = now.getDay();
+                const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                monday.setDate(now.getDate() - daysToMonday);
+                monday.setHours(0, 0, 0, 0);
+                
+                const sunday = new Date(monday);
+                sunday.setDate(monday.getDate() + 6);
+                sunday.setHours(23, 59, 59, 999);
+                
+                return tasks.filter(task => {
+                    if (!task.start) return false;
+                    const taskDate = new Date(task.start);
+                    return taskDate >= monday && taskDate <= sunday;
+                });
+            }
+            
+            case 'month': {
+                // Last 4 weeks
+                const fourWeeksAgo = new Date(now);
+                fourWeeksAgo.setDate(now.getDate() - 28);
+                fourWeeksAgo.setHours(0, 0, 0, 0);
+                
+                return tasks.filter(task => {
+                    if (!task.start) return false;
+                    const taskDate = new Date(task.start);
+                    return taskDate >= fourWeeksAgo;
+                });
+            }
+            
+            case 'year': {
+                // Last 12 months
+                const twelveMonthsAgo = new Date(now);
+                twelveMonthsAgo.setMonth(now.getMonth() - 12);
+                twelveMonthsAgo.setHours(0, 0, 0, 0);
+                
+                return tasks.filter(task => {
+                    if (!task.start) return false;
+                    const taskDate = new Date(task.start);
+                    return taskDate >= twelveMonthsAgo;
+                });
+            }
+            
+            case 'custom': {
+                // Use custom date range from simpleChart
+                if (this.simpleChart && this.simpleChart.customDateRange) {
+                    const { fromDate, toDate } = this.simpleChart.customDateRange;
+                    return tasks.filter(task => {
+                        if (!task.start) return false;
+                        const taskDate = new Date(task.start);
+                        return taskDate >= fromDate && taskDate <= toDate;
+                    });
+                }
+                // Fallback to week if no custom range
+                return this._filterTasksByPeriod(tasks, 'week');
+            }
+            
+            default:
+                return this._filterTasksByPeriod(tasks, 'week');
+        }
+    }
+    
+    /**
+     * Update currency carousel with earnings data
+     */
+    _updateCurrencyCarousel(currencyTotals) {
+        const carousel = this.parentWindow._reports_currency_carousel;
+        if (!carousel) return;
+        
+        // Clear existing carousel content
+        while (carousel.get_first_child()) {
+            carousel.remove(carousel.get_first_child());
+        }
+        
+        if (currencyTotals.size === 0) {
+            // Show $0.00 if no earnings
+            const zeroBox = this._createCurrencyBox('$0.00', 'USD');
+            carousel.append(zeroBox);
+        } else {
+            // Add a page for each currency
+            for (const [currency, amount] of currencyTotals) {
+                const formattedAmount = this._formatCurrency(amount, currency);
+                const currencyBox = this._createCurrencyBox(formattedAmount, currency);
+                carousel.append(currencyBox);
+            }
+        }
+    }
+    
+    /**
+     * Create a currency display box for the carousel
+     */
+    _createCurrencyBox(formattedAmount, currency) {
+        const box = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 4,
+            halign: Gtk.Align.CENTER,
+            valign: Gtk.Align.CENTER
+        });
+        
+        const amountLabel = new Gtk.Label({
+            label: formattedAmount,
+            css_classes: ['title-1']
+        });
+        
+        const currencyLabel = new Gtk.Label({
+            label: currency,
+            css_classes: ['caption']
+        });
+        
+        box.append(amountLabel);
+        box.append(currencyLabel);
+        
+        return box;
+    }
+    
+    /**
+     * Format currency amount
+     */
+    _formatCurrency(amount, currency = 'USD') {
+        const symbols = {
+            'USD': '$',
+            'EUR': '€',
+            'GBP': '£',
+            'JPY': '¥'
+        };
+        
+        const symbol = symbols[currency] || '$';
+        return `${symbol}${amount.toFixed(2)}`;
     }
 
     /**

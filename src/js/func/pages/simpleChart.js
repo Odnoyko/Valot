@@ -102,8 +102,11 @@ export class SimpleChart {
         const calculatedWidth = chartData.length * minBarWidth;
         const maxWidthForCentering = 400; // Maximum width before switching to scrollable mode
         
-        // Find max value for scaling
+        // Find max value for scaling - ensure minimum reasonable scale
         const maxHours = Math.max(...chartData.map(d => d.hours), 1);
+        
+        // For custom ranges with small daily values, ensure minimum scale for visibility
+        const adjustedMaxHours = this._getAdjustedMaxHours(maxHours, chartData);
         
         // Create bars container
         const barsBox = new Gtk.Box({
@@ -114,22 +117,30 @@ export class SimpleChart {
         
         // Create bars for each day
         chartData.forEach(dayData => {
-            this._createBar(barsBox, dayData, maxHours);
+            this._createBar(barsBox, dayData, adjustedMaxHours);
         });
         
-        // Decide layout based on content width
+        // Always center the chart regardless of number of elements
+        const centeringContainer = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            halign: Gtk.Align.CENTER,
+            valign: Gtk.Align.CENTER,
+            hexpand: true
+        });
+        
         if (calculatedWidth <= maxWidthForCentering) {
-            // Few elements - center them without scrolling
-            barsBox.set_halign(Gtk.Align.CENTER);
-            chartBox.append(barsBox);
+            // Few elements - simple centered layout
+            centeringContainer.append(barsBox);
         } else {
-            // Many elements - use scrollable container with dragging
+            // Many elements - use scrollable container with dragging, but still centered
+            // Calculate responsive width based on available space
+            const maxScrollWidth = Math.min(calculatedWidth, 600); // Max 600px or content width
+            
             const scrolledWindow = new Gtk.ScrolledWindow({
                 hscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
                 vscrollbar_policy: Gtk.PolicyType.NEVER,
                 height_request: 140, // Slightly larger to accommodate scrollbar
-                margin_start: 12,
-                margin_end: 12,
+                width_request: maxScrollWidth,
                 kinetic_scrolling: true, // Enable smooth kinetic scrolling/dragging
                 overlay_scrolling: true  // Use overlay scrollbars for cleaner look
             });
@@ -138,7 +149,6 @@ export class SimpleChart {
             barsBox.set_size_request(calculatedWidth, -1);
             
             scrolledWindow.set_child(barsBox);
-            chartBox.append(scrolledWindow);
             
             // Add touch/drag gesture support for better dragging experience
             const dragGesture = new Gtk.GestureDrag();
@@ -160,7 +170,10 @@ export class SimpleChart {
             });
             
             scrolledWindow.add_controller(dragGesture);
+            centeringContainer.append(scrolledWindow);
         }
+        
+        chartBox.append(centeringContainer);
         
         // Total summary with period-specific text
         const totalHours = chartData.reduce((sum, d) => sum + d.hours, 0);
@@ -632,6 +645,33 @@ export class SimpleChart {
         }
         
         return data;
+    }
+
+    /**
+     * Adjust maximum hours for better chart visibility
+     * Ensures bars have reasonable height regardless of period type
+     */
+    _getAdjustedMaxHours(maxHours, chartData) {
+        // If we have very small values (less than 2 hours max), and this is a custom range
+        // or daily view, use a more appropriate scale
+        if (this.currentPeriod === 'custom' || this.currentPeriod === 'week') {
+            const totalHours = chartData.reduce((sum, d) => sum + d.hours, 0);
+            const avgHours = totalHours / chartData.length;
+            
+            // If the max is very small but we have reasonable activity, scale appropriately
+            if (maxHours < 2 && totalHours > 5) {
+                // Use a scale that makes the tallest bar about 70% of chart height
+                return Math.max(maxHours * 1.5, 4);
+            }
+            
+            // For very small values, ensure minimum scale of 2 hours for visibility
+            if (maxHours < 1 && totalHours > 0) {
+                return Math.max(maxHours * 2, 2);
+            }
+        }
+        
+        // For month/year views or when values are already reasonable, use original
+        return maxHours;
     }
 
 }
