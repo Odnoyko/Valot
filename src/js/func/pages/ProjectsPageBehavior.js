@@ -107,7 +107,7 @@ export class ProjectsPageBehavior {
         }
 
         try {
-            const sql = `SELECT id, name, color, total_time, icon, dark_icons, icon_color_mode 
+            const sql = `SELECT id, name, color, total_time, icon, dark_icons, icon_color_mode, icon_color 
                         FROM Project ORDER BY name`;
             const result = projectManager.dbConnection.execute_select_command(sql);
             const projects = [];
@@ -121,7 +121,8 @@ export class ProjectsPageBehavior {
                         totalTime: result.get_value_at(3, i) || 0,
                         icon: result.get_value_at(4, i) || 'folder-symbolic',
                         dark_icons: result.get_value_at(5, i) || 0,
-                        icon_color_mode: result.get_value_at(6, i) || 'auto'
+                        icon_color_mode: result.get_value_at(6, i) || 'auto',
+                        icon_color: result.get_value_at(7, i) || '#cccccc'
                     });
                 }
             }
