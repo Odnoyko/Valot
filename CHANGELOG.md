@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Future features and improvements will be listed here
 
+## [0.7.7] - 22.09.2025
+
+### 🚀 Fix not Gnome DE Database Bugs
+
+---
+
+
 ## [0.7.4 - 0.7.6] - 22.09.2025
 
 ### 🚀 Small interface improvement
