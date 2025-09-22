@@ -5,7 +5,7 @@
 @define-color subtitle_dark_color #7B7B7B;
 
 .content-box{
-	background: white;
+	background: @view_bg_color;
 	border-radius: 12px;
 }
 
