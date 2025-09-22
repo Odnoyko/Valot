@@ -110,6 +110,7 @@ function initDatabase(conn) {
         // Ensure additional columns exist (for existing databases)
         ensureProjectIconColumn(conn);
         ensureDarkIconsColumn(conn);
+        ensureIconColorColumn(conn);
         ensureIconColorModeColumn(conn);
         ensureClientCurrencyColumn(conn);
 
@@ -147,6 +148,19 @@ function ensureDarkIconsColumn(conn) {
     }
 }
 
+function ensureIconColorColumn(conn) {
+    try {
+        const alterSql = `ALTER TABLE Project ADD COLUMN icon_color TEXT DEFAULT '#cccccc'`;
+        executeNonSelectCommand(conn, alterSql);
+    } catch (error) {
+        // Column already exists, ignore error
+        if (error.message && error.message.includes('duplicate column name')) {
+            // icon_color column already exists
+        } else {
+        }
+    }
+}
+
 function ensureIconColorModeColumn(conn) {
     try {
         const alterSql = `ALTER TABLE Project ADD COLUMN icon_color_mode TEXT DEFAULT 'auto'`;
@@ -162,14 +176,27 @@ function ensureIconColorModeColumn(conn) {
 
 function ensureClientCurrencyColumn(conn) {
     try {
-        // Add currency column if it doesn't exist
-        const alterSql = `ALTER TABLE Client ADD COLUMN currency TEXT DEFAULT 'USD'`;
-        executeNonSelectCommand(conn, alterSql);
+        // Use standard SQL to check if column exists
+        const checkColumnSql = `SELECT currency FROM Client LIMIT 1`;
+        try {
+            executeQuery(conn, checkColumnSql);
+            // Column exists, no need to add it
+        } catch (columnError) {
+            // Column doesn't exist, add it
+            if (columnError.message && columnError.message.includes('no such column')) {
+                const alterSql = `ALTER TABLE Client ADD COLUMN currency TEXT DEFAULT 'USD'`;
+                executeNonSelectCommand(conn, alterSql);
+            } else {
+                throw columnError;
+            }
+        }
     } catch (error) {
-        // Column already exists, ignore error
+        console.error('Error ensuring currency column:', error);
+        // Column already exists, ignore specific error
         if (error.message && error.message.includes('duplicate column name')) {
             // currency column already exists
         } else {
+            throw error;
         }
     }
 }

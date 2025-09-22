@@ -391,18 +391,18 @@ export class ClientManager {
 
         try {
             // Get client data
-            const query = `SELECT name, email, rate FROM Client WHERE id = ${clientId}`;
+            const query = `SELECT name, email, rate, currency FROM Client WHERE id = ${clientId}`;
             const result = this.dbConnection.execute_select_command(query);
-            const iter = result.create_iter();
             
-            if (!result.iter_move_next(iter)) {
+            if (result.get_n_rows() === 0) {
                 console.error('Client not found');
                 return;
             }
 
-            const currentName = result.get_value_at(iter, 0);
-            const currentEmail = result.get_value_at(iter, 1);
-            const currentRate = result.get_value_at(iter, 2);
+            const currentName = result.get_value_at(0, 0);
+            const currentEmail = result.get_value_at(1, 0);
+            const currentRate = result.get_value_at(2, 0);
+            const currentCurrency = result.get_value_at(3, 0) || 'USD';
 
             
             const dialog = new Adw.AlertDialog({
@@ -543,17 +543,17 @@ export class ClientManager {
         }
 
         try {
-            const query = 'SELECT id, name, email, rate FROM Client ORDER BY name';
+            const query = 'SELECT id, name, email, rate, currency FROM Client ORDER BY name';
             const result = this.dbConnection.execute_select_command(query);
-            const iter = result.create_iter();
             const clients = [];
 
-            while (result.iter_move_next(iter)) {
+            for (let i = 0; i < result.get_n_rows(); i++) {
                 clients.push({
-                    id: result.get_value_at(iter, 0),
-                    name: result.get_value_at(iter, 1),
-                    email: result.get_value_at(iter, 2),
-                    rate: result.get_value_at(iter, 3)
+                    id: result.get_value_at(0, i),
+                    name: result.get_value_at(1, i),
+                    email: result.get_value_at(2, i),
+                    rate: result.get_value_at(3, i),
+                    currency: result.get_value_at(4, i) || 'USD'
                 });
             }
 
