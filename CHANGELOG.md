@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Future features and improvements will be listed here
 
+## [0.7.9] - 23.09.2025
+
+### 🎨 UI Improvements
+- Added brand colors (#F6D32D) for Flathub store integration
+
+---
+
 ## [0.7.8] - 22.09.2025
 
 ### 🚀 Hot Fix
