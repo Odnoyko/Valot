@@ -122,12 +122,7 @@ export class ReportPDF {
             }
         } catch (error) {
             progressDialog.close();
-            //('💥 PDF export failed:', error);
-            //('📍 Error details:', {
-                message: error.message,
-                stack: error.stack,
-                name: error.name
-            });
+            // PDF export failed
             
             let errorMessage = error.message;
             let errorDetail = '';
