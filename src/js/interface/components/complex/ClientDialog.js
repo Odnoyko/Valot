@@ -233,7 +233,7 @@ export class ClientDialog extends FormDialog {
                 return true; // Close dialog
                 
             } catch (error) {
-                console.error('Error saving client:', error);
+                // Error saving client
                 this.showFieldError('name', 'Failed to save client. Please try again.');
                 return false;
             }

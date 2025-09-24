@@ -127,7 +127,7 @@ export class TaskRenderer {
 			    //start Tracking label
                             timeLabel.set_markup(`<span color="@accent_bg_color">●</span> ${totalTimeStr}`);
                         }).catch(error => {
-                            console.error(`Error getting database time for "${task.name}":`, error);
+                            //(`Error getting database time for "${task.name}":`, error);
                             // Fallback to showing just current elapsed time
                             const elapsedTime = trackingStateManager.currentElapsedTime || 0;
                             const timeStr = this._formatElapsedTime(elapsedTime);
@@ -505,7 +505,7 @@ export class TaskRenderer {
     // Update task name in database
     _updateTaskName(taskId, newName) {
         if (!this.parentWindow.dbConnection) {
-            console.error('No database connection to update task name');
+            //('No database connection to update task name');
             return;
         }
 
@@ -521,7 +521,7 @@ export class TaskRenderer {
             }
 
         } catch (error) {
-            console.error('Error updating task name:', error);
+            //('Error updating task name:', error);
         }
     }
 
@@ -536,7 +536,7 @@ export class TaskRenderer {
             try {
                 widget.timeLabel.set_label(formattedTime);
             } catch (error) {
-                console.error(`❌ Error updating duration for task "${taskName}":`, error);
+                //(`❌ Error updating duration for task "${taskName}":`, error);
                 // Remove invalid widget from tracking
                 this.activeTaskWidgets.delete(taskName);
             }

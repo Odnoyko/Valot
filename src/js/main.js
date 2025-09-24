@@ -140,7 +140,6 @@ export const ValotApplication = GObject.registerClass(
 
             // Initialize database
             if (!this._initializeDatabase()) {
-                console.error("Application starting without database connection");
             }
 
             if (this.compactMode) {
@@ -228,7 +227,6 @@ export const ValotApplication = GObject.registerClass(
                     this.compactWindow.stick();
                 }
             } catch (error) {
-                console.log('Note: Some window positioning features not available in this environment');
             }
 
             // Set window properties for always-on-top behavior
@@ -237,7 +235,6 @@ export const ValotApplication = GObject.registerClass(
                     this.compactWindow.set_type_hint(Gdk.WindowTypeHint.UTILITY);
                 }
             } catch (error) {
-                console.log('Note: Window type hint not available in this environment');
             }
 
             // Handle close event - minimize instead of closing

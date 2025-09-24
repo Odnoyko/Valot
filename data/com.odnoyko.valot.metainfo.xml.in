@@ -25,10 +25,6 @@
   <url type="bugtracker">https://gitlab.com/Valo27/valot/-/issues</url>
   <url type="vcs-browser">https://gitlab.com/Valo27/valot</url>
   <content_rating type="oars-1.1" />
-  <branding>
-    <color type="primary" scheme_preference="light">#8FF0A4</color>
-    <color type="primary" scheme_preference="dark">#57E389</color>
-  </branding>
   <supports>
     <control>pointing</control>
     <control>keyboard</control>
@@ -126,4 +122,8 @@
       <caption>Comprehensive reports with interactive charts, statistics, and time analytics</caption>
     </screenshot>
   </screenshots>
+  <branding>
+    <color type="primary" scheme_preference="light">#8FF0A4</color>
+    <color type="primary" scheme_preference="dark">#57E389</color>
+  </branding>
 </component>

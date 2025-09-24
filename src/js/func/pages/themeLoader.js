@@ -335,7 +335,7 @@ export class ThemeLoader {
                 return themeId;
             }
         } catch (error) {
-            console.error('Error loading theme file:', error);
+            //('Error loading theme file:', error);
         }
         return null;
     }
@@ -347,7 +347,7 @@ export class ThemeLoader {
             file.replace_contents(themeJson, null, false, Gio.FileCreateFlags.NONE, null);
             return true;
         } catch (error) {
-            console.error('Error saving theme file:', error);
+            //('Error saving theme file:', error);
             return false;
         }
     }

@@ -93,10 +93,10 @@ export class TimeUtils {
             const tasksText = weekTasks === 1 ? '1 task' : `${weekTasks} tasks`;
             weeklyTimeElement.set_subtitle(`${timeText} • ${tasksText}`);
 
-            console.log(`📊 Weekly time updated: ${timeText} (${weekTasks} tasks)`);
+            //(`📊 Weekly time updated: ${timeText} (${weekTasks} tasks)`);
 
         } catch (error) {
-            console.error('❌ Error updating weekly time display:', error);
+            //('❌ Error updating weekly time display:', error);
         }
     }
 

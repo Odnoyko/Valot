@@ -1,4 +1,5 @@
 import Gtk from 'gi://Gtk';
+import Gdk from 'gi://Gdk';
 import Adw from 'gi://Adw';
 import GObject from 'gi://GObject';
 import { trackingStateManager } from 'resource:///com/odnoyko/valot/js/func/global/trackingStateManager.js';
@@ -8,6 +9,7 @@ import { SelectorFactory } from 'resource:///com/odnoyko/valot/js/interface/comp
 import { WidgetFactory } from 'resource:///com/odnoyko/valot/js/interface/components/widgetFactory.js';
 import { ClientDropdown } from 'resource:///com/odnoyko/valot/js/interface/components/clientDropdown.js';
 import { getProjectIconColor } from 'resource:///com/odnoyko/valot/js/func/global/colorUtils.js';
+import { pomodoroManager } from 'resource:///com/odnoyko/valot/js/func/global/pomodoroManager.js';
 
 export const CompactTrackerWindow = GObject.registerClass({
     GTypeName: 'CompactTrackerWindow'
@@ -24,9 +26,19 @@ export const CompactTrackerWindow = GObject.registerClass({
         });
         this.mainWindow = mainWindow;
         this.shiftMode = false; // Track if opened with shift key
+        
+        // Pomodoro state
+        this.pomodoroMode = false;
+        this.pomodoroStartTime = null;
+        this.pomodoroMinutes = 20; // Default 20 minutes
+        this.pomodoroUpdateInterval = null;
+        
         this._createWidgets();
         this._setupSignals();
         this._updateFromMainWindow();
+        
+        // Register with shared Pomodoro manager
+        pomodoroManager.registerWidget(this);
 
     }
 
@@ -165,15 +177,45 @@ export const CompactTrackerWindow = GObject.registerClass({
 
         // Register time display for updates
         trackingStateManager.registerTimeLabel(this._time_display);
+        
+        // Store original set_text method to override during Pomodoro mode
+        this._time_display._originalSetText = this._time_display.set_text;
+        this._time_display.set_text = (text) => {
+            // Skip normal time updates when in Pomodoro mode
+            if (this.pomodoroMode) {
+                return;
+            }
+            this._time_display._originalSetText(text);
+        };
 
-        // Add tracking click handler
+        // Add tracking click handler with Shift detection
         this._track_button.connect('clicked', () => {
-            GlobalTracking.handleTrackingClick({
-                input: this._task_input,
-                taskGroupKey: null,
-                parentWindow: this.mainWindow,
-                sourceComponent: this
-            });
+            // Check for Shift key in current event
+            const display = Gdk.Display.get_default();
+            const seat = display.get_default_seat();
+            const keyboard = seat.get_keyboard();
+            const state = keyboard.get_modifier_state();
+            
+            if (state & Gdk.ModifierType.SHIFT_MASK) {
+                // Shift+click: Start Pomodoro tracking
+                GlobalTracking.handleTrackingClick({
+                    input: this._task_input,
+                    taskGroupKey: null,
+                    parentWindow: this.mainWindow,
+                    sourceComponent: this
+                });
+                if (trackingStateManager.getCurrentTracking()) {
+                    pomodoroManager.startPomodoro();
+                }
+            } else {
+                // Normal click: Regular tracking
+                GlobalTracking.handleTrackingClick({
+                    input: this._task_input,
+                    taskGroupKey: null,
+                    parentWindow: this.mainWindow,
+                    sourceComponent: this
+                });
+            }
         });
 
         // Task input validation
@@ -250,10 +292,22 @@ export const CompactTrackerWindow = GObject.registerClass({
             // Something is currently being tracked - show stop icon
             this._track_button.set_icon_name('media-playback-stop-symbolic');
             this._track_button.set_tooltip_text('Stop tracking');
+            
+            // Don't override Pomodoro styling if active
+            if (!this.pomodoroMode) {
+                this._track_button.remove_css_class('destructive-action');
+                this._track_button.add_css_class('suggested-action');
+            }
         } else {
             // Nothing is being tracked - show start icon
             this._track_button.set_icon_name('media-playback-start-symbolic');
             this._track_button.set_tooltip_text('Start tracking');
+            
+            // Only restore normal styling if not in Pomodoro mode
+            if (!this.pomodoroMode) {
+                this._track_button.remove_css_class('destructive-action');
+                this._track_button.add_css_class('suggested-action');
+            }
         }
     }
 
@@ -332,7 +386,6 @@ export const CompactTrackerWindow = GObject.registerClass({
         // Get projects from the projects page component
         const projectsPage = this.mainWindow?.pageComponents?.projects;
         if (!projectsPage || !projectsPage.projects) {
-            console.error('No projects available for selection');
             return;
         }
 
@@ -355,7 +408,6 @@ export const CompactTrackerWindow = GObject.registerClass({
         // Get clients from the clients page component
         const clientsPage = this.mainWindow?.pageComponents?.clients;
         if (!clientsPage || !clientsPage.clients) {
-            console.error('No clients available for selection');
             return;
         }
 
@@ -415,6 +467,51 @@ export const CompactTrackerWindow = GObject.registerClass({
             // If cursor was beyond new text length, put it at the end
             this._task_input.set_position(text.length);
         }
+    }
+
+    /**
+     * Called when Pomodoro starts (from shared manager)
+     */
+    _onPomodoroStart() {
+        this.pomodoroMode = true;
+        
+        // Change button to error color for Pomodoro mode
+        this._track_button.remove_css_class('suggested-action');
+        this._track_button.add_css_class('destructive-action');
+    }
+
+    /**
+     * Called when Pomodoro updates (from shared manager)
+     */
+    _onPomodoroUpdate(formattedTime) {
+        this._time_display._originalSetText(formattedTime);
+    }
+
+    /**
+     * Called when Pomodoro stops (from shared manager)
+     */
+    _onPomodoroStop() {
+        this.pomodoroMode = false;
+        // Restore normal time display and button color
+        if (!trackingStateManager.getCurrentTracking()) {
+            this._time_display._originalSetText('00:00:00');
+        }
+        this._track_button.remove_css_class('destructive-action');
+        this._track_button.add_css_class('suggested-action');
+    }
+
+    /**
+     * Called to trigger tracking stop when Pomodoro timer ends
+     */
+    _triggerTrackingStop() {
+        this._track_button.emit('clicked');
+    }
+
+    /**
+     * Check if tracking is currently active
+     */
+    _isTrackingActive() {
+        return trackingStateManager.getCurrentTracking() !== null;
     }
 
     /**

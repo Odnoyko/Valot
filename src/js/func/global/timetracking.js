@@ -158,7 +158,7 @@ export function timeTrack(button, input, label, taskContext = {}) {
         } else {
         }
       } catch (error) {
-        console.error("❌ Error saving task when tracking started:", error);
+        //("❌ Error saving task when tracking started:", error);
       }
 
       // Icon will be updated by trackingStateManager

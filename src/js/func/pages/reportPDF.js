@@ -88,7 +88,7 @@ export class ReportPDF {
             const file = await this._createReportsFolder(reportsDir);
             
             if (exportCancelled) {
-                console.log('❌ Export cancelled after folder creation');
+                //('❌ Export cancelled after folder creation');
                 throw new Error('Export cancelled by user');
             }
             
@@ -101,17 +101,17 @@ export class ReportPDF {
                 await this._createPDFFromTemplate(filepath, parentWindow, progressDialog);
                 
                 if (exportCancelled) {
-                    console.log('❌ Export cancelled after PDF generation attempt');
+                    //('❌ Export cancelled after PDF generation attempt');
                     // Clean up partial file
                     try {
                         if (GLib.file_test(filepath, GLib.FileTest.EXISTS)) {
-                            console.log('🧹 Cleaning up partial file...');
+                            //('🧹 Cleaning up partial file...');
                             const file = Gio.File.new_for_path(filepath);
                             file.delete(null);
-                            console.log('🧹 Partial file cleaned up');
+                            //('🧹 Partial file cleaned up');
                         }
                     } catch (cleanupError) {
-                        console.warn('⚠️ Could not clean up partial file:', cleanupError);
+                        //('⚠️ Could not clean up partial file:', cleanupError);
                     }
                     throw new Error('Export cancelled by user');
                 }
@@ -122,8 +122,8 @@ export class ReportPDF {
             }
         } catch (error) {
             progressDialog.close();
-            console.error('💥 PDF export failed:', error);
-            console.error('📍 Error details:', {
+            //('💥 PDF export failed:', error);
+            //('📍 Error details:', {
                 message: error.message,
                 stack: error.stack,
                 name: error.name
@@ -136,25 +136,25 @@ export class ReportPDF {
             if (error.message.includes('WebKit')) {
                 errorMessage = 'PDF Generation Failed';
                 errorDetail = 'WebKit rendering engine failed. This usually happens in sandboxed environments like Flatpak.\n\nTry using the HTML export option instead.';
-                console.error('🌐 WebKit-related error detected');
+                //('🌐 WebKit-related error detected');
             } else if (error.message.includes('print')) {
                 errorMessage = 'Print System Unavailable';  
                 errorDetail = 'Cannot access system printer/PDF export functionality.\n\nThis feature may not be available in your environment.';
-                console.error('🖨️ Print system error detected');
+                //('🖨️ Print system error detected');
             } else if (error.message.includes('timeout')) {
                 errorMessage = 'Export Timeout';
                 errorDetail = 'PDF generation took too long and was cancelled.\n\nTry reducing the amount of data in your report or try again.';
-                console.error('⏰ Timeout error detected');
+                //('⏰ Timeout error detected');
             } else if (error.message.includes('cancelled')) {
-                console.log('👤 User cancellation detected - not showing error dialog');
+                //('👤 User cancellation detected - not showing error dialog');
                 // Don't show error for user cancellation
                 return;
             } else {
-                console.error('❓ Unknown error type detected');
+                //('❓ Unknown error type detected');
                 errorDetail = `Technical details: ${error.message}`;
             }
             
-            console.log('🚨 Showing error dialog to user...');
+            //('🚨 Showing error dialog to user...');
             const errorDialog = new Gtk.AlertDialog({
                 message: errorMessage,
                 detail: errorDetail
@@ -162,7 +162,7 @@ export class ReportPDF {
             errorDialog.show(parentWindow);
             
             // Re-throw for fallback system
-            console.log('🔄 Re-throwing error for fallback system');
+            //('🔄 Re-throwing error for fallback system');
             throw error;
         }
     }
@@ -172,7 +172,7 @@ export class ReportPDF {
         try {
             // Create Valot folder if it doesn't exist
             if (!GLib.file_test(reportsDir, GLib.FileTest.IS_DIR)) {
-                console.log(`Directory doesn't exist, creating: ${reportsDir}`);
+                //(`Directory doesn't exist, creating: ${reportsDir}`);
                 const result = GLib.mkdir_with_parents(reportsDir, 0o755);
                 if (result !== 0) {
                     throw new Error(`Failed to create directory: ${reportsDir} (code: ${result})`);
@@ -185,7 +185,7 @@ export class ReportPDF {
             const filePath = GLib.build_filenamev([reportsDir, fileName]);
             return Gio.File.new_for_path(filePath);
         } catch (error) {
-            console.error(`Error in _createReportsFolder: ${error.message}`);
+            //(`Error in _createReportsFolder: ${error.message}`);
             throw error;
         }
     }
@@ -213,7 +213,7 @@ export class ReportPDF {
     }
 
     _openFolder(folderPath) {
-        console.log(`Attempting to open folder: ${folderPath}`);
+        //(`Attempting to open folder: ${folderPath}`);
         
         try {
             // Simple xdg-open call only
@@ -222,10 +222,10 @@ export class ReportPDF {
                 Gio.SubprocessFlags.NONE
             );
             subprocess.wait_async(null, null);
-            console.log('✓ Opened folder via xdg-open');
+            //('✓ Opened folder via xdg-open');
             return true;
         } catch (error) {
-            console.error('Could not open folder:', error);
+            //('Could not open folder:', error);
         }
         
         // If failed, show simple dialog
@@ -242,7 +242,7 @@ export class ReportPDF {
         try {
             progressDialog.set_body(message);
         } catch (error) {
-            console.warn('Could not update progress dialog:', error);
+            //('Could not update progress dialog:', error);
         }
     }
 
@@ -256,7 +256,7 @@ export class ReportPDF {
                 // Set timeout for the entire PDF generation process (30 seconds)
                 timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 30000, () => {
                     if (!isCompleted) {
-                        console.error('⏰ PDF generation timeout after 30 seconds');
+                        //('⏰ PDF generation timeout after 30 seconds');
                         reject(new Error('PDF generation timeout - process took too long'));
                     }
                     return GLib.SOURCE_REMOVE;
@@ -267,7 +267,7 @@ export class ReportPDF {
                 
                 // Handle WebKit errors
                 webView.connect('load-failed', (webView, loadEvent, failingURI, error) => {
-                    console.error('🚨 WebKit load failed:', error.message);
+                    //('🚨 WebKit load failed:', error.message);
                     if (!isCompleted) {
                         isCompleted = true;
                         if (timeoutId) GLib.source_remove(timeoutId);
@@ -330,7 +330,7 @@ export class ReportPDF {
                 });
                 
             } catch (error) {
-                console.error('💥 Error in _createPDFFromTemplate:', error);
+                //('💥 Error in _createPDFFromTemplate:', error);
                 isCompleted = true;
                 if (timeoutId) GLib.source_remove(timeoutId);
                 reject(error);
@@ -365,7 +365,7 @@ export class ReportPDF {
                 
                 // Set timeout for print operation (15 seconds)
                 printTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 15000, () => {
-                    console.error('⏰ Print operation timeout');
+                    //('⏰ Print operation timeout');
                     if (checkIntervalId) GLib.source_remove(checkIntervalId);
                     reject(new Error('Print operation timeout - PDF generation took too long'));
                     return GLib.SOURCE_REMOVE;
@@ -376,7 +376,7 @@ export class ReportPDF {
                     printOp.print();
                     this._updateProgress(progressDialog, 'Writing PDF file...');
                 } catch (printError) {
-                    console.error('🚨 Print operation failed:', printError.message);
+                    //('🚨 Print operation failed:', printError.message);
                     if (printTimeoutId) GLib.source_remove(printTimeoutId);
                     reject(new Error(`Print operation failed: ${printError.message}`));
                     return;
@@ -405,7 +405,7 @@ export class ReportPDF {
                                 reject(new Error('Generated PDF file is empty'));
                             }
                         } catch (sizeError) {
-                            console.warn('Could not check file size:', sizeError);
+                            //('Could not check file size:', sizeError);
                             resolve(); // File exists, assume it's okay
                         }
                         
@@ -421,7 +421,7 @@ export class ReportPDF {
                 });
                 
             } catch (error) {
-                console.error('💥 Error in _printWebViewToPDF:', error);
+                //('💥 Error in _printWebViewToPDF:', error);
                 if (printTimeoutId) GLib.source_remove(printTimeoutId);
                 if (checkIntervalId) GLib.source_remove(checkIntervalId);
                 reject(error);

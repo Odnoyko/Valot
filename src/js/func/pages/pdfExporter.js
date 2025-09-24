@@ -69,7 +69,7 @@ export class PDFExporter {
             }
         } catch (error) {
             if (error.code !== Gtk.DialogError.DISMISSED) {
-                console.error('PDF export error:', error);
+                //('PDF export error:', error);
                 const errorDialog = new Gtk.AlertDialog({
                     message: 'Export Failed',
                     detail: `Could not export PDF: ${error.message}`
@@ -108,7 +108,7 @@ export class PDFExporter {
             outputStream.close(null);
 
         } catch (error) {
-            console.error('Error writing report file:', error);
+            //('Error writing report file:', error);
             throw error;
         }
     }
