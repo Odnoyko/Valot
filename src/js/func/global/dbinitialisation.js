@@ -27,7 +27,7 @@ function openDatabase() {
         // Database successfully connected
         return connection;
     } catch (error) {
-        console.error('Fehler bei der Datenbankverbindung:', error.message);
+        //('Fehler bei der Datenbankverbindung:', error.message);
         throw error;
     }
 }
@@ -117,7 +117,7 @@ function initDatabase(conn) {
         // Database schema successfully initialized
 
     } catch (error) {
-        console.error('Fehler bei der Datenbankinitialisierung:', error);
+        //('Fehler bei der Datenbankinitialisierung:', error);
         throw error;
     }
 }
@@ -191,7 +191,7 @@ function ensureClientCurrencyColumn(conn) {
             }
         }
     } catch (error) {
-        console.error('Error ensuring currency column:', error);
+        //('Error ensuring currency column:', error);
         // Column already exists, ignore specific error
         if (error.message && error.message.includes('duplicate column name')) {
             // currency column already exists
@@ -207,7 +207,7 @@ export function setupDatabase() {
         initDatabase(conn);
         return conn;
     } catch (error) {
-        console.error('Database setup failed:', error);
+        //('Database setup failed:', error);
         throw error;
     }
 }
@@ -219,7 +219,7 @@ export function executeQuery(conn, sql, params = null) {
         const result = conn.execute_select_command(sql);
         return result;
     } catch (error) {
-        console.error('Query execution failed:', error);
+        //('Query execution failed:', error);
         throw error;
     }
 }

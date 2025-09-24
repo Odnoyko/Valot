@@ -32,7 +32,7 @@ export class EventManager {
                     action();
                 }
             } catch (error) {
-                console.error(`Click handler error:`, error);
+                //(`Click handler error:`, error);
                 this.showErrorToast(`Action failed: ${error.message}`);
             }
         };
@@ -49,7 +49,7 @@ export class EventManager {
                 try {
                     handler(widget, ...args);
                 } catch (error) {
-                    console.error(`Debounced handler error:`, error);
+                    //(`Debounced handler error:`, error);
                 }
             }, delay);
         };
@@ -103,7 +103,7 @@ export class EventManager {
                         return; // Keep dialog open
                     }
                 } catch (error) {
-                    console.error('Form submission error:', error);
+                    //('Form submission error:', error);
                     this.showErrorToast(`Submission failed: ${error.message}`);
                     return;
                 }
@@ -180,7 +180,7 @@ export class EventManager {
                     shortcuts[shortcutKey]();
                     return true; // Consume event
                 } catch (error) {
-                    console.error(`Keyboard shortcut error (${shortcutKey}):`, error);
+                    //(`Keyboard shortcut error (${shortcutKey}):`, error);
                 }
             }
 
@@ -236,7 +236,7 @@ export class EventManager {
                 try {
                     return onDropReceived(value, x, y);
                 } catch (error) {
-                    console.error('Drop handler error:', error);
+                    //('Drop handler error:', error);
                     return false;
                 }
             });
@@ -283,7 +283,7 @@ export class EventManager {
                         action();
                     }
                 } catch (error) {
-                    console.error('Context menu action error:', error);
+                    //('Context menu action error:', error);
                 }
             });
 
@@ -348,7 +348,7 @@ export class EventManager {
                 try {
                     return onClose(); // Return true to prevent close, false to allow
                 } catch (error) {
-                    console.error('Window close handler error:', error);
+                    //('Window close handler error:', error);
                     return false; // Allow close on error
                 }
             });
@@ -379,7 +379,7 @@ export class EventManager {
                 
                 handlers.push({ widget, handlerId });
             } catch (error) {
-                console.error(`Failed to connect ${signal} handler:`, error);
+                //(`Failed to connect ${signal} handler:`, error);
             }
         });
 
@@ -394,7 +394,7 @@ export class EventManager {
             try {
                 widget.disconnect(handlerId);
             } catch (error) {
-                console.error('Failed to disconnect handler:', error);
+                //('Failed to disconnect handler:', error);
             }
         });
     }
@@ -436,7 +436,7 @@ export class EventManager {
         if (this.parentWindow.show_toast) {
             this.parentWindow.show_toast(message);
         } else {
-            console.error('Toast Error:', message);
+            //('Toast Error:', message);
         }
     }
 

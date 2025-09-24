@@ -563,7 +563,7 @@ export class FormDialog {
             try {
                 callback(event, data);
             } catch (error) {
-                console.error('Error in event listener:', error);
+                // Error in event listener
             }
         });
     }

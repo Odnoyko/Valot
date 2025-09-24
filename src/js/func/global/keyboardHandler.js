@@ -69,7 +69,7 @@ export function getCurrentPageName(mainContent, pages) {
         
         return 'unknown';
     } catch (error) {
-        console.error('❌ Error determining current page:', error);
+        //('❌ Error determining current page:', error);
         return 'unknown';
     }
 }

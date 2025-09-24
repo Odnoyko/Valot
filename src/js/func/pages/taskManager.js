@@ -42,7 +42,7 @@ export class TaskManager {
             const tasks = this._convertResultToArray(result);
             return tasks;
         } catch (error) {
-            console.error('❌ TaskManager: Error loading tasks:', error);
+            //('❌ TaskManager: Error loading tasks:', error);
             return [];
         }
     }
@@ -132,7 +132,7 @@ export class TaskManager {
             const tasks = this._convertResultToArray(result);
             return tasks;
         } catch (error) {
-            console.error('❌ TaskManager: Error filtering tasks:', error);
+            //('❌ TaskManager: Error filtering tasks:', error);
             return [];
         }
     }
@@ -169,7 +169,7 @@ export class TaskManager {
             const tasks = this._convertResultToArray(result);
             return tasks.length > 0 ? tasks[0] : null;
         } catch (error) {
-            console.error('❌ TaskManager: Error getting task by ID:', error);
+            //('❌ TaskManager: Error getting task by ID:', error);
             return null;
         }
     }
@@ -197,7 +197,7 @@ export class TaskManager {
             this.executeNonSelectCommand(this.dbConnection, sql);
             return true;
         } catch (error) {
-            console.error('❌ TaskManager: Error creating task:', error);
+            //('❌ TaskManager: Error creating task:', error);
             throw error;
         }
     }
@@ -257,7 +257,7 @@ export class TaskManager {
             this.executeNonSelectCommand(this.dbConnection, sql);
             return true;
         } catch (error) {
-            console.error('❌ TaskManager: Error updating task:', error);
+            //('❌ TaskManager: Error updating task:', error);
             throw error;
         }
     }
@@ -272,7 +272,7 @@ export class TaskManager {
             this.executeNonSelectCommand(this.dbConnection, sql);
             return true;
         } catch (error) {
-            console.error('❌ TaskManager: Error deleting task:', error);
+            //('❌ TaskManager: Error deleting task:', error);
             throw error;
         }
     }
@@ -292,7 +292,7 @@ export class TaskManager {
             this.executeNonSelectCommand(this.dbConnection, sql);
             return true;
         } catch (error) {
-            console.error('❌ TaskManager: Error deleting tasks:', error);
+            //('❌ TaskManager: Error deleting tasks:', error);
             throw error;
         }
     }
@@ -307,7 +307,7 @@ export class TaskManager {
             this.executeNonSelectCommand(this.dbConnection, sql);
             return true;
         } catch (error) {
-            console.error('❌ TaskManager: Error starting tracking:', error);
+            //('❌ TaskManager: Error starting tracking:', error);
             throw error;
         }
     }
@@ -322,7 +322,7 @@ export class TaskManager {
             this.executeNonSelectCommand(this.dbConnection, sql);
             return true;
         } catch (error) {
-            console.error('❌ TaskManager: Error stopping tracking:', error);
+            //('❌ TaskManager: Error stopping tracking:', error);
             throw error;
         }
     }
@@ -349,7 +349,7 @@ export class TaskManager {
                 projects_with_tasks: 0
             };
         } catch (error) {
-            console.error('❌ TaskManager: Error getting task stats:', error);
+            //('❌ TaskManager: Error getting task stats:', error);
             return {
                 total_tasks: 0,
                 active_tasks: 0,
@@ -394,7 +394,7 @@ export class TaskManager {
                 }
             }
         } catch (error) {
-            console.error('❌ TaskManager: Error converting result to array:', error);
+            //('❌ TaskManager: Error converting result to array:', error);
             return [];
         }
 

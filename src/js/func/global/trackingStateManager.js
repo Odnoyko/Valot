@@ -242,7 +242,7 @@ class TrackingStateManager {
                         input.set_text(this.currentTrackingTask.name);
                         this._lastSyncedTaskName = this.currentTrackingTask.name;
                     } catch (error) {
-                        console.error('📊 TrackingStateManager: Error syncing input field:', error);
+                        //('📊 TrackingStateManager: Error syncing input field:', error);
                     }
                 }
             } else {
@@ -258,7 +258,7 @@ class TrackingStateManager {
                         input.set_text(this._lastSyncedTaskName);
                         // Don't clear _lastSyncedTaskName so it persists
                     } catch (error) {
-                        console.error('📊 TrackingStateManager: Error keeping input field:', error);
+                        //('📊 TrackingStateManager: Error keeping input field:', error);
                     }
                 }
             }
@@ -286,7 +286,7 @@ class TrackingStateManager {
                     button.set_tooltip_text('Start New Session');
                 }
             } catch (error) {
-                console.error(`Error updating stack button "${groupKey}":`, error);
+                //(`Error updating stack button "${groupKey}":`, error);
             }
         });
     }
@@ -300,7 +300,7 @@ class TrackingStateManager {
             try {
                 callback(event, taskInfo);
             } catch (error) {
-                console.error('📊 TrackingStateManager: Error in subscriber callback:', error);
+                //('📊 TrackingStateManager: Error in subscriber callback:', error);
             }
         });
     }
@@ -321,11 +321,11 @@ class TrackingStateManager {
 
                 // Async update time labels
                 this._updateAllTimeLabels().catch(error => {
-                    console.error('Error updating time labels:', error);
+                    //('Error updating time labels:', error);
                 });
                 // Async update money labels
                 this._updateAllMoneyLabels().catch(error => {
-                    console.error('Error updating money labels:', error);
+                    //('Error updating money labels:', error);
                 });
 
                 this._updateSidebarStats();
@@ -384,7 +384,7 @@ class TrackingStateManager {
             }
             return 1;
         } catch (error) {
-            console.error(`Error getting project ID for "${projectName}":`, error);
+            //(`Error getting project ID for "${projectName}":`, error);
             return 1;
         }
     }
@@ -411,7 +411,7 @@ class TrackingStateManager {
             }
             return 1;
         } catch (error) {
-            console.error(`Error getting client ID for "${clientName}":`, error);
+            //(`Error getting client ID for "${clientName}":`, error);
             return 1;
         }
     }
@@ -468,7 +468,7 @@ class TrackingStateManager {
                                 dbTime = parseInt(totalTimeValue.toString());
                             }
                         } catch (parseError) {
-                            console.error(`Error parsing DB value for "${taskName}":`, parseError);
+                            //(`Error parsing DB value for "${taskName}":`, parseError);
                             dbTime = parseInt(totalTimeValue.toString()) || 0;
                         }
                     }
@@ -476,11 +476,11 @@ class TrackingStateManager {
 
                 return dbTime;
             } catch (dbError) {
-                console.error(`Error getting database time for "${taskName}":`, dbError);
+                //(`Error getting database time for "${taskName}":`, dbError);
                 return 0;
             }
         } catch (error) {
-            console.error('📊 Error calculating total task time:', error);
+            //('📊 Error calculating total task time:', error);
             return 0;
         }
     }
@@ -514,7 +514,7 @@ class TrackingStateManager {
                             label.set_text(formattedTime);
                         }
                     } catch (error) {
-                        console.error(`Error updating task time for ${taskGroupKey}:`, error);
+                        //(`Error updating task time for ${taskGroupKey}:`, error);
                     }
                 }
             });
@@ -525,7 +525,7 @@ class TrackingStateManager {
                     try {
                         stackLabelData.label.set_text(stackLabelData.originalText);
                     } catch (error) {
-                        console.error(`Error restoring stack label for "${groupKey}":`, error);
+                        //(`Error restoring stack label for "${groupKey}":`, error);
                     }
                 }
             });
@@ -570,7 +570,7 @@ class TrackingStateManager {
                     try {
                         stackLabelData.label.set_text(stackLabelData.originalText);
                     } catch (error) {
-                        console.error(`📊 TrackingStateManager: Error restoring stack label for "${groupKey}":`, error);
+                        //(`📊 TrackingStateManager: Error restoring stack label for "${groupKey}":`, error);
                     }
                 }
             }
@@ -754,7 +754,7 @@ class TrackingStateManager {
             );
             
         } catch (error) {
-            console.error("❌ Error creating new task in database:", error);
+            //("❌ Error creating new task in database:", error);
         }
     }
 
@@ -781,7 +781,7 @@ class TrackingStateManager {
             });
             
         } catch (error) {
-            console.error("❌ Error updating task in database:", error);
+            //("❌ Error updating task in database:", error);
         }
     }
 

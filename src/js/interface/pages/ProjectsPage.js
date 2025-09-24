@@ -58,7 +58,7 @@ export class ProjectsPage {
      */
     _connectToExistingUI() {
         if (!this.parentWindow) {
-            console.error('ProjectsPage: No parent window provided');
+            //('ProjectsPage: No parent window provided');
             return;
         }
         
@@ -271,7 +271,7 @@ export class ProjectsPage {
             this._updateProjectsDisplay();
             // Projects loaded successfully
         } catch (error) {
-            console.error('Error loading projects:', error);
+            //('Error loading projects:', error);
             this.showError('Load Error', 'Failed to load projects');
         } finally {
             this.hideLoading();
@@ -648,7 +648,7 @@ export class ProjectsPage {
                 }
             }
         } catch (error) {
-            console.error('ProjectsPage refresh failed:', error);
+            //('ProjectsPage refresh failed:', error);
         }
     }
 
@@ -672,7 +672,7 @@ export class ProjectsPage {
      * Show error message
      */
     showError(message) {
-        console.error(`ProjectsPage Error: ${message}`);
+        //(`ProjectsPage Error: ${message}`);
         // Could show error dialog in UI if needed
     }
 
@@ -769,7 +769,7 @@ export class ProjectsPage {
             // Loaded projects from database
             return projects;
         } catch (error) {
-            console.error('Error loading projects:', error);
+            //('Error loading projects:', error);
             return [];
         }
     }
@@ -783,7 +783,7 @@ export class ProjectsPage {
      */
     _showProjectSettings(project) {
         if (!this.parentWindow || !this.projectManager) {
-            console.error('Missing dependencies for project settings');
+            //('Missing dependencies for project settings');
             return;
         }
 
@@ -796,7 +796,7 @@ export class ProjectsPage {
      */
     _showProjectNameEditDialog(project, nameLabel) {
         if (!this.modularDialogManager) {
-            console.error('No modular dialog manager available');
+            //('No modular dialog manager available');
             return;
         }
 
@@ -834,14 +834,14 @@ export class ProjectsPage {
      */
     _handleProjectNameChange(projectId, newName, nameLabel) {
         if (!this.projectManager) {
-            console.error('No project manager available');
+            //('No project manager available');
             return;
         }
 
         // Find the project
         const project = this.projects.find(p => p.id === projectId);
         if (!project) {
-            console.error('Project not found:', projectId);
+            //('Project not found:', projectId);
             return;
         }
 

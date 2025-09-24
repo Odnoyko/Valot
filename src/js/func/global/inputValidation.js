@@ -258,7 +258,7 @@ export class InputValidator {
      */
     static showValidationTooltip(widget, message, showError = true) {
         if (!widget) {
-            console.error('Validation Error: Widget missing');
+            //('Validation Error: Widget missing');
             return;
         }
         
@@ -276,7 +276,7 @@ export class InputValidator {
             }
             
         } catch (error) {
-            console.error('Failed to update validation styling:', error);
+            //('Failed to update validation styling:', error);
         }
     }
     
@@ -378,7 +378,7 @@ export class InputValidator {
      */
     static showValidationError(parentWindow, title, message) {
         if (!parentWindow) {
-            console.error('Validation Error:', title, '-', message);
+            //('Validation Error:', title, '-', message);
             return;
         }
         
@@ -394,8 +394,8 @@ export class InputValidator {
             errorDialog.present(parentWindow);
             
         } catch (error) {
-            console.error('Failed to show validation error dialog:', error);
-            console.error('Original validation error:', title, '-', message);
+            //('Failed to show validation error dialog:', error);
+            //('Original validation error:', title, '-', message);
         }
     }
 }

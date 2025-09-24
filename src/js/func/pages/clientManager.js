@@ -26,7 +26,7 @@ export class ClientManager {
             // Validate inputs
             const nameValidation = InputValidator.validateClientName(name);
             if (!nameValidation.valid) {
-                console.error('Client validation failed:', nameValidation.error);
+                //('Client validation failed:', nameValidation.error);
                 this._showError(parentWindow, 'Validation Error', nameValidation.error);
                 return false;
             }
@@ -57,7 +57,7 @@ export class ClientManager {
             return true;
             
         } catch (error) {
-            console.error('Error creating client:', error);
+            //('Error creating client:', error);
             this._showError(parentWindow, 'Database Error', 'Failed to create client. Please try again.');
             return false;
         }
@@ -90,7 +90,7 @@ export class ClientManager {
             return true;
             
         } catch (error) {
-            console.error('Error updating client:', error);
+            //('Error updating client:', error);
             this._showError(parentWindow, 'Database Error', 'Failed to update client. Please try again.');
             return false;
         }
@@ -116,7 +116,7 @@ export class ClientManager {
             return true;
             
         } catch (error) {
-            console.error('Error deleting client:', error);
+            //('Error deleting client:', error);
             this._showError(parentWindow, 'Database Error', 'Failed to delete client. Please try again.');
             return false;
         }
@@ -141,14 +141,14 @@ export class ClientManager {
             const result = this.executeQuery(this.dbConnection, sql);
             return result.length > 0 && result[0].count > 0;
         } catch (error) {
-            console.error('Error checking client name:', error);
+            //('Error checking client name:', error);
             return false;
         }
     }
 
     _showError(parentWindow, title, message) {
         if (!parentWindow) {
-            console.error(`${title}: ${message}`);
+            //(`${title}: ${message}`);
             return;
         }
 
@@ -162,8 +162,8 @@ export class ClientManager {
             errorDialog.set_response_appearance('ok', Adw.ResponseAppearance.SUGGESTED);
             errorDialog.present(parentWindow);
         } catch (error) {
-            console.error('Failed to show error dialog:', error);
-            console.error('Original error:', title, '-', message);
+            //('Failed to show error dialog:', error);
+            //('Original error:', title, '-', message);
         }
     }
 
@@ -385,7 +385,7 @@ export class ClientManager {
     // Edit client dialog
     showEditClientDialog(clientId, parentWindow) {
         if (!this.dbConnection) {
-            console.error('No database connection to edit client');
+            //('No database connection to edit client');
             return;
         }
 
@@ -395,7 +395,7 @@ export class ClientManager {
             const result = this.dbConnection.execute_select_command(query);
             
             if (result.get_n_rows() === 0) {
-                console.error('Client not found');
+                //('Client not found');
                 return;
             }
 
@@ -486,7 +486,7 @@ export class ClientManager {
             dialog.present(parentWindow);
             
         } catch (error) {
-            console.error('Error showing edit client dialog:', error);
+            //('Error showing edit client dialog:', error);
         }
     }
 
@@ -515,7 +515,7 @@ export class ClientManager {
     // Delete client from database
     deleteClient(clientId, parentWindow) {
         if (!this.dbConnection) {
-            console.error('No database connection to delete client');
+            //('No database connection to delete client');
             return;
         }
 
@@ -531,14 +531,14 @@ export class ClientManager {
             }
             
         } catch (error) {
-            console.error('Error deleting client:', error);
+            //('Error deleting client:', error);
         }
     }
 
     // Load all clients
     loadClients() {
         if (!this.dbConnection) {
-            console.error('No database connection to load clients');
+            //('No database connection to load clients');
             return [];
         }
 
@@ -560,7 +560,7 @@ export class ClientManager {
             return clients;
             
         } catch (error) {
-            console.error('Error loading clients:', error);
+            //('Error loading clients:', error);
             return [];
         }
     }
@@ -802,7 +802,7 @@ export class ClientManager {
                     }
                 }
             } catch (error) {
-                console.error('Error loading projects for task dialog:', error);
+                //('Error loading projects for task dialog:', error);
             }
 
             form.append(projectRow);
@@ -885,7 +885,7 @@ export class ClientManager {
                             selectedProjectId = projects[selectedIndex].id;
                         }
                     } catch (error) {
-                        console.error('Error getting selected project:', error);
+                        //('Error getting selected project:', error);
                     }
                 }
 
@@ -932,10 +932,10 @@ export class ClientManager {
                     parentWindow.pageComponents.tasks.loadTasks();
                 }
             } else {
-                console.error('TaskManager not available');
+                //('TaskManager not available');
             }
         } catch (error) {
-            console.error('Error creating time entry:', error);
+            //('Error creating time entry:', error);
             const errorDialog = new Adw.AlertDialog({
                 heading: 'Error',
                 body: 'Failed to create time entry. Please try again.'

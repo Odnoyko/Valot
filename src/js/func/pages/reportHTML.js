@@ -86,7 +86,7 @@ export class ReportHTML {
                 this._showSuccessDialog(filepath, reportsDir, parentWindow, reason);
             }
         } catch (error) {
-            console.error('HTML export error:', error);
+            //('HTML export error:', error);
             const errorDialog = new Gtk.AlertDialog({
                 message: 'HTML Export Failed',
                 detail: `Could not export HTML: ${error.message}`
@@ -112,7 +112,7 @@ export class ReportHTML {
             const filePath = GLib.build_filenamev([reportsDir, fileName]);
             return Gio.File.new_for_path(filePath);
         } catch (error) {
-            console.error(`Error in _createReportsFolder: ${error.message}`);
+            //(`Error in _createReportsFolder: ${error.message}`);
             throw error;
         }
     }
@@ -159,7 +159,7 @@ export class ReportHTML {
             subprocess.wait_async(null, null);
             return true;
         } catch (error) {
-            console.error('Could not open folder:', error);
+            //('Could not open folder:', error);
             return false;
         }
     }
@@ -210,7 +210,7 @@ export class ReportHTML {
 
 
         } catch (error) {
-            console.error('Error creating HTML from template:', error);
+            //('Error creating HTML from template:', error);
             throw error;
         }
     }
