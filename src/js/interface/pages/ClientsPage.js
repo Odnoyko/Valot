@@ -54,7 +54,7 @@ export class ClientsPage {
      */
     _connectToExistingUI() {
         if (!this.parentWindow) {
-            console.error('ClientsPage: No parent window provided');
+            //('ClientsPage: No parent window provided');
             return;
         }
         
@@ -111,10 +111,10 @@ export class ClientsPage {
             if (this.clientManager) {
                 this.clientManager.showCreateClientDialog(this.parentWindow, searchText);
             } else {
-                console.error('❌ ClientManager not available');
+                //('❌ ClientManager not available');
             }
         } catch (error) {
-            console.error('❌ Error in showAddClientDialogNEW():', error);
+            //('❌ Error in showAddClientDialogNEW():', error);
         }
     }
 
@@ -405,7 +405,7 @@ export class ClientsPage {
             this._updateClientsDisplay();
             // Clients loaded successfully
         } catch (error) {
-            console.error('Error loading clients:', error);
+            //('Error loading clients:', error);
             this.showError('Load Error', 'Failed to load clients');
         } finally {
             this.hideLoading();
@@ -563,14 +563,14 @@ export class ClientsPage {
      */
     _handleClientNameChange(clientId, newName, nameLabel) {
         if (!this.clientManager) {
-            console.error('No client manager available');
+            //('No client manager available');
             return;
         }
 
         // Find the client
         const client = this.clients.find(c => c.id === clientId);
         if (!client) {
-            console.error('Client not found:', clientId);
+            //('Client not found:', clientId);
             return;
         }
 
@@ -652,7 +652,7 @@ export class ClientsPage {
      */
     _showCurrencyChangeDialog(client) {
         if (!this.clientManager) {
-            console.error('No client manager available');
+            //('No client manager available');
             return;
         }
 
@@ -937,7 +937,7 @@ export class ClientsPage {
             this._updateClientsDisplay();
             // Clients loaded successfully
         } catch (error) {
-            console.error('Error loading clients:', error);
+            //('Error loading clients:', error);
             this.showError('Load Error', 'Failed to load clients');
         } finally {
             this.hideLoading();
@@ -969,7 +969,7 @@ export class ClientsPage {
         try {
             await this.loadClients();
         } catch (error) {
-            console.error('ClientsPage refresh failed:', error);
+            //('ClientsPage refresh failed:', error);
         }
     }
 
@@ -991,7 +991,7 @@ export class ClientsPage {
      * Show error message
      */
     showError(message) {
-        console.error(`ClientsPage Error: ${message}`);
+        //(`ClientsPage Error: ${message}`);
     }
 
     /**
@@ -1018,7 +1018,7 @@ export class ClientsPage {
             // Use the client manager's create dialog method
             this.clientManager.showCreateClientDialog(this.parentWindow);
         } else {
-            console.error('ClientManager not available');
+            //('ClientManager not available');
         }
     }
 
@@ -1041,7 +1041,7 @@ export class ClientsPage {
         if (this.clientManager) {
             this.clientManager.showEditRateDialog(client, this.parentWindow);
         } else {
-            console.error('ClientManager not available for price/value dialog');
+            //('ClientManager not available for price/value dialog');
         }
     }
 
@@ -1063,7 +1063,7 @@ export class ClientsPage {
         try {
             await this.loadClients();
         } catch (error) {
-            console.error('ClientsPage refresh failed:', error);
+            //('ClientsPage refresh failed:', error);
         }
     }
 
@@ -1087,7 +1087,7 @@ export class ClientsPage {
      * Show error message
      */
     showError(message) {
-        console.error(`ClientsPage Error: ${message}`);
+        //(`ClientsPage Error: ${message}`);
         // Could show error dialog in UI if needed
     }
 
@@ -1239,7 +1239,7 @@ export class ClientsPage {
             // Loaded clients from database
             return clients;
         } catch (error) {
-            console.error('Error loading clients:', error);
+            //('Error loading clients:', error);
             return [];
         }
     }

@@ -357,7 +357,7 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
     async applyAndExport() {
 
         if (!this.reportExporter) {
-            console.error('❌ No report exporter available');
+            //('❌ No report exporter available');
             return;
         }
 
@@ -424,7 +424,7 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
             this.close();
 
         } catch (error) {
-            console.error('💥 Export configuration failed:', error);
+            //('💥 Export configuration failed:', error);
         }
     }
 

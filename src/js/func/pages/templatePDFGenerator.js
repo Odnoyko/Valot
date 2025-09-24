@@ -78,7 +78,7 @@ export class TemplatePDFGenerator {
                 this._showSuccessDialog(filepath, reportsDir, parentWindow);
             }
         } catch (error) {
-            console.error('Template PDF export error:', error);
+            //('Template PDF export error:', error);
             const errorDialog = new Gtk.AlertDialog({
                 message: 'Export Failed',
                 detail: `Could not export PDF: ${error.message}`
@@ -104,7 +104,7 @@ export class TemplatePDFGenerator {
             const filePath = GLib.build_filenamev([reportsDir, fileName]);
             return Gio.File.new_for_path(filePath);
         } catch (error) {
-            console.error(`Error in _createReportsFolder: ${error.message}`);
+            //(`Error in _createReportsFolder: ${error.message}`);
             throw error;
         }
     }
@@ -142,7 +142,7 @@ export class TemplatePDFGenerator {
             subprocess.wait_async(null, null);
             return true;
         } catch (error) {
-            console.error('Could not open folder:', error);
+            //('Could not open folder:', error);
         }
         
         // If failed, show simple dialog

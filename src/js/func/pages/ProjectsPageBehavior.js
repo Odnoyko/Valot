@@ -90,7 +90,7 @@ export class ProjectsPageBehavior {
             this._updateDisplay();
 
         } catch (error) {
-            console.error('Failed to load projects:', error);
+            //('Failed to load projects:', error);
             this._showError('Failed to load projects');
         } finally {
             this.isLoading = false;
@@ -129,7 +129,7 @@ export class ProjectsPageBehavior {
 
             return projects;
         } catch (error) {
-            console.error('Error fetching projects from manager:', error);
+            //('Error fetching projects from manager:', error);
             return [];
         }
     }
@@ -239,7 +239,7 @@ export class ProjectsPageBehavior {
                 setTimeout(() => dialog.setFormData({ name: searchText }), 100);
             }
         } else {
-            console.error('ModularDialogManager not available');
+            //('ModularDialogManager not available');
         }
     }
 
@@ -338,7 +338,7 @@ export class ProjectsPageBehavior {
     // Error handling
     _showError(message) {
         // Show error message to user
-        console.error(message);
+        //(message);
         // Could integrate with notification system or show error dialog
     }
 

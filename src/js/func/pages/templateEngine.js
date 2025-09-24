@@ -36,7 +36,7 @@ export class TemplateEngine {
                     throw new Error(`Could not load template resource: ${template.resourcePath}`);
                 }
             } catch (error) {
-                console.error('Error loading template resource:', error);
+                //('Error loading template resource:', error);
                 throw error;
             }
         } else if (template.templatePath) {
@@ -49,7 +49,7 @@ export class TemplateEngine {
                     throw new Error(`Could not load template file: ${template.templatePath}`);
                 }
             } catch (error) {
-                console.error('Error loading template file:', error);
+                //('Error loading template file:', error);
                 throw error;
             }
         } else {
@@ -475,7 +475,7 @@ export class TemplateEngine {
                 return templateId;
             }
         } catch (error) {
-            console.error('Error loading template file:', error);
+            //('Error loading template file:', error);
         }
         return null;
     }
@@ -489,7 +489,7 @@ export class TemplateEngine {
             file.replace_contents(template.html, null, false, Gio.FileCreateFlags.NONE, null);
             return true;
         } catch (error) {
-            console.error('Error saving template file:', error);
+            //('Error saving template file:', error);
             return false;
         }
     }

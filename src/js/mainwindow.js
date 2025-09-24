@@ -177,14 +177,14 @@ export const ValotWindow = GObject.registerClass({
             try {
                 this.dbConnection = setupDatabase();
             } catch (error) {
-                console.error('❌ Failed to initialize database:', error);
+                // Database initialization failed
             }
         }
     }
 
     _initializeManagers() {
         if (!this.dbConnection) {
-            console.error('No database connection for managers');
+            // No database connection available for managers
             return;
         }
 
@@ -944,7 +944,7 @@ export const ValotWindow = GObject.registerClass({
             }
 
         } catch (error) {
-            console.error('Error showing project selector:', error);
+            // Error showing project selector
         }
     }
 
@@ -1001,7 +1001,7 @@ export const ValotWindow = GObject.registerClass({
             dialog.present(this);
 
         } catch (error) {
-            console.error('Error showing client selector:', error);
+            // Error showing client selector
         }
     }
 
@@ -1123,7 +1123,7 @@ export const ValotWindow = GObject.registerClass({
     _setupNavigation() {
         // Setup sidebar navigation using original working method
         if (!this._sidebar_list) {
-            console.error('❌ sidebar_list is null - UI template may not be fully loaded');
+            //('❌ sidebar_list is null - UI template may not be fully loaded');
             return;
         }
         
@@ -1141,7 +1141,7 @@ export const ValotWindow = GObject.registerClass({
                     this._showPage('tasks'); 
                     if (this.tasksPageComponent) {
                         this.tasksPageComponent.refresh().catch(error => {
-                            console.error('Failed to refresh tasks page:', error);
+                            //('Failed to refresh tasks page:', error);
                         });
                         this.updateWeeklyStats();
                     }
@@ -1150,7 +1150,7 @@ export const ValotWindow = GObject.registerClass({
                     this._showPage('projects'); 
                     if (this.projectsPageComponent) {
                         this.projectsPageComponent.refresh().catch(error => {
-                            console.error('Failed to refresh projects page:', error);
+                            //('Failed to refresh projects page:', error);
                         });
                     }
                     break;
@@ -1158,7 +1158,7 @@ export const ValotWindow = GObject.registerClass({
                     this._showPage('clients'); 
                     if (this.clientsPageComponent) {
                         this.clientsPageComponent.refresh().catch(error => {
-                            console.error('Failed to refresh clients page:', error);
+                            //('Failed to refresh clients page:', error);
                         });
                     }
                     break;
@@ -1166,7 +1166,7 @@ export const ValotWindow = GObject.registerClass({
                     this._showPage('reports'); 
                     if (this.reportsPageComponent) {
                         this.reportsPageComponent.refresh().catch(error => {
-                            console.error('Failed to refresh reports page:', error);
+                            //('Failed to refresh reports page:', error);
                         });
                     }
                     // Update chart and statistics when Reports page is shown
@@ -1272,7 +1272,7 @@ export const ValotWindow = GObject.registerClass({
                         this._showPage('tasks');
                         if (this.tasksPageComponent) {
                             this.tasksPageComponent.refresh().catch(error => {
-                                console.error('Failed to refresh tasks page:', error);
+                                //('Failed to refresh tasks page:', error);
                             });
                             this.updateWeeklyStats();
                         }
@@ -1283,7 +1283,7 @@ export const ValotWindow = GObject.registerClass({
                         this._showPage('projects');
                         if (this.projectsPageComponent) {
                             this.projectsPageComponent.refresh().catch(error => {
-                                console.error('Failed to refresh projects page:', error);
+                                //('Failed to refresh projects page:', error);
                             });
                         }
                         return true;
@@ -1293,7 +1293,7 @@ export const ValotWindow = GObject.registerClass({
                         this._showPage('clients');
                         if (this.clientsPageComponent) {
                             this.clientsPageComponent.refresh().catch(error => {
-                                console.error('Failed to refresh clients page:', error);
+                                //('Failed to refresh clients page:', error);
                             });
                         }
                         return true;
@@ -1303,7 +1303,7 @@ export const ValotWindow = GObject.registerClass({
                         this._showPage('reports');
                         if (this.reportsPageComponent) {
                             this.reportsPageComponent.refresh().catch(error => {
-                                console.error('Failed to refresh reports page:', error);
+                                //('Failed to refresh reports page:', error);
                             });
                         }
                         this._updateReportsStatistics();
@@ -1352,7 +1352,7 @@ export const ValotWindow = GObject.registerClass({
                     this._main_content.add(pages[pageName]);
                     this._main_content.set_visible_page(pages[pageName]);
                 } catch (fallbackError) {
-                    console.error(`Fallback navigation failed for ${pageName}:`, fallbackError);
+                    //(`Fallback navigation failed for ${pageName}:`, fallbackError);
                 }
             }
         }
@@ -1373,7 +1373,7 @@ export const ValotWindow = GObject.registerClass({
         // Load tasks data
         if (this.tasksPageComponent) {
             this.tasksPageComponent.refresh().catch(error => {
-                console.error('Failed to load initial tasks data:', error);
+                //('Failed to load initial tasks data:', error);
             });
             this.updateWeeklyStats();
         }
@@ -1462,7 +1462,7 @@ export const ValotWindow = GObject.registerClass({
         const pageComponent = this.pageComponents[pageTag];
         if (pageComponent && typeof pageComponent.refresh === 'function') {
             pageComponent.refresh().catch(error => {
-                console.error(`Failed to refresh ${pageTag} page:`, error);
+                //(`Failed to refresh ${pageTag} page:`, error);
             });
         }
     }
@@ -1540,7 +1540,7 @@ export const ValotWindow = GObject.registerClass({
      */
     _loadProjects() {
         if (!this.projectManager || !this.projectManager.dbConnection) {
-            console.error('ProjectManager or database connection not available to load projects');
+            //('ProjectManager or database connection not available to load projects');
             return;
         }
 
@@ -1583,7 +1583,7 @@ export const ValotWindow = GObject.registerClass({
             }
             
         } catch (error) {
-            console.error('❌ Failed to load projects:', error);
+            //('❌ Failed to load projects:', error);
             this.allProjects = [];
         }
     }
@@ -1593,7 +1593,7 @@ export const ValotWindow = GObject.registerClass({
      */
     _loadClients() {
         if (!this.clientManager || !this.clientManager.dbConnection) {
-            console.error('ClientManager or database connection not available to load clients');
+            //('ClientManager or database connection not available to load clients');
             return;
         }
 
@@ -1639,7 +1639,7 @@ export const ValotWindow = GObject.registerClass({
             }
             
         } catch (error) {
-            console.error('❌ Failed to load clients:', error);
+            //('❌ Failed to load clients:', error);
             this.allClients = [];
         }
     }
@@ -1694,7 +1694,7 @@ export const ValotWindow = GObject.registerClass({
             this._weekly_time_row.set_subtitle(subtitle);
 
         } catch (error) {
-            console.error('❌ Failed to update weekly stats:', error);
+            //('❌ Failed to update weekly stats:', error);
             this._weekly_time_row.set_subtitle('Error loading stats');
         }
     }
@@ -1733,11 +1733,11 @@ export const ValotWindow = GObject.registerClass({
                         this._weekly_time_row.set_subtitle(`${timeStr} • ${taskCount} tasks`);
                     }
                 } catch (error) {
-                    console.error('❌ Failed to update real-time weekly stats:', error);
+                    //('❌ Failed to update real-time weekly stats:', error);
                 }
             }
         }).catch(error => {
-            console.error('❌ Failed to update weekly stats for real-time update:', error);
+            //('❌ Failed to update weekly stats for real-time update:', error);
         });
     }
 
@@ -1769,7 +1769,7 @@ export const ValotWindow = GObject.registerClass({
                         break;
                 }
             } catch (error) {
-                console.error('❌ Error handling tracking event:', error);
+                //('❌ Error handling tracking event:', error);
             }
         });
     }
@@ -1780,7 +1780,7 @@ export const ValotWindow = GObject.registerClass({
     _updateProjectStats() {
         if (this.projectsPageComponent && typeof this.projectsPageComponent.loadProjects === 'function') {
             this.projectsPageComponent.loadProjects().catch(error => {
-                console.error('❌ Failed to refresh project stats:', error);
+                //('❌ Failed to refresh project stats:', error);
             });
         }
     }
@@ -1791,7 +1791,7 @@ export const ValotWindow = GObject.registerClass({
     _updateTaskStats() {
         if (this.tasksPageComponent && typeof this.tasksPageComponent.refresh === 'function') {
             this.tasksPageComponent.refresh().catch(error => {
-                console.error('❌ Failed to refresh task stats:', error);
+                //('❌ Failed to refresh task stats:', error);
             });
         }
     }
@@ -2015,7 +2015,7 @@ export const ValotWindow = GObject.registerClass({
      */
     _performReportsTaskDeletion() {
         if (!this.dbConnection || !this.taskManager) {
-            console.error('Database connection or TaskManager not available');
+            //('Database connection or TaskManager not available');
             return;
         }
 
@@ -2055,7 +2055,7 @@ export const ValotWindow = GObject.registerClass({
 
 
         } catch (error) {
-            console.error('❌ Failed to delete tasks:', error);
+            //('❌ Failed to delete tasks:', error);
         }
     }
 
@@ -2155,7 +2155,7 @@ export const ValotWindow = GObject.registerClass({
             // Reports statistics updated
             
         } catch (error) {
-            console.error('❌ Failed to update Reports statistics:', error);
+            //('❌ Failed to update Reports statistics:', error);
         }
     }
 
@@ -2217,7 +2217,7 @@ export const ValotWindow = GObject.registerClass({
             // Updated currency carousel
 
         } catch (error) {
-            console.error('❌ Failed to update currency carousel:', error);
+            //('❌ Failed to update currency carousel:', error);
         }
     }
 
@@ -2315,7 +2315,7 @@ export const ValotWindow = GObject.registerClass({
             // Recent Tasks list updated successfully
 
         } catch (error) {
-            console.error('❌ Failed to update Recent Tasks list:', error);
+            //('❌ Failed to update Recent Tasks list:', error);
         }
     }
 
@@ -2682,14 +2682,14 @@ export const ValotWindow = GObject.registerClass({
     _showPDFExportPreferences() {
 
         if (!this.reportExporter) {
-            console.error('❌ No report exporter available for preferences dialog');
+            //('❌ No report exporter available for preferences dialog');
             return;
         }
 
         try {
             PDFExportPreferencesDialog.show(this, this.reportExporter);
         } catch (error) {
-            console.error('💥 Error opening PDF Export Preferences Dialog:', error);
+            //('💥 Error opening PDF Export Preferences Dialog:', error);
         }
     }
 

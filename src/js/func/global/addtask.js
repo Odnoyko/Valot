@@ -12,7 +12,7 @@ function getDbConnection() {
     if (app && app.database_connection) {
       dbConnection = app.database_connection;
     } else {
-      console.error("❌ Datenbank in der Anwendung nicht gefunden - App:", !!app, "DB Connection:", !!app?.database_connection);
+      //("❌ Datenbank in der Anwendung nicht gefunden - App:", !!app, "DB Connection:", !!app?.database_connection);
       
       // Try to get database connection from global window if available
       try {
@@ -24,7 +24,7 @@ function getDbConnection() {
           dbConnection = setupDatabase();
         }
       } catch (fallbackError) {
-        console.error("❌ Alle Datenbankverbindungsversuche gescheitert:", fallbackError);
+        //("❌ Alle Datenbankverbindungsversuche gescheitert:", fallbackError);
         throw new Error("Database connection not found - all fallbacks failed");
       }
     }
@@ -41,7 +41,7 @@ export function saveTask(name, project, startTime, endTime, spentSeconds, projec
     // Validate task name
     const nameValidation = InputValidator.validateTaskName(name);
     if (!nameValidation.valid) {
-      console.error('Task name validation failed:', nameValidation.error);
+      //('Task name validation failed:', nameValidation.error);
       return false;
     }
     
@@ -49,7 +49,7 @@ export function saveTask(name, project, startTime, endTime, spentSeconds, projec
     if (project) {
       const projectValidation = InputValidator.validateProjectName(project);
       if (!projectValidation.valid) {
-        console.error('Project name validation failed:', projectValidation.error);
+        //('Project name validation failed:', projectValidation.error);
         return false;
       }
     }
@@ -57,14 +57,14 @@ export function saveTask(name, project, startTime, endTime, spentSeconds, projec
     // Validate project ID
     const projectIdValidation = InputValidator.validateNumber(projectId, 1);
     if (!projectIdValidation.valid) {
-      console.error('Project ID validation failed:', projectIdValidation.error);
+      //('Project ID validation failed:', projectIdValidation.error);
       return false;
     }
     
     // Validate spent seconds
     const timeValidation = InputValidator.validateNumber(spentSeconds, 0);
     if (!timeValidation.valid) {
-      console.error('Time validation failed:', timeValidation.error);
+      //('Time validation failed:', timeValidation.error);
       return false;
     }
     
@@ -73,7 +73,7 @@ export function saveTask(name, project, startTime, endTime, spentSeconds, projec
     if (context?.client?.id) {
       const clientIdValidation = InputValidator.validateNumber(context.client.id, 1);
       if (!clientIdValidation.valid) {
-        console.error('Client ID validation failed:', clientIdValidation.error);
+        //('Client ID validation failed:', clientIdValidation.error);
         return false;
       }
       safeClientId = clientIdValidation.sanitized;
@@ -107,7 +107,7 @@ export function saveTask(name, project, startTime, endTime, spentSeconds, projec
         } else {
         }
       } catch (verifyError) {
-        console.error("❌ Error verifying saved task:", verifyError);
+        //("❌ Error verifying saved task:", verifyError);
       }
     } else {
     }
@@ -115,8 +115,8 @@ export function saveTask(name, project, startTime, endTime, spentSeconds, projec
     return result;
     
   } catch (error) {
-    console.error("❌ Fehler beim Speichern der Aufgabe:", error.message);
-    console.error("Stack-Trace:", error.stack);
+    //("❌ Fehler beim Speichern der Aufgabe:", error.message);
+    //("Stack-Trace:", error.stack);
     throw error;
   }
 }
@@ -127,13 +127,13 @@ export function updateTaskWhenTrackingStops(taskName, endTime, spentSeconds, con
     // Validate inputs
     const nameValidation = InputValidator.validateTaskName(taskName);
     if (!nameValidation.valid) {
-      console.error('Task name validation failed:', nameValidation.error);
+      //('Task name validation failed:', nameValidation.error);
       return false;
     }
     
     const timeValidation = InputValidator.validateNumber(spentSeconds, 0);
     if (!timeValidation.valid) {
-      console.error('Time validation failed:', timeValidation.error);
+      //('Time validation failed:', timeValidation.error);
       return false;
     }
     
@@ -161,7 +161,7 @@ export function updateTaskWhenTrackingStops(taskName, endTime, spentSeconds, con
           currentTimeSpent = checkResult.get_value_at(4, 0) || 0;
           
         } catch (rowReadError) {
-          console.error("🔍 Error reading found task row:", rowReadError);
+          //("🔍 Error reading found task row:", rowReadError);
           foundTaskId = null; // Reset so we show debug info
         }
       }
@@ -183,18 +183,18 @@ export function updateTaskWhenTrackingStops(taskName, endTime, spentSeconds, con
                 const end = debugResult.get_value_at(3, i);
                 const spent = debugResult.get_value_at(4, i);
               } catch (rowError) {
-                console.error(`🔍 Error reading debug row ${i}:`, rowError);
+                //(`🔍 Error reading debug row ${i}:`, rowError);
               }
             }
           }
         } catch (debugError) {
-          console.error("🔍 Debug query failed:", debugError);
+          //("🔍 Debug query failed:", debugError);
         }
         
         return 0; // No task found, return 0 rows affected
       }
     } catch (checkError) {
-      console.error("❌ Error checking for active task:", checkError);
+      //("❌ Error checking for active task:", checkError);
       throw checkError;
     }
     
@@ -210,8 +210,8 @@ export function updateTaskWhenTrackingStops(taskName, endTime, spentSeconds, con
     return result;
     
   } catch (error) {
-    console.error("❌ Fehler beim Aktualisieren der Aufgabe:", error.message);
-    console.error("Stack-Trace:", error.stack);
+    //("❌ Fehler beim Aktualisieren der Aufgabe:", error.message);
+    //("Stack-Trace:", error.stack);
     throw error;
   }
 }
@@ -222,13 +222,13 @@ export function updateActiveTaskInRealTime(taskName, currentSpentSeconds) {
     // Validate inputs
     const nameValidation = InputValidator.validateTaskName(taskName);
     if (!nameValidation.valid) {
-      console.error('Task name validation failed:', nameValidation.error);
+      //('Task name validation failed:', nameValidation.error);
       return false;
     }
     
     const timeValidation = InputValidator.validateNumber(currentSpentSeconds, 0);
     if (!timeValidation.valid) {
-      console.error('Time validation failed:', timeValidation.error);
+      //('Time validation failed:', timeValidation.error);
       return false;
     }
     
@@ -259,7 +259,7 @@ export function updateActiveTaskInRealTime(taskName, currentSpentSeconds) {
     return result;
     
   } catch (error) {
-    console.error("❌ Fehler beim Real-time Aktualisieren der Aufgabe:", error.message);
+    //("❌ Fehler beim Real-time Aktualisieren der Aufgabe:", error.message);
     return false; // Don't throw error for real-time updates to avoid disrupting tracking
   }
 }

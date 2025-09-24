@@ -83,7 +83,7 @@ export class TasksPage {
                 executeNonSelectCommand
             );
         } else {
-            console.error('❌ No database connection available for TaskManager');
+            //('❌ No database connection available for TaskManager');
         }
     }
 
@@ -100,13 +100,13 @@ export class TasksPage {
             this.allProjects = this.parentWindow.allProjects || [];
             
         } else {
-            console.error('❌ Missing dependencies for TaskRenderer');
+            //('❌ Missing dependencies for TaskRenderer');
         }
     }
 
     _connectToExistingUI() {
         if (!this.parentWindow) {
-            console.error('TasksPage: No parent window provided');
+            //('TasksPage: No parent window provided');
             return;
         }
         
@@ -501,7 +501,7 @@ export class TasksPage {
      */
     _renderTaskGroups(taskGroups) {
         if (!this.taskRenderer) {
-            console.error('TaskRenderer not initialized');
+            //('TaskRenderer not initialized');
             return;
         }
 
@@ -721,7 +721,7 @@ export class TasksPage {
      */
     async loadTasks() {
         if (!this.taskManager) {
-            console.error('TasksPage: TaskManager not initialized');
+            //('TasksPage: TaskManager not initialized');
             return;
         }
 
@@ -765,7 +765,7 @@ export class TasksPage {
             this._updateTaskDisplay();
             
         } catch (error) {
-            console.error('❌ Error loading tasks:', error);
+            //('❌ Error loading tasks:', error);
             this.showError('Load Error', 'Failed to load tasks: ' + error.message);
             this.tasks = [];
             this.filteredTasks = [];
@@ -873,7 +873,7 @@ export class TasksPage {
         try {
             await this.loadTasks();
         } catch (error) {
-            console.error('TasksPage refresh failed:', error);
+            //('TasksPage refresh failed:', error);
         }
     }
 
@@ -897,7 +897,7 @@ export class TasksPage {
      * Show error message
      */
     showError(message) {
-        console.error(`TasksPage Error: ${message}`);
+        //(`TasksPage Error: ${message}`);
         // Could show error dialog in UI if needed
     }
 
@@ -1628,7 +1628,7 @@ export class TasksPage {
 
     _updateTask(taskId, taskData) {
         if (!this.taskManager) {
-            console.error('TasksPage: TaskManager not initialized');
+            //('TasksPage: TaskManager not initialized');
             return;
         }
 
@@ -1642,14 +1642,14 @@ export class TasksPage {
             }
             
         } catch (error) {
-            console.error('❌ Error updating task:', error);
+            //('❌ Error updating task:', error);
             this.showError('Update Error', 'Failed to update task: ' + error.message);
         }
     }
 
     _performDeleteTask(taskId) {
         if (!this.taskManager) {
-            console.error('TasksPage: TaskManager not initialized');
+            //('TasksPage: TaskManager not initialized');
             return;
         }
 
@@ -1663,7 +1663,7 @@ export class TasksPage {
             }
             
         } catch (error) {
-            console.error('❌ Error deleting task:', error);
+            //('❌ Error deleting task:', error);
             this.showError('Delete Error', 'Failed to delete task: ' + error.message);
         }
     }
@@ -1737,8 +1737,8 @@ export class TasksPage {
             }
             
         } catch (error) {
-            console.error('❌ Error deleting selected tasks:', error);
-            console.error('❌ Stack trace:', error.stack);
+            //('❌ Error deleting selected tasks:', error);
+            //('❌ Stack trace:', error.stack);
             this.showError('Delete Error', 'Failed to delete selected tasks: ' + error.message);
         }
     }
@@ -1843,7 +1843,7 @@ export class TasksPage {
                     projectCombo.set_active_id(this.parentWindow.currentProjectId.toString());
                 }
             } catch (error) {
-                console.error('Error loading projects for task dialog:', error);
+                //('Error loading projects for task dialog:', error);
             }
 
             form.append(projectLabel);
@@ -1901,7 +1901,7 @@ export class TasksPage {
      */
     _createTask(taskData) {
         if (!this.taskManager) {
-            console.error('TasksPage: TaskManager not initialized');
+            //('TasksPage: TaskManager not initialized');
             return;
         }
 
@@ -1920,7 +1920,7 @@ export class TasksPage {
             }
             
         } catch (error) {
-            console.error('❌ Error creating task:', error);
+            //('❌ Error creating task:', error);
             this.showError('Creation Error', 'Failed to create task: ' + error.message);
         }
     }
@@ -1946,7 +1946,7 @@ export class TasksPage {
      */
     _createTaskFromTemplate(templateTask) {
         if (!this.taskManager) {
-            console.error('TasksPage: TaskManager not initialized');
+            //('TasksPage: TaskManager not initialized');
             return;
         }
 
@@ -1973,7 +1973,7 @@ export class TasksPage {
             }
             
         } catch (error) {
-            console.error('❌ Error creating task from template:', error);
+            //('❌ Error creating task from template:', error);
             this.showError('Creation Error', 'Failed to create task: ' + error.message);
         }
     }
@@ -1997,7 +1997,7 @@ export class TasksPage {
                 this.taskRenderer.updateActiveTaskDuration(taskInfo.name, formattedTime);
             }
         } catch (error) {
-            console.error('❌ Error updating active task duration:', error);
+            //('❌ Error updating active task duration:', error);
         }
     }
     

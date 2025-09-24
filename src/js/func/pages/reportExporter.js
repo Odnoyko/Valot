@@ -87,23 +87,23 @@ export class ReportExporter {
             await this.pdfExporter.exportToPDF(parentWindow);
             
         } catch (pdfError) {
-            console.warn('❌ PDF export failed:', pdfError.message);
-            console.warn('📍 PDF error stack:', pdfError.stack);
-            console.log('🔄 Falling back to HTML export...');
+            //('❌ PDF export failed:', pdfError.message);
+            //('📍 PDF error stack:', pdfError.stack);
+            //('🔄 Falling back to HTML export...');
             
             try {
                 // STEP 2: PDF failed, export HTML with fallback message
-                console.log('🌐 Attempting HTML export fallback...');
+                //('🌐 Attempting HTML export fallback...');
                 await this.htmlExporter.exportToHTML(parentWindow, 'fallback');
-                console.log('✅ HTML export fallback completed successfully!');
+                //('✅ HTML export fallback completed successfully!');
                 
             } catch (htmlError) {
-                console.error('💥 Both PDF and HTML export failed!');
-                console.error('📍 HTML error:', htmlError.message);
-                console.error('📍 HTML error stack:', htmlError.stack);
+                //('💥 Both PDF and HTML export failed!');
+                //('📍 HTML error:', htmlError.message);
+                //('📍 HTML error stack:', htmlError.stack);
                 
                 // Show error dialog if both fail
-                console.log('🚨 Showing error dialog to user...');
+                //('🚨 Showing error dialog to user...');
                 const errorDialog = new Gtk.AlertDialog({
                     message: 'Export Failed',
                     detail: `Both PDF and HTML export failed.\n\nPDF Error: ${pdfError.message}\nHTML Error: ${htmlError.message}`

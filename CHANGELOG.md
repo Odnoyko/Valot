@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Future features and improvements will be listed here
 
+## [0.8.0] - 23.09.2025
+
+### 🍅 Pommodoro + App Icon Update
+- Added brand colors (#8FF0A4 for Light mode. #57E389 for Dark mode) for Flathub store integration
+
+---
+
+
 ## [0.7.10] - 23.09.2025
 
 ### 🎨 UI Improvements

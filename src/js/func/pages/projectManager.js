@@ -33,14 +33,14 @@ export class ProjectManager {
             // Validate inputs one more time for safety
             const nameValidation = InputValidator.validateProjectName(name);
             if (!nameValidation.valid) {
-                console.error('Project validation failed:', nameValidation.error);
+                //('Project validation failed:', nameValidation.error);
                 this._showError(parentWindow, 'Validation Error', nameValidation.error);
                 return false;
             }
 
             const colorValidation = InputValidator.validateColor(color);
             if (!colorValidation.valid) {
-                console.error('Color validation failed:', colorValidation.error);
+                //('Color validation failed:', colorValidation.error);
                 this._showError(parentWindow, 'Validation Error', colorValidation.error);
                 return false;
             }
@@ -80,7 +80,7 @@ export class ProjectManager {
             return true;
             
         } catch (error) {
-            console.error('Error creating project:', error);
+            //('Error creating project:', error);
             this._showError(parentWindow, 'Database Error', 'Failed to create project. Please try again.');
             return false;
         }
@@ -135,14 +135,14 @@ export class ProjectManager {
             // Validate inputs
             const nameValidation = InputValidator.validateProjectName(name);
             if (!nameValidation.valid) {
-                console.error('Project validation failed:', nameValidation.error);
+                //('Project validation failed:', nameValidation.error);
                 this._showError(parentWindow, 'Validation Error', nameValidation.error);
                 return null;
             }
 
             const colorValidation = InputValidator.validateColor(color);
             if (!colorValidation.valid) {
-                console.error('Color validation failed:', colorValidation.error);
+                //('Color validation failed:', colorValidation.error);
                 this._showError(parentWindow, 'Validation Error', colorValidation.error);
                 return null;
             }
@@ -190,12 +190,12 @@ export class ProjectManager {
                 
                 return newProjectId;
             } else {
-                console.error('Failed to get new project ID, query returned rows:', result ? result.get_n_rows() : 'null');
+                //('Failed to get new project ID, query returned rows:', result ? result.get_n_rows() : 'null');
                 return null;
             }
             
         } catch (error) {
-            console.error('Error creating project:', error);
+            //('Error creating project:', error);
             this._showError(parentWindow, 'Database Error', `Failed to create project: ${error.message}`);
             return null;
         }
@@ -223,11 +223,11 @@ export class ProjectManager {
                 };
                 return project;
             } else {
-                console.error('Project not found with ID:', projectId);
+                //('Project not found with ID:', projectId);
                 return null;
             }
         } catch (error) {
-            console.error('Error getting project by ID:', error);
+            //('Error getting project by ID:', error);
             return null;
         }
     }
@@ -297,7 +297,7 @@ export class ProjectManager {
             return true;
             
         } catch (error) {
-            console.error('Error updating project:', error);
+            //('Error updating project:', error);
             InputValidator.showValidationError(parentWindow, 'Project Update Failed', `Failed to update project: ${error.message}`);
             return false;
         }
@@ -330,7 +330,7 @@ export class ProjectManager {
             }
             
         } catch (error) {
-            console.error('Error deleting project:', error);
+            //('Error deleting project:', error);
         }
     }
 
@@ -1196,7 +1196,7 @@ export class ProjectManager {
 
     filterProjects() {
         if (!this.parentWindow) {
-            console.error('Parent window not set for ProjectManager');
+            //('Parent window not set for ProjectManager');
             return;
         }
 
@@ -1245,7 +1245,7 @@ export class ProjectManager {
 
     renderProjectRow(project) {
         if (!this.parentWindow) {
-            console.error('Parent window not set for ProjectManager');
+            //('Parent window not set for ProjectManager');
             return;
         }
 
@@ -1783,7 +1783,7 @@ export class ProjectManager {
             const result = this.executeQuery(this.dbConnection, sql);
             return result.length > 0 && result[0].count > 0;
         } catch (error) {
-            console.error('Error checking project name:', error);
+            //('Error checking project name:', error);
             return false; // Assume doesn't exist if query fails
         }
     }
@@ -1794,7 +1794,7 @@ export class ProjectManager {
      */
     _showError(parentWindow, title, message) {
         if (!parentWindow) {
-            console.error(`${title}: ${message}`);
+            //(`${title}: ${message}`);
             return;
         }
 
@@ -1808,8 +1808,8 @@ export class ProjectManager {
             errorDialog.set_response_appearance('ok', Adw.ResponseAppearance.SUGGESTED);
             errorDialog.present(parentWindow);
         } catch (error) {
-            console.error('Failed to show error dialog:', error);
-            console.error('Original error:', title, '-', message);
+            //('Failed to show error dialog:', error);
+            //('Original error:', title, '-', message);
         }
     }
 
@@ -1923,13 +1923,13 @@ export class ProjectManager {
                         } else {
                         }
                     } catch (error) {
-                        console.error('Project creation error, removing temporary ID:', tempId, error);
+                        //('Project creation error, removing temporary ID:', tempId, error);
                         success = false;
                     }
                 } else if (mode === 'edit') {
                     // Ensure we have a valid ID for edit mode
                     if (!projectData.id || projectData.id < 1) {
-                        console.error('Invalid project ID for edit mode:', projectData.id);
+                        //('Invalid project ID for edit mode:', projectData.id);
                         return false;
                     }
                     success = this.updateProject(
