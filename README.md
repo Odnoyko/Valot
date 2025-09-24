@@ -11,7 +11,7 @@
 </div>
 <br>
 <div align="center">
-    ![Valot Screenshot](data/screenshots/v0.1.1.png)
+    ![Valot Screenshot](data/screenshots/1.png)
 </div>
 ## Description
 
@@ -33,12 +33,6 @@ Valot is designed for developers, freelancers, and professionals who need to tra
 
 ```bash
 flatpak install flathub com.odnoyko.valot
-```
-
-### From AUR
-
-```bash
-yay valot
 ```
 
 ### Building from Source
