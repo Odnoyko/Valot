@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Future features and improvements will be listed here
 
+## [0.8.2] - 25.09.2025
+
+### Fixed
+- Updated Ukrainian translation file
+
 ## [0.8.1] - 25.09.2025
 
 ### - Created settings Dialog.
