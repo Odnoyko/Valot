@@ -3,8 +3,8 @@ using Adw 1;
 
 template $ValotWindow: Adw.ApplicationWindow {
   title: _("Valot");
-  default-width: 1200;
-  default-height: 800;
+  default-width: 1040;
+  default-height: 700;
   width-request: 756;
   height-request: 600;
   resizable: true;
@@ -632,7 +632,7 @@ template $ValotWindow: Adw.ApplicationWindow {
                       margin-end: 16;
 
                       Image {
-                        icon-name: "clock-symbolic";
+                        icon-name: "alarm-symbolic";
                         pixel-size: 32;
                         css-classes: ["accent"];
                       }
@@ -693,11 +693,6 @@ template $ValotWindow: Adw.ApplicationWindow {
                       margin-start: 12;
                       margin-end: 12;
 
-                      Image {
-                        icon-name: "money-symbolic";
-                        pixel-size: 32;
-                        css-classes: ["accent"];
-                      }
 
                       // Currency Carousel
                       Adw.Carousel reports_currency_carousel {

@@ -392,3 +392,55 @@ msgstr "Компактный таймер"
 #: src/ui/compact-tracker.blp:23
 msgid "Close compact tracker and open main window"
 msgstr "Закрыть компактный таймер и открыть окно программы"
+
+#: src/js/interface/components/CarouselDialog.js:186
+msgid "Welcome to Valot"
+msgstr "Ласкаво просимо до Valot"
+
+#: src/js/interface/components/CarouselDialog.js:188
+msgid "Right-click to select • Double-click project names to edit • Click icons to change • Set custom currencies in settings"
+msgstr "ПКМ для виділення • Подвійний клік по назві проекту для редагування • Клік по іконці для зміни • Налаштуйте валюти у налаштуваннях"
+
+#: src/js/interface/components/CarouselDialog.js:191
+msgid "Organize Projects"
+msgstr "Організація проектів"
+
+#: src/js/interface/components/CarouselDialog.js:192
+msgid "Create and manage projects with custom colors and icons"
+msgstr "Створюйте та керуйте проектами з власними кольорами та іконками"
+
+#: src/js/interface/components/CarouselDialog.js:196
+msgid "Manage Clients"
+msgstr "Керування клієнтами"
+
+#: src/js/interface/components/CarouselDialog.js:197
+msgid "Add clients with billing rates and contact information"
+msgstr "Додавайте клієнтів з тарифами та контактною інформацією"
+
+#: src/js/interface/components/CarouselDialog.js:201
+msgid "Generate Reports"
+msgstr "Створення звітів"
+
+#: src/js/interface/components/CarouselDialog.js:202
+msgid "View analytics and export professional reports"
+msgstr "Переглядайте аналітику та експортуйте професійні звіти"
+
+#: src/js/interface/components/CarouselDialog.js:201
+msgid "Compact Tracker"
+msgstr "Компактний трекер"
+
+#: src/js/interface/components/CarouselDialog.js:203
+msgid "Launch with terminal command or setup system hotkey"
+msgstr "Запуск командою терміналу або налаштування системної гарячої клавіші"
+
+#: src/js/interface/components/CarouselDialog.js:207
+msgid "Pomodoro Timer"
+msgstr "Таймер Помодоро"
+
+#: src/js/interface/components/CarouselDialog.js:209
+msgid "Shift+click track button • Default 20 minutes • Customizable in settings"
+msgstr "Shift+клік по кнопці трекера • За замовчуванням 20 хвилин • Налаштовується у налаштуваннях"
+
+#: src/js/interface/components/CarouselDialog.js:310
+msgid "Copy command"
+msgstr "Копіювати команду"

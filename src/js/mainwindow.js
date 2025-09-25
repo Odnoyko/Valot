@@ -40,7 +40,7 @@ import { SimpleChart } from 'resource:///com/odnoyko/valot/js/func/pages/simpleC
 import { timeTrack } from 'resource:///com/odnoyko/valot/js/func/global/timetracking.js';
 import { trackingStateManager } from 'resource:///com/odnoyko/valot/js/func/global/trackingStateManager.js';
 import { ReportExporter } from 'resource:///com/odnoyko/valot/js/func/pages/reportExporter.js';
-import { showAboutDialog } from 'resource:///com/odnoyko/valot/js/func/global/aboutDialog.js';
+import { PreferencesDialog } from 'resource:///com/odnoyko/valot/js/interface/components/PreferencesDialog.js';
 import { getAllCurrencies } from 'resource:///com/odnoyko/valot/js/data/currencies.js';
 import { getProjectIconColor } from 'resource:///com/odnoyko/valot/js/func/global/colorUtils.js';
 import { handleDeleteKey, getCurrentPageName, setupApplicationKeyboardHandler } from 'resource:///com/odnoyko/valot/js/func/global/keyboardHandler.js';
@@ -1180,7 +1180,7 @@ export const ValotWindow = GObject.registerClass({
 
         // Menu button
         this._menu_button.connect('clicked', () => {
-            showAboutDialog(this);
+            PreferencesDialog.show(this);
         });
 
         // Sidebar toggle
@@ -2179,7 +2179,7 @@ export const ValotWindow = GObject.registerClass({
             // Add pages for each currency
             for (const [currency, amount] of earningsByCurrency) {
                 const currencySymbol = this._getCurrencySymbol(currency);
-                const formattedAmount = `${currencySymbol}${amount.toFixed(2)}`;
+                const formattedAmount = amount.toFixed(2); // Remove currency symbol prefix
                 
                 // Create a page for this currency
                 const currencyPage = new Gtk.Box({
@@ -2189,7 +2189,14 @@ export const ValotWindow = GObject.registerClass({
                     spacing: 4
                 });
 
-                // Main amount label
+                // Currency symbol as icon (larger)
+                const symbolLabel = new Gtk.Label({
+                    label: currencySymbol,
+                    css_classes: ['title-1', 'accent'],
+                    halign: Gtk.Align.CENTER
+                });
+
+                // Amount label (without currency symbol)
                 const amountLabel = new Gtk.Label({
                     label: formattedAmount,
                     css_classes: ['title-1'],
@@ -2203,6 +2210,7 @@ export const ValotWindow = GObject.registerClass({
                     halign: Gtk.Align.CENTER
                 });
 
+                currencyPage.append(symbolLabel);
                 currencyPage.append(amountLabel);
                 currencyPage.append(currencyLabel);
 

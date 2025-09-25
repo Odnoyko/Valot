@@ -4,6 +4,21 @@
 @define-color subtitle_light_color #959595;
 @define-color subtitle_dark_color #7B7B7B;
 
+/* Carousel overlay text styles */
+.overlay-title {
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+  padding: 8px 16px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.overlay-description {
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 6px;
+  padding: 6px 12px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
 .content-box{
 	background: @view_bg_color;
 	border-radius: 12px;
@@ -386,13 +401,17 @@ entry.inline-editable:focus {
   background-color: alpha(@accent_bg_color, 0.1);
   color: @accent_fg_color;
 }
-
+.about-content-box button{
+  padding: 6px;
+  border-radius: 8px;
+}
 .template-badge {
   background-color: alpha(@accent_bg_color, 0.2);
-  color: @accent_fg_color;
-  border-radius: 8px;
-  padding: 2px 6px;
-  font-size: 10px;
+  color: @accent_bg_color;
+  border-radius: 18px;
+  margin: 10px 0px;
+  padding: 4px 10px;
+  font-size: 15px;
   font-weight: bold;
   text-transform: uppercase;
 }
@@ -507,4 +526,14 @@ window.dark .subtitle {
 }
 .currency-button:hover stack row {
 	background: alpha(@window_fg_color, 0);
+}
+.hint-box {
+  padding: 10px 20px;
+  color: @accent_color;
+}
+.hint-box .caption {
+  color: alpha(@window_fg_color, 0.8);
+}
+.carousel-command-text {
+  padding: 10px 20px;
 }

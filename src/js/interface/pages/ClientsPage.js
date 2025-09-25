@@ -1,7 +1,9 @@
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
 import Gdk from 'gi://Gdk';
-import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/js/data/currencies.js';
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import { getCurrencySymbol, getAllCurrencies } from 'resource:///com/odnoyko/valot/js/data/currencies.js';
 
 /**
  * Clients management page - extracted from window.js
@@ -207,7 +209,8 @@ export class ClientsPage {
         });
 
         // Default currency
-        let selectedCurrency = this.clientManager?.currencies?.[1] || { code: 'EUR', symbol: '€' }; // Default to EUR
+        const availableCurrencies = this._getAvailableCurrencies();
+        let selectedCurrency = availableCurrencies?.[1] || availableCurrencies?.[0] || { code: 'USD', symbol: '$' };
         
         const updateCurrencyButton = () => {
             const currencyLabel = new Gtk.Label({
@@ -298,15 +301,8 @@ export class ClientsPage {
             css_classes: ['boxed-list']
         });
 
-        // Show common currencies
-        const currencies = this.clientManager?.currencies || [
-            { code: 'USD', symbol: '$', name: 'US Dollar' },
-            { code: 'EUR', symbol: '€', name: 'Euro' },
-            { code: 'GBP', symbol: '£', name: 'British Pound' },
-            { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
-            { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
-            { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' }
-        ];
+        // Show available currencies
+        const currencies = this._getAvailableCurrencies();
 
         let selectedCurrency = currentCurrency;
 
@@ -671,7 +667,8 @@ export class ClientsPage {
         });
 
         // Currency selection grid
-        let selectedCurrency = this.clientManager.currencies.find(c => c.code === client.currency) || this.clientManager.currencies[0];
+        const availableCurrencies = this._getAvailableCurrencies();
+        let selectedCurrency = availableCurrencies.find(c => c.code === client.currency) || availableCurrencies[0];
         form.append(new Gtk.Label({label: 'Select Currency:', halign: Gtk.Align.START}));
         
         const currencyGrid = new Gtk.Grid({
@@ -680,8 +677,8 @@ export class ClientsPage {
             margin_bottom: 12
         });
         
-        // Show first 12 most common currencies in a grid
-        const commonCurrencies = this.clientManager.currencies.slice(0, 12);
+        // Show first 12 available currencies in a grid
+        const commonCurrencies = availableCurrencies.slice(0, 12);
         for (let i = 0; i < commonCurrencies.length; i++) {
             const currency = commonCurrencies[i];
             const currencyButton = new Gtk.Button({
@@ -1242,5 +1239,55 @@ export class ClientsPage {
             //('Error loading clients:', error);
             return [];
         }
+    }
+
+    _getAvailableCurrencies() {
+        // Load currency settings from preferences
+        let currencySettings;
+        try {
+            const configDir = GLib.get_user_config_dir() + '/valot';
+            const configPath = configDir + '/currency-settings.json';
+            const file = Gio.File.new_for_path(configPath);
+            
+            if (file.query_exists(null)) {
+                const [success, contents] = file.load_contents(null);
+                if (success) {
+                    const configText = new TextDecoder().decode(contents);
+                    currencySettings = JSON.parse(configText);
+                }
+            }
+        } catch (error) {
+            console.log('Error loading currency settings:', error);
+        }
+        
+        // Default to all currencies if no settings found
+        if (!currencySettings) {
+            const allCurrencies = getAllCurrencies();
+            currencySettings = {
+                visible: allCurrencies.map(c => c.code),
+                hidden: [],
+                custom: []
+            };
+        }
+        
+        const allCurrencies = getAllCurrencies();
+        const availableCurrencies = [];
+        
+        // Add visible default currencies
+        currencySettings.visible.forEach(code => {
+            const currency = allCurrencies.find(c => c.code === code);
+            if (currency) {
+                availableCurrencies.push(currency);
+            }
+        });
+        
+        // Add visible custom currencies
+        currencySettings.custom.forEach(currency => {
+            if (!currency.hidden) {
+                availableCurrencies.push(currency);
+            }
+        });
+        
+        return availableCurrencies;
     }
 }

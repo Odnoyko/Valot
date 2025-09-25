@@ -1,6 +1,7 @@
 import Gtk from 'gi://Gtk';
 import { Button } from '../components/primitive/Button.js';
 import { Label } from '../components/primitive/Label.js';
+import { getCurrencySymbol } from '../../data/currencies.js';
 
 /**
  * Reports management page - extracted from window.js
@@ -481,13 +482,13 @@ export class ReportsPage {
         }
         
         if (currencyTotals.size === 0) {
-            // Show $0.00 if no earnings
-            const zeroBox = this._createCurrencyBox('$0.00', 'USD');
+            // Show 0.00 if no earnings
+            const zeroBox = this._createCurrencyBox('0.00', 'USD');
             carousel.append(zeroBox);
         } else {
             // Add a page for each currency
             for (const [currency, amount] of currencyTotals) {
-                const formattedAmount = this._formatCurrency(amount, currency);
+                const formattedAmount = amount.toFixed(2); // Remove currency symbol
                 const currencyBox = this._createCurrencyBox(formattedAmount, currency);
                 carousel.append(currencyBox);
             }
@@ -505,6 +506,13 @@ export class ReportsPage {
             valign: Gtk.Align.CENTER
         });
         
+        // Get currency symbol and show it as icon
+        const currencySymbol = getCurrencySymbol(currency);
+        const symbolLabel = new Gtk.Label({
+            label: currencySymbol,
+            css_classes: ['title-1', 'accent']
+        });
+        
         const amountLabel = new Gtk.Label({
             label: formattedAmount,
             css_classes: ['title-1']
@@ -515,6 +523,7 @@ export class ReportsPage {
             css_classes: ['caption']
         });
         
+        box.append(symbolLabel);
         box.append(amountLabel);
         box.append(currencyLabel);
         

@@ -1,6 +1,9 @@
 import Gtk from 'gi://Gtk';
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import { FormDialog } from './FormDialog.js';
 import { InputValidator } from '../../../func/global/inputValidation.js';
+import { getAllCurrencies, getCurrencySymbol } from '../../../data/currencies.js';
 
 /**
  * Client creation/editing dialog using the modular form system
@@ -41,6 +44,9 @@ export class ClientDialog extends FormDialog {
         this.mode = mode;
         this.client = client;
         this.onClientSave = onClientSave;
+        
+        // Load available currencies
+        this.availableCurrencies = this._getAvailableCurrencies();
         
         // Create custom layout after form is ready
         setTimeout(() => {
@@ -152,10 +158,14 @@ export class ClientDialog extends FormDialog {
         rateBox.append(this.rateEntry);
         rateBox.append(ratePlusBtn);
 
-        // Currency dropdown
+        // Currency dropdown with available currencies
+        const currencyStrings = this.availableCurrencies.map(currency => 
+            `${currency.code} (${currency.symbol})`
+        );
+        
         this.currencyDropdown = new Gtk.DropDown({
             model: new Gtk.StringList({
-                strings: ['USD ($)', 'EUR (€)', 'GBP (£)', 'JPY (¥)', 'CAD (C$)', 'AUD (A$)']
+                strings: currencyStrings
             }),
             selected: this._getCurrencyIndex(isEdit ? (client.currency || 'USD') : 'USD')
         });
@@ -177,14 +187,64 @@ export class ClientDialog extends FormDialog {
         return mainBox;
     }
 
+    _getAvailableCurrencies() {
+        // Load currency settings from preferences
+        let currencySettings;
+        try {
+            const configDir = GLib.get_user_config_dir() + '/valot';
+            const configPath = configDir + '/currency-settings.json';
+            const file = Gio.File.new_for_path(configPath);
+            
+            if (file.query_exists(null)) {
+                const [success, contents] = file.load_contents(null);
+                if (success) {
+                    const configText = new TextDecoder().decode(contents);
+                    currencySettings = JSON.parse(configText);
+                }
+            }
+        } catch (error) {
+            console.log('Error loading currency settings:', error);
+        }
+        
+        // Default to all currencies if no settings found
+        if (!currencySettings) {
+            const allCurrencies = getAllCurrencies();
+            currencySettings = {
+                visible: allCurrencies.map(c => c.code),
+                hidden: [],
+                custom: []
+            };
+        }
+        
+        const allCurrencies = getAllCurrencies();
+        const availableCurrencies = [];
+        
+        // Add visible default currencies
+        currencySettings.visible.forEach(code => {
+            const currency = allCurrencies.find(c => c.code === code);
+            if (currency) {
+                availableCurrencies.push(currency);
+            }
+        });
+        
+        // Add visible custom currencies
+        currencySettings.custom.forEach(currency => {
+            if (!currency.hidden) {
+                availableCurrencies.push(currency);
+            }
+        });
+        
+        return availableCurrencies;
+    }
+
     _getCurrencyIndex(currency) {
-        const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD'];
+        const currencies = this.availableCurrencies.map(c => c.code);
         const index = currencies.indexOf(currency);
         return index >= 0 ? index : 0;
     }
 
     _getCurrencyFromIndex(index) {
-        const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD'];
+        const currencies = this.availableCurrencies.map(c => c.code);
         return currencies[index] || 'USD';
     }
 

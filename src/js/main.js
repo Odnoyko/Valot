@@ -31,10 +31,58 @@ import Gdk from 'gi://Gdk?version=4.0';
 
 import { setupDatabase } from 'resource:///com/odnoyko/valot/js/func/global/dbinitialisation.js';
 import { ValotWindow } from 'resource:///com/odnoyko/valot/js/mainwindow.js';
+import { CarouselDialog } from 'resource:///com/odnoyko/valot/js/interface/components/CarouselDialog.js';
+import { PreferencesDialog } from 'resource:///com/odnoyko/valot/js/interface/components/PreferencesDialog.js';
 import { CompactTrackerWindow } from 'resource:///com/odnoyko/valot/js/compacttracker.js';
 
 pkg.initGettext();
 pkg.initFormat();
+
+// Global accent color manager
+const AccentColorManager = {
+    _customAccentProvider: null,
+    
+    applyAccentMode(mode, colorString) {
+        const display = Gdk.Display.get_default();
+        
+        // Remove existing custom accent provider if it exists
+        if (this._customAccentProvider) {
+            Gtk.StyleContext.remove_provider_for_display(display, this._customAccentProvider);
+            this._customAccentProvider = null;
+        }
+        
+        if (mode === 0) {
+            // Standard mode - custom CSS removed, system uses defaults
+            return;
+        } else if (mode === 1 && colorString) {
+            // Custom mode - apply custom accent color
+            const rgba = new Gdk.RGBA();
+            if (!rgba.parse(colorString)) return;
+            
+            // Create CSS for custom accent color
+            this._customAccentProvider = new Gtk.CssProvider();
+            const css = `
+                @define-color accent_color ${colorString};
+                @define-color accent_bg_color ${colorString};
+                @define-color accent_fg_color white;
+            `;
+            
+            try {
+                this._customAccentProvider.load_from_data(css, -1);
+                
+                // Apply the CSS provider
+                Gtk.StyleContext.add_provider_for_display(
+                    display,
+                    this._customAccentProvider,
+                    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1
+                );
+            } catch (error) {
+                console.log('Error applying custom accent color:', error);
+                this._customAccentProvider = null;
+            }
+        }
+    }
+};
 
 function loadCss() {
     const provider = new Gtk.CssProvider();
@@ -80,24 +128,11 @@ export const ValotApplication = GObject.registerClass(
             this.add_action(quit_action);
             this.set_accels_for_action('app.quit', ['<primary>q']);
 
-            const show_about_action = new Gio.SimpleAction({name: 'about'});
-            show_about_action.connect('activate', action => {
-                const aboutParams = {
-                    application_name: 'valot',
-                    application_icon: 'com.odnoyko.valot',
-                    developer_name: 'Odnoyko',
-                    version: '0.8.0',
-                    developers: [
-                        'Odnoyko'
-                    ],
-                    // Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
-                    translator_credits: _("translator-credits"),
-                    copyright: '© 2025 Odnoyko'
-                };
-                const aboutDialog = new Adw.AboutDialog(aboutParams);
-                aboutDialog.present(this.active_window);
+            const show_preferences_action = new Gio.SimpleAction({name: 'about'});
+            show_preferences_action.connect('activate', action => {
+                PreferencesDialog.show(this.active_window);
             });
-            this.add_action(show_about_action);
+            this.add_action(show_preferences_action);
         }
 
         vfunc_command_line(command_line) {
@@ -137,6 +172,9 @@ export const ValotApplication = GObject.registerClass(
         vfunc_activate() {
             // Load CSS first
             loadCss();
+            
+            // Apply saved theme
+            this._applySavedTheme();
 
             // Initialize database
             if (!this._initializeDatabase()) {
@@ -174,6 +212,9 @@ export const ValotApplication = GObject.registerClass(
                 const mainWindow = new ValotWindow(this);
                 this.add_window(mainWindow);
                 mainWindow.present();
+                
+                // Show welcome carousel if needed
+                CarouselDialog.showIfNeeded(mainWindow);
             }
         }
 
@@ -260,6 +301,9 @@ export const ValotApplication = GObject.registerClass(
             active_window.set_visible(true);
             active_window.present();
             active_window.unminimize(); // Force unminimize if it was minimized
+            
+            // Don't show welcome carousel when coming from compact mode
+            // It should only show when opening app normally
         }
 
         vfunc_shutdown() {
@@ -276,8 +320,43 @@ export const ValotApplication = GObject.registerClass(
 
             super.vfunc_shutdown();
         }
+
+        _applySavedTheme() {
+            try {
+                const settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
+                
+                // Apply theme
+                const savedTheme = settings.get_int('theme-preference');
+                const styleManager = Adw.StyleManager.get_default();
+                
+                switch (savedTheme) {
+                    case 0: // Auto
+                        styleManager.color_scheme = Adw.ColorScheme.DEFAULT;
+                        break;
+                    case 1: // Light
+                        styleManager.color_scheme = Adw.ColorScheme.FORCE_LIGHT;
+                        break;
+                    case 2: // Dark
+                        styleManager.color_scheme = Adw.ColorScheme.FORCE_DARK;
+                        break;
+                }
+                
+                // Apply accent color only if in custom mode
+                const savedMode = settings.get_int('accent-mode');
+                const savedColor = settings.get_string('accent-color');
+                if (savedMode === 1) {
+                    AccentColorManager.applyAccentMode(savedMode, savedColor);
+                }
+            } catch (error) {
+                // If settings fail, just use default
+                console.log('Could not load theme preference:', error);
+            }
+        }
+
     }
 );
+
+export { AccentColorManager };
 
 export function main(argv) {
     const application = new ValotApplication();

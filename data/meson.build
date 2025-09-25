@@ -45,3 +45,4 @@ configure_file(
 
 subdir('icons')
 subdir('screenshots')
+subdir('slides')
