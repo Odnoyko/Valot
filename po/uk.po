@@ -51,23 +51,23 @@ msgstr "Создайте свой первый проект для начала"
 
 #: src/js/interface/pages/ProjectsPage.js:237
 msgid "Previous page"
-msgstr "Предыдущая страница"
+msgstr "Попередня сторінка"
 
 #: src/js/interface/pages/ProjectsPage.js:243
 msgid "Page 1 of 1"
-msgstr "1 из 1"
+msgstr "1 з 1"
 
 #: src/js/interface/pages/ProjectsPage.js:249
 msgid "Next page"
-msgstr "Следующая страница"
+msgstr "Наступна сторінка"
 
 #: src/js/interface/pages/ProjectsPage.js:352
 msgid "Project settings - Change color and icon"
-msgstr "Настройки проекта - Вы можете изменить его цвет и иконку"
+msgstr "Налаштування проекту - Змінити колір та значок"
 
 #: src/js/interface/pages/ProjectsPage.js:579
 msgid "Delete Projects"
-msgstr "Удалить проекты"
+msgstr "Видалити проекти"
 
 #: src/js/interface/pages/ProjectsPage.js:580
 #, javascript-format
@@ -75,121 +75,122 @@ msgid ""
 "Are you sure you want to delete %d selected project(s)? This cannot be "
 "undone."
 msgstr ""
-"Вы уверены что хотите удалить %d выбранные проекты? Их потом не вернуть."
+"Ви впевнені, що хочете видалити %d вибраних проектів? Цю дію неможливо "
+"скасувати."
 
 #: src/js/interface/pages/ProjectsPage.js:583
 #: src/js/interface/pages/ProjectsPage.js:814
 #: src/js/interface/components/complex/ModularDialogManager.js:206
 msgid "Cancel"
-msgstr "Отменить"
+msgstr "Скасувати"
 
 #: src/js/interface/pages/ProjectsPage.js:584
 msgid "Delete"
-msgstr "Удалить"
+msgstr "Видалити"
 
 #: src/js/interface/pages/ProjectsPage.js:804
 msgid "Edit Project Name"
-msgstr "Редактирование имени проекта"
+msgstr "Редагувати назву проекту"
 
 #: src/js/interface/pages/ProjectsPage.js:805
 #, javascript-format
 msgid "Change the name of \"%s\""
-msgstr "Изменение имени %s"
+msgstr "Змінити назву \"%s\""
 
 #: src/js/interface/pages/ProjectsPage.js:815
 msgid "Save"
-msgstr "Сохранить"
+msgstr "Зберегти"
 
 #: src/js/func/pages/clientManager.js:191
 msgid "Client name"
-msgstr "Имя клиента"
+msgstr "Ім'я клієнта"
 
 #: src/js/func/pages/simpleChart.js:47
 msgid ""
 "📊 No data yet\n"
 "Start tracking time to see your productivity chart"
 msgstr ""
-"📊 Нет данных\n"
-"Отследите хотя бы одну задачу для того что бы увидеть статистику"
+"📊 Поки що немає даних\n"
+"Почніть відстежувати час, щоб переглянути діаграму продуктивності"
 
 #. Chart title - dynamic based on period with German week numbering
 #: src/js/func/pages/simpleChart.js:66
 msgid "📊 Weekly Activity"
-msgstr "📊 Активность на этой неделе"
+msgstr "📊 Щотижнева активність"
 
 #: src/js/func/pages/simpleChart.js:69
 #, javascript-format
 msgid "📊 Weekly Activity (KW %d)"
-msgstr "📊  Активность для рабочей недели %d"
+msgstr "📊 📊 Щотижнева активність (KT %d)"
 
 #: src/js/func/pages/simpleChart.js:71
 msgid "📊 Monthly Activity (4 weeks)"
-msgstr "📊 Месячная активность (4 недели)"
+msgstr "📊 Щомісячна активність (4 тижні)"
 
 #: src/js/func/pages/simpleChart.js:72
 msgid "📊 Yearly Activity (12 months)"
-msgstr "📊 Активность за год (12 месяцев)"
+msgstr "📊 Річна активність (12 місяців)"
 
 #. Update dialog title
 #: src/js/interface/components/complex/ClientDialog.js:289
 msgid "Edit Client"
-msgstr "Редактирование клиента"
+msgstr "Редагувати клієнта"
 
 #: src/js/interface/components/complex/ClientDialog.js:290
 msgid "Update client information"
-msgstr "Обновить информацию о клиенте"
+msgstr "Оновлення інформації про клієнта"
 
 #: src/js/interface/components/complex/ClientDialog.js:291
 #: src/js/interface/components/complex/ProjectDialog.js:285
 msgid "Save Changes"
-msgstr "Сохранить изменения"
+msgstr "Зберегти зміни"
 
 #. Update dialog title
 #: src/js/interface/components/complex/ClientDialog.js:314
 msgid "Create New Client"
-msgstr "Создание нового клиента"
+msgstr "Створити нового клієнта"
 
 #: src/js/interface/components/complex/ClientDialog.js:315
 msgid "Add a new client with contact details and billing rates"
-msgstr "Добавьте нового клиента с именем и стоимостью своей работы для него"
+msgstr "Додати нового клієнта з контактною інформацією та тарифами на рахунки"
 
 #: src/js/interface/components/complex/ClientDialog.js:316
 msgid "Create Client"
-msgstr "Создать клиента"
+msgstr "Створити клієнта"
 
 #. Update dialog title
 #: src/js/interface/components/complex/ProjectDialog.js:283
 msgid "Edit Project"
-msgstr "Редактировать проект"
+msgstr "Редагувати проєкт"
 
 #: src/js/interface/components/complex/ProjectDialog.js:284
 msgid "Update project name and appearance"
-msgstr "Обновить имя проекта и его внешний вид"
+msgstr "Оновити назву та зовнішній вигляд проекту"
 
 #. Update dialog title
 #: src/js/interface/components/complex/ProjectDialog.js:305
 msgid "Create New Project"
-msgstr "Создать новый проект"
+msgstr "Створити новий проект"
 
 #: src/js/interface/components/complex/ProjectDialog.js:306
 msgid "Create a new project"
-msgstr "Создать новый проект"
+msgstr "Створити новий проект"
 
 #: src/js/interface/components/complex/ProjectDialog.js:307
 msgid "Create Project"
-msgstr "Создать проект"
+msgstr "Створити проєкт"
 
 #: src/js/interface/components/complex/ModularDialogManager.js:203
 msgid "Confirm Action"
-msgstr "Подтвердить действие"
+msgstr "Підтвердити дію"
 
 #: src/js/interface/components/complex/ModularDialogManager.js:204
 msgid "Are you sure?"
-msgstr "Вы уверены?"
+msgstr "Ви впевнені?"
 
 #: src/js/interface/components/complex/ModularDialogManager.js:205
 msgid "Confirm"
-msgstr "Подтвердить"
+msgstr "Підтвердити"
 
 #: src/ui/window.blp:5
 msgid "Valot"
@@ -197,250 +198,198 @@ msgstr "Valot"
 
 #: src/ui/window.blp:21
 msgid "Navigation"
-msgstr "Навигация"
+msgstr "Навігація"
 
 #: src/ui/window.blp:30
 msgid "Toggle Sidebar"
-msgstr "Скрыть / Раскрыть боковую панель"
+msgstr "Перемикання бічної панелі"
 
 #: src/ui/window.blp:36
 msgid "About"
-msgstr "О программе"
+msgstr "Про додаток"
 
 #: src/ui/window.blp:52 src/ui/window.blp:125
 msgid "Tasks"
-msgstr "Задачи"
+msgstr "Завдання"
 
 #: src/ui/window.blp:62 src/ui/window.blp:247
 msgid "Projects"
-msgstr "Проекты"
+msgstr "Проєкти"
 
 #: src/ui/window.blp:72 src/ui/window.blp:361
 msgid "Clients"
-msgstr "Клиенты"
+msgstr "Клієнти"
 
 #: src/ui/window.blp:82 src/ui/window.blp:476
 msgid "Reports"
-msgstr "Отсчеты"
+msgstr "Звіти"
 
 #: src/ui/window.blp:103
 msgid "Quick Stats"
-msgstr "Быстрый обзор"
+msgstr "Коротка статистика"
 
 #: src/ui/window.blp:109 src/ui/window.blp:206
 msgid "This Week"
-msgstr "Эта неделя"
+msgstr "Цього тижня"
 
 #: src/ui/window.blp:134 src/ui/window.blp:255 src/ui/window.blp:369
 #: src/ui/window.blp:484
 msgid "Show Sidebar"
-msgstr "Показать боковую панель"
+msgstr "Показати бічну панель"
 
 #: src/ui/window.blp:145 src/ui/window.blp:266 src/ui/window.blp:380
 #: src/ui/window.blp:495 src/ui/compact-tracker.blp:35
 msgid "Task name"
-msgstr "Имя задачи"
+msgstr "Назва завдання"
 
 #: src/ui/window.blp:153 src/ui/window.blp:274 src/ui/window.blp:388
 #: src/ui/window.blp:503 src/ui/compact-tracker.blp:43
 msgid "Project"
-msgstr "Проект"
+msgstr "Демонструвати"
 
 #: src/ui/window.blp:161 src/ui/window.blp:282 src/ui/window.blp:396
 #: src/ui/window.blp:511 src/ui/compact-tracker.blp:51
 msgid "Client"
-msgstr "Клиент"
+msgstr "Клієнт"
 
 #: src/ui/window.blp:175 src/ui/window.blp:296 src/ui/window.blp:410
 #: src/ui/window.blp:525 src/ui/compact-tracker.blp:66
 msgid "Start tracking"
-msgstr "Начать отслеживание"
+msgstr "Почати відстеження"
 
 #: src/ui/window.blp:183 src/ui/window.blp:304 src/ui/window.blp:418
 #: src/ui/window.blp:533
 msgid "Open Compact Tracker"
-msgstr "Открыть компактный таймер"
+msgstr "Відкрити компактний таймер"
 
 #: src/ui/window.blp:200
 msgid "Search tasks..."
-msgstr "Поиск задач…"
+msgstr "Пошук завдань..."
 
 #: src/ui/window.blp:206
 msgid "All"
-msgstr "Все"
+msgstr "Усі"
 
 #: src/ui/window.blp:206
 msgid "Today"
-msgstr "Сегодня"
+msgstr "Сьогодні"
 
 #: src/ui/window.blp:206
 msgid "This Month"
-msgstr "Этот месяц"
+msgstr "Цього місяця"
 
 #: src/ui/window.blp:227
 msgid "Previous"
-msgstr "Предыдущий"
+msgstr "Попередній"
 
 #: src/ui/window.blp:238
 msgid "Next"
-msgstr "Следующий"
+msgstr "Далі"
 
 #: src/ui/window.blp:327
 msgid "Add Project"
-msgstr "Добавить проект"
+msgstr "Додати проєкт"
 
 #: src/ui/window.blp:335
 msgid "Add project"
-msgstr "Добавить проект"
+msgstr "Додати проєкт"
 
 #: src/ui/window.blp:436
 msgid "Search clients..."
-msgstr "Поиск клиентов…"
+msgstr "Пошук клієнтів..."
 
 #: src/ui/window.blp:441
 msgid "Add Client"
-msgstr "Добавить клиента"
+msgstr "Додати клієнта"
 
 #: src/ui/window.blp:449
 msgid "Add client"
-msgstr "Добавить клиента"
+msgstr "Додати клієнта"
 
 #: src/ui/window.blp:538
 msgid "PDF Export Preview"
-msgstr "Предпросмотр PDF экспорта"
+msgstr "Попередній перегляд експорту PDF"
 
 #: src/ui/window.blp:553
 msgid "Task Reports"
-msgstr "Отсчет по задачам"
+msgstr "Звіти про завдання"
 
 #: src/ui/window.blp:573
 msgid "Week"
-msgstr "Неделя"
+msgstr "Тиждень"
 
 #: src/ui/window.blp:573
 msgid "Month"
-msgstr "Месяц"
+msgstr "Місяць"
 
 #: src/ui/window.blp:573
 msgid "Year"
-msgstr "Год"
+msgstr "Рік"
 
 #: src/ui/window.blp:576
 msgid "Select time period"
-msgstr "Выбрать период времени"
+msgstr "Виберіть період часу"
 
 #: src/ui/window.blp:581
 msgid "Filter by project"
-msgstr "Фильтр по проектам"
+msgstr "Фільтрувати за проектом"
 
 #: src/ui/window.blp:586
 msgid "Filter by client"
-msgstr "Фильтр по клиентам"
+msgstr "Фільтрувати за клієнтом"
 
 #: src/ui/window.blp:597
 msgid "📊 Chart Visualization"
-msgstr "📊 Визуализация отсчета"
+msgstr "📊 Візуалізація діаграм"
 
 #: src/ui/window.blp:604
 msgid "Time tracking data will be visualized here"
-msgstr "Информация об отслеживании времени будет отображена здесь"
+msgstr "Дані відстеження часу будуть візуалізовані тут"
 
 #: src/ui/window.blp:614
 msgid "Summary Statistics"
-msgstr "Итоговая Статистика"
+msgstr "Зведена статистика"
 
 #: src/ui/window.blp:646
 msgid "Total Time"
-msgstr "Общее время"
+msgstr "Загальний час"
 
 #: src/ui/window.blp:677
 msgid "Active Projects"
-msgstr "Активные проекты"
+msgstr "Активні проекти"
 
 #: src/ui/window.blp:718
 msgid "Total Earnings"
-msgstr "Общий доход"
+msgstr "Загальний прибуток"
 
 #: src/ui/window.blp:749
 msgid "Tracked Tasks"
-msgstr "Отслежено задач"
+msgstr "Відстежувані завдання"
 
 #: src/ui/window.blp:758
 msgid "Recent Tasks"
-msgstr "Последние задачи"
+msgstr "Нещодавні завдання"
 
 #: src/ui/window.blp:759
 msgid "Your most recent completed tasks"
-msgstr "Ваши самые последние задачи"
+msgstr "Ваші останні виконані завдання"
 
 #: src/ui/window.blp:764
 msgid "Delete Selected Tasks"
-msgstr "Удалить выбранные задачи"
+msgstr "Видалити вибрані завдання"
 
 #: src/ui/window.blp:775
 msgid "No tasks yet"
-msgstr "Нет задач"
+msgstr "Ще немає завдань"
 
 #: src/ui/window.blp:776
 msgid "Start tracking time to see your tasks here"
-msgstr "Начните отслеживание для того что бы увидеть здесь свои задачи"
+msgstr "Почніть відстежувати час, щоб переглядати свої завдання тут"
 
 #: src/ui/compact-tracker.blp:5
 msgid "Compact Tracker"
-msgstr "Компактный таймер"
+msgstr "Компактний таймер"
 
 #: src/ui/compact-tracker.blp:23
 msgid "Close compact tracker and open main window"
-msgstr "Закрыть компактный таймер и открыть окно программы"
-
-#: src/js/interface/components/CarouselDialog.js:186
-msgid "Welcome to Valot"
-msgstr "Ласкаво просимо до Valot"
-
-#: src/js/interface/components/CarouselDialog.js:188
-msgid "Right-click to select • Double-click project names to edit • Click icons to change • Set custom currencies in settings"
-msgstr "ПКМ для виділення • Подвійний клік по назві проекту для редагування • Клік по іконці для зміни • Налаштуйте валюти у налаштуваннях"
-
-#: src/js/interface/components/CarouselDialog.js:191
-msgid "Organize Projects"
-msgstr "Організація проектів"
-
-#: src/js/interface/components/CarouselDialog.js:192
-msgid "Create and manage projects with custom colors and icons"
-msgstr "Створюйте та керуйте проектами з власними кольорами та іконками"
-
-#: src/js/interface/components/CarouselDialog.js:196
-msgid "Manage Clients"
-msgstr "Керування клієнтами"
-
-#: src/js/interface/components/CarouselDialog.js:197
-msgid "Add clients with billing rates and contact information"
-msgstr "Додавайте клієнтів з тарифами та контактною інформацією"
-
-#: src/js/interface/components/CarouselDialog.js:201
-msgid "Generate Reports"
-msgstr "Створення звітів"
-
-#: src/js/interface/components/CarouselDialog.js:202
-msgid "View analytics and export professional reports"
-msgstr "Переглядайте аналітику та експортуйте професійні звіти"
-
-#: src/js/interface/components/CarouselDialog.js:201
-msgid "Compact Tracker"
-msgstr "Компактний трекер"
-
-#: src/js/interface/components/CarouselDialog.js:203
-msgid "Launch with terminal command or setup system hotkey"
-msgstr "Запуск командою терміналу або налаштування системної гарячої клавіші"
-
-#: src/js/interface/components/CarouselDialog.js:207
-msgid "Pomodoro Timer"
-msgstr "Таймер Помодоро"
-
-#: src/js/interface/components/CarouselDialog.js:209
-msgid "Shift+click track button • Default 20 minutes • Customizable in settings"
-msgstr "Shift+клік по кнопці трекера • За замовчуванням 20 хвилин • Налаштовується у налаштуваннях"
-
-#: src/js/interface/components/CarouselDialog.js:310
-msgid "Copy command"
-msgstr "Копіювати команду"
+msgstr "Закрити компактний таймер і відкрити головне вікно"
