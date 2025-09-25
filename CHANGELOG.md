@@ -10,6 +10,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Future features and improvements will be listed here
 
+## [0.8.1] - 25.09.2025
+
+### - Created settings Dialog.
+	- Select mode.
+	- Select Accent color for app.
+	- Set pommodoro Timer time.
+	- Added Currency editor
+    - Updated new screenshots
+    - Added Ukrainian and Russian language.
+    - Added Welcome screen.
+
+---
+
+
 ## [0.8.0] - 23.09.2025
 
 ### 🍅 Pommodoro + App Icon Update

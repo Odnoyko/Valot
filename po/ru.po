@@ -392,3 +392,55 @@ msgstr "Компактный таймер"
 #: src/ui/compact-tracker.blp:23
 msgid "Close compact tracker and open main window"
 msgstr "Закрыть компактный таймер и открыть окно программы"
+
+#: src/js/interface/components/CarouselDialog.js:186
+msgid "Welcome to Valot"
+msgstr "Добро пожаловать в Valot"
+
+#: src/js/interface/components/CarouselDialog.js:188
+msgid "Right-click to select • Double-click project names to edit • Click icons to change • Set custom currencies in settings"
+msgstr "ПКМ для выделения • Двойной клик по названию проекта для редактирования • Клик по иконке для изменения • Настройте валюты в настройках"
+
+#: src/js/interface/components/CarouselDialog.js:191
+msgid "Organize Projects"
+msgstr "Организация проектов"
+
+#: src/js/interface/components/CarouselDialog.js:192
+msgid "Create and manage projects with custom colors and icons"
+msgstr "Создавайте и управляйте проектами с собственными цветами и иконками"
+
+#: src/js/interface/components/CarouselDialog.js:196
+msgid "Manage Clients"
+msgstr "Управление клиентами"
+
+#: src/js/interface/components/CarouselDialog.js:197
+msgid "Add clients with billing rates and contact information"
+msgstr "Добавляйте клиентов со ставками и контактной информацией"
+
+#: src/js/interface/components/CarouselDialog.js:201
+msgid "Generate Reports"
+msgstr "Создание отчетов"
+
+#: src/js/interface/components/CarouselDialog.js:202
+msgid "View analytics and export professional reports"
+msgstr "Просматривайте аналитику и экспортируйте профессиональные отчеты"
+
+#: src/js/interface/components/CarouselDialog.js:201
+msgid "Compact Tracker"
+msgstr "Компактный трекер"
+
+#: src/js/interface/components/CarouselDialog.js:203
+msgid "Launch with terminal command or setup system hotkey"
+msgstr "Запуск командой терминала или настройка системной горячей клавиши"
+
+#: src/js/interface/components/CarouselDialog.js:207
+msgid "Pomodoro Timer"
+msgstr "Таймер Помодоро"
+
+#: src/js/interface/components/CarouselDialog.js:209
+msgid "Shift+click track button • Default 20 minutes • Customizable in settings"
+msgstr "Shift+клик по кнопке трекера • По умолчанию 20 минут • Настраивается в настройках"
+
+#: src/js/interface/components/CarouselDialog.js:310
+msgid "Copy command"
+msgstr "Копировать команду"

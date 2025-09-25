@@ -81,24 +81,12 @@ export const ValotApplication = GObject.registerClass(
             this.add_action(quit_action);
             this.set_accels_for_action('app.quit', ['<primary>q']);
 
-            const show_about_action = new Gio.SimpleAction({name: 'about'});
-            show_about_action.connect('activate', action => {
-                const aboutParams = {
-                    application_name: 'valot',
-                    application_icon: 'com.odnoyko.valot',
-                    developer_name: 'Unknown',
-                    version: '0.1.2',
-                    developers: [
-                        'Unknown'
-                    ],
-                    // Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
-                    translator_credits: _("translator-credits"),
-                    copyright: '© 2025 Unknown'
-                };
-                const aboutDialog = new Adw.AboutDialog(aboutParams);
-                aboutDialog.present(this.active_window);
+            const show_preferences_action = new Gio.SimpleAction({name: 'about'});
+            show_preferences_action.connect('activate', async (action) => {
+                const { PreferencesDialog } = await import('resource:///com/odnoyko/valot/js/interface/components/PreferencesDialog.js');
+                PreferencesDialog.show(this.active_window);
             });
-            this.add_action(show_about_action);
+            this.add_action(show_preferences_action);
         }
 
         vfunc_activate() {

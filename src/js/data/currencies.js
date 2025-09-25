@@ -32,6 +32,7 @@ export function getCurrencySymbol(currencyCode) {
         'MXN': '$',
         'ZAR': 'R',
         'TRY': '₺',
+        'UAH': '₴',
         
         // Crypto currencies
         'BTC': '₿',
@@ -65,6 +66,7 @@ export function getAllCurrencies() {
         { code: 'MXN', symbol: '$', name: 'Mexican Peso' },
         { code: 'ZAR', symbol: 'R', name: 'South African Rand' },
         { code: 'TRY', symbol: '₺', name: 'Turkish Lira' },
+        { code: 'UAH', symbol: '₴', name: 'Ukrainian Hryvnia' },
         { code: 'BTC', symbol: '₿', name: 'Bitcoin' },
         { code: 'ETH', symbol: 'Ξ', name: 'Ethereum' },
         { code: 'LTC', symbol: 'Ł', name: 'Litecoin' }

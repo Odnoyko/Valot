@@ -1,4 +1,5 @@
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 
 /**
  * Shared Pomodoro state manager for synchronizing between main window and compact tracker
@@ -18,8 +19,13 @@ class PomodoroManager {
      */
     _loadConfig() {
         try {
-            const configPath = '/home/Val/Projects/MyApps/valot/valot/src/js/data/pomodoro-config.json';
-            const file = Gio.File.new_for_path(configPath);
+            const configDir = GLib.get_user_config_dir() + '/valot';
+            const configPath = configDir + '/pomodoro-config.json';
+            let file = Gio.File.new_for_path(configPath);
+            
+            if (!file.query_exists(null)) {
+                file = Gio.File.new_for_uri('resource:///com/odnoyko/valot/js/data/pomodoro-config.json');
+            }
             if (file.query_exists(null)) {
                 const [success, contents] = file.load_contents(null);
                 if (success) {
@@ -187,6 +193,13 @@ class PomodoroManager {
      */
     getIsActive() {
         return this.isActive;
+    }
+
+    /**
+     * Reload configuration (call when settings change)
+     */
+    reloadConfig() {
+        this._loadConfig();
     }
 }
 

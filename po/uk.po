@@ -10,9 +10,9 @@ msgstr ""
 "POT-Creation-Date: 2025-09-20 00:42+0200\n"
 "PO-Revision-Date: 2025-09-25 09:18+0000\n"
 "Last-Translator: Vitalii  Odnoiko <kontakt@odnoyko.com>\n"
-"Language-Team: Ukrainian <https://hosted.weblate.org/projects/valot/valot/uk/"
-">\n"
-"Language: uk\n"
+"Language-Team: Russian <https://hosted.weblate.org/projects/valot/valot/ru/>"
+"\n"
+"Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -23,31 +23,31 @@ msgstr ""
 #. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
 #: src/js/main.js:94
 msgid "translator-credits"
-msgstr "Перекладачі"
+msgstr "Благодарности переводчикам"
 
 #: src/js/mainwindow.js:2012
 msgid "All Projects"
-msgstr "Усі проекти"
+msgstr "Все проекты"
 
 #: src/js/mainwindow.js:2023
 msgid "All Clients"
-msgstr "Усі клієнти"
+msgstr "Все клиенты"
 
 #: src/js/interface/pages/ProjectsPage.js:130 src/ui/window.blp:322
 msgid "Search projects..."
-msgstr "Пошук проектів..."
+msgstr "Найти проекты"
 
 #: src/js/interface/pages/ProjectsPage.js:161
 msgid "Delete Selected"
-msgstr "Видалити вибране"
+msgstr "Удалить выбранное"
 
 #: src/js/interface/pages/ProjectsPage.js:204
 msgid "No projects found"
-msgstr "Проектів не знайдено"
+msgstr "Не найдено проектов"
 
 #: src/js/interface/pages/ProjectsPage.js:210
 msgid "Create your first project to get started"
-msgstr "Створіть свій перший проєкт, щоб розпочати"
+msgstr "Создайте свой первый проект для начала"
 
 #: src/js/interface/pages/ProjectsPage.js:237
 msgid "Previous page"

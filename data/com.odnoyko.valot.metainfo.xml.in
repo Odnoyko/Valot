@@ -24,6 +24,7 @@
   <url type="homepage">https://gitlab.com/Valo27/valot</url>
   <url type="bugtracker">https://gitlab.com/Valo27/valot/-/issues</url>
   <url type="vcs-browser">https://gitlab.com/Valo27/valot</url>
+  <url type="donation">https://ko-fi.com/odnoyko</url>
   <content_rating type="oars-1.1" />
   <supports>
     <control>pointing</control>
@@ -33,6 +34,11 @@
     <display_length compare="ge">768</display_length>
   </recommends>
   <releases>
+    <release version="0.8.1" date="2025-09-25">
+      <description>
+        <p>Settings Dialog: Select mode, accent color, pomodoro timer. Currency editor, Ukrainian and Russian language support, Welcome screen.</p>
+      </description>
+    </release>
     <release version="0.8.0" date="2025-09-23">
       <description>
         <p>App icon update, Branding colors update, Pommodoro timer update</p>

@@ -9,5 +9,11 @@
     <file preprocess="xml-stripblanks" alias="scalable/actions/document-open-recent-symbolic.svg">../data/icons/interface/document-open-recent-symbolic.svg</file>
     <file preprocess="xml-stripblanks" alias="scalable/actions/open-menu-symbolic.svg">../data/icons/interface/open-menu-symbolic.svg</file>
     <file preprocess="xml-stripblanks" alias="scalable/actions/sidebar-show-symbolic.svg">../data/icons/interface/sidebar-show-symbolic.svg</file>
+    <!-- Carousel Slides -->
+    <file alias="data/slides/slide1.svg">../data/slides/slide1.svg</file>
+    <file alias="data/slides/slide2.svg">../data/slides/slide2.svg</file>
+    <file alias="data/slides/slide3.svg">../data/slides/slide3.svg</file>
+    <file alias="data/slides/slide4.svg">../data/slides/slide4.svg</file>
+    <file alias="data/slides/slide5.svg">../data/slides/slide5.svg</file>
   </gresource>
 </gresources> 
