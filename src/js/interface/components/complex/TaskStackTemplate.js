@@ -195,6 +195,11 @@ export class TaskStackTemplate {
             use_markup: true
         });
 
+        // Apply selection CSS if this task is selected
+        if (this.parentWindow.selectedTasks && this.parentWindow.selectedTasks.has(task.id)) {
+            taskRow.add_css_class('selected-task');
+        }
+
         // Add time display for individual task in group
         const taskSuffixBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
@@ -275,25 +280,36 @@ export class TaskStackTemplate {
             // Ensure this is treated as a stack selection event
             gesture.set_state(Gtk.EventSequenceState.CLAIMED);
 
-            if (this.parentWindow.selectedStacks && this.parentWindow.selectedTasks) {
-                if (this.parentWindow.selectedStacks.has(this.group.groupKey)) {
-                    // DESELECT stack and all its tasks
-                    this.parentWindow.selectedStacks.delete(this.group.groupKey);
-                    groupRow.remove_css_class('selected-task');
+            if (this.parentWindow.selectedTasks) {
+                // Check if all tasks are currently selected
+                const allTasksSelected = stackTasks.every(task => this.parentWindow.selectedTasks.has(task.id));
 
-                    // Remove all tasks from this stack from selectedTasks
+                if (allTasksSelected) {
+                    // DESELECT all tasks - just update the Set, CSS will be updated if stack is expanded
                     stackTasks.forEach(task => {
                         this.parentWindow.selectedTasks.delete(task.id);
                     });
-                } else {
-                    // SELECT stack and all its tasks
-                    this.parentWindow.selectedStacks.add(this.group.groupKey);
-                    groupRow.add_css_class('selected-task');
 
-                    // Add all tasks from this stack to selectedTasks
+                    // Remove stack from selectedStacks and un-highlight
+                    this.parentWindow.selectedStacks.delete(this.group.groupKey);
+                    groupRow.remove_css_class('selected-task');
+                } else {
+                    // SELECT all tasks - just update the Set, CSS will be updated if stack is expanded
                     stackTasks.forEach(task => {
                         this.parentWindow.selectedTasks.add(task.id);
                     });
+
+                    // Add stack to selectedStacks and highlight
+                    this.parentWindow.selectedStacks.add(this.group.groupKey);
+                    groupRow.add_css_class('selected-task');
+                }
+
+                // If stack is expanded, update CSS on visible task rows
+                this._syncTaskRowsCSS();
+
+                // Notify parent window that selection changed
+                if (this.parentWindow._updateSelectionUI) {
+                    this.parentWindow._updateSelectionUI();
                 }
             }
         });
@@ -364,6 +380,7 @@ export class TaskStackTemplate {
 
     _toggleTaskSelection(taskRow, task) {
         if (this.parentWindow.selectedTasks) {
+            // Toggle this specific task
             if (this.parentWindow.selectedTasks.has(task.id)) {
                 this.parentWindow.selectedTasks.delete(task.id);
                 taskRow.remove_css_class('selected-task');
@@ -371,7 +388,74 @@ export class TaskStackTemplate {
                 this.parentWindow.selectedTasks.add(task.id);
                 taskRow.add_css_class('selected-task');
             }
+
+            // After toggling, check if all tasks in this stack are now selected and update stack highlight
+            this._updateStackHighlight();
+
+            // Notify parent window that selection changed
+            if (this.parentWindow._updateSelectionUI) {
+                this.parentWindow._updateSelectionUI();
+            }
         }
+    }
+
+    _updateStackHighlight() {
+        // Find all tasks in this stack
+        const stackTasks = this.parentWindow.allTasks.filter(task => {
+            const taskBaseName = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+            const baseNameToCheck = taskBaseName ? taskBaseName[1].trim() : task.name;
+            const taskGroupKey = `${baseNameToCheck}::${task.project || task.project_name}::${task.client || task.client_name}`;
+            return taskGroupKey === this.group.groupKey;
+        });
+
+        // Check if ALL tasks in the stack are selected
+        const allTasksSelected = stackTasks.every(task => this.parentWindow.selectedTasks.has(task.id));
+
+        if (allTasksSelected) {
+            // Add stack to selectedStacks and highlight stack row
+            this.parentWindow.selectedStacks.add(this.group.groupKey);
+            this.widget.add_css_class('selected-task');
+        } else {
+            // Remove stack from selectedStacks and un-highlight stack row
+            this.parentWindow.selectedStacks.delete(this.group.groupKey);
+            this.widget.remove_css_class('selected-task');
+        }
+    }
+
+    _syncTaskRowsCSS() {
+        // Sync CSS for all task rows based on selectedTasks Set
+        // Iterate through the group's tasks and update CSS for each
+        this.group.tasks.forEach((task, index) => {
+            const taskRow = this._findTaskRowByIndex(index);
+            if (taskRow) {
+                if (this.parentWindow.selectedTasks.has(task.id)) {
+                    taskRow.add_css_class('selected-task');
+                } else {
+                    taskRow.remove_css_class('selected-task');
+                }
+            }
+        });
+    }
+
+    _findTaskRowByIndex(index) {
+        // The expander row children are the individual task rows
+        // Skip the first child (which might be internal), get the actual added rows
+        let currentIndex = 0;
+        let child = this.widget.get_first_child();
+
+        while (child) {
+            // Look for ActionRow children (these are the task rows we added)
+            if (child.constructor.name === 'AdwActionRow') {
+                if (currentIndex === index) {
+                    return child;
+                }
+                currentIndex++;
+            }
+
+            child = child.get_next_sibling();
+        }
+
+        return null;
     }
 
     _findTrackButtonsInSuffixBox(suffixBox) {

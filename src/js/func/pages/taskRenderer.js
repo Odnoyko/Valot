@@ -36,7 +36,7 @@ export class TaskRenderer {
         const taskGroupKey = `${baseName}::${projectName}::${clientName}`;
         const isCurrentlyTracking = trackingStateManager.isTaskTracking(taskGroupKey);
 
-        // Always use TaskRowTemplate - it will adapt based on tracking state
+        // Always use TaskRowTemplate - pass parentWindow (which is TasksPage) directly
         const templateInstance = new TaskRowTemplate(task, this.timeUtils, this.allProjects, this.parentWindow);
         // Using TaskRowTemplate
 
@@ -386,11 +386,14 @@ export class TaskRenderer {
     }
 
     _addRightClickGesture(row, task) {
+        console.log('TaskRenderer: Adding right-click gesture to task:', task.id);
+
         const gesture = new Gtk.GestureClick({
             button: 3
         });
 
         gesture.connect('pressed', (gesture, n_press, x, y) => {
+            console.log('TaskRenderer: Right-click detected on task:', task.id);
             // Stop event propagation to prevent parent stack selection
             gesture.set_state(Gtk.EventSequenceState.CLAIMED);
 
@@ -398,6 +401,7 @@ export class TaskRenderer {
         });
 
         row.add_controller(gesture);
+        console.log('TaskRenderer: Right-click gesture added to task:', task.id);
 
         // Also add left-click selection with Ctrl key
         const leftClickGesture = new Gtk.GestureClick({
@@ -425,22 +429,33 @@ export class TaskRenderer {
     }
 
     _toggleTaskSelection(row, task) {
+        console.log('TaskRenderer: _toggleTaskSelection called for task:', task.id);
+
         // Use the selectedTasks set from the renderer (could be main page or reports page)
         const selectedTasks = this.selectedTasks || this.parentWindow.selectedTasks;
-        
+
+        console.log('TaskRenderer: selectedTasks:', !!selectedTasks, 'has callback:', !!this.onSelectionChanged);
+
         if (selectedTasks) {
             if (selectedTasks.has(task.id)) {
                 selectedTasks.delete(task.id);
                 row.remove_css_class('selected-task');
+                console.log('TaskRenderer: Deselected task', task.id, 'total selected:', selectedTasks.size);
             } else {
                 selectedTasks.add(task.id);
                 row.add_css_class('selected-task');
+                console.log('TaskRenderer: Selected task', task.id, 'total selected:', selectedTasks.size);
             }
-            
+
             // Call selection changed callback if available
             if (this.onSelectionChanged) {
+                console.log('TaskRenderer: Calling onSelectionChanged callback');
                 this.onSelectionChanged();
+            } else {
+                console.log('TaskRenderer: No onSelectionChanged callback available');
             }
+        } else {
+            console.log('TaskRenderer: No selectedTasks Set available');
         }
     }
 

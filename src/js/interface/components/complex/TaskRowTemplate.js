@@ -225,6 +225,67 @@ export class TaskRowTemplate {
                 this.parentWindow.selectedTasks.add(this.task.id);
                 row.add_css_class('selected-task');
             }
+
+            // Check if this task belongs to a stack and update stack selection
+            this._updateStackSelectionState();
+
+            // Notify parent window that selection changed
+            if (this.parentWindow._updateSelectionUI) {
+                this.parentWindow._updateSelectionUI();
+            }
+        }
+    }
+
+    _updateStackSelectionState() {
+        if (!this.parentWindow.selectedStacks || !this.parentWindow.allTasks) return;
+
+        // Find the stack this task belongs to
+        const taskBaseName = this.task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+        const baseName = taskBaseName ? taskBaseName[1].trim() : this.task.name;
+        const projectName = this.task.project || this.task.project_name || 'Unbekanntes Projekt';
+        const clientName = this.task.client || this.task.client_name || 'Standard-Kunde';
+        const stackKey = `${baseName}::${projectName}::${clientName}`;
+
+        // Find all tasks in this stack
+        const stackTasks = this.parentWindow.allTasks.filter(task => {
+            const taskBaseName = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+            const baseNameToCheck = taskBaseName ? taskBaseName[1].trim() : task.name;
+            const taskGroupKey = `${baseNameToCheck}::${task.project || task.project_name}::${task.client || task.client_name}`;
+            return taskGroupKey === stackKey;
+        });
+
+        // Only consider it a stack if there are multiple tasks
+        if (stackTasks.length > 1) {
+            // Check if ALL tasks in the stack are selected
+            const allTasksSelected = stackTasks.every(task => this.parentWindow.selectedTasks.has(task.id));
+
+            if (allTasksSelected) {
+                // Add stack to selectedStacks
+                this.parentWindow.selectedStacks.add(stackKey);
+
+                // Find and highlight the stack row
+                if (this.parentWindow.stackRowMap) {
+                    for (let [row, key] of this.parentWindow.stackRowMap.entries()) {
+                        if (key === stackKey) {
+                            row.add_css_class('selected-task');
+                            break;
+                        }
+                    }
+                }
+            } else {
+                // Remove stack from selectedStacks
+                this.parentWindow.selectedStacks.delete(stackKey);
+
+                // Find and un-highlight the stack row
+                if (this.parentWindow.stackRowMap) {
+                    for (let [row, key] of this.parentWindow.stackRowMap.entries()) {
+                        if (key === stackKey) {
+                            row.remove_css_class('selected-task');
+                            break;
+                        }
+                    }
+                }
+            }
         }
     }
 
