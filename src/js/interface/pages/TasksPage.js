@@ -47,7 +47,7 @@ export class TasksPage {
         this.parentWindow = config.parentWindow;
         this.isLoading = false;
         this.currentPage = 0;
-        this.itemsPerPage = 20;
+        this.itemsPerPage = 30;
         
         this.tasks = [];
         this.filteredTasks = [];
@@ -95,10 +95,15 @@ export class TasksPage {
                 this.parentWindow.allProjects || [],
                 this // Use TasksPage as parent for method access
             );
-            
+
+            // Set selection change callback for TaskRenderer
+            this.taskRenderer.onSelectionChanged = () => {
+                this._updateSelectionUI();
+            };
+
             // Ensure TasksPage has access to allProjects from main window
             this.allProjects = this.parentWindow.allProjects || [];
-            
+
         } else {
             //('❌ Missing dependencies for TaskRenderer');
         }
@@ -109,7 +114,7 @@ export class TasksPage {
             //('TasksPage: No parent window provided');
             return;
         }
-        
+
         // Get references to existing UI elements from the template
         this.taskSearch = this.parentWindow._task_search;
         this.taskFilter = this.parentWindow._task_filter;
@@ -118,14 +123,48 @@ export class TasksPage {
         this.nextPageBtn = this.parentWindow._next_page_btn;
         this.pageInfo = this.parentWindow._page_info;
         this.paginationBox = this.parentWindow._pagination_box;
-        
+
+        // Replace simple pagination with pagination/context bar
+        this._replacePaginationWithContextBar();
+
         // TasksPage UI elements initialized
-        
+
         // Connect event handlers to existing UI elements
         this._connectEventHandlers();
-        
+
     }
     
+    /**
+     * Replace simple pagination with combined pagination/context bar
+     */
+    _replacePaginationWithContextBar() {
+        if (!this.paginationBox) {
+            return;
+        }
+
+        // Create new pagination/context bar widget
+        this.paginationContextBarWidget = WidgetFactory.createPaginationContextBar({
+            onPreviousClick: () => this._previousPage(),
+            onNextClick: () => this._nextPage(),
+            onCancelClick: () => this._clearSelection(),
+            onDeleteClick: () => this._deleteSelectedTasks()
+        });
+
+        // Clear the pagination box and add our new widget
+        let child = this.paginationBox.get_first_child();
+        while (child) {
+            const next = child.get_next_sibling();
+            this.paginationBox.remove(child);
+            child = next;
+        }
+
+        // Add the new pagination/context bar widget
+        this.paginationBox.append(this.paginationContextBarWidget.widget);
+
+        // Make sure the widget is visible
+        this.paginationContextBarWidget.widget.set_visible(true);
+    }
+
     _connectEventHandlers() {
         if (this.taskSearch) {
             this.taskSearch.connect('search-changed', () => {
@@ -133,7 +172,7 @@ export class TasksPage {
                 this._filterTasks();
             });
         }
-        
+
         if (this.taskFilter) {
             this.taskFilter.connect('notify::selected', () => {
                 const selectedIndex = this.taskFilter.get_selected();
@@ -143,15 +182,7 @@ export class TasksPage {
                 this._filterTasks();
             });
         }
-        
-        if (this.prevPageBtn) {
-            this.prevPageBtn.connect('clicked', () => this._previousPage());
-        }
-        
-        if (this.nextPageBtn) {
-            this.nextPageBtn.connect('clicked', () => this._nextPage());
-        }
-        
+
     }
     
     _subscribeToTrackingStateChanges() {
@@ -409,18 +440,17 @@ export class TasksPage {
             }
         }
 
-        // Clear selection state
-        this.selectedTasks.clear();
-        this.selectedStacks.clear();
+        // Clear row maps (but keep selections to preserve user's selection across refreshes)
         this.taskRowMap.clear();
         this.stackRowMap.clear();
-        
+
         // Clear active task tracking in TaskRenderer for real-time updates
         if (this.taskRenderer) {
             this.taskRenderer.clearAllActiveTaskTracking();
         }
 
         if (!this.filteredTasks || this.filteredTasks.length === 0) {
+            this.currentPage = 0;
             this._showEmptyState();
             return;
         }
@@ -431,11 +461,17 @@ export class TasksPage {
         this.allTasks = [...this.filteredTasks];
         this.parentWindow.allTasks = this.allTasks;
 
-        // Group all tasks first, then paginate groups (not individual tasks)
+        // Group all tasks first
         const allTaskGroups = this._groupSimilarTasks(this.filteredTasks);
-        
-        // Calculate pagination based on groups, not individual tasks
+
+        // Calculate pagination based on GROUPS (stacks + singles count as 1 item each)
         const totalPages = Math.ceil(allTaskGroups.length / this.itemsPerPage);
+
+        // If current page is beyond total pages, go to last page
+        if (this.currentPage >= totalPages && totalPages > 0) {
+            this.currentPage = totalPages - 1;
+        }
+
         const start = this.currentPage * this.itemsPerPage;
         const end = Math.min(start + this.itemsPerPage, allTaskGroups.length);
         const groupsToShow = allTaskGroups.slice(start, end);
@@ -443,8 +479,9 @@ export class TasksPage {
         // Render paginated groups
         this._renderTaskGroups(groupsToShow);
 
-        // Update pagination info
+        // Update pagination/selection UI
         this._updatePaginationInfo(totalPages);
+        this._updateSelectionUI();
     }
 
     /**
@@ -509,10 +546,22 @@ export class TasksPage {
             if (group.tasks.length === 1 || group.isIndividual) {
                 // Single task OR individual tracking task - render using TaskRenderer
                 const row = this.taskRenderer.renderSingleTask(group.tasks[0]);
+
+                // Force re-apply selection styling if this task is selected
+                if (this.selectedTasks.has(group.tasks[0].id)) {
+                    row.add_css_class('selected-task');
+                }
+
                 this.taskList.append(row);
             } else {
                 // Multiple tasks - render as expandable group using TaskRenderer
                 const groupRow = this.taskRenderer.renderTaskGroup(group);
+
+                // Force re-apply selection styling if this stack is selected
+                if (this.selectedStacks.has(group.groupKey)) {
+                    groupRow.add_css_class('selected-task');
+                }
+
                 this.taskList.append(groupRow);
             }
         });
@@ -1743,40 +1792,75 @@ export class TasksPage {
         }
     }
     
-    _previousPage() { if (this.currentPage > 0) { this.currentPage--; this._updateTaskDisplay(); }}
-    _nextPage() { this.currentPage++; this._updateTaskDisplay(); }
-    _updatePaginationInfo(totalPages) { 
-        if (totalPages <= 1) {
-            // Hide pagination completely when not needed
-            if (this.pageInfo) this.pageInfo.set_visible(false);
-            if (this.prevPageBtn) this.prevPageBtn.set_visible(false);
-            if (this.nextPageBtn) this.nextPageBtn.set_visible(false);
-            
-            // Also hide the pagination container if accessible
-            if (this.paginationBox) {
-                this.paginationBox.set_visible(false);
+    _previousPage() {
+        if (this.currentPage > 0) {
+            this.currentPage--;
+            this._updateTaskDisplay();
+        }
+    }
+
+    _nextPage() {
+        this.currentPage++;
+        this._updateTaskDisplay();
+    }
+
+    _updatePaginationInfo(totalPages) {
+        // Store totalPages for use in _updateSelectionUI
+        this._totalPages = totalPages;
+    }
+
+    _clearSelection() {
+        this.selectedTasks.clear();
+        this.selectedStacks.clear();
+
+        // Remove selection CSS from all rows
+        let child = this.taskList.get_first_child();
+        while (child) {
+            if (child.remove_css_class) {
+                child.remove_css_class('selected-task');
+                child.remove_css_class('selected-client');
+                child.remove_css_class('selected-project');
             }
-        } else {
-            // Show and update pagination when needed
-            if (this.pageInfo) {
-                this.pageInfo.set_visible(true);
-                this.pageInfo.set_label(`Page ${this.currentPage + 1} of ${totalPages}`);
+            child = child.get_next_sibling();
+        }
+
+        // Update the UI to show pagination instead of context menu
+        this._updateSelectionUI();
+    }
+
+    _updateSelectionUI() {
+        // Prevent recursive calls
+        if (this._isUpdatingSelectionUI) {
+            return;
+        }
+        this._isUpdatingSelectionUI = true;
+
+        try {
+            // Only count actual tasks, not stacks (since selecting a stack adds all its tasks to selectedTasks)
+            const selectedCount = this.selectedTasks.size;
+
+            if (!this.paginationContextBarWidget) {
+                return;
             }
-            
-            if (this.prevPageBtn) {
-                this.prevPageBtn.set_visible(true);
-                this.prevPageBtn.set_sensitive(this.currentPage > 0);
+
+            if (selectedCount > 0) {
+                // Show context actions mode
+                this.paginationContextBarWidget.show();
+                this.paginationContextBarWidget.showContextActions(selectedCount);
+            } else {
+                // Show pagination mode - use stored totalPages or recalculate
+                const totalPages = this._totalPages || Math.ceil(this._groupSimilarTasks(this.filteredTasks).length / this.itemsPerPage);
+
+                if (totalPages > 1) {
+                    this.paginationContextBarWidget.show();
+                    this.paginationContextBarWidget.showPagination(this.currentPage + 1, totalPages);
+                } else {
+                    // Hide pagination when no selection and only 1 page
+                    this.paginationContextBarWidget.hide();
+                }
             }
-            
-            if (this.nextPageBtn) {
-                this.nextPageBtn.set_visible(true);
-                this.nextPageBtn.set_sensitive(this.currentPage < totalPages - 1);
-            }
-            
-            // Show the pagination container if accessible
-            if (this.paginationBox) {
-                this.paginationBox.set_visible(true);
-            }
+        } finally {
+            this._isUpdatingSelectionUI = false;
         }
     }
     showAddTaskDialog() {
