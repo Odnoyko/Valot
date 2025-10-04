@@ -11,11 +11,13 @@ import { WidgetFactory } from 'resource:///com/odnoyko/valot/js/interface/compon
  * Shows an expandable row with task group summary and individual tasks
  */
 export class TaskStackTemplate {
-    constructor(group, timeUtils, allProjects, parentWindow) {
+    constructor(group, timeUtils, allProjects, parentWindow, enableSelection = true) {
         this.group = group;
         this.timeUtils = timeUtils;
         this.allProjects = allProjects;
         this.parentWindow = parentWindow;
+        this.enableSelection = enableSelection;
+        this.taskRows = []; // Store references to task rows
         this.widget = this._createStackWidget();
     }
 
@@ -172,9 +174,11 @@ export class TaskStackTemplate {
     }
 
     _addTaskRows(groupRow) {
-        this.group.tasks.forEach(task => {
+        this.group.tasks.forEach((task, index) => {
             const taskRow = this._renderIndividualTaskInGroup(task);
             groupRow.add_row(taskRow);
+            // Store reference to this task row with its task ID
+            this.taskRows.push({ taskId: task.id, row: taskRow });
         });
     }
 
@@ -264,6 +268,11 @@ export class TaskStackTemplate {
     }
 
     _addStackGestures(groupRow) {
+        // Only add selection gestures if enabled
+        if (!this.enableSelection) {
+            return;
+        }
+
         const gesture = new Gtk.GestureClick({
             button: 3
         });
@@ -343,6 +352,11 @@ export class TaskStackTemplate {
     }
 
     _addTaskGestures(taskRow, task) {
+        // Only add selection gestures if enabled
+        if (!this.enableSelection) {
+            return;
+        }
+
         const rightClickGesture = new Gtk.GestureClick({
             button: 3
         });
@@ -424,38 +438,13 @@ export class TaskStackTemplate {
 
     _syncTaskRowsCSS() {
         // Sync CSS for all task rows based on selectedTasks Set
-        // Iterate through the group's tasks and update CSS for each
-        this.group.tasks.forEach((task, index) => {
-            const taskRow = this._findTaskRowByIndex(index);
-            if (taskRow) {
-                if (this.parentWindow.selectedTasks.has(task.id)) {
-                    taskRow.add_css_class('selected-task');
-                } else {
-                    taskRow.remove_css_class('selected-task');
-                }
+        this.taskRows.forEach(({ taskId, row }) => {
+            if (this.parentWindow.selectedTasks.has(taskId)) {
+                row.add_css_class('selected-task');
+            } else {
+                row.remove_css_class('selected-task');
             }
         });
-    }
-
-    _findTaskRowByIndex(index) {
-        // The expander row children are the individual task rows
-        // Skip the first child (which might be internal), get the actual added rows
-        let currentIndex = 0;
-        let child = this.widget.get_first_child();
-
-        while (child) {
-            // Look for ActionRow children (these are the task rows we added)
-            if (child.constructor.name === 'AdwActionRow') {
-                if (currentIndex === index) {
-                    return child;
-                }
-                currentIndex++;
-            }
-
-            child = child.get_next_sibling();
-        }
-
-        return null;
     }
 
     _findTrackButtonsInSuffixBox(suffixBox) {

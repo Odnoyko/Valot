@@ -1316,7 +1316,7 @@ export class ClientsPage {
                 }
             }
         } catch (error) {
-            console.log('Error loading currency settings:', error);
+            // Silently continue with defaults
         }
         
         // Default to all currencies if no settings found

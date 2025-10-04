@@ -753,15 +753,6 @@ template $ValotWindow: Adw.ApplicationWindow {
                 title: _("Recent Tasks");
                 description: _("Your most recent completed tasks");
 
-                [header-suffix]
-                Button reports_delete_selected_btn {
-                  icon-name: "user-trash-symbolic";
-                  tooltip-text: _("Delete Selected Tasks");
-                  css-classes: ["destructive-action", "flat"];
-                  sensitive: false;
-                  visible: false;
-                }
-
                 ListBox recent_tasks_list {
                   css-classes: ["content-box"];
                   selection-mode: none;

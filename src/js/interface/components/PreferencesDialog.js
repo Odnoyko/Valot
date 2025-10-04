@@ -779,7 +779,7 @@ export const PreferencesDialog = GObject.registerClass({
                 return JSON.parse(configText);
             }
         } catch (error) {
-            console.log('Error loading pomodoro config:', error);
+            // Return default on error
         }
         
         // Return default config on error
@@ -815,7 +815,7 @@ export const PreferencesDialog = GObject.registerClass({
             // Reload PomodoroManager config
             pomodoroManager.reloadConfig();
         } catch (error) {
-            console.log('Error saving pomodoro config:', error);
+            // Silently continue
         }
     }
     
@@ -834,7 +834,7 @@ export const PreferencesDialog = GObject.registerClass({
                 }
             }
         } catch (error) {
-            console.log('Error loading currency settings:', error);
+            // Continue with defaults
         }
         
         // Default settings - load ALL currencies by default
@@ -867,7 +867,7 @@ export const PreferencesDialog = GObject.registerClass({
                 null
             );
         } catch (error) {
-            console.log('Error saving currency settings:', error);
+            // Silently continue
         }
     }
     
@@ -1040,7 +1040,6 @@ export const PreferencesDialog = GObject.registerClass({
                               this.currencySettings.hidden.includes(currencyData.code);
                               
                 if (exists) {
-                    console.log('Currency already exists');
                     return false;
                 }
                 

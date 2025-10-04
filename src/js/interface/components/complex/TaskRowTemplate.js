@@ -10,11 +10,12 @@ import { WidgetFactory } from 'resource:///com/odnoyko/valot/js/interface/compon
  * Template component for individual task rows
  */
 export class TaskRowTemplate {
-    constructor(task, timeUtils, allProjects, parentWindow) {
+    constructor(task, timeUtils, allProjects, parentWindow, enableSelection = true) {
         this.task = task;
         this.timeUtils = timeUtils;
         this.allProjects = allProjects;
         this.parentWindow = parentWindow;
+        this.enableSelection = enableSelection;
         this.widget = this._createTaskWidget();
     }
 
@@ -175,44 +176,47 @@ export class TaskRowTemplate {
     }
 
     _addGestures(row) {
-        // Right-click gesture for task selection
-        const rightClickGesture = new Gtk.GestureClick({
-            button: 3
-        });
+        // Only add selection gestures if enabled
+        if (this.enableSelection) {
+            // Right-click gesture for task selection
+            const rightClickGesture = new Gtk.GestureClick({
+                button: 3
+            });
 
-        rightClickGesture.connect('pressed', (gesture, n_press, x, y) => {
-            gesture.set_state(Gtk.EventSequenceState.CLAIMED);
-            this._toggleTaskSelection(row);
-        });
+            rightClickGesture.connect('pressed', (gesture, n_press, x, y) => {
+                gesture.set_state(Gtk.EventSequenceState.CLAIMED);
+                this._toggleTaskSelection(row);
+            });
 
-        row.add_controller(rightClickGesture);
+            row.add_controller(rightClickGesture);
 
-        // Ctrl+click gesture for task selection
-        const leftClickGesture = new Gtk.GestureClick({
-            button: 1
-        });
+            // Ctrl+click gesture for task selection
+            const leftClickGesture = new Gtk.GestureClick({
+                button: 1
+            });
 
-        leftClickGesture.connect('pressed', (gesture, n_press, x, y) => {
-            try {
-                const event = gesture.get_current_event();
-                if (!event) return false;
+            leftClickGesture.connect('pressed', (gesture, n_press, x, y) => {
+                try {
+                    const event = gesture.get_current_event();
+                    if (!event) return false;
 
-                const state = event.get_modifier_state();
-                if (state & Gdk.ModifierType.CONTROL_MASK) {
-                    this._toggleTaskSelection(row);
-                    return true;
+                    const state = event.get_modifier_state();
+                    if (state & Gdk.ModifierType.CONTROL_MASK) {
+                        this._toggleTaskSelection(row);
+                        return true;
+                    }
+                    return false;
+                } catch (error) {
+                    return false;
                 }
-                return false;
-            } catch (error) {
-                return false;
+            });
+
+            row.add_controller(leftClickGesture);
+
+            // Store mapping for task management
+            if (this.parentWindow.taskRowMap) {
+                this.parentWindow.taskRowMap.set(row, this.task.id);
             }
-        });
-
-        row.add_controller(leftClickGesture);
-
-        // Store mapping for task management
-        if (this.parentWindow.taskRowMap) {
-            this.parentWindow.taskRowMap.set(row, this.task.id);
         }
     }
 

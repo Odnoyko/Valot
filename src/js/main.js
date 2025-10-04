@@ -77,7 +77,6 @@ const AccentColorManager = {
                     Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1
                 );
             } catch (error) {
-                console.log('Error applying custom accent color:', error);
                 this._customAccentProvider = null;
             }
         }
@@ -349,7 +348,6 @@ export const ValotApplication = GObject.registerClass(
                 }
             } catch (error) {
                 // If settings fail, just use default
-                console.log('Could not load theme preference:', error);
             }
         }
 

@@ -185,7 +185,6 @@ export class CurrencyDialog {
 
     _showValidationError(message) {
         // You could implement a toast or inline error display here
-        console.log('Validation Error:', message);
     }
 
     present() {

@@ -171,7 +171,7 @@ export const CarouselDialog = GObject.registerClass({
             const settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
             settings.set_boolean('welcome-dialog-shown', true);
         } catch (error) {
-            console.log('Could not save welcome dialog state:', error);
+            // Silently continue
         }
     }
 
@@ -406,7 +406,6 @@ export const CarouselDialog = GObject.registerClass({
             const settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
             return !settings.get_boolean('welcome-dialog-shown');
         } catch (error) {
-            console.log('Could not read welcome dialog state:', error);
             return true; // Show by default if can't read settings
         }
     }

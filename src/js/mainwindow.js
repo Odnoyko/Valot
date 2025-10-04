@@ -88,7 +88,7 @@ export const ValotWindow = GObject.registerClass({
         // Currency carousel
         'reports_currency_carousel', 'reports_carousel_indicators',
         // Reports page recent tasks
-        'recent_tasks_list', 'reports_delete_selected_btn'
+        'recent_tasks_list'
     ],
 }, class ValotWindow extends Adw.ApplicationWindow {
     constructor(application) {
@@ -124,11 +124,7 @@ export const ValotWindow = GObject.registerClass({
         
         // Track current page for selection clearing
         this.currentPageIndex = 0; // Start with tasks page
-        
-        // Reports page selection state
-        this.reportsSelectedTasks = new Set();
-        this.reportsSelectedStacks = new Set();
-        
+
         // Initialize modular page components
         this._initializePages();
         
@@ -243,19 +239,13 @@ export const ValotWindow = GObject.registerClass({
             (db, sql) => db.execute_non_select_command(sql)
         );
 
-        // Initialize TaskRenderer for Reports page recent tasks
+        // Initialize TaskRenderer for Reports page recent tasks (with selection disabled)
         this.reportsTaskRenderer = new TaskRenderer(
             TimeUtils,
             this.allProjects || [],
-            this
+            this,
+            { enableSelection: false }
         );
-        // Set Reports-specific selection state
-        this.reportsTaskRenderer.selectedTasks = this.reportsSelectedTasks;
-        this.reportsTaskRenderer.selectedStacks = this.reportsSelectedStacks;
-        // Set callback for selection changes
-        this.reportsTaskRenderer.onSelectionChanged = () => {
-            this._updateReportsDeleteButton();
-        };
 
         // Initialize other managers
         this.timeUtils = TimeUtils;
@@ -1112,10 +1102,7 @@ export const ValotWindow = GObject.registerClass({
         
         // Setup Reports page chart filters
         this._setupReportsChartFilters();
-        
-        // Setup Reports page delete button
-        this._setupReportsDeleteButton();
-        
+
         // For other pages, we can connect them to work with the existing template
         // or replace their content if needed
     }
@@ -1233,20 +1220,27 @@ export const ValotWindow = GObject.registerClass({
      * Clear selections when navigating away from Projects and Clients pages
      */
     _clearPageSelections(targetPageIndex) {
+        // Clear tasks selection when leaving tasks page (index 0)
+        if (this.currentPageIndex === 0 && targetPageIndex !== 0) {
+            if (this.tasksPageComponent && typeof this.tasksPageComponent._clearSelection === 'function') {
+                this.tasksPageComponent._clearSelection();
+            }
+        }
+
         // Clear projects selection when leaving projects page (index 1)
         if (this.currentPageIndex === 1 && targetPageIndex !== 1) {
             if (this.projectsPageComponent && typeof this.projectsPageComponent._clearSelection === 'function') {
                 this.projectsPageComponent._clearSelection();
             }
         }
-        
+
         // Clear clients selection when leaving clients page (index 2)
         if (this.currentPageIndex === 2 && targetPageIndex !== 2) {
             if (this.clientsPageComponent && typeof this.clientsPageComponent._clearSelection === 'function') {
                 this.clientsPageComponent._clearSelection();
             }
         }
-        
+
         // Update current page tracking
         this.currentPageIndex = targetPageIndex;
     }
@@ -1969,113 +1963,6 @@ export const ValotWindow = GObject.registerClass({
     }
 
     /**
-     * Setup Reports page delete button functionality
-     */
-    _setupReportsDeleteButton() {
-        if (!this._reports_delete_selected_btn) {
-            return;
-        }
-
-        this._reports_delete_selected_btn.connect('clicked', () => {
-            this._deleteSelectedReportsTasks();
-        });
-        
-        // Reports delete button setup completed
-    }
-
-    /**
-     * Delete selected tasks from Reports page
-     */
-    _deleteSelectedReportsTasks() {
-        if (this.reportsSelectedTasks.size === 0 && this.reportsSelectedStacks.size === 0) {
-            return;
-        }
-
-        // Show confirmation dialog
-        const dialog = new Adw.AlertDialog({
-            heading: 'Delete Selected Tasks',
-            body: `Are you sure you want to delete ${this.reportsSelectedTasks.size} selected tasks? This action cannot be undone.`
-        });
-
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('delete', 'Delete');
-        dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
-        
-        dialog.connect('response', (dialog, response) => {
-            if (response === 'delete') {
-                this._performReportsTaskDeletion();
-            }
-        });
-
-        dialog.present(this);
-    }
-
-    /**
-     * Perform actual task deletion from Reports page selection
-     */
-    _performReportsTaskDeletion() {
-        if (!this.dbConnection || !this.taskManager) {
-            //('Database connection or TaskManager not available');
-            return;
-        }
-
-        try {
-            // Collect all task IDs to delete (from individual tasks and stacks)
-            const taskIdsToDelete = new Set([...this.reportsSelectedTasks]);
-            
-            // Add tasks from selected stacks
-            for (const stackKey of this.reportsSelectedStacks) {
-                const stackTasks = this.allTasks.filter(task => {
-                    const taskBaseName = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
-                    const baseName = taskBaseName ? taskBaseName[1].trim() : task.name;
-                    const taskGroupKey = `${baseName}::${task.project_name || 'Unknown'}::${task.client_name || 'Default'}`;
-                    return taskGroupKey === stackKey;
-                });
-                
-                stackTasks.forEach(task => taskIdsToDelete.add(task.id));
-            }
-
-
-            // Delete each task
-            for (const taskId of taskIdsToDelete) {
-                const sql = `DELETE FROM Task WHERE id = ${taskId}`;
-                this.dbConnection.execute_non_select_command(sql);
-            }
-
-            // Clear selections
-            this.reportsSelectedTasks.clear();
-            this.reportsSelectedStacks.clear();
-            this._updateReportsDeleteButton();
-
-            // Refresh data
-            this._loadTasks();
-            this._updateRecentTasksList();
-            this._updateReportsStatistics();
-            this._updateChart();
-
-
-        } catch (error) {
-            //('❌ Failed to delete tasks:', error);
-        }
-    }
-
-    /**
-     * Update Reports delete button visibility and state
-     */
-    _updateReportsDeleteButton() {
-        if (!this._reports_delete_selected_btn) return;
-
-        const hasSelection = this.reportsSelectedTasks.size > 0 || this.reportsSelectedStacks.size > 0;
-        this._reports_delete_selected_btn.set_visible(hasSelection);
-        this._reports_delete_selected_btn.set_sensitive(hasSelection);
-
-        if (hasSelection) {
-            const totalCount = this.reportsSelectedTasks.size + this.reportsSelectedStacks.size;
-            this._reports_delete_selected_btn.set_tooltip_text(`Delete ${totalCount} selected items`);
-        }
-    }
-    
-    /**
      * Update chart filter dropdowns with current data
      */
     _refreshReportsChartFilters() {
@@ -2317,9 +2204,6 @@ export const ValotWindow = GObject.registerClass({
                 }
             });
 
-            // Update delete button visibility
-            this._updateReportsDeleteButton();
-            
             // Recent Tasks list updated successfully
 
         } catch (error) {
