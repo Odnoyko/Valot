@@ -192,6 +192,10 @@ entry.itemNameEntry {
 }
 
 /* Use system accent colors for all elements */
+.bright-subtitle:hover {
+  transition: all 0.2s ease;
+  background: alpha(@window_fg_color, 0.04);
+}
 
 .selected-task {
   background: alpha(@accent_bg_color, 0.15);
@@ -537,3 +541,5 @@ window.dark .subtitle {
 .carousel-command-text {
   padding: 10px 20px;
 }
+
+

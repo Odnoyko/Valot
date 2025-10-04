@@ -570,7 +570,8 @@ export class ClientManager {
     // Create an inline editable client name row
     createEditableClientRow(client, parentWindow) {
         const row = new Adw.ActionRow({
-            subtitle: `Rate: €${client.rate || 0}/hour • Email: ${client.email || 'No email'}`
+            subtitle: `Rate: €${client.rate || 0}/hour • Email: ${client.email || 'No email'}`,
+            css_classes: ['bright-subtitle']
         });
 
         // Create title container with inline editable entry

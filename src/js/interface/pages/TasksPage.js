@@ -21,20 +21,20 @@ import { ClientDropdown } from '../components/clientDropdown.js';
 export class TasksPage {
     constructor(config = {}) {
         this.config = {
-            title: 'Tasks',
-            subtitle: 'Manage and track your tasks',
+            title: _('Tasks'),
+            subtitle: _('Manage and track your tasks'),
             showTrackingWidget: true,
             showSearchButton: true,
             actions: [
                 {
                     icon: 'list-add-symbolic',
-                    tooltip: 'Add Task',
+                    tooltip: _('Add Task'),
                     cssClasses: ['suggested-action'],
                     onClick: (page) => page.showAddTaskDialog()
                 },
                 {
                     icon: 'document-properties-symbolic',
-                    tooltip: 'Add from Template',
+                    tooltip: _('Add from Template'),
                     cssClasses: ['flat'],
                     onClick: (page) => page.showTaskTemplateDialog()
                 }
@@ -245,10 +245,10 @@ export class TasksPage {
 
         // Filter buttons
         const filters = [
-            { id: 'all', label: 'All Tasks', active: true },
-            { id: 'today', label: 'Today' },
-            { id: 'week', label: 'This Week' },
-            { id: 'active', label: 'Active Only' }
+            { id: 'all', label: _('All Tasks'), active: true },
+            { id: 'today', label: _('Today') },
+            { id: 'week', label: _('This Week') },
+            { id: 'active', label: _('Active Only') }
         ];
 
         this.filterButtons = new Map();
@@ -989,10 +989,10 @@ export class TasksPage {
                      today.getMonth() === taskDate.getMonth();
         return match;
     }
-    _editTaskObject(task) { 
+    _editTaskObject(task) {
         const dialog = new Adw.AlertDialog({
-            heading: 'Edit Task',
-            body: `Modify "${task.name}"`
+            heading: _('Edit Task'),
+            body: _('Modify "%s"').format(task.name)
         });
 
         // Create inline form layout

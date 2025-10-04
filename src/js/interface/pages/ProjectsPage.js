@@ -348,10 +348,11 @@ export class ProjectsPage {
         // Add only paginated projects
         projectsToShow.forEach(project => {
             if (this.projectList) {
-                // Create ListBoxRow with custom content 
+                // Create ListBoxRow with custom content
                 const row = new Gtk.ListBoxRow({
                     activatable: false,
-                    selectable: false
+                    selectable: false,
+                    css_classes: ['bright-subtitle']
                 });
                 
                 // Create main horizontal box

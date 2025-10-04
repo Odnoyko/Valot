@@ -74,13 +74,13 @@ export const CarouselDialog = GObject.registerClass({
         });
 
         const skipButton = new Gtk.Button({
-            label: 'Skip',
+            label: _('Skip'),
             css_classes: ['flat'],
         });
         skipButton.connect('clicked', () => this._closeDialog());
 
         const nextButton = new Gtk.Button({
-            label: 'Next',
+            label: _('Next'),
             css_classes: ['suggested-action'],
         });
         nextButton.connect('clicked', () => {
@@ -97,7 +97,7 @@ export const CarouselDialog = GObject.registerClass({
         });
 
         const donateButton = new Gtk.Button({
-            label: 'Donate',
+            label: _('Donate'),
             css_classes: ['flat'],
         });
         donateButton.connect('clicked', () => {
