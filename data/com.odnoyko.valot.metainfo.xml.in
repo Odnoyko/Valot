@@ -4,19 +4,56 @@
   <launchable type="desktop-id">com.odnoyko.valot.desktop</launchable>
   <name>Valot</name>
   <summary>Time tracking without the hassle</summary>
+  <summary xml:lang="de">Zeiterfassung ohne Aufwand</summary>
+  <summary xml:lang="ru">Учёт времени без лишних хлопот</summary>
+  <summary xml:lang="uk">Облік часу без зайвих клопотів</summary>
   <description>
     <p>Valot combines time tracking with earnings calculation in one clean app. Set your hourly rates, track your work time, and instantly see what you've earned. Simple tracking for professionals who value their time.</p>
+    <p xml:lang="de">Valot kombiniert Zeiterfassung mit Einkommensberechnung in einer übersichtlichen App. Legen Sie Ihre Stundensätze fest, verfolgen Sie Ihre Arbeitszeit und sehen Sie sofort, was Sie verdient haben. Einfache Erfassung für Profis, die ihre Zeit schätzen.</p>
+    <p xml:lang="ru">Valot объединяет учёт времени и расчёт заработка в одном удобном приложении. Устанавливайте почасовые ставки, отслеживайте рабочее время и мгновенно видите свой заработок. Простой учёт для профессионалов, которые ценят своё время.</p>
+    <p xml:lang="uk">Valot поєднує облік часу та розрахунок заробітку в одному зручному застосунку. Встановлюйте погодинні ставки, відстежуйте робочий час та миттєво бачте свій заробіток. Простий облік для професіоналів, які цінують свій час.</p>
     <p>Key Features:</p>
+    <p xml:lang="de">Hauptfunktionen:</p>
+    <p xml:lang="ru">Основные возможности:</p>
+    <p xml:lang="uk">Основні можливості:</p>
     <ul>
       <li>Compact tracker accessible via system hotkeys for quick time logging</li>
+      <li xml:lang="de">Kompakter Tracker über System-Tastenkombinationen für schnelle Zeiterfassung</li>
+      <li xml:lang="ru">Компактный трекер, доступный через системные горячие клавиши для быстрого учёта времени</li>
+      <li xml:lang="uk">Компактний трекер, доступний через системні гарячі клавіші для швидкого обліку часу</li>
       <li>Real-time task tracking with live timer updates and instant feedback</li>
+      <li xml:lang="de">Echtzeit-Aufgabenverfolgung mit Live-Timer-Updates und sofortigem Feedback</li>
+      <li xml:lang="ru">Отслеживание задач в реальном времени с обновлениями таймера и мгновенной обратной связью</li>
+      <li xml:lang="uk">Відстеження завдань у реальному часі з оновленнями таймера та миттєвим зворотним зв'язком</li>
       <li>Project organization with custom colors and icons for easy identification</li>
+      <li xml:lang="de">Projektorganisation mit benutzerdefinierten Farben und Symbolen zur einfachen Identifizierung</li>
+      <li xml:lang="ru">Организация проектов с пользовательскими цветами и значками для лёгкой идентификации</li>
+      <li xml:lang="uk">Організація проектів із власними кольорами та значками для легкої ідентифікації</li>
       <li>Client management with custom currency support for international work</li>
+      <li xml:lang="de">Kundenverwaltung mit benutzerdefinierter Währungsunterstützung für internationale Arbeit</li>
+      <li xml:lang="ru">Управление клиентами с поддержкой пользовательских валют для международной работы</li>
+      <li xml:lang="uk">Керування клієнтами з підтримкою власних валют для міжнародної роботи</li>
       <li>Comprehensive reporting with detailed charts and statistics</li>
+      <li xml:lang="de">Umfassende Berichte mit detaillierten Diagrammen und Statistiken</li>
+      <li xml:lang="ru">Комплексные отчёты с подробными графиками и статистикой</li>
+      <li xml:lang="uk">Комплексні звіти з детальними графіками та статистикою</li>
       <li>HTML/PDF export capabilities with professional formatting options</li>
+      <li xml:lang="de">HTML/PDF-Exportfunktionen mit professionellen Formatierungsoptionen</li>
+      <li xml:lang="ru">Возможности экспорта HTML/PDF с профессиональными опциями форматирования</li>
+      <li xml:lang="uk">Можливості експорту HTML/PDF з професійними опціями форматування</li>
+      <li>Built-in Pomodoro timer with customizable session lengths for focused work</li>
+      <li xml:lang="de">Integrierter Pomodoro-Timer mit anpassbaren Sitzungslängen für fokussiertes Arbeiten</li>
+      <li xml:lang="ru">Встроенный таймер Pomodoro с настраиваемой длительностью сеансов для сосредоточенной работы</li>
+      <li xml:lang="uk">Вбудований таймер Pomodoro з налаштовуваною тривалістю сеансів для зосередженої роботи</li>
       <li>Clear and intuitive interface designed for effortless daily use</li>
+      <li xml:lang="de">Klare und intuitive Oberfläche für mühelosen täglichen Gebrauch</li>
+      <li xml:lang="ru">Чистый и интуитивный интерфейс для лёгкого ежедневного использования</li>
+      <li xml:lang="uk">Чистий та інтуїтивний інтерфейс для легкого щоденного використання</li>
     </ul>
     <p>Valot offers a clean, modern interface, making time tracking simple and efficient without getting in your way.</p>
+    <p xml:lang="de">Valot bietet eine klare, moderne Oberfläche und macht die Zeiterfassung einfach und effizient, ohne Ihnen im Weg zu stehen.</p>
+    <p xml:lang="ru">Valot предлагает чистый современный интерфейс, делая учёт времени простым и эффективным, не мешая вашей работе.</p>
+    <p xml:lang="uk">Valot пропонує чистий сучасний інтерфейс, роблячи облік часу простим та ефективним, не заважаючи вашій роботі.</p>
   </description>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
@@ -34,6 +71,11 @@
     <display_length compare="ge">768</display_length>
   </recommends>
   <releases>
+    <release version="0.8.3" date="2025-10-04">
+      <description>
+        <p>Selection context UI, Removed selection from Report page, Updated interface,Updated Translations</p>
+      </description>
+    </release>
     <release version="0.8.2" date="2025-09-25">
       <description>
         <p>Updated Ukrainian translation file</p>
@@ -115,22 +157,37 @@
     <screenshot type="default">
       <image>https://gitlab.com/Valo27/valot/-/raw/main/data/screenshots/1.png</image>
       <caption>Main task tracking interface with active timer and comprehensive task management</caption>
+      <caption xml:lang="de">Hauptschnittstelle zur Aufgabenverfolgung mit aktivem Timer und umfassender Aufgabenverwaltung</caption>
+      <caption xml:lang="ru">Основной интерфейс отслеживания задач с активным таймером и комплексным управлением задачами</caption>
+      <caption xml:lang="uk">Основний інтерфейс відстеження завдань з активним таймером та комплексним керуванням завданнями</caption>
     </screenshot>
     <screenshot>
       <image>https://gitlab.com/Valo27/valot/-/raw/main/data/screenshots/3.png</image>
       <caption>Projects management with easy project creation and colorful organization</caption>
+      <caption xml:lang="de">Projektverwaltung mit einfacher Projekterstellung und farbenfroher Organisation</caption>
+      <caption xml:lang="ru">Управление проектами с простым созданием проектов и яркой организацией</caption>
+      <caption xml:lang="uk">Керування проектами з простим створенням проектів та яскравою організацією</caption>
     </screenshot>
     <screenshot>
       <image>https://gitlab.com/Valo27/valot/-/raw/main/data/screenshots/4.png</image>
       <caption>Client management with billing rates and currency support</caption>
+      <caption xml:lang="de">Kundenverwaltung mit Abrechnungssätzen und Währungsunterstützung</caption>
+      <caption xml:lang="ru">Управление клиентами с тарифами на оплату и поддержкой валют</caption>
+      <caption xml:lang="uk">Керування клієнтами з тарифами на оплату та підтримкою валют</caption>
     </screenshot>
     <screenshot>
       <image>https://gitlab.com/Valo27/valot/-/raw/main/data/screenshots/5.png</image>
       <caption>Create new clients with custom hourly rates and currency settings</caption>
+      <caption xml:lang="de">Neue Kunden mit benutzerdefinierten Stundensätzen und Währungseinstellungen erstellen</caption>
+      <caption xml:lang="ru">Создание новых клиентов с пользовательскими почасовыми ставками и настройками валют</caption>
+      <caption xml:lang="uk">Створення нових клієнтів з власними погодинними ставками та налаштуваннями валют</caption>
     </screenshot>
     <screenshot>
       <image>https://gitlab.com/Valo27/valot/-/raw/main/data/screenshots/6.png</image>
       <caption>Comprehensive reports with interactive charts, statistics, and time analytics</caption>
+      <caption xml:lang="de">Umfassende Berichte mit interaktiven Diagrammen, Statistiken und Zeitanalysen</caption>
+      <caption xml:lang="ru">Комплексные отчёты с интерактивными графиками, статистикой и аналитикой времени</caption>
+      <caption xml:lang="uk">Комплексні звіти з інтерактивними графіками, статистикою та аналітикою часу</caption>
     </screenshot>
   </screenshots>
   <branding>

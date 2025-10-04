@@ -1,13 +1,22 @@
 [Desktop Entry]
 Name=Valot
 GenericName=Time Tracker
+GenericName[de]=Zeiterfassung
+GenericName[ru]=Учёт времени
+GenericName[uk]=Облік часу
 Comment=Track time for tasks and projects
+Comment[de]=Verfolgen Sie die Zeit für Aufgaben und Projekte
+Comment[ru]=Отслеживайте время для задач и проектов
+Comment[uk]=Відстежуйте час для завдань та проектів
 Exec=com.odnoyko.valot
 Icon=com.odnoyko.valot
 Terminal=false
 Type=Application
 Categories=Office;ProjectManagement;
 Keywords=time;tracker;productivity;tasks;projects;timesheet;billing;
+Keywords[de]=Zeit;Tracker;Produktivität;Aufgaben;Projekte;Zeiterfassung;Abrechnung;
+Keywords[ru]=время;трекер;продуктивность;задачи;проекты;учёт времени;выставление счетов;
+Keywords[uk]=час;трекер;продуктивність;завдання;проекти;облік часу;виставлення рахунків;
 MimeType=application/x-valot-project;
 StartupNotify=true
 X-GNOME-UsesNotifications=true
