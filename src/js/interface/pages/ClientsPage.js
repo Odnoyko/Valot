@@ -4,6 +4,7 @@ import Gdk from 'gi://Gdk';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import { getCurrencySymbol, getAllCurrencies } from 'resource:///com/odnoyko/valot/js/data/currencies.js';
+import { WidgetFactory } from '../components/widgetFactory.js';
 
 /**
  * Clients management page - extracted from window.js
@@ -32,7 +33,7 @@ export class ClientsPage {
         this.parentWindow = config.parentWindow;
         this.isLoading = false;
         this.currentPage = 0;
-        this.itemsPerPage = 10;
+        this.itemsPerPage = 30;
         
         // Client-specific state
         this.clients = [];
@@ -59,15 +60,23 @@ export class ClientsPage {
             //('ClientsPage: No parent window provided');
             return;
         }
-        
+
         // Get references to existing UI elements from the template
         this.clientSearch = this.parentWindow._client_search;
         this.addClientBtn = this.parentWindow._add_client_btn;
         this.clientList = this.parentWindow._client_list;
-        
+
+        // Try to get pagination box from template, or create one
+        this.paginationContextBar = this.parentWindow._clients_pagination_box;
+
+        // If no pagination bar in template, we need to create one
+        if (!this.paginationContextBar) {
+            this._createPaginationContextBar();
+        }
+
         // Debug: check what we found
         // ClientsPage init - elements found
-        
+
     }
 
     /**
@@ -441,18 +450,34 @@ export class ClientsPage {
         }
 
         if (!this.filteredClients || this.filteredClients.length === 0) {
+            this.currentClientsPage = 0;
+            this._updatePaginationInfo();
+            this._updateSelectionUI();
             return;
         }
 
-        // Displaying filtered clients
+        // Calculate pagination
+        const totalPages = Math.ceil(this.filteredClients.length / this.clientsPerPage);
 
-        // Add clients using your specific requirements
-        this.filteredClients.forEach(client => {
+        // If current page is beyond total pages, go to last page
+        if (this.currentClientsPage >= totalPages && totalPages > 0) {
+            this.currentClientsPage = totalPages - 1;
+        }
+
+        const start = this.currentClientsPage * this.clientsPerPage;
+        const end = Math.min(start + this.clientsPerPage, this.filteredClients.length);
+        const clientsToShow = this.filteredClients.slice(start, end);
+
+        // Displaying filtered clients (page ${this.currentClientsPage + 1} of ${totalPages})
+
+        // Add only paginated clients
+        clientsToShow.forEach(client => {
             if (this.clientList) {
                 // Create ListBoxRow with custom content
                 const row = new Gtk.ListBoxRow({
                     activatable: false,
-                    selectable: false
+                    selectable: false,
+                    css_classes: ['bright-subtitle']
                 });
                 
                 // Create main horizontal box
@@ -552,6 +577,9 @@ export class ClientsPage {
             }
         });
 
+        // Update pagination info
+        this._updatePaginationInfo();
+        this._updateSelectionUI();
     }
 
     /**
@@ -831,14 +859,55 @@ export class ClientsPage {
     }
 
     /**
+     * Create pagination/context bar if not in template
+     */
+    _createPaginationContextBar() {
+        this.paginationContextBarWidget = WidgetFactory.createPaginationContextBar({
+            onPreviousClick: () => this._previousPage(),
+            onNextClick: () => this._nextPage(),
+            onCancelClick: () => this._clearSelection(),
+            onDeleteClick: () => this._deleteSelectedClients()
+        });
+
+        // Try to find a container to append to
+        if (this.clientList) {
+            // Navigate up the widget hierarchy to find a Box container
+            let parent = this.clientList.get_parent();
+            while (parent && !parent.append) {
+                parent = parent.get_parent();
+            }
+
+            if (parent && parent.append) {
+                parent.append(this.paginationContextBarWidget.widget);
+            } else {
+                console.warn('Could not find suitable container for pagination bar');
+            }
+        }
+    }
+
+    /**
      * Update selection UI
      */
     _updateSelectionUI() {
         const selectedCount = this.selectedClients.size;
-        
-        // For now, just log the selection since we're using the template UI
+
+        if (!this.paginationContextBarWidget) return;
+
         if (selectedCount > 0) {
+            // Show context actions mode (always visible when items selected)
+            this.paginationContextBarWidget.show();
+            this.paginationContextBarWidget.showContextActions(selectedCount);
         } else {
+            // Show pagination mode - use stored totalPages
+            const totalPages = this._totalPages || Math.ceil(this.filteredClients.length / this.clientsPerPage);
+
+            if (totalPages > 1) {
+                this.paginationContextBarWidget.show();
+                this.paginationContextBarWidget.showPagination(this.currentClientsPage + 1, totalPages);
+            } else {
+                // Hide pagination when no selection and only 1 page
+                this.paginationContextBarWidget.hide();
+            }
         }
     }
 
@@ -1112,18 +1181,9 @@ export class ClientsPage {
     /**
      * Update pagination info
      */
-    _updatePaginationInfo(totalPages) {
-        if (this.clientsPageInfo) {
-            this.clientsPageInfo.setText(`Page ${this.currentClientsPage + 1} of ${totalPages}`);
-        }
-
-        // Enable/disable pagination buttons
-        if (this.prevClientsButton) {
-            this.prevClientsButton.setEnabled(this.currentClientsPage > 0);
-        }
-        if (this.nextClientsButton) {
-            this.nextClientsButton.setEnabled(this.currentClientsPage < totalPages - 1);
-        }
+    _updatePaginationInfo() {
+        // Store totalPages for use in _updateSelectionUI
+        this._totalPages = Math.ceil(this.filteredClients.length / this.clientsPerPage);
     }
 
     // Helper methods
@@ -1257,7 +1317,7 @@ export class ClientsPage {
                 }
             }
         } catch (error) {
-            console.log('Error loading currency settings:', error);
+            // Silently continue with defaults
         }
         
         // Default to all currencies if no settings found

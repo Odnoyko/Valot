@@ -1095,7 +1095,8 @@ export class ProjectManager {
     // Create an inline editable project name row
     createEditableProjectRow(project, parentWindow) {
         const row = new Adw.ActionRow({
-            subtitle: `Total time: ${parentWindow._formatDuration(project.totalTime)}`
+            subtitle: `Total time: ${parentWindow._formatDuration(project.totalTime)}`,
+            css_classes: ['bright-subtitle']
         });
 
         // Create title container with inline editable entry

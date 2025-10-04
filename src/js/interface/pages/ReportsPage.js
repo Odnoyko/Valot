@@ -42,7 +42,6 @@ export class ReportsPage {
      * Update chart filters (called by main window when UI filters change)
      */
     updateFilters(period, projectId, clientId) {
-        console.log('📊 Updating ReportsPage filters:', { period, projectId, clientId });
         this.chartFilters = {
             period: period || 'week',
             project: projectId,
@@ -168,40 +167,24 @@ export class ReportsPage {
      * Export PDF report with current filter settings
      */
     exportPDFReport() {
-        console.log('🚀 PDF Export button clicked!');
-        
         if (!this.reportExporter) {
             console.error('❌ Report exporter not available - this.reportExporter is null/undefined');
-            console.log('📊 Available properties:', Object.keys(this));
             return;
         }
 
-        console.log('✅ Report exporter found:', this.reportExporter);
-
         try {
-            console.log('🔧 Configuring PDF export with current settings...');
-            console.log('📊 Current chart filters:', this.chartFilters);
-            
             // Update the report exporter with current data
-            console.log('🔄 Updating report exporter data...');
             this._updateReportExporterData();
-            
+
             // Configure filters based on current chart filters
-            console.log('⚙️ Configuring period filter:', this.chartFilters.period);
             this.reportExporter.configurePeriod(this.chartFilters.period);
-            
+
             if (this.chartFilters.project) {
-                console.log('📁 Configuring project filter:', this.chartFilters.project);
                 this.reportExporter.configureProjectFilter(this.chartFilters.project);
-            } else {
-                console.log('📁 No project filter applied');
             }
-            
+
             if (this.chartFilters.client) {
-                console.log('👤 Configuring client filter:', this.chartFilters.client);
                 this.reportExporter.configureClientFilter(this.chartFilters.client);
-            } else {
-                console.log('👤 No client filter applied');
             }
 
             // Configure sections based on UI switches
@@ -212,19 +195,13 @@ export class ReportsPage {
                 showProjects: this.includeProjectsSwitch?.get_active() ?? true,
                 showBilling: this.includeBillingSwitch?.get_active() ?? false
             };
-            
-            console.log('📋 Configured sections:', sections);
-            
+
             this.reportExporter.configureSections(sections);
             this.reportExporter.configureBilling(sections.showBilling);
 
             // Export the report
-            console.log('🎯 Starting PDF export with parent window - type:', typeof this.parentWindow);
-            console.log('🏠 Parent window available:', !!this.parentWindow);
-            
             this.reportExporter.exportReport(this.parentWindow);
-            console.log('📤 PDF export method called successfully');
-            
+
         } catch (error) {
             console.error('💥 Error configuring PDF export:', error);
             console.error('📍 Error stack:', error.stack);
@@ -241,18 +218,16 @@ export class ReportsPage {
         }
 
         try {
-            console.log('Configuring HTML export with current settings...');
-            
             // Update the report exporter with current data
             this._updateReportExporterData();
-            
+
             // Configure filters based on current chart filters
             this.reportExporter.configurePeriod(this.chartFilters.period);
-            
+
             if (this.chartFilters.project) {
                 this.reportExporter.configureProjectFilter(this.chartFilters.project);
             }
-            
+
             if (this.chartFilters.client) {
                 this.reportExporter.configureClientFilter(this.chartFilters.client);
             }
@@ -265,14 +240,13 @@ export class ReportsPage {
                 showProjects: true,
                 showBilling: false
             };
-            
+
             this.reportExporter.configureSections(sections);
             this.reportExporter.configureBilling(sections.showBilling);
 
             // Export HTML report
-            console.log('Starting HTML export...');
             this.reportExporter.exportHTML(this.parentWindow);
-            
+
         } catch (error) {
             console.error('Error configuring HTML export:', error);
         }
@@ -325,38 +299,27 @@ export class ReportsPage {
      * Update report exporter with current task data
      */
     _updateReportExporterData() {
-        console.log('🔄 _updateReportExporterData called');
-        
         if (!this.reportExporter) {
             console.error('❌ No report exporter available in _updateReportExporterData');
             return;
         }
-        
+
         if (!this.parentWindow) {
             console.error('❌ No parent window available in _updateReportExporterData');
             return;
         }
 
-        console.log('🏠 Parent window found, extracting data...');
         const tasks = this.parentWindow.allTasks || [];
         const projects = this.parentWindow.allProjects || [];
         const clients = this.parentWindow.allClients || [];
 
-        console.log('📊 Data extracted:', {
-            tasks: tasks.length,
-            projects: projects.length,
-            clients: clients.length
-        });
-
         // Update the data in both PDF and HTML exporters
-        console.log('🔄 Updating main report exporter data...');
         this.reportExporter.tasks = tasks;
         this.reportExporter.projects = projects;
         this.reportExporter.clients = clients;
 
         // Update the underlying exporters
         if (this.reportExporter.pdfExporter) {
-            console.log('📄 Updating PDF exporter data...');
             this.reportExporter.pdfExporter.tasks = tasks;
             this.reportExporter.pdfExporter.projects = projects;
             this.reportExporter.pdfExporter.clients = clients;
@@ -365,15 +328,12 @@ export class ReportsPage {
         }
 
         if (this.reportExporter.htmlExporter) {
-            console.log('🌐 Updating HTML exporter data...');
             this.reportExporter.htmlExporter.tasks = tasks;
             this.reportExporter.htmlExporter.projects = projects;
             this.reportExporter.htmlExporter.clients = clients;
         } else {
             console.warn('⚠️ HTML exporter not found in report exporter');
         }
-
-        console.log('✅ Report exporter data update completed successfully');
     }
 
     /**
@@ -557,6 +517,5 @@ export class ReportsPage {
      */
     toggleSearch() {
         // Reports page doesn't have search functionality
-        console.log('Search not available on reports page');
     }
 }

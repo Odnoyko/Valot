@@ -203,7 +203,7 @@ export class ClientDialog extends FormDialog {
                 }
             }
         } catch (error) {
-            console.log('Error loading currency settings:', error);
+            // Continue with defaults
         }
         
         // Default to all currencies if no settings found

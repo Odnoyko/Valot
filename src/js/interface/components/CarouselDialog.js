@@ -74,13 +74,13 @@ export const CarouselDialog = GObject.registerClass({
         });
 
         const skipButton = new Gtk.Button({
-            label: 'Skip',
+            label: _('Skip'),
             css_classes: ['flat'],
         });
         skipButton.connect('clicked', () => this._closeDialog());
 
         const nextButton = new Gtk.Button({
-            label: 'Next',
+            label: _('Next'),
             css_classes: ['suggested-action'],
         });
         nextButton.connect('clicked', () => {
@@ -97,7 +97,7 @@ export const CarouselDialog = GObject.registerClass({
         });
 
         const donateButton = new Gtk.Button({
-            label: 'Donate',
+            label: _('Donate'),
             css_classes: ['flat'],
         });
         donateButton.connect('clicked', () => {
@@ -171,7 +171,7 @@ export const CarouselDialog = GObject.registerClass({
             const settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
             settings.set_boolean('welcome-dialog-shown', true);
         } catch (error) {
-            console.log('Could not save welcome dialog state:', error);
+            // Silently continue
         }
     }
 
@@ -406,7 +406,6 @@ export const CarouselDialog = GObject.registerClass({
             const settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
             return !settings.get_boolean('welcome-dialog-shown');
         } catch (error) {
-            console.log('Could not read welcome dialog state:', error);
             return true; // Show by default if can't read settings
         }
     }
