@@ -14,10 +14,11 @@ import { TaskStackTemplate } from 'resource:///com/odnoyko/valot/js/interface/co
 
 // Task rendering functionality
 export class TaskRenderer {
-    constructor(timeUtils, allProjects, parentWindow) {
+    constructor(timeUtils, allProjects, parentWindow, options = {}) {
         this.timeUtils = timeUtils;
         this.allProjects = allProjects;
         this.parentWindow = parentWindow;
+        this.enableSelection = options.enableSelection !== false; // Default to true
 
         // Track template instances for cleanup
         this.taskTemplates = new Map(); // Maps task/stack IDs to template instances
@@ -36,8 +37,8 @@ export class TaskRenderer {
         const taskGroupKey = `${baseName}::${projectName}::${clientName}`;
         const isCurrentlyTracking = trackingStateManager.isTaskTracking(taskGroupKey);
 
-        // Always use TaskRowTemplate - it will adapt based on tracking state
-        const templateInstance = new TaskRowTemplate(task, this.timeUtils, this.allProjects, this.parentWindow);
+        // Always use TaskRowTemplate - pass parentWindow (which is TasksPage) directly
+        const templateInstance = new TaskRowTemplate(task, this.timeUtils, this.allProjects, this.parentWindow, this.enableSelection);
         // Using TaskRowTemplate
 
         // Store template instance for cleanup
@@ -54,7 +55,7 @@ export class TaskRenderer {
         const isCurrentlyTracking = trackingStateManager.isStackTracking(group.groupKey);
 
         // Always use TaskStackTemplate - it will adapt based on tracking state
-        const templateInstance = new TaskStackTemplate(group, this.timeUtils, this.allProjects, this.parentWindow);
+        const templateInstance = new TaskStackTemplate(group, this.timeUtils, this.allProjects, this.parentWindow, this.enableSelection);
         // Using TaskStackTemplate
 
         // Store template instance for cleanup
@@ -427,7 +428,7 @@ export class TaskRenderer {
     _toggleTaskSelection(row, task) {
         // Use the selectedTasks set from the renderer (could be main page or reports page)
         const selectedTasks = this.selectedTasks || this.parentWindow.selectedTasks;
-        
+
         if (selectedTasks) {
             if (selectedTasks.has(task.id)) {
                 selectedTasks.delete(task.id);
@@ -436,7 +437,7 @@ export class TaskRenderer {
                 selectedTasks.add(task.id);
                 row.add_css_class('selected-task');
             }
-            
+
             // Call selection changed callback if available
             if (this.onSelectionChanged) {
                 this.onSelectionChanged();

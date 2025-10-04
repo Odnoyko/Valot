@@ -10,11 +10,12 @@ import { WidgetFactory } from 'resource:///com/odnoyko/valot/js/interface/compon
  * Template component for individual task rows
  */
 export class TaskRowTemplate {
-    constructor(task, timeUtils, allProjects, parentWindow) {
+    constructor(task, timeUtils, allProjects, parentWindow, enableSelection = true) {
         this.task = task;
         this.timeUtils = timeUtils;
         this.allProjects = allProjects;
         this.parentWindow = parentWindow;
+        this.enableSelection = enableSelection;
         this.widget = this._createTaskWidget();
     }
 
@@ -175,44 +176,47 @@ export class TaskRowTemplate {
     }
 
     _addGestures(row) {
-        // Right-click gesture for task selection
-        const rightClickGesture = new Gtk.GestureClick({
-            button: 3
-        });
+        // Only add selection gestures if enabled
+        if (this.enableSelection) {
+            // Right-click gesture for task selection
+            const rightClickGesture = new Gtk.GestureClick({
+                button: 3
+            });
 
-        rightClickGesture.connect('pressed', (gesture, n_press, x, y) => {
-            gesture.set_state(Gtk.EventSequenceState.CLAIMED);
-            this._toggleTaskSelection(row);
-        });
+            rightClickGesture.connect('pressed', (gesture, n_press, x, y) => {
+                gesture.set_state(Gtk.EventSequenceState.CLAIMED);
+                this._toggleTaskSelection(row);
+            });
 
-        row.add_controller(rightClickGesture);
+            row.add_controller(rightClickGesture);
 
-        // Ctrl+click gesture for task selection
-        const leftClickGesture = new Gtk.GestureClick({
-            button: 1
-        });
+            // Ctrl+click gesture for task selection
+            const leftClickGesture = new Gtk.GestureClick({
+                button: 1
+            });
 
-        leftClickGesture.connect('pressed', (gesture, n_press, x, y) => {
-            try {
-                const event = gesture.get_current_event();
-                if (!event) return false;
+            leftClickGesture.connect('pressed', (gesture, n_press, x, y) => {
+                try {
+                    const event = gesture.get_current_event();
+                    if (!event) return false;
 
-                const state = event.get_modifier_state();
-                if (state & Gdk.ModifierType.CONTROL_MASK) {
-                    this._toggleTaskSelection(row);
-                    return true;
+                    const state = event.get_modifier_state();
+                    if (state & Gdk.ModifierType.CONTROL_MASK) {
+                        this._toggleTaskSelection(row);
+                        return true;
+                    }
+                    return false;
+                } catch (error) {
+                    return false;
                 }
-                return false;
-            } catch (error) {
-                return false;
+            });
+
+            row.add_controller(leftClickGesture);
+
+            // Store mapping for task management
+            if (this.parentWindow.taskRowMap) {
+                this.parentWindow.taskRowMap.set(row, this.task.id);
             }
-        });
-
-        row.add_controller(leftClickGesture);
-
-        // Store mapping for task management
-        if (this.parentWindow.taskRowMap) {
-            this.parentWindow.taskRowMap.set(row, this.task.id);
         }
     }
 
@@ -224,6 +228,67 @@ export class TaskRowTemplate {
             } else {
                 this.parentWindow.selectedTasks.add(this.task.id);
                 row.add_css_class('selected-task');
+            }
+
+            // Check if this task belongs to a stack and update stack selection
+            this._updateStackSelectionState();
+
+            // Notify parent window that selection changed
+            if (this.parentWindow._updateSelectionUI) {
+                this.parentWindow._updateSelectionUI();
+            }
+        }
+    }
+
+    _updateStackSelectionState() {
+        if (!this.parentWindow.selectedStacks || !this.parentWindow.allTasks) return;
+
+        // Find the stack this task belongs to
+        const taskBaseName = this.task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+        const baseName = taskBaseName ? taskBaseName[1].trim() : this.task.name;
+        const projectName = this.task.project || this.task.project_name || 'Unbekanntes Projekt';
+        const clientName = this.task.client || this.task.client_name || 'Standard-Kunde';
+        const stackKey = `${baseName}::${projectName}::${clientName}`;
+
+        // Find all tasks in this stack
+        const stackTasks = this.parentWindow.allTasks.filter(task => {
+            const taskBaseName = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+            const baseNameToCheck = taskBaseName ? taskBaseName[1].trim() : task.name;
+            const taskGroupKey = `${baseNameToCheck}::${task.project || task.project_name}::${task.client || task.client_name}`;
+            return taskGroupKey === stackKey;
+        });
+
+        // Only consider it a stack if there are multiple tasks
+        if (stackTasks.length > 1) {
+            // Check if ALL tasks in the stack are selected
+            const allTasksSelected = stackTasks.every(task => this.parentWindow.selectedTasks.has(task.id));
+
+            if (allTasksSelected) {
+                // Add stack to selectedStacks
+                this.parentWindow.selectedStacks.add(stackKey);
+
+                // Find and highlight the stack row
+                if (this.parentWindow.stackRowMap) {
+                    for (let [row, key] of this.parentWindow.stackRowMap.entries()) {
+                        if (key === stackKey) {
+                            row.add_css_class('selected-task');
+                            break;
+                        }
+                    }
+                }
+            } else {
+                // Remove stack from selectedStacks
+                this.parentWindow.selectedStacks.delete(stackKey);
+
+                // Find and un-highlight the stack row
+                if (this.parentWindow.stackRowMap) {
+                    for (let [row, key] of this.parentWindow.stackRowMap.entries()) {
+                        if (key === stackKey) {
+                            row.remove_css_class('selected-task');
+                            break;
+                        }
+                    }
+                }
             }
         }
     }

@@ -11,11 +11,13 @@ import { WidgetFactory } from 'resource:///com/odnoyko/valot/js/interface/compon
  * Shows an expandable row with task group summary and individual tasks
  */
 export class TaskStackTemplate {
-    constructor(group, timeUtils, allProjects, parentWindow) {
+    constructor(group, timeUtils, allProjects, parentWindow, enableSelection = true) {
         this.group = group;
         this.timeUtils = timeUtils;
         this.allProjects = allProjects;
         this.parentWindow = parentWindow;
+        this.enableSelection = enableSelection;
+        this.taskRows = []; // Store references to task rows
         this.widget = this._createStackWidget();
     }
 
@@ -172,9 +174,11 @@ export class TaskStackTemplate {
     }
 
     _addTaskRows(groupRow) {
-        this.group.tasks.forEach(task => {
+        this.group.tasks.forEach((task, index) => {
             const taskRow = this._renderIndividualTaskInGroup(task);
             groupRow.add_row(taskRow);
+            // Store reference to this task row with its task ID
+            this.taskRows.push({ taskId: task.id, row: taskRow });
         });
     }
 
@@ -194,6 +198,11 @@ export class TaskStackTemplate {
                 : `${this.timeUtils.formatDate(task.start)}`,
             use_markup: true
         });
+
+        // Apply selection CSS if this task is selected
+        if (this.parentWindow.selectedTasks && this.parentWindow.selectedTasks.has(task.id)) {
+            taskRow.add_css_class('selected-task');
+        }
 
         // Add time display for individual task in group
         const taskSuffixBox = new Gtk.Box({
@@ -259,6 +268,11 @@ export class TaskStackTemplate {
     }
 
     _addStackGestures(groupRow) {
+        // Only add selection gestures if enabled
+        if (!this.enableSelection) {
+            return;
+        }
+
         const gesture = new Gtk.GestureClick({
             button: 3
         });
@@ -275,25 +289,36 @@ export class TaskStackTemplate {
             // Ensure this is treated as a stack selection event
             gesture.set_state(Gtk.EventSequenceState.CLAIMED);
 
-            if (this.parentWindow.selectedStacks && this.parentWindow.selectedTasks) {
-                if (this.parentWindow.selectedStacks.has(this.group.groupKey)) {
-                    // DESELECT stack and all its tasks
-                    this.parentWindow.selectedStacks.delete(this.group.groupKey);
-                    groupRow.remove_css_class('selected-task');
+            if (this.parentWindow.selectedTasks) {
+                // Check if all tasks are currently selected
+                const allTasksSelected = stackTasks.every(task => this.parentWindow.selectedTasks.has(task.id));
 
-                    // Remove all tasks from this stack from selectedTasks
+                if (allTasksSelected) {
+                    // DESELECT all tasks - just update the Set, CSS will be updated if stack is expanded
                     stackTasks.forEach(task => {
                         this.parentWindow.selectedTasks.delete(task.id);
                     });
-                } else {
-                    // SELECT stack and all its tasks
-                    this.parentWindow.selectedStacks.add(this.group.groupKey);
-                    groupRow.add_css_class('selected-task');
 
-                    // Add all tasks from this stack to selectedTasks
+                    // Remove stack from selectedStacks and un-highlight
+                    this.parentWindow.selectedStacks.delete(this.group.groupKey);
+                    groupRow.remove_css_class('selected-task');
+                } else {
+                    // SELECT all tasks - just update the Set, CSS will be updated if stack is expanded
                     stackTasks.forEach(task => {
                         this.parentWindow.selectedTasks.add(task.id);
                     });
+
+                    // Add stack to selectedStacks and highlight
+                    this.parentWindow.selectedStacks.add(this.group.groupKey);
+                    groupRow.add_css_class('selected-task');
+                }
+
+                // If stack is expanded, update CSS on visible task rows
+                this._syncTaskRowsCSS();
+
+                // Notify parent window that selection changed
+                if (this.parentWindow._updateSelectionUI) {
+                    this.parentWindow._updateSelectionUI();
                 }
             }
         });
@@ -327,6 +352,11 @@ export class TaskStackTemplate {
     }
 
     _addTaskGestures(taskRow, task) {
+        // Only add selection gestures if enabled
+        if (!this.enableSelection) {
+            return;
+        }
+
         const rightClickGesture = new Gtk.GestureClick({
             button: 3
         });
@@ -364,6 +394,7 @@ export class TaskStackTemplate {
 
     _toggleTaskSelection(taskRow, task) {
         if (this.parentWindow.selectedTasks) {
+            // Toggle this specific task
             if (this.parentWindow.selectedTasks.has(task.id)) {
                 this.parentWindow.selectedTasks.delete(task.id);
                 taskRow.remove_css_class('selected-task');
@@ -371,7 +402,49 @@ export class TaskStackTemplate {
                 this.parentWindow.selectedTasks.add(task.id);
                 taskRow.add_css_class('selected-task');
             }
+
+            // After toggling, check if all tasks in this stack are now selected and update stack highlight
+            this._updateStackHighlight();
+
+            // Notify parent window that selection changed
+            if (this.parentWindow._updateSelectionUI) {
+                this.parentWindow._updateSelectionUI();
+            }
         }
+    }
+
+    _updateStackHighlight() {
+        // Find all tasks in this stack
+        const stackTasks = this.parentWindow.allTasks.filter(task => {
+            const taskBaseName = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+            const baseNameToCheck = taskBaseName ? taskBaseName[1].trim() : task.name;
+            const taskGroupKey = `${baseNameToCheck}::${task.project || task.project_name}::${task.client || task.client_name}`;
+            return taskGroupKey === this.group.groupKey;
+        });
+
+        // Check if ALL tasks in the stack are selected
+        const allTasksSelected = stackTasks.every(task => this.parentWindow.selectedTasks.has(task.id));
+
+        if (allTasksSelected) {
+            // Add stack to selectedStacks and highlight stack row
+            this.parentWindow.selectedStacks.add(this.group.groupKey);
+            this.widget.add_css_class('selected-task');
+        } else {
+            // Remove stack from selectedStacks and un-highlight stack row
+            this.parentWindow.selectedStacks.delete(this.group.groupKey);
+            this.widget.remove_css_class('selected-task');
+        }
+    }
+
+    _syncTaskRowsCSS() {
+        // Sync CSS for all task rows based on selectedTasks Set
+        this.taskRows.forEach(({ taskId, row }) => {
+            if (this.parentWindow.selectedTasks.has(taskId)) {
+                row.add_css_class('selected-task');
+            } else {
+                row.remove_css_class('selected-task');
+            }
+        });
     }
 
     _findTrackButtonsInSuffixBox(suffixBox) {

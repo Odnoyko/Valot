@@ -220,6 +220,145 @@ export class WidgetFactory {
     }
 
     /**
+     * Creates a combined pagination and context action bar
+     * Can switch between pagination mode and context actions mode
+     * Used across multiple pages for consistent behavior
+     */
+    static createPaginationContextBar(config = {}) {
+        const {
+            onPreviousClick = null,
+            onNextClick = null,
+            onCancelClick = null,
+            onDeleteClick = null
+        } = config;
+
+        // Main container
+        const containerBox = new Gtk.Box({
+            halign: Gtk.Align.CENTER,
+            spacing: 6
+        });
+
+        // Pagination elements
+        const prevButton = new Gtk.Button({
+            label: 'Previous',
+            sensitive: false
+        });
+
+        const pageInfo = new Gtk.Label({
+            label: 'Page 1 of 1',
+            margin_start: 12,
+            margin_end: 12
+        });
+
+        const nextButton = new Gtk.Button({
+            label: 'Next',
+            sensitive: false
+        });
+
+        if (onPreviousClick) {
+            prevButton.connect('clicked', onPreviousClick);
+        }
+
+        if (onNextClick) {
+            nextButton.connect('clicked', onNextClick);
+        }
+
+        // Context action elements
+        const cancelButton = new Gtk.Button({
+            label: 'Cancel',
+            visible: false
+        });
+
+        const selectionCounter = new Gtk.Label({
+            label: '0 selected',
+            margin_start: 12,
+            margin_end: 12,
+            visible: false
+        });
+
+        const deleteButton = new Gtk.Button({
+            label: 'Delete',
+            css_classes: ['destructive-action'],
+            visible: false
+        });
+
+        if (onCancelClick) {
+            cancelButton.connect('clicked', onCancelClick);
+        }
+
+        if (onDeleteClick) {
+            deleteButton.connect('clicked', onDeleteClick);
+        }
+
+        // Add all elements to container
+        containerBox.append(prevButton);
+        containerBox.append(pageInfo);
+        containerBox.append(nextButton);
+        containerBox.append(cancelButton);
+        containerBox.append(selectionCounter);
+        containerBox.append(deleteButton);
+
+        return {
+            widget: containerBox,
+
+            // Pagination controls
+            prevButton,
+            pageInfo,
+            nextButton,
+
+            // Context action controls
+            cancelButton,
+            selectionCounter,
+            deleteButton,
+
+            // Mode switching methods
+            showPagination: function(currentPage, totalPages) {
+                // Hide context actions
+                cancelButton.set_visible(false);
+                selectionCounter.set_visible(false);
+                deleteButton.set_visible(false);
+
+                // Show pagination
+                prevButton.set_visible(true);
+                pageInfo.set_visible(true);
+                nextButton.set_visible(true);
+
+                // Update pagination info
+                pageInfo.set_label(`Page ${currentPage} of ${totalPages}`);
+                prevButton.set_sensitive(currentPage > 1);
+                nextButton.set_sensitive(currentPage < totalPages);
+            },
+
+            showContextActions: function(selectedCount) {
+                // Hide pagination
+                prevButton.set_visible(false);
+                pageInfo.set_visible(false);
+                nextButton.set_visible(false);
+
+                // Show context actions
+                cancelButton.set_visible(true);
+                selectionCounter.set_visible(true);
+                deleteButton.set_visible(true);
+
+                // Update counter
+                selectionCounter.set_label(`${selectedCount} selected`);
+            },
+
+            hide: function() {
+                containerBox.set_visible(false);
+            },
+
+            show: function() {
+                containerBox.set_visible(true);
+            },
+
+            updateCounter: function(count) {
+                selectionCounter.set_label(`${count} selected`);
+            }
+        };
+    }
+
+    /**
      * Creates a circular color button with project color
      */
     static createProjectColorButton(project, onClick = null) {

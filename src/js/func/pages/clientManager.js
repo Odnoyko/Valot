@@ -2,6 +2,8 @@
 
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import { executeNonSelectCommand } from 'resource:///com/odnoyko/valot/js/func/global/dbinitialisation.js';
 import { InputValidator } from 'resource:///com/odnoyko/valot/js/func/global/inputValidation.js';
 import { getAllCurrencies, getCurrencySymbol } from 'resource:///com/odnoyko/valot/js/data/currencies.js';
@@ -254,11 +256,11 @@ export class ClientManager {
             css_classes: ['currency-button']
         });
 
-        // Get currency data from data folder
-        const allCurrencies = getAllCurrencies();
+        // Get available currencies based on settings
+        const availableCurrencies = this._getAvailableCurrencies();
         const currencyModel = new Gtk.StringList();
         
-        allCurrencies.forEach(currency => {
+        availableCurrencies.forEach(currency => {
             currencyModel.append(`${currency.symbol} ${currency.code}`);
         });
         
@@ -266,15 +268,15 @@ export class ClientManager {
         currencyDropdown.set_enable_search(true); // Enable search functionality
 
         // Default to EUR (find EUR in the list)
-        const defaultCurrencyIndex = allCurrencies.findIndex(c => c.code === 'EUR');
+        const defaultCurrencyIndex = availableCurrencies.findIndex(c => c.code === 'EUR');
         currencyDropdown.set_selected(defaultCurrencyIndex >= 0 ? defaultCurrencyIndex : 0);
         
-        let selectedCurrency = allCurrencies[defaultCurrencyIndex >= 0 ? defaultCurrencyIndex : 0];
+        let selectedCurrency = availableCurrencies[defaultCurrencyIndex >= 0 ? defaultCurrencyIndex : 0];
 
         // Handle currency selection change
         currencyDropdown.connect('notify::selected', () => {
             const selectedIndex = currencyDropdown.get_selected();
-            selectedCurrency = allCurrencies[selectedIndex];
+            selectedCurrency = availableCurrencies[selectedIndex];
         });
 
         // Assemble the rate row
@@ -568,7 +570,8 @@ export class ClientManager {
     // Create an inline editable client name row
     createEditableClientRow(client, parentWindow) {
         const row = new Adw.ActionRow({
-            subtitle: `Rate: €${client.rate || 0}/hour • Email: ${client.email || 'No email'}`
+            subtitle: `Rate: €${client.rate || 0}/hour • Email: ${client.email || 'No email'}`,
+            css_classes: ['bright-subtitle']
         });
 
         // Create title container with inline editable entry
@@ -1014,11 +1017,11 @@ export class ClientManager {
             css_classes: ['currency-button']
         });
 
-        // Get currency data
-        const allCurrencies = getAllCurrencies();
+        // Get available currencies (only visible ones)
+        const availableCurrencies = this._getAvailableCurrencies();
         const currencyModel = new Gtk.StringList();
         
-        allCurrencies.forEach(currency => {
+        availableCurrencies.forEach(currency => {
             currencyModel.append(`${currency.symbol} ${currency.code}`);
         });
         
@@ -1026,15 +1029,15 @@ export class ClientManager {
         currencyDropdown.set_enable_search(true);
 
         // Set current currency as selected
-        const currentCurrencyIndex = allCurrencies.findIndex(c => c.code === (client.currency || 'USD'));
+        const currentCurrencyIndex = availableCurrencies.findIndex(c => c.code === (client.currency || 'USD'));
         currencyDropdown.set_selected(currentCurrencyIndex >= 0 ? currentCurrencyIndex : 0);
         
-        let selectedCurrency = allCurrencies[currentCurrencyIndex >= 0 ? currentCurrencyIndex : 0];
+        let selectedCurrency = availableCurrencies[currentCurrencyIndex >= 0 ? currentCurrencyIndex : 0];
 
         // Handle currency selection change
         currencyDropdown.connect('notify::selected', () => {
             const selectedIndex = currencyDropdown.get_selected();
-            selectedCurrency = allCurrencies[selectedIndex];
+            selectedCurrency = availableCurrencies[selectedIndex];
         });
 
         form.append(rateBox);
@@ -1098,5 +1101,55 @@ export class ClientManager {
             this.showEditClientDialog = this.showEditClientDialogModular.bind(this);
         } else {
         }
+    }
+
+    _getAvailableCurrencies() {
+        // Load currency settings from preferences
+        let currencySettings;
+        try {
+            const configDir = GLib.get_user_config_dir() + '/valot';
+            const configPath = configDir + '/currency-settings.json';
+            const file = Gio.File.new_for_path(configPath);
+            
+            if (file.query_exists(null)) {
+                const [success, contents] = file.load_contents(null);
+                if (success) {
+                    const configText = new TextDecoder().decode(contents);
+                    currencySettings = JSON.parse(configText);
+                }
+            }
+        } catch (error) {
+            // Continue with defaults
+        }
+        
+        // Default to all currencies if no settings found
+        if (!currencySettings) {
+            const allCurrencies = getAllCurrencies();
+            currencySettings = {
+                visible: allCurrencies.map(c => c.code),
+                hidden: [],
+                custom: []
+            };
+        }
+        
+        const allCurrencies = getAllCurrencies();
+        const availableCurrencies = [];
+        
+        // Add visible default currencies
+        currencySettings.visible.forEach(code => {
+            const currency = allCurrencies.find(c => c.code === code);
+            if (currency) {
+                availableCurrencies.push(currency);
+            }
+        });
+        
+        // Add visible custom currencies
+        currencySettings.custom.forEach(currency => {
+            if (!currency.hidden) {
+                availableCurrencies.push(currency);
+            }
+        });
+        
+        return availableCurrencies;
     }
 }

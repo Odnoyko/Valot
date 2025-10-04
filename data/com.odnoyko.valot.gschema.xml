@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="valot">
-	<schema id="com.odnoyko.com" path="/com/odnoyko/com/">
+	<schema id="com.odnoyko.valot" path="/com/odnoyko/valot/">
+		<key name="theme-preference" type="i">
+			<default>0</default>
+			<summary>Theme preference</summary>
+			<description>Theme preference: 0=Auto, 1=Light, 2=Dark</description>
+		</key>
+		<key name="accent-color" type="s">
+			<default>''</default>
+			<summary>Custom accent color</summary>
+			<description>Custom accent color in hex format (empty for system default)</description>
+		</key>
+		<key name="accent-mode" type="i">
+			<default>0</default>
+			<summary>Accent color mode</summary>
+			<description>Accent color mode: 0=Standard, 1=Custom</description>
+		</key>
+		<key name="welcome-dialog-shown" type="b">
+			<default>false</default>
+			<summary>Welcome dialog shown</summary>
+			<description>Whether the welcome carousel dialog has been shown to the user</description>
+		</key>
 	</schema>
 </schemalist>

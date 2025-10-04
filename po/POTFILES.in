@@ -5,6 +5,12 @@ data/com.odnoyko.valot.metainfo.xml.in
 data/com.odnoyko.valot.gschema.xml
 src/js/main.js
 src/js/mainwindow.js
+src/js/interface/components/CarouselDialog.js
+src/js/interface/components/PreferencesDialog.js
+src/js/interface/components/complex/ClientDialog.js
+src/js/interface/components/complex/ModularDialogManager.js
+src/js/interface/components/complex/ProjectDialog.js
+src/js/interface/dialogs/PDFExportPreferencesDialog.js
 src/js/interface/pages/ClientsPage.js
 src/js/interface/pages/ProjectsPage.js
 src/js/interface/pages/ReportsPage.js
@@ -12,10 +18,6 @@ src/js/interface/pages/TasksPage.js
 src/js/func/pages/clientManager.js
 src/js/func/pages/projectManager.js
 src/js/func/pages/simpleChart.js
-src/js/interface/dialogs/PDFExportPreferencesDialog.js
-src/js/interface/components/complex/ClientDialog.js
-src/js/interface/components/complex/ProjectDialog.js
-src/js/interface/components/complex/ModularDialogManager.js
 src/ui/window.blp
 src/ui/compact-tracker.blp
 src/gtk/help-overlay.ui

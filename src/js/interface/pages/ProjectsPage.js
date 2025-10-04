@@ -34,7 +34,7 @@ export class ProjectsPage {
         this.parentWindow = config.parentWindow;
         this.isLoading = false;
         this.currentPage = 0;
-        this.itemsPerPage = 10;
+        this.itemsPerPage = 30;
         
         // Project-specific state
         this.projects = [];
@@ -61,12 +61,20 @@ export class ProjectsPage {
             //('ProjectsPage: No parent window provided');
             return;
         }
-        
+
         // Get references to existing UI elements from the template
         this.projectSearch = this.parentWindow._project_search;
         this.addProjectBtn = this.parentWindow._add_project_btn;
         this.projectList = this.parentWindow._project_list;
-        
+
+        // Try to get pagination box from template, or create one
+        this.paginationContextBar = this.parentWindow._projects_pagination_box;
+
+        // If no pagination bar in template, we need to create one
+        if (!this.paginationContextBar) {
+            this._createPaginationContextBar();
+        }
+
     }
 
     /**
@@ -317,18 +325,34 @@ export class ProjectsPage {
         }
 
         if (!this.filteredProjects || this.filteredProjects.length === 0) {
+            this.currentProjectsPage = 0;
+            this._updatePaginationInfo();
+            this._updateSelectionUI();
             return;
         }
 
-        // Displaying filtered projects
+        // Calculate pagination
+        const totalPages = Math.ceil(this.filteredProjects.length / this.projectsPerPage);
 
-        // Add projects using your specific requirements
-        this.filteredProjects.forEach(project => {
+        // If current page is beyond total pages, go to last page
+        if (this.currentProjectsPage >= totalPages && totalPages > 0) {
+            this.currentProjectsPage = totalPages - 1;
+        }
+
+        const start = this.currentProjectsPage * this.projectsPerPage;
+        const end = Math.min(start + this.projectsPerPage, this.filteredProjects.length);
+        const projectsToShow = this.filteredProjects.slice(start, end);
+
+        // Displaying filtered projects (page ${this.currentProjectsPage + 1} of ${totalPages})
+
+        // Add only paginated projects
+        projectsToShow.forEach(project => {
             if (this.projectList) {
-                // Create ListBoxRow with custom content 
+                // Create ListBoxRow with custom content
                 const row = new Gtk.ListBoxRow({
                     activatable: false,
-                    selectable: false
+                    selectable: false,
+                    css_classes: ['bright-subtitle']
                 });
                 
                 // Create main horizontal box
@@ -446,6 +470,9 @@ export class ProjectsPage {
             }
         });
 
+        // Update pagination info
+        this._updatePaginationInfo();
+        this._updateSelectionUI();
     }
 
     /**
@@ -604,18 +631,56 @@ export class ProjectsPage {
     }
 
     /**
+     * Create pagination/context bar if not in template
+     */
+    _createPaginationContextBar() {
+        this.paginationContextBarWidget = WidgetFactory.createPaginationContextBar({
+            onPreviousClick: () => this._previousPage(),
+            onNextClick: () => this._nextPage(),
+            onCancelClick: () => this._clearSelection(),
+            onDeleteClick: () => this._deleteSelectedProjects()
+        });
+
+        // Try to find a container to append to
+        if (this.projectList) {
+            // Navigate up the widget hierarchy to find a Box container
+            let parent = this.projectList.get_parent();
+            while (parent && !parent.append) {
+                parent = parent.get_parent();
+            }
+
+            if (parent && parent.append) {
+                parent.append(this.paginationContextBarWidget.widget);
+            } else {
+                console.warn('Could not find suitable container for pagination bar');
+            }
+        }
+    }
+
+    /**
      * Update selection UI
      */
     _updateSelectionUI() {
         const selectedCount = this.selectedProjects.size;
-        
-        // For now, just log the selection since we're using the template UI
-        // Later can be enhanced to show selection info in UI
+
+        if (!this.paginationContextBarWidget) return;
+
         if (selectedCount > 0) {
+            // Show context actions mode (always visible when items selected)
+            this.paginationContextBarWidget.show();
+            this.paginationContextBarWidget.showContextActions(selectedCount);
         } else {
+            // Show pagination mode - use stored totalPages
+            const totalPages = this._totalPages || Math.ceil(this.filteredProjects.length / this.projectsPerPage);
+
+            if (totalPages > 1) {
+                this.paginationContextBarWidget.show();
+                this.paginationContextBarWidget.showPagination(this.currentProjectsPage + 1, totalPages);
+            } else {
+                // Hide pagination when no selection and only 1 page
+                this.paginationContextBarWidget.hide();
+            }
         }
-        
-        // Could add a status bar or header info here later
     }
 
     /**
@@ -700,18 +765,9 @@ export class ProjectsPage {
     /**
      * Update pagination info
      */
-    _updatePaginationInfo(totalPages) {
-        if (this.projectsPageInfo) {
-            this.projectsPageInfo.setText(`Page ${this.currentProjectsPage + 1} of ${totalPages}`);
-        }
-
-        // Enable/disable pagination buttons
-        if (this.prevProjectsButton) {
-            this.prevProjectsButton.setEnabled(this.currentProjectsPage > 0);
-        }
-        if (this.nextProjectsButton) {
-            this.nextProjectsButton.setEnabled(this.currentProjectsPage < totalPages - 1);
-        }
+    _updatePaginationInfo() {
+        // Store totalPages for use in _updateSelectionUI
+        this._totalPages = Math.ceil(this.filteredProjects.length / this.projectsPerPage);
     }
 
     // Helper methods
