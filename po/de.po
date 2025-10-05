@@ -6,16 +6,17 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: valot 0.6.3\n"
-"Report-Msgid-Bugs-To: \n"
+"Report-Msgid-Bugs-To: vitalyod.27@gmail.com\n"
 "POT-Creation-Date: 2025-09-20 00:42+0200\n"
-"PO-Revision-Date: 2025-09-20 00:19+0200\n"
-"Last-Translator:  <EMAIL@ADDRESS>\n"
-"Language-Team: German <translation-team-de@lists.sourceforge.net>\n"
+"PO-Revision-Date: 2025-10-04 04:57+0000\n"
+"Last-Translator: Anonymous <noreply@weblate.org>\n"
+"Language-Team: German <https://hosted.weblate.org/projects/valot/valot/de/>\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.14-dev\n"
 
 #. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
 #: src/js/main.js:94
@@ -71,7 +72,9 @@ msgstr "Projekte löschen"
 msgid ""
 "Are you sure you want to delete %d selected project(s)? This cannot be "
 "undone."
-msgstr "Sind Sie sicher, dass Sie %d ausgewählte(s) Projekt(e) löschen möchten? Dies kann nicht rückgängig gemacht werden."
+msgstr ""
+"Sind Sie sicher, dass Sie %d ausgewählte(s) Projekt(e) löschen möchten? Dies "
+"kann nicht rückgängig gemacht werden."
 
 #: src/js/interface/pages/ProjectsPage.js:583
 #: src/js/interface/pages/ProjectsPage.js:814
@@ -104,7 +107,9 @@ msgstr "Kundenname"
 msgid ""
 "📊 No data yet\n"
 "Start tracking time to see your productivity chart"
-msgstr "📊 Noch keine Daten\nStarten Sie die Zeiterfassung, um Ihr Produktivitätsdiagramm zu sehen"
+msgstr ""
+"📊 Noch keine Daten\n"
+"Starten Sie die Zeiterfassung, um Ihr Produktivitätsdiagramm zu sehen"
 
 #. Chart title - dynamic based on period with German week numbering
 #: src/js/func/pages/simpleChart.js:66
