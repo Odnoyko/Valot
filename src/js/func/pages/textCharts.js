@@ -6,7 +6,9 @@ import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
 
 export class TextCharts {
-    
+    // Static cache for CSS providers to avoid memory leaks
+    static _providerCache = new Map();
+
     /**
      * Create a simple horizontal bar chart using GTK labels
      */
@@ -74,13 +76,18 @@ export class TextCharts {
                 hexpand: true
             });
             
-            // Apply custom color
-            const provider = new Gtk.CssProvider();
-            provider.load_from_string(`
-                progressbar progress {
-                    background-color: ${color};
-                }
-            `);
+            // Apply custom color - reuse cached provider
+            const cacheKey = `progressbar-${color}`;
+            let provider = TextCharts._providerCache.get(cacheKey);
+            if (!provider) {
+                provider = new Gtk.CssProvider();
+                provider.load_from_string(`
+                    progressbar progress {
+                        background-color: ${color};
+                    }
+                `);
+                TextCharts._providerCache.set(cacheKey, provider);
+            }
             progressBar.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
             
             itemBox.append(itemLabel);
@@ -144,13 +151,19 @@ export class TextCharts {
                 css_classes: ['legend-color']
             });
             
-            const provider = new Gtk.CssProvider();
-            provider.load_from_string(`
-                .legend-color {
-                    background-color: ${color};
-                    border-radius: 8px;
-                }
-            `);
+            // Reuse cached provider for legend colors
+            const cacheKey = `legend-${color}`;
+            let provider = TextCharts._providerCache.get(cacheKey);
+            if (!provider) {
+                provider = new Gtk.CssProvider();
+                provider.load_from_string(`
+                    .legend-color {
+                        background-color: ${color};
+                        border-radius: 8px;
+                    }
+                `);
+                TextCharts._providerCache.set(cacheKey, provider);
+            }
             colorBox.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
             
             // Label
@@ -225,14 +238,20 @@ export class TextCharts {
                 tooltip_text: showDates ? `${item.date}: ${item.value}` : `${item.value}`
             });
             
-            const provider = new Gtk.CssProvider();
-            provider.load_from_string(`
-                .activity-day {
-                    background-color: rgba(53, 132, 228, ${alpha});
-                    border-radius: 2px;
-                    margin: 1px;
-                }
-            `);
+            // Reuse cached provider for activity days
+            const cacheKey = `activity-${alpha.toFixed(2)}`;
+            let provider = TextCharts._providerCache.get(cacheKey);
+            if (!provider) {
+                provider = new Gtk.CssProvider();
+                provider.load_from_string(`
+                    .activity-day {
+                        background-color: rgba(53, 132, 228, ${alpha});
+                        border-radius: 2px;
+                        margin: 1px;
+                    }
+                `);
+                TextCharts._providerCache.set(cacheKey, provider);
+            }
             dayBox.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
             
             activityBox.append(dayBox);

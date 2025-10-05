@@ -341,6 +341,80 @@ export const PreferencesDialog = GObject.registerClass({
 
         page.add(appearanceGroup);
 
+        // Behavior Group
+        const behaviorGroup = new Adw.PreferencesGroup({
+            title: _('Behavior'),
+        });
+
+        // Sidebar mode selector with toggle buttons
+        const sidebarRow = new Adw.ActionRow({
+            title: _('Sidebar'),
+            subtitle: _('Choose sidebar behavior on launch'),
+        });
+
+        // Sidebar toggle buttons container
+        const sidebarToggleBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            css_classes: ['linked'],
+            valign: Gtk.Align.CENTER,
+        });
+
+        const openedButton = new Gtk.ToggleButton({
+            label: _('Opened'),
+            tooltip_text: _('Always open on launch'),
+        });
+
+        const closedButton = new Gtk.ToggleButton({
+            label: _('Closed'),
+            tooltip_text: _('Always closed on launch'),
+        });
+
+        const dynamicButton = new Gtk.ToggleButton({
+            label: _('Dynamic'),
+            tooltip_text: _('Remember last state'),
+        });
+
+        // Group the buttons so only one can be active
+        closedButton.set_group(openedButton);
+        dynamicButton.set_group(openedButton);
+
+        sidebarToggleBox.append(openedButton);
+        sidebarToggleBox.append(closedButton);
+        sidebarToggleBox.append(dynamicButton);
+        sidebarRow.add_suffix(sidebarToggleBox);
+        behaviorGroup.add(sidebarRow);
+
+        // Load saved sidebar mode preference and set initial state
+        const sidebarMode = settings.get_int('sidebar-mode');
+        if (sidebarMode === 0) {
+            openedButton.set_active(true);
+        } else if (sidebarMode === 1) {
+            closedButton.set_active(true);
+        } else if (sidebarMode === 2) {
+            dynamicButton.set_active(true);
+        }
+
+        // Connect button signals
+        openedButton.connect('toggled', () => {
+            if (openedButton.get_active()) {
+                settings.set_int('sidebar-mode', 0);
+            }
+        });
+
+        closedButton.connect('toggled', () => {
+            if (closedButton.get_active()) {
+                settings.set_int('sidebar-mode', 1);
+            }
+        });
+
+        dynamicButton.connect('toggled', () => {
+            if (dynamicButton.get_active()) {
+                settings.set_int('sidebar-mode', 2);
+            }
+        });
+
+        page.add(behaviorGroup);
+
         // Pomodoro Group
         const pomodoroGroup = new Adw.PreferencesGroup({
             title: _('Pomodoro Timer'),

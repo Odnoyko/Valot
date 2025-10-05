@@ -124,12 +124,20 @@ export class ColorPicker {
             }
         `;
 
-        const provider = new Gtk.CssProvider();
+        // Store provider in button's internal map for reuse
+        if (!this._colorProviders) {
+            this._colorProviders = new Map();
+        }
+        let provider = this._colorProviders.get(button);
+        if (!provider) {
+            provider = new Gtk.CssProvider();
+            this._colorProviders.set(button, provider);
+            button.getWidget().get_style_context().add_provider(
+                provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            );
+        }
         provider.load_from_data(css, -1);
-        button.getWidget().get_style_context().add_provider(
-            provider, 
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        );
     }
 
     _markSelected(button) {

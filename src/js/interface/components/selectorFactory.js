@@ -396,9 +396,12 @@ export class SelectorFactory {
                 min-height: 20px;
             }
         `;
-        const provider = new Gtk.CssProvider();
-        provider.load_from_string(css);
-        label.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+        // Reuse shared provider for currency styles
+        if (!this._sharedCurrencyProvider) {
+            this._sharedCurrencyProvider = new Gtk.CssProvider();
+            this._sharedCurrencyProvider.load_from_string(css);
+        }
+        label.get_style_context().add_provider(this._sharedCurrencyProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
     }
 
     static _createIconTypeSelector() {

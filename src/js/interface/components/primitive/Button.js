@@ -252,9 +252,12 @@ export class Button {
      */
     setBackgroundColor(color) {
         const css = `button { background: ${color}; }`;
-        const provider = new Gtk.CssProvider();
-        provider.load_from_string(css);
-        this.widget.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+        // Reuse the same provider instance
+        if (!this._backgroundColorProvider) {
+            this._backgroundColorProvider = new Gtk.CssProvider();
+            this.widget.get_style_context().add_provider(this._backgroundColorProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+        }
+        this._backgroundColorProvider.load_from_string(css);
         this.config.backgroundColor = color;
     }
 

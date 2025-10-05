@@ -25,9 +25,9 @@ template $ValotWindow: Adw.ApplicationWindow {
         [top]
         Adw.HeaderBar {
           [start]
-          ToggleButton sidebar_toggle_btn {
-            icon-name: "sidebar-show-symbolic";
-            tooltip-text: _("Toggle Sidebar");
+          Button sidebar_hide_btn {
+            icon-name: "sidebar-hide-symbolic";
+            tooltip-text: _("Hide Sidebar");
           }
 
           [end]
@@ -132,7 +132,6 @@ template $ValotWindow: Adw.ApplicationWindow {
             Button show_sidebar_btn {
               icon-name: "sidebar-show-symbolic";
               tooltip-text: _("Show Sidebar");
-              visible: false;
             }
 
             [title]
@@ -220,7 +219,8 @@ template $ValotWindow: Adw.ApplicationWindow {
             }
 
             Box pagination_box {
-              halign: center;
+              halign: fill;
+              hexpand: true;
               spacing: 6;
 
               Button prev_page_btn {
@@ -232,6 +232,8 @@ template $ValotWindow: Adw.ApplicationWindow {
                 label: "Page 1 of 1";
                 margin-start: 12;
                 margin-end: 12;
+                halign: fill;
+                hexpand: true;
               }
 
               Button next_page_btn {
@@ -253,7 +255,6 @@ template $ValotWindow: Adw.ApplicationWindow {
             Button show_sidebar_btn2 {
               icon-name: "sidebar-show-symbolic";
               tooltip-text: _("Show Sidebar");
-              visible: false;
             }
 
             [title]
@@ -367,7 +368,6 @@ template $ValotWindow: Adw.ApplicationWindow {
             Button show_sidebar_btn3 {
               icon-name: "sidebar-show-symbolic";
               tooltip-text: _("Show Sidebar");
-              visible: false;
             }
 
             [title]
@@ -482,7 +482,6 @@ template $ValotWindow: Adw.ApplicationWindow {
             Button show_sidebar_btn5 {
               icon-name: "sidebar-show-symbolic";
               tooltip-text: _("Show Sidebar");
-              visible: false;
             }
 
             [title]

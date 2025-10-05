@@ -728,7 +728,8 @@ export class ProjectManager {
         });
         
         let colorSelection = selectedColor;
-        
+        const colorProviders = new Map(); // Reuse providers per button
+
         // Add all colors (2 rows of 8)
         for (let i = 0; i < 16 && i < this.projectColors.length; i++) {
             const color = this.projectColors[i];
@@ -738,20 +739,23 @@ export class ProjectManager {
                 css_classes: ['flat'],
                 tooltip_text: color.name
             });
-            
+
+            // Create and store provider once per button
+            const provider = new Gtk.CssProvider();
+            colorProviders.set(colorButton, provider);
+
             // Set background color with CSS
             let css = `button { background: ${color.value}; border-radius: 15px; border: 2px solid rgba(0,0,0,0.1); }`;
             if (color.value === selectedColor.value) {
                 css = `button { background: ${color.value}; border-radius: 15px; border: 3px solid #000000; }`;
             }
-            
-            const provider = new Gtk.CssProvider();
+
             provider.load_from_data(css, -1);
             colorButton.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
-            
+
             colorButton.connect('clicked', () => {
                 colorSelection = color;
-                
+
                 // Update visual selection for all color buttons
                 for (let j = 0; j < 16 && j < this.projectColors.length; j++) {
                     const row = Math.floor(j / 8);
@@ -759,16 +763,18 @@ export class ProjectManager {
                     const btn = colorGrid.get_child_at(col, row);
                     if (btn) {
                         const currentColor = this.projectColors[j];
-                        const newCss = j === i 
+                        const newCss = j === i
                             ? `button { background: ${currentColor.value}; border-radius: 15px; border: 3px solid #000000; }`
                             : `button { background: ${currentColor.value}; border-radius: 15px; border: 2px solid rgba(0,0,0,0.1); }`;
-                        const newProvider = new Gtk.CssProvider();
-                        newProvider.load_from_data(newCss, -1);
-                        btn.get_style_context().add_provider(newProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+                        // Reuse existing provider instead of creating new one
+                        const btnProvider = colorProviders.get(btn);
+                        if (btnProvider) {
+                            btnProvider.load_from_data(newCss, -1);
+                        }
                     }
                 }
             });
-            
+
             const row = Math.floor(i / 8);
             const col = i % 8;
             colorGrid.attach(colorButton, col, row, 1, 1);
@@ -1018,7 +1024,9 @@ export class ProjectManager {
             row_spacing: 6,
             margin_bottom: 12
         });
-        
+
+        const colorProviders = new Map(); // Reuse providers per button
+
         // Add all colors (2 rows of 8)
         for (let i = 0; i < 16 && i < this.projectColors.length; i++) {
             const color = this.projectColors[i];
@@ -1028,20 +1036,23 @@ export class ProjectManager {
                 css_classes: ['flat'],
                 tooltip_text: color.name
             });
-            
+
+            // Create and store provider once per button
+            const provider = new Gtk.CssProvider();
+            colorProviders.set(colorButton, provider);
+
             // Set background color with CSS
             let css = `button { background: ${color.value}; border-radius: 15px; border: 2px solid rgba(0,0,0,0.1); }`;
             if (color.value === selectedColor.value) {
                 css = `button { background: ${color.value}; border-radius: 15px; border: 3px solid #000000; }`;
             }
-            
-            const provider = new Gtk.CssProvider();
+
             provider.load_from_data(css, -1);
             colorButton.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
-            
+
             colorButton.connect('clicked', () => {
                 selectedColor = color;
-                
+
                 // Update visual selection for all color buttons
                 for (let j = 0; j < 16 && j < this.projectColors.length; j++) {
                     const row = Math.floor(j / 8);
@@ -1049,16 +1060,18 @@ export class ProjectManager {
                     const btn = colorGrid.get_child_at(col, row);
                     if (btn) {
                         const currentColor = this.projectColors[j];
-                        const newCss = j === i 
+                        const newCss = j === i
                             ? `button { background: ${currentColor.value}; border-radius: 15px; border: 3px solid #000000; }`
                             : `button { background: ${currentColor.value}; border-radius: 15px; border: 2px solid rgba(0,0,0,0.1); }`;
-                        const newProvider = new Gtk.CssProvider();
-                        newProvider.load_from_data(newCss, -1);
-                        btn.get_style_context().add_provider(newProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+                        // Reuse existing provider instead of creating new one
+                        const btnProvider = colorProviders.get(btn);
+                        if (btnProvider) {
+                            btnProvider.load_from_data(newCss, -1);
+                        }
                     }
                 }
             });
-            
+
             const row = Math.floor(i / 8);
             const col = i % 8;
             colorGrid.attach(colorButton, col, row, 1, 1);

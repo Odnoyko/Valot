@@ -179,7 +179,8 @@ export class WidgetFactory {
         } = config;
 
         const paginationBox = new Gtk.Box({
-            halign: Gtk.Align.CENTER,
+            halign: Gtk.Align.FILL,
+            hexpand: true,
             spacing: 6
         });
 
@@ -191,7 +192,9 @@ export class WidgetFactory {
         const pageInfo = new Gtk.Label({
             label: 'Page 1 of 1',
             margin_start: 12,
-            margin_end: 12
+            margin_end: 12,
+            halign: Gtk.Align.FILL,
+            hexpand: true
         });
 
         const nextButton = new Gtk.Button({
@@ -234,7 +237,8 @@ export class WidgetFactory {
 
         // Main container
         const containerBox = new Gtk.Box({
-            halign: Gtk.Align.CENTER,
+            halign: Gtk.Align.FILL,
+            hexpand: true,
             spacing: 6
         });
 
@@ -247,7 +251,9 @@ export class WidgetFactory {
         const pageInfo = new Gtk.Label({
             label: 'Page 1 of 1',
             margin_start: 12,
-            margin_end: 12
+            margin_end: 12,
+            halign: Gtk.Align.FILL,
+            hexpand: true
         });
 
         const nextButton = new Gtk.Button({
@@ -273,7 +279,9 @@ export class WidgetFactory {
             label: '0 selected',
             margin_start: 12,
             margin_end: 12,
-            visible: false
+            visible: false,
+            halign: Gtk.Align.FILL,
+            hexpand: true
         });
 
         const deleteButton = new Gtk.Button({
