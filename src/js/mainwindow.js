@@ -28,6 +28,7 @@ import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
 import Gdk from 'gi://Gdk?version=4.0';
 import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 import { setupDatabase } from 'resource:///com/odnoyko/valot/js/func/global/dbinitialisation.js';
 import { CompactTrackerWindow } from 'resource:///com/odnoyko/valot/js/compacttracker.js';
 import { ProjectManager } from 'resource:///com/odnoyko/valot/js/func/pages/projectManager.js';
@@ -65,7 +66,7 @@ export const ValotWindow = GObject.registerClass({
     Template: 'resource:///com/odnoyko/valot/ui/window.ui',
     InternalChildren: [
         'split_view', 'main_content', 'sidebar_list',
-        'sidebar_toggle_btn', 'menu_button',
+        'sidebar_hide_btn', 'menu_button',
         'tasks_page', 'projects_page', 'clients_page', 'reports_page',
         'export_pdf_btn', 'period_filter', 'project_filter', 'client_filter',
         'task_search', 'task_filter', 'task_list', 
@@ -93,15 +94,18 @@ export const ValotWindow = GObject.registerClass({
 }, class ValotWindow extends Adw.ApplicationWindow {
     constructor(application) {
         super({ application });
-        
+
+        // Settings
+        this.settings = new Gio.Settings({ schema_id: 'com.odnoyko.valot' });
+
         // Core application state
         this.dbConnection = null;
         this.compactTrackerWindow = null;
-        
+
         // Current selections for compact tracker compatibility
         this.currentProjectId = 1;
         this.currentClientId = 1;
-        
+
         // Data arrays for compatibility
         this.allProjects = [];
         this.allClients = [];
@@ -1170,10 +1174,9 @@ export const ValotWindow = GObject.registerClass({
             PreferencesDialog.show(this);
         });
 
-        // Sidebar toggle
-        this._sidebar_toggle_btn.connect('toggled', () => {
-            const isOpen = this._sidebar_toggle_btn.get_active();
-            this._split_view.set_show_sidebar(isOpen);
+        // Sidebar hide button (inside sidebar) - always hides
+        this._sidebar_hide_btn.connect('clicked', () => {
+            this._split_view.set_show_sidebar(false);
         });
 
         // Setup responsive sidebar behavior
@@ -1794,15 +1797,16 @@ export const ValotWindow = GObject.registerClass({
      * Setup responsive sidebar behavior for small screens
      */
     _setupResponsiveSidebar() {
-        // Connect all page-specific sidebar buttons
-        const sidebarButtons = [
+        // Connect all page-specific sidebar show buttons
+        const sidebarShowButtons = [
             this._show_sidebar_btn,     // Tasks page
-            this._show_sidebar_btn2,    // Projects page  
+            this._show_sidebar_btn2,    // Projects page
             this._show_sidebar_btn3,    // Clients page
             this._show_sidebar_btn5     // Reports page
         ];
 
-        sidebarButtons.forEach(button => {
+        // All show buttons simply open the sidebar
+        sidebarShowButtons.forEach(button => {
             if (button) {
                 button.connect('clicked', () => {
                     this._split_view.set_show_sidebar(true);
@@ -1810,35 +1814,48 @@ export const ValotWindow = GObject.registerClass({
             }
         });
 
-        // Function to update page button visibility based on sidebar state
-        const updatePageButtonVisibility = () => {
-            const isCollapsed = this._split_view.get_collapsed();
-            const isVisible = this._split_view.get_show_sidebar();
-            
-            // Show page buttons when sidebar is hidden (either collapsed OR manually hidden)
-            const shouldShowButtons = isCollapsed || !isVisible;
-            
-            sidebarButtons.forEach(button => {
+        // Update button visibility based on sidebar state
+        const updateButtonVisibility = () => {
+            const isSidebarVisible = this._split_view.get_show_sidebar();
+
+            // Hide show buttons when sidebar is visible
+            sidebarShowButtons.forEach(button => {
                 if (button) {
-                    button.set_visible(shouldShowButtons);
+                    button.set_visible(!isSidebarVisible);
                 }
             });
-
-            // Sidebar state updated
         };
 
-        // Monitor split view collapsed state (responsive behavior)
-        this._split_view.connect('notify::collapsed', updatePageButtonVisibility);
-
-        // Monitor sidebar visibility changes (manual toggle)
+        // Monitor sidebar visibility changes and save to settings (for Dynamic mode)
         this._split_view.connect('notify::show-sidebar', () => {
-            const isVisible = this._split_view.get_show_sidebar();
-            this._sidebar_toggle_btn.set_active(isVisible);
-            updatePageButtonVisibility();
+            const isSidebarVisible = this._split_view.get_show_sidebar();
+
+            // Save last state (used in Dynamic mode)
+            this.settings.set_boolean('sidebar-last-state', isSidebarVisible);
+
+            // Update button visibility
+            updateButtonVisibility();
         });
 
-        // Initial state check
-        updatePageButtonVisibility();
+        // Load initial state based on sidebar mode
+        const sidebarMode = this.settings.get_int('sidebar-mode');
+        let initialState = true;
+
+        if (sidebarMode === 0) {
+            // Opened - always open
+            initialState = true;
+        } else if (sidebarMode === 1) {
+            // Closed - always closed
+            initialState = false;
+        } else if (sidebarMode === 2) {
+            // Dynamic - remember last state
+            initialState = this.settings.get_boolean('sidebar-last-state');
+        }
+
+        this._split_view.set_show_sidebar(initialState);
+
+        // Set initial button visibility
+        updateButtonVisibility();
     }
     
     /**

@@ -21,5 +21,15 @@
 			<summary>Welcome dialog shown</summary>
 			<description>Whether the welcome carousel dialog has been shown to the user</description>
 		</key>
+		<key name="sidebar-mode" type="i">
+			<default>0</default>
+			<summary>Sidebar behavior mode</summary>
+			<description>Sidebar behavior: 0=Opened (always open on launch), 1=Closed (always closed on launch), 2=Dynamic (remember last state)</description>
+		</key>
+		<key name="sidebar-last-state" type="b">
+			<default>true</default>
+			<summary>Sidebar last state</summary>
+			<description>Last sidebar visibility state (used in Dynamic mode)</description>
+		</key>
 	</schema>
 </schemalist>

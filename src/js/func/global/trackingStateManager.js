@@ -239,8 +239,22 @@ class TrackingStateManager {
                 // Synchronize input field if provided - set to current tracking task name
                 if (input && this.currentTrackingTask) {
                     try {
+                        // Save cursor position
+                        const cursorPos = input.get_position();
+                        const textLength = input.get_text().length;
+
                         input.set_text(this.currentTrackingTask.name);
                         this._lastSyncedTaskName = this.currentTrackingTask.name;
+
+                        // Restore cursor position (or move to end if was at end)
+                        const newTextLength = this.currentTrackingTask.name.length;
+                        if (cursorPos >= textLength) {
+                            // Cursor was at the end, move to end of new text
+                            input.set_position(newTextLength);
+                        } else {
+                            // Restore previous position (or end if beyond new text)
+                            input.set_position(Math.min(cursorPos, newTextLength));
+                        }
                     } catch (error) {
                         //('📊 TrackingStateManager: Error syncing input field:', error);
                     }
@@ -254,8 +268,22 @@ class TrackingStateManager {
                 // This allows users to see and reuse the last tracked task name
                 if (input && !isAnyTracking && !taskName && this._lastSyncedTaskName) {
                     try {
+                        // Save cursor position
+                        const cursorPos = input.get_position();
+                        const textLength = input.get_text().length;
+
                         // Keep the last tracked task name in the input field
                         input.set_text(this._lastSyncedTaskName);
+
+                        // Restore cursor position (or move to end if was at end)
+                        const newTextLength = this._lastSyncedTaskName.length;
+                        if (cursorPos >= textLength) {
+                            // Cursor was at the end, move to end of new text
+                            input.set_position(newTextLength);
+                        } else {
+                            // Restore previous position (or end if beyond new text)
+                            input.set_position(Math.min(cursorPos, newTextLength));
+                        }
                         // Don't clear _lastSyncedTaskName so it persists
                     } catch (error) {
                         //('📊 TrackingStateManager: Error keeping input field:', error);

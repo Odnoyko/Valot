@@ -867,7 +867,7 @@ export class TasksPage {
 
         // Helpful hint
         const hint = new Gtk.Label({
-            label: 'Click the + button above to create your first task, or use templates for quick setup',
+            label: _('Type a task name and click track to create one'),
             css_classes: ['caption', 'dim-label'],
             halign: Gtk.Align.CENTER,
             wrap: true,
@@ -896,13 +896,13 @@ export class TasksPage {
 
         switch (this.activeFilter) {
             case 'today':
-                return 'No tasks for today';
+                return _('No tasks for today');
             case 'week':
-                return 'No tasks for this week';
+                return _('No tasks for this week');
             case 'active':
-                return 'No active tasks';
+                return _('No active tasks');
             default:
-                return 'No tasks yet';
+                return _('No tasks yet');
         }
     }
 
@@ -1028,6 +1028,9 @@ export class TasksPage {
             css_classes: ['flat']
         });
 
+        // Create CSS provider once and reuse it
+        let projectButtonProvider = null;
+
         const updateProjectButton = (project) => {
             const projectBox = new Gtk.Box({
                 orientation: Gtk.Orientation.HORIZONTAL,
@@ -1067,10 +1070,13 @@ export class TasksPage {
             projectBox.append(projectLabel);
             projectBox.append(arrow);
 
-            // Apply project color styling
+            // Apply project color styling - reuse provider
             const iconColor = getProjectIconColor(project);
-            const projectProvider = new Gtk.CssProvider();
-            projectProvider.load_from_string(`
+            if (!projectButtonProvider) {
+                projectButtonProvider = new Gtk.CssProvider();
+                projectButton.get_style_context().add_provider(projectButtonProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+            }
+            projectButtonProvider.load_from_string(`
                 button {
                     background-color: ${project.color};
                     border-radius: 6px;
@@ -1084,8 +1090,7 @@ export class TasksPage {
                     font-weight: 500;
                 }
             `);
-            projectButton.get_style_context().add_provider(projectProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
-            
+
             projectButton.set_child(projectBox);
         };
 
