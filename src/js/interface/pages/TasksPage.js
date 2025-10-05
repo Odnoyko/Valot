@@ -867,7 +867,7 @@ export class TasksPage {
 
         // Helpful hint
         const hint = new Gtk.Label({
-            label: 'Click the + button above to create your first task, or use templates for quick setup',
+            label: _('Type a task name and click track to create one'),
             css_classes: ['caption', 'dim-label'],
             halign: Gtk.Align.CENTER,
             wrap: true,
@@ -896,13 +896,13 @@ export class TasksPage {
 
         switch (this.activeFilter) {
             case 'today':
-                return 'No tasks for today';
+                return _('No tasks for today');
             case 'week':
-                return 'No tasks for this week';
+                return _('No tasks for this week');
             case 'active':
-                return 'No active tasks';
+                return _('No active tasks');
             default:
-                return 'No tasks yet';
+                return _('No tasks yet');
         }
     }
 
