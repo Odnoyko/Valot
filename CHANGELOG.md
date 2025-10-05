@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Fix App icon for KDE by Surjyadip Sen
     - App optimisations
     - Delete context menu update.
+    - Sidebar update
+    - Update Task page information
 
 ## [0.8.3] - 04.10.2025
 
