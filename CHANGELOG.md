@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Future features and improvements will be listed here
+## [0.8.4] - 05.10.2025
+
+    - Fix App icon for KDE by Surjyadip Sen
+    - App optimisations
+    - Delete context menu update.
 
 ## [0.8.3] - 04.10.2025
 

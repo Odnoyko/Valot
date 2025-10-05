@@ -1028,6 +1028,9 @@ export class TasksPage {
             css_classes: ['flat']
         });
 
+        // Create CSS provider once and reuse it
+        let projectButtonProvider = null;
+
         const updateProjectButton = (project) => {
             const projectBox = new Gtk.Box({
                 orientation: Gtk.Orientation.HORIZONTAL,
@@ -1067,10 +1070,13 @@ export class TasksPage {
             projectBox.append(projectLabel);
             projectBox.append(arrow);
 
-            // Apply project color styling
+            // Apply project color styling - reuse provider
             const iconColor = getProjectIconColor(project);
-            const projectProvider = new Gtk.CssProvider();
-            projectProvider.load_from_string(`
+            if (!projectButtonProvider) {
+                projectButtonProvider = new Gtk.CssProvider();
+                projectButton.get_style_context().add_provider(projectButtonProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+            }
+            projectButtonProvider.load_from_string(`
                 button {
                     background-color: ${project.color};
                     border-radius: 6px;
@@ -1084,8 +1090,7 @@ export class TasksPage {
                     font-weight: 500;
                 }
             `);
-            projectButton.get_style_context().add_provider(projectProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
-            
+
             projectButton.set_child(projectBox);
         };
 

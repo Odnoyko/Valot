@@ -9,6 +9,7 @@ export class SimpleChart {
         this.selectedClientId = null; // null = all clients
         this.allProjects = []; // Store projects for color mapping
         this.customDateRange = null; // For custom date range filtering
+        this._cssProviderCache = new Map(); // Cache CSS providers to avoid creating too many
     }
 
     createChart(allTasks, allProjects = [], allClients = []) {
@@ -263,9 +264,15 @@ export class SimpleChart {
                             ${index > 0 ? 'border-top: 1px solid rgba(255,255,255,0.3);' : ''}
                         }
                     `;
-                    
-                    const segmentProvider = new Gtk.CssProvider();
-                    segmentProvider.load_from_data(segmentCss, -1);
+
+                    // Reuse cached provider based on CSS content
+                    const cacheKey = `segment-${projectColor}-${borderRadius}-${index}`;
+                    let segmentProvider = this._cssProviderCache.get(cacheKey);
+                    if (!segmentProvider) {
+                        segmentProvider = new Gtk.CssProvider();
+                        segmentProvider.load_from_data(segmentCss, -1);
+                        this._cssProviderCache.set(cacheKey, segmentProvider);
+                    }
                     segmentBar.get_style_context().add_provider(segmentProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
                     
                     stackedBar.append(segmentBar);
@@ -289,9 +296,12 @@ export class SimpleChart {
                     border-radius: 2px;
                 }
             `;
-            const emptyProvider = new Gtk.CssProvider();
-            emptyProvider.load_from_data(emptyCss, -1);
-            emptyBar.get_style_context().add_provider(emptyProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+            // Reuse shared empty bar provider
+            if (!this._emptyBarProvider) {
+                this._emptyBarProvider = new Gtk.CssProvider();
+                this._emptyBarProvider.load_from_data(emptyCss, -1);
+            }
+            emptyBar.get_style_context().add_provider(this._emptyBarProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
             
             barBox.append(emptyBar);
         }
