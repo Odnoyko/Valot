@@ -1,6 +1,7 @@
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
 import GLib from 'gi://GLib';
+import { BUTTON } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 /**
  * Custom Date Range Selector Component
@@ -57,12 +58,12 @@ export class DateRangeSelector {
         });
 
         const quickFilters = [
-            { label: 'Today', action: () => this._setToday() },
-            { label: 'Yesterday', action: () => this._setYesterday() },
-            { label: 'This Week', action: () => this._setCurrentWeek() },
-            { label: 'Last Week', action: () => this._setLastWeek() },
-            { label: 'This Month', action: () => this._setCurrentMonth() },
-            { label: 'Last Month', action: () => this._setLastMonth() }
+            { label: _('Today'), action: () => this._setToday() },
+            { label: _('Yesterday'), action: () => this._setYesterday() },
+            { label: _('This Week'), action: () => this._setCurrentWeek() },
+            { label: _('Last Week'), action: () => this._setLastWeek() },
+            { label: _('This Month'), action: () => this._setCurrentMonth() },
+            { label: _('Last Month'), action: () => this._setLastMonth() }
         ];
 
         quickFilters.forEach(filter => {
@@ -97,7 +98,7 @@ export class DateRangeSelector {
 
         // "to" label
         const toLabel = new Gtk.Label({
-            label: 'to',
+            label: _('to'),
             css_classes: ['dim-label']
         });
 
@@ -127,10 +128,10 @@ export class DateRangeSelector {
 
         // From time controls
         const fromTimeBox = this._createTimeControls('from');
-        
+
         // "to" label
         const toLabel = new Gtk.Label({
-            label: 'to',
+            label: _('to'),
             css_classes: ['dim-label']
         });
 
@@ -203,10 +204,10 @@ export class DateRangeSelector {
 
     _showDatePicker(type) {
         const currentDate = type === 'from' ? this.fromDate : this.toDate;
-        
+
         const calendarDialog = new Adw.AlertDialog({
-            heading: `Select ${type === 'from' ? 'Start' : 'End'} Date`,
-            body: `Choose the ${type === 'from' ? 'start' : 'end'} date for the report range`
+            heading: type === 'from' ? _('Select Start Date') : _('Select End Date'),
+            body: type === 'from' ? _('Choose the start date for the report range') : _('Choose the end date for the report range')
         });
 
         const calendarBox = new Gtk.Box({
@@ -232,8 +233,8 @@ export class DateRangeSelector {
         calendarBox.append(calendar);
         calendarDialog.set_extra_child(calendarBox);
 
-        calendarDialog.add_response('cancel', 'Cancel');
-        calendarDialog.add_response('ok', 'OK');
+        calendarDialog.add_response('cancel', BUTTON.CANCEL);
+        calendarDialog.add_response('ok', BUTTON.OK);
         calendarDialog.set_response_appearance('ok', Adw.ResponseAppearance.SUGGESTED);
 
         calendarDialog.connect('response', (dialog, response) => {

@@ -1,6 +1,7 @@
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
 import { WidgetFactory } from './widgetFactory.js';
+import { BUTTON } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 /**
  * Factory for creating reusable selector dialogs and components
@@ -56,8 +57,8 @@ export class SelectorFactory {
 
             if (items.length === 0) {
                 const noItemsRow = new Adw.ActionRow({
-                    title: 'No items available',
-                    subtitle: 'Go to the appropriate page to add items',
+                    title: _('No items available'),
+                    subtitle: _('Go to the appropriate page to add items'),
                     sensitive: false
                 });
                 listBox.append(noItemsRow);
@@ -99,8 +100,8 @@ export class SelectorFactory {
         searchBox.append(scrolled);
 
         dialog.set_extra_child(searchBox);
-        dialog.add_response('cancel', 'Cancel');
-        
+        dialog.add_response('cancel', BUTTON.CANCEL);
+
         return dialog;
     }
 
@@ -109,8 +110,8 @@ export class SelectorFactory {
      */
     static createProjectSelector(projects, currentProjectId, onProjectSelected) {
         return this.createEnhancedSelector({
-            title: 'Select Project',
-            subtitle: 'Choose a project for time tracking',
+            title: _('Select Project'),
+            subtitle: _('Choose a project for time tracking'),
             searchPlaceholder: 'Search projects...',
             items: projects,
             currentItemId: currentProjectId,
@@ -127,8 +128,8 @@ export class SelectorFactory {
      */
     static createClientSelector(clients, currentClientId, onClientSelected) {
         return this.createEnhancedSelector({
-            title: 'Select Client',
-            subtitle: 'Choose a client for time tracking',
+            title: _('Select Client'),
+            subtitle: _('Choose a client for time tracking'),
             searchPlaceholder: 'Search clients...',
             items: clients,
             currentItemId: currentClientId,
@@ -194,8 +195,8 @@ export class SelectorFactory {
         } = config;
 
         const dialog = new Adw.AlertDialog({
-            heading: 'Select Icon',
-            body: 'Choose an appropriate icon or emoji'
+            heading: _('Select Icon'),
+            body: _('Choose an appropriate icon or emoji')
         });
 
         // Main container
@@ -252,7 +253,7 @@ export class SelectorFactory {
         mainContainer.append(contentArea);
 
         dialog.set_extra_child(mainContainer);
-        dialog.add_response('cancel', 'Cancel');
+        dialog.add_response('cancel', BUTTON.CANCEL);
 
         return dialog;
     }
@@ -414,12 +415,12 @@ export class SelectorFactory {
         });
 
         const iconsButton = new Gtk.ToggleButton({
-            label: 'Icons',
+            label: _('Icons'),
             active: true
         });
 
         const emojiButton = new Gtk.ToggleButton({
-            label: 'Emoji'
+            label: _('Emoji')
         });
 
         // Group toggle buttons

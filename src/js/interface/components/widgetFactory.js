@@ -1,5 +1,6 @@
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
+import { TOOLTIP, BUTTON, PAGINATION } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 /**
  * Factory for creating reusable UI components with consistent styling
@@ -41,7 +42,7 @@ export class WidgetFactory {
         const projectButton = new Gtk.Button({
             icon_name: 'folder-symbolic',
             css_classes: ['flat', 'widget-factory-project-button'],
-            tooltip_text: 'Project',
+            tooltip_text: _('Project'),
             width_request: 36,
             height_request: 36
         });
@@ -54,7 +55,7 @@ export class WidgetFactory {
         const clientButton = new Gtk.Button({
             icon_name: 'contact-new-symbolic',
             css_classes: ['flat'],
-            tooltip_text: 'Client',
+            tooltip_text: _('Client'),
             width_request: 36,
             height_request: 36
         });
@@ -77,7 +78,7 @@ export class WidgetFactory {
         const trackButton = new Gtk.Button({
             icon_name: 'media-playback-start-symbolic',
             css_classes: ['suggested-action', 'circular'],
-            tooltip_text: 'Start tracking'
+            tooltip_text: TOOLTIP.START_TRACKING
         });
 
         if (onTrackClick) {
@@ -185,12 +186,12 @@ export class WidgetFactory {
         });
 
         const prevButton = new Gtk.Button({
-            label: 'Previous',
+            label: _('Previous'),
             sensitive: false
         });
 
         const pageInfo = new Gtk.Label({
-            label: 'Page 1 of 1',
+            label: _('Page 1 of 1'),
             margin_start: 12,
             margin_end: 12,
             halign: Gtk.Align.FILL,
@@ -198,7 +199,7 @@ export class WidgetFactory {
         });
 
         const nextButton = new Gtk.Button({
-            label: 'Next',
+            label: _('Next'),
             sensitive: false
         });
 
@@ -244,12 +245,12 @@ export class WidgetFactory {
 
         // Pagination elements
         const prevButton = new Gtk.Button({
-            label: 'Previous',
+            label: _('Previous'),
             sensitive: false
         });
 
         const pageInfo = new Gtk.Label({
-            label: 'Page 1 of 1',
+            label: _('Page 1 of 1'),
             margin_start: 12,
             margin_end: 12,
             halign: Gtk.Align.FILL,
@@ -257,7 +258,7 @@ export class WidgetFactory {
         });
 
         const nextButton = new Gtk.Button({
-            label: 'Next',
+            label: _('Next'),
             sensitive: false
         });
 
@@ -271,12 +272,12 @@ export class WidgetFactory {
 
         // Context action elements
         const cancelButton = new Gtk.Button({
-            label: 'Cancel',
+            label: _('Cancel'),
             visible: false
         });
 
         const selectionCounter = new Gtk.Label({
-            label: '0 selected',
+            label: _('0 selected'),
             margin_start: 12,
             margin_end: 12,
             visible: false,
@@ -285,7 +286,7 @@ export class WidgetFactory {
         });
 
         const deleteButton = new Gtk.Button({
-            label: 'Delete',
+            label: _('Delete'),
             css_classes: ['destructive-action'],
             visible: false
         });
@@ -349,7 +350,7 @@ export class WidgetFactory {
                 deleteButton.set_visible(true);
 
                 // Update counter
-                selectionCounter.set_label(`${selectedCount} selected`);
+                selectionCounter.set_label(_('%d selected').format(selectedCount));
             },
 
             hide: function() {
@@ -361,7 +362,7 @@ export class WidgetFactory {
             },
 
             updateCounter: function(count) {
-                selectionCounter.set_label(`${count} selected`);
+                selectionCounter.set_label(_('%d selected').format(count));
             }
         };
     }
@@ -376,7 +377,7 @@ export class WidgetFactory {
             halign: Gtk.Align.CENTER,
             valign: Gtk.Align.CENTER,
             css_classes: ['project-icon-button', 'project-color-settings-button', 'flat'],
-            tooltip_text: 'Click to change color and icon'
+            tooltip_text: _('Click to change color and icon')
         });
 
         this.applyProjectButtonStyle(button, project);
@@ -506,7 +507,7 @@ export class WidgetFactory {
             const editBtn = new Gtk.Button({
                 icon_name: 'document-edit-symbolic',
                 css_classes: ['flat'],
-                tooltip_text: 'Edit Task'
+                tooltip_text: TOOLTIP.EDIT_TASK
             });
 
             if (onEditClick) {
@@ -521,7 +522,7 @@ export class WidgetFactory {
             const trackBtn = new Gtk.Button({
                 icon_name: 'media-playback-start-symbolic',
                 css_classes: ['flat'],
-                tooltip_text: 'Start Tracking'
+                tooltip_text: TOOLTIP.START_TRACKING
             });
 
             if (onTrackClick) {

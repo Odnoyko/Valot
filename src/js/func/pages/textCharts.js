@@ -4,6 +4,7 @@
 
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
+import { EMPTY_STATE } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 export class TextCharts {
     // Static cache for CSS providers to avoid memory leaks
@@ -27,16 +28,16 @@ export class TextCharts {
             container.remove(child);
             child = next;
         }
-        
+
         if (!data || data.length === 0) {
             const emptyLabel = new Gtk.Label({
-                label: 'No data available',
+                label: EMPTY_STATE.NO_DATA,
                 css_classes: ['dim-label']
             });
             container.append(emptyLabel);
             return;
         }
-        
+
         // Sort and limit data
         const sortedData = data.sort((a, b) => b.value - a.value).slice(0, maxBars);
         const maxValue = Math.max(...sortedData.map(d => d.value));
@@ -116,13 +117,13 @@ export class TextCharts {
         
         if (!data || data.length === 0) {
             const emptyLabel = new Gtk.Label({
-                label: 'No data available',
+                label: EMPTY_STATE.NO_DATA,
                 css_classes: ['dim-label']
             });
             container.append(emptyLabel);
             return;
         }
-        
+
         const total = data.reduce((sum, item) => sum + item.value, 0);
         
         // Title
@@ -203,7 +204,7 @@ export class TextCharts {
         
         if (!data || data.length === 0) {
             const emptyLabel = new Gtk.Label({
-                label: 'No activity data',
+                label: EMPTY_STATE.NO_ACTIVITY,
                 css_classes: ['dim-label']
             });
             container.append(emptyLabel);

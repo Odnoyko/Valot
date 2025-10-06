@@ -3,6 +3,7 @@ import Adw from 'gi://Adw';
 import { TrackingWidget } from '../components/complex/TrackingWidget.js';
 import { Button } from '../components/primitive/Button.js';
 import { Label } from '../components/primitive/Label.js';
+import { LOADING } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 /**
  * Base class for all page components in Valot
@@ -66,7 +67,7 @@ export class BasePage {
             this.refreshButton = new Button({
                 iconName: 'view-refresh-symbolic',
                 cssClasses: ['flat'],
-                tooltipText: 'Refresh',
+                tooltipText: _('Refresh'),
                 onClick: () => this.refresh()
             });
             headerBar.pack_start(this.refreshButton.widget);
@@ -79,7 +80,7 @@ export class BasePage {
             this.searchButton = new Button({
                 iconName: 'system-search-symbolic',
                 cssClasses: ['flat'],
-                tooltipText: 'Search',
+                tooltipText: _('Search'),
                 onClick: () => this.toggleSearch()
             });
             headerBar.pack_end(this.searchButton.widget);
@@ -192,7 +193,7 @@ export class BasePage {
         });
 
         const loadingLabel = new Gtk.Label({
-            label: 'Loading...',
+            label: LOADING.LOADING,
             css_classes: ['dim-label']
         });
 

@@ -1,394 +1,2422 @@
 # SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE valot'S COPYRIGHT HOLDER
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the valot package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
+#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: valot 0.6.3\n"
+"Project-Id-Version: valot 0.8.4\n"
 "Report-Msgid-Bugs-To: vitalyod.27@gmail.com\n"
-"POT-Creation-Date: 2025-09-20 00:42+0200\n"
-"PO-Revision-Date: 2025-10-04 04:57+0000\n"
-"Last-Translator: Anonymous <noreply@weblate.org>\n"
-"Language-Team: English <https://hosted.weblate.org/projects/valot/valot/en/>"
-"\n"
-"Language: en\n"
+"POT-Creation-Date: 2025-10-06 12:38+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 5.14-dev\n"
 
-#. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
-#: src/js/main.js:94
-msgid "translator-credits"
-msgstr "translator-credits"
-
-#: src/js/mainwindow.js:2012
-msgid "All Projects"
-msgstr "All Projects"
-
-#: src/js/mainwindow.js:2023
-msgid "All Clients"
-msgstr "All Clients"
-
-#: src/js/interface/pages/ProjectsPage.js:130 src/ui/window.blp:322
-msgid "Search projects..."
-msgstr "Search projects..."
-
-#: src/js/interface/pages/ProjectsPage.js:161
-msgid "Delete Selected"
-msgstr "Delete Selected"
-
-#: src/js/interface/pages/ProjectsPage.js:204
-msgid "No projects found"
-msgstr "No projects found"
-
-#: src/js/interface/pages/ProjectsPage.js:210
-msgid "Create your first project to get started"
-msgstr "Create your first project to get started"
-
-#: src/js/interface/pages/ProjectsPage.js:237
-msgid "Previous page"
-msgstr "Previous page"
-
-#: src/js/interface/pages/ProjectsPage.js:243
-msgid "Page 1 of 1"
-msgstr "Page 1 of 1"
-
-#: src/js/interface/pages/ProjectsPage.js:249
-msgid "Next page"
-msgstr "Next page"
-
-#: src/js/interface/pages/ProjectsPage.js:352
-msgid "Project settings - Change color and icon"
-msgstr "Project settings - Change color and icon"
-
-#: src/js/interface/pages/ProjectsPage.js:579
-msgid "Delete Projects"
-msgstr "Delete Projects"
-
-#: src/js/interface/pages/ProjectsPage.js:580
-#, javascript-format
-msgid ""
-"Are you sure you want to delete %d selected project(s)? This cannot be "
-"undone."
+#: data/com.odnoyko.valot.desktop.in:2 src/ui/window.blp:5
+msgid "Valot"
 msgstr ""
-"Are you sure you want to delete %d selected project(s)? This cannot be "
-"undone."
 
-#: src/js/interface/pages/ProjectsPage.js:583
-#: src/js/interface/pages/ProjectsPage.js:814
-#: src/js/interface/components/complex/ModularDialogManager.js:206
+#: data/com.odnoyko.valot.desktop.in:3
+msgid "Time Tracker"
+msgstr ""
+
+#: data/com.odnoyko.valot.desktop.in:7
+msgid "Track time for tasks and projects"
+msgstr ""
+
+#: data/com.odnoyko.valot.desktop.in:16
+msgid "time;tracker;productivity;tasks;projects;timesheet;billing;"
+msgstr ""
+
+#: data/com.odnoyko.valot.gschema.xml:6
+msgid "Theme preference"
+msgstr ""
+
+#: data/com.odnoyko.valot.gschema.xml:7
+msgid "Theme preference: 0=Auto, 1=Light, 2=Dark"
+msgstr ""
+
+#: data/com.odnoyko.valot.gschema.xml:11
+msgid "Custom accent color"
+msgstr ""
+
+#: data/com.odnoyko.valot.gschema.xml:12
+msgid "Custom accent color in hex format (empty for system default)"
+msgstr ""
+
+#: data/com.odnoyko.valot.gschema.xml:16
+msgid "Accent color mode"
+msgstr ""
+
+#: data/com.odnoyko.valot.gschema.xml:17
+msgid "Accent color mode: 0=Standard, 1=Custom"
+msgstr ""
+
+#: data/com.odnoyko.valot.gschema.xml:21
+msgid "Welcome dialog shown"
+msgstr ""
+
+#: data/com.odnoyko.valot.gschema.xml:22
+msgid "Whether the welcome carousel dialog has been shown to the user"
+msgstr ""
+
+#: data/com.odnoyko.valot.gschema.xml:26
+msgid "Sidebar behavior mode"
+msgstr ""
+
+#: data/com.odnoyko.valot.gschema.xml:27
+msgid ""
+"Sidebar behavior: 0=Opened (always open on launch), 1=Closed (always closed "
+"on launch), 2=Dynamic (remember last state)"
+msgstr ""
+
+#: data/com.odnoyko.valot.gschema.xml:31
+msgid "Sidebar last state"
+msgstr ""
+
+#: data/com.odnoyko.valot.gschema.xml:32
+msgid "Last sidebar visibility state (used in Dynamic mode)"
+msgstr ""
+
+#: src/gtk/help-overlay.ui:11
+msgctxt "shortcut window"
+msgid "General"
+msgstr ""
+
+#: src/gtk/help-overlay.ui:14
+msgctxt "shortcut window"
+msgid "Show Shortcuts"
+msgstr ""
+
+#: src/gtk/help-overlay.ui:20
+msgctxt "shortcut window"
+msgid "Quit"
+msgstr ""
+
+#: src/js/compacttracker.js:21
+#: src/js/interface/components/CarouselDialog.js:202
+#: src/ui/compact-tracker.blp:5
+msgid "Compact Tracker"
+msgstr ""
+
+#: src/js/compacttracker.js:68 src/ui/compact-tracker.blp:23
+msgid "Close compact tracker and open main window"
+msgstr ""
+
+#: src/js/compacttracker.js:94
+#: src/js/interface/components/complex/HeaderTrackingWidget.js:57
+#: src/js/interface/components/widgetFactory.js:45
+#: src/ui/compact-tracker.blp:43 src/ui/window.blp:152 src/ui/window.blp:275
+#: src/ui/window.blp:388 src/ui/window.blp:502
+msgid "Project"
+msgstr ""
+
+#: src/js/compacttracker.js:113
+msgid "Select client"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:11
+#: src/js/interface/components/complex/ModularDialogManager.js:207
+#: src/js/interface/pages/ProjectsPage.js:610
+#: src/js/interface/pages/ProjectsPage.js:870
+#: src/js/interface/components/widgetFactory.js:275
+#: src/js/interface/pages/TasksPage.js:1670
 msgid "Cancel"
-msgstr "Cancel"
+msgstr ""
 
-#: src/js/interface/pages/ProjectsPage.js:584
-msgid "Delete"
-msgstr "Delete"
+#: src/js/func/global/commonStrings.js:12
+#: src/js/func/pages/projectManager.js:1822
+msgid "OK"
+msgstr ""
 
-#: src/js/interface/pages/ProjectsPage.js:804
-msgid "Edit Project Name"
-msgstr "Edit Project Name"
-
-#: src/js/interface/pages/ProjectsPage.js:805
-#, javascript-format
-msgid "Change the name of \"%s\""
-msgstr "Change the name of \"%s\""
-
-#: src/js/interface/pages/ProjectsPage.js:815
+#: src/js/func/global/commonStrings.js:13
+#: src/js/interface/pages/ProjectsPage.js:871
 msgid "Save"
-msgstr "Save"
+msgstr ""
 
-#: src/js/func/pages/clientManager.js:191
+#: src/js/func/global/commonStrings.js:14
+#: src/js/interface/components/complex/ClientDialog.js:351
+#: src/js/interface/components/complex/ProjectDialog.js:286
+msgid "Save Changes"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:15
+#: src/js/interface/pages/ProjectsPage.js:611
+#: src/js/interface/components/widgetFactory.js:289
+#: src/js/interface/pages/TasksPage.js:1671
+msgid "Delete"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:16
+msgid "Create"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:17
+msgid "Create Task"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:18
+#: src/js/interface/components/complex/ProjectDialog.js:308
+msgid "Create Project"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:19
+#: src/js/func/pages/clientManager.js:177
+#: src/js/interface/components/complex/ClientDialog.js:376
+#: src/js/interface/pages/ClientsPage.js:143
+msgid "Create Client"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:20
+msgid "Select"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:21
+msgid "Close"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:22
+msgid "Open Folder"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:27
+msgid "Invalid Input"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:28
+msgid "Delete Task"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:29
+#: src/js/interface/pages/TasksPage.js:1666
+msgid "Delete Tasks"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:30
+msgid "Delete Project"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:31
+#: src/js/func/pages/clientManager.js:500
+msgid "Delete Client"
+msgstr ""
+
+#. Update dialog title
+#: src/js/func/global/commonStrings.js:32
+#: src/js/interface/components/complex/ProjectDialog.js:284
+msgid "Edit Project"
+msgstr ""
+
+#. Update dialog title
+#: src/js/func/global/commonStrings.js:33
+#: src/js/func/pages/clientManager.js:412
+#: src/js/interface/components/complex/ClientDialog.js:349
+msgid "Edit Client"
+msgstr ""
+
+#. Update dialog title
+#: src/js/func/global/commonStrings.js:34
+#: src/js/interface/components/complex/ProjectDialog.js:306
+msgid "Create New Project"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:35
+msgid "Add New Task"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:36
+msgid "Error"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:37 src/js/main.js:159
+msgid "Database Error"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:38
+msgid "Validation Error"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:39
+msgid "Duplicate Project"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:40
+msgid "Duplicate Client"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:41
+msgid "Load Error"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:42
+msgid "Update Error"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:43
+msgid "Delete Error"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:44
+msgid "Creation Error"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:45
+msgid "Invalid Date/Time"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:50
+msgid "Task name is required"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:51
+msgid "Project name is required"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:52
+msgid "Client name is required"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:53
+msgid "Please enter a task name and select a project"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:54
+msgid "End time must be after start time"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:55
+msgid "A project with this name already exists"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:56
+msgid "A client with this name already exists"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:57 src/js/main.js:160
+msgid "Failed to initialize database"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:58
+msgid "No tasks selected. Right-click a task to select it first."
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:63
+msgid "Task Name:"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:64
+msgid "Project Name:"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:65
+#: src/js/func/pages/clientManager.js:427
+#: src/js/interface/components/complex/ClientDialog.js:88
+msgid "Client Name"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:66
+msgid "Project:"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:67
+#: src/js/interface/components/widgetFactory.js:58
+#: src/ui/compact-tracker.blp:51 src/ui/window.blp:160 src/ui/window.blp:283
+#: src/ui/window.blp:396 src/ui/window.blp:510
+msgid "Client"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:68
+msgid "Description (optional):"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:69
+msgid "Start Time:"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:70
+msgid "End Time:"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:71
+msgid "Duration:"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:72
+msgid "Project Icon:"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:73
+msgid "Project Color:"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:74
+msgid "Icon Mode:"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:75
+msgid "Icon Color:"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:76
+msgid "Hourly Rate"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:81 src/ui/window.blp:199
+msgid "Search tasks..."
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:82
+#: src/js/interface/pages/ProjectsPage.js:138 src/ui/window.blp:323
+msgid "Search projects..."
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:83 src/ui/window.blp:436
+msgid "Search clients..."
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:84 src/ui/compact-tracker.blp:35
+#: src/ui/window.blp:144 src/ui/window.blp:267 src/ui/window.blp:380
+#: src/ui/window.blp:494
+msgid "Task name"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:85
+msgid "Enter task name..."
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:86
+msgid "Project name"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:87
+#: src/js/func/pages/clientManager.js:194
 msgid "Client name"
-msgstr "Client name"
+msgstr ""
 
-#: src/js/func/pages/simpleChart.js:47
+#: src/js/func/global/commonStrings.js:92
+msgid "Edit task"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:93
+msgid "Delete task"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:94
+#: src/js/interface/components/complex/TrackingWidget.js:108
+#: src/js/interface/components/complex/TrackingWidget.js:271
+#: src/ui/compact-tracker.blp:66 src/ui/window.blp:174 src/ui/window.blp:297
+#: src/ui/window.blp:410 src/ui/window.blp:524
+msgid "Start tracking"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:95
+#: src/js/interface/components/complex/TrackingWidget.js:108
+#: src/js/interface/components/complex/TrackingWidget.js:271
+msgid "Stop tracking"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:96
+#: src/js/interface/components/complex/TrackingWidget.js:72
+#: src/js/interface/components/selectorFactory.js:113 src/js/mainwindow.js:933
+msgid "Select Project"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:97
+#: src/js/interface/components/complex/TrackingWidget.js:88
+#: src/js/interface/components/selectorFactory.js:131 src/js/mainwindow.js:959
+msgid "Select Client"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:98
+msgid "Select start date and time"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:99
+msgid "Select end date and time"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:100
+#: src/js/interface/pages/ProjectsPage.js:245
+msgid "Previous page"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:101
+#: src/js/interface/pages/ProjectsPage.js:257
+msgid "Next page"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:102
+msgid "Click to change color"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:103
+msgid "Click to change icon"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:104
+msgid "Change project appearance"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:109 src/ui/window.blp:760
+msgid "No tasks yet"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:110
+msgid "No tasks found"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:111
+#: src/js/interface/pages/ProjectsPage.js:212
+msgid "No projects found"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:112
+msgid "No clients found"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:113
+msgid "No Project"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:114
+msgid "No data available"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:115
+msgid "No activity data"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:116
+msgid "Create your first task to get started"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:117
+#: src/js/interface/pages/ProjectsPage.js:218
+msgid "Create your first project to get started"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:118
+msgid "Create your first client to get started"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:119
+msgid "Type a task name and click track to create one"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:124
+msgid "Loading tasks..."
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:125
+msgid "Loading projects..."
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:126
+msgid "Loading clients..."
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:127
+msgid "Loading..."
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:132
+msgid "Task created successfully"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:133
+msgid "Task updated successfully"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:134
+msgid "Task deleted successfully"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:135
+msgid "Project created successfully"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:136
+msgid "Project updated successfully"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:137
+msgid "Project deleted successfully"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:138
+msgid "Client created successfully"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:139
+msgid "Client updated successfully"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:140
+msgid "Client deleted successfully"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:145
+msgid "Failed to load tasks"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:146
+msgid "Failed to create task"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:147
+msgid "Failed to update task"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:148
+msgid "Failed to delete task"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:149
+msgid "Failed to create project"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:150
+msgid "Failed to update project"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:151
+msgid "Failed to delete project"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:152
+msgid "Failed to load projects"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:153
+msgid "Failed to load clients"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:158
+#: src/js/interface/components/PreferencesDialog.js:180
+msgid "Auto"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:159
+#: src/js/interface/components/PreferencesDialog.js:185
+msgid "Light"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:160
+#: src/js/interface/components/PreferencesDialog.js:190
+msgid "Dark"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:161
+msgid "Default"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:162
+msgid "White"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:163
+msgid "Black"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:168
+msgid "Currently Tracking"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:169
+msgid "Invalid range"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:170
+msgid "Invalid format"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:175
+#: src/js/interface/components/widgetFactory.js:194
+#: src/js/interface/components/widgetFactory.js:253
+#: src/js/interface/pages/ClientsPage.js:977
+#: src/js/interface/pages/ProjectsPage.js:251
+#: src/js/interface/pages/TasksPage.js:333
+msgid "Page 1 of 1"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:180
+msgid "Create a new project with icon and color."
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:181
+msgid "Update project name, icon, and color."
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:182
+msgid "Create a new task for tracking your work"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:183
+msgid "Choose the start date and time for this task"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:184
+msgid "Choose the end date and time for this task"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:185
+msgid "Are you sure you want to delete this task?"
+msgstr ""
+
+#: src/js/func/global/commonStrings.js:186
+msgid "This action cannot be undone."
+msgstr ""
+
+#: src/js/func/global/inputValidation.js:109
+msgid "Task description must be text"
+msgstr ""
+
+#: src/js/func/global/inputValidation.js:129
+msgid "Description contains potentially dangerous content"
+msgstr ""
+
+#: src/js/func/global/inputValidation.js:163
+msgid "Value must be a number"
+msgstr ""
+
+#: src/js/func/global/inputValidation.js:200
+msgid "Color is required"
+msgstr ""
+
+#: src/js/func/global/inputValidation.js:211
+msgid "Invalid color format (use #RRGGBB or #RGB)"
+msgstr ""
+
+#: src/js/func/global/inputValidation.js:294
+msgid "Email address is required"
+msgstr ""
+
+#: src/js/func/global/inputValidation.js:313
+msgid "Invalid email format"
+msgstr ""
+
+#: src/js/func/global/inputValidation.js:321
+msgid "Email address too long (max 255 characters)"
+msgstr ""
+
+#: src/js/func/global/inputValidation.js:344
+msgid "Rate must be a number"
+msgstr ""
+
+#: src/js/func/global/inputValidation.js:352
+msgid "Rate cannot be negative"
+msgstr ""
+
+#: src/js/func/global/inputValidation.js:360
+msgid "Rate too high (max 10000)"
+msgstr ""
+
+#. ('Error creating client:', error);
+#: src/js/func/pages/clientManager.js:64
+msgid "Failed to create client. Please try again."
+msgstr ""
+
+#. ('Error updating client:', error);
+#: src/js/func/pages/clientManager.js:97
+msgid "Failed to update client. Please try again."
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:107
+msgid "Cannot Delete Default Client"
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:107
+msgid "The default client cannot be deleted."
+msgstr ""
+
+#. ('Error deleting client:', error);
+#: src/js/func/pages/clientManager.js:123
+msgid "Failed to delete client. Please try again."
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:178
+#: src/js/interface/pages/ClientsPage.js:144
+msgid "Add a new client with name and currency"
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:256
+#: src/js/func/pages/clientManager.js:1017
+#: src/js/interface/pages/ClientsPage.js:218
+msgid "Select currency"
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:413
+msgid "Modify client details"
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:435
+msgid "Email"
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:501
+msgid ""
+"Are you sure you want to delete this client? This action cannot be undone."
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:763
+#, javascript-format
+msgid "Track Time - %s"
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:764
+#, javascript-format
+msgid "Create a new time entry for %s"
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:778
+msgid "Task Description"
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:781
+msgid "Describe what you worked on..."
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:817
+msgid "Hours"
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:827
+msgid "Minutes"
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:842
+msgid "Estimated Cost"
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:862
+msgid "Create Entry"
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:875
+msgid "Please enter a time duration"
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:928
+msgid "Time Entry Created"
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:929
+#, javascript-format
+msgid "Successfully created %dh %dm time entry for %s"
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:945
+msgid "Failed to create time entry. Please try again."
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:958
+#, javascript-format
+msgid "Edit Rate - %s"
+msgstr ""
+
+#: src/js/func/pages/clientManager.js:959
+msgid "Change hourly rate and currency for this client"
+msgstr ""
+
+#: src/js/func/pages/pdfExporter.js:27
+msgid "Export Time Report (Text)"
+msgstr ""
+
+#: src/js/func/pages/pdfExporter.js:67
+msgid "Report Export Complete"
+msgstr ""
+
+#: src/js/func/pages/pdfExporter.js:76 src/js/func/pages/reportExporter.js:110
+#: src/js/func/pages/templatePDFGenerator.js:86
+msgid "Export Failed"
+msgstr ""
+
+#. ('Error creating project:', error);
+#: src/js/func/pages/projectManager.js:85
+msgid "Failed to create project. Please try again."
+msgstr ""
+
+#. ('Error creating project:', error);
+#: src/js/func/pages/projectManager.js:200
+msgid "Failed to create project: "
+msgstr ""
+
+#: src/js/func/pages/projectManager.js:242
+#: src/js/func/pages/projectManager.js:313
+msgid "Invalid Project ID"
+msgstr ""
+
+#: src/js/func/pages/projectManager.js:249
+msgid "Invalid Project Name"
+msgstr ""
+
+#: src/js/func/pages/projectManager.js:256
+msgid "Invalid Project Color"
+msgstr ""
+
+#. ('Error updating project:', error);
+#: src/js/func/pages/projectManager.js:302
+msgid "Project Update Failed"
+msgstr ""
+
+#: src/js/func/pages/projectManager.js:302
+msgid "Failed to update project: "
+msgstr ""
+
+#: src/js/func/pages/projectManager.js:319
+msgid "Cannot Delete Default Project"
+msgstr ""
+
+#: src/js/func/pages/projectManager.js:319
+msgid "The default project cannot be deleted."
+msgstr ""
+
+#. Set tooltip text
+#: src/js/func/pages/projectManager.js:1288
+#: src/js/interface/components/widgetFactory.js:380
+msgid "Click to change color and icon"
+msgstr ""
+
+#: src/js/func/pages/projectManager.js:1352
+msgid "Project Appearance"
+msgstr ""
+
+#: src/js/func/pages/projectManager.js:1353
+msgid "Configure color and icon for "
+msgstr ""
+
+#: src/js/func/pages/projectManager.js:1548
+msgid "Select Project Color"
+msgstr ""
+
+#: src/js/func/pages/projectManager.js:1586
+msgid "Select Emoji"
+msgstr ""
+
+#: src/js/func/pages/projectManager.js:1586
+#: src/js/interface/components/selectorFactory.js:198
+msgid "Select Icon"
+msgstr ""
+
+#: src/js/func/pages/projectManager.js:1587
+msgid "Choose from our comprehensive emoji collection"
+msgstr ""
+
+#: src/js/func/pages/projectManager.js:1587
+msgid "Choose an appropriate icon for the project"
+msgstr ""
+
+#: src/js/func/pages/reportHTML.js:94
+msgid "HTML Export Failed"
+msgstr ""
+
+#: src/js/func/pages/reportHTML.js:126
+msgid "HTML Report Export Complete"
+msgstr ""
+
+#: src/js/func/pages/reportHTML.js:130
+msgid "PDF Export Fallback - HTML Generated"
+msgstr ""
+
+#: src/js/func/pages/reportHTML.js:131
+#, javascript-format
+msgid ""
+"PDF export is not available in your environment.\n"
+"HTML report created instead.\n"
+"\n"
+"File: %s\n"
+"Location: %s\n"
+"\n"
+"📄 To create PDF: Use the Print button in your browser to save as PDF."
+msgstr ""
+
+#: src/js/func/pages/reportHTML.js:133
+#, javascript-format
+msgid ""
+"Report saved successfully!\n"
+"\n"
+"File: %s\n"
+"Location: %s\n"
+"\n"
+"📄 To create PDF: Use the Print button in your browser to save as PDF."
+msgstr ""
+
+#: src/js/func/pages/reportPDF.js:75
+msgid "Exporting PDF"
+msgstr ""
+
+#: src/js/func/pages/reportPDF.js:76
+msgid ""
+"Preparing PDF export...\n"
+"Please wait while your report is being generated."
+msgstr ""
+
+#: src/js/func/pages/reportPDF.js:195
+#: src/js/func/pages/templatePDFGenerator.js:119
+msgid "PDF Export Complete"
+msgstr ""
+
+#: src/js/func/pages/reportPDF.js:196
+#: src/js/func/pages/templatePDFGenerator.js:120
+#, javascript-format
+msgid ""
+"Report saved successfully!\n"
+"\n"
+"File: %s\n"
+"Location: %s\n"
+"\n"
+"Click \"Open Folder\" to view the file in your file manager."
+msgstr ""
+
+#: src/js/func/pages/reportPDF.js:231
+#: src/js/func/pages/templatePDFGenerator.js:153
+msgid "PDF Export Completed"
+msgstr ""
+
+#: src/js/func/pages/reportPDF.js:232
+#: src/js/func/pages/templatePDFGenerator.js:154
+#, javascript-format
+msgid ""
+"Your report has been saved successfully!\n"
+"\n"
+"Location: %s\n"
+"\n"
+"Please open this location manually in your file manager."
+msgstr ""
+
+#: src/js/func/pages/simpleChart.js:61
 msgid ""
 "📊 No data yet\n"
 "Start tracking time to see your productivity chart"
 msgstr ""
-"📊 No data yet\n"
-"Start tracking time to see your productivity chart"
 
 #. Chart title - dynamic based on period with German week numbering
-#: src/js/func/pages/simpleChart.js:66
+#: src/js/func/pages/simpleChart.js:80
 msgid "📊 Weekly Activity"
-msgstr "📊 Weekly Activity"
+msgstr ""
 
-#: src/js/func/pages/simpleChart.js:69
+#: src/js/func/pages/simpleChart.js:83
 #, javascript-format
 msgid "📊 Weekly Activity (KW %d)"
-msgstr "📊 Weekly Activity (KW %d)"
+msgstr ""
 
-#: src/js/func/pages/simpleChart.js:71
+#: src/js/func/pages/simpleChart.js:85
 msgid "📊 Monthly Activity (4 weeks)"
-msgstr "📊 Monthly Activity (4 weeks)"
+msgstr ""
 
-#: src/js/func/pages/simpleChart.js:72
+#: src/js/func/pages/simpleChart.js:86
 msgid "📊 Yearly Activity (12 months)"
-msgstr "📊 Yearly Activity (12 months)"
+msgstr ""
 
-#. Update dialog title
-#: src/js/interface/components/complex/ClientDialog.js:289
-msgid "Edit Client"
-msgstr "Edit Client"
+#: src/js/interface/components/CarouselDialog.js:77
+msgid "Skip"
+msgstr ""
 
-#: src/js/interface/components/complex/ClientDialog.js:290
+#: src/js/interface/components/CarouselDialog.js:83
+#: src/js/interface/components/CarouselDialog.js:138
+#: src/js/interface/components/widgetFactory.js:202
+#: src/js/interface/components/widgetFactory.js:261 src/ui/window.blp:240
+msgid "Next"
+msgstr ""
+
+#: src/js/interface/components/CarouselDialog.js:100
+#: src/js/interface/components/PreferencesDialog.js:98
+msgid "Donate"
+msgstr ""
+
+#: src/js/interface/components/CarouselDialog.js:136
+msgid "Get Started"
+msgstr ""
+
+#: src/js/interface/components/CarouselDialog.js:184
+msgid "Welcome to Valot"
+msgstr ""
+
+#: src/js/interface/components/CarouselDialog.js:185
+msgid "Track your time efficiently and boost your productivity"
+msgstr ""
+
+#: src/js/interface/components/CarouselDialog.js:186
+msgid "Right-click to select items"
+msgstr ""
+
+#: src/js/interface/components/CarouselDialog.js:190
+msgid "Organize Projects"
+msgstr ""
+
+#: src/js/interface/components/CarouselDialog.js:191
+msgid "Create and manage projects with custom colors and icons"
+msgstr ""
+
+#: src/js/interface/components/CarouselDialog.js:192
+msgid ""
+"Double-click project names to edit • Click icons to change icon and color"
+msgstr ""
+
+#: src/js/interface/components/CarouselDialog.js:196
+msgid "Manage Clients"
+msgstr ""
+
+#: src/js/interface/components/CarouselDialog.js:197
+msgid "Add clients with billing rates and contact information"
+msgstr ""
+
+#: src/js/interface/components/CarouselDialog.js:198
+msgid "Set custom currencies in settings"
+msgstr ""
+
+#: src/js/interface/components/CarouselDialog.js:203
+msgid "Launch with terminal command or setup system hotkey"
+msgstr ""
+
+#: src/js/interface/components/CarouselDialog.js:208
+#: src/js/interface/components/PreferencesDialog.js:420
+msgid "Pomodoro Timer"
+msgstr ""
+
+#: src/js/interface/components/CarouselDialog.js:209
+msgid "Activate 20 minutes by default and you can customize it inside settings"
+msgstr ""
+
+#: src/js/interface/components/CarouselDialog.js:210
+msgid "Shift+click track button to track items in pomodoro mode"
+msgstr ""
+
+#: src/js/interface/components/CarouselDialog.js:310
+#: src/js/interface/components/PreferencesDialog.js:502
+msgid "Copy command"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:20
+msgid "Preferences"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:33 src/ui/window.blp:36
+msgid "About"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:41
+msgid "Global"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:49
+#: src/js/interface/pages/ClientsPage.js:17 src/ui/window.blp:72
+#: src/ui/window.blp:362
+msgid "Clients"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:116
+#: src/js/interface/components/PreferencesDialog.js:573
+msgid "Details"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:130
+#: src/js/interface/components/PreferencesDialog.js:672
+msgid "Credits"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:144
+#: src/js/interface/components/PreferencesDialog.js:749
+msgid "Legal"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:162
+msgid "Appearance"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:167
+msgid "Theme"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:168
+msgid "Choose your preferred theme"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:247
+msgid "Accent Color"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:248
+msgid "Choose system accent or custom color"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:259
+msgid "Standard"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:263
+msgid "Custom"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:275
+msgid "Custom Color"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:276
+msgid "Pick your preferred accent color"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:346
+msgid "Behavior"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:351
+msgid "Sidebar"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:352
+msgid "Choose sidebar behavior on launch"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:363
+msgid "Opened"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:364
+msgid "Always open on launch"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:368
+msgid "Closed"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:369
+msgid "Always closed on launch"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:373
+msgid "Dynamic"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:374
+msgid "Remember last state"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:425
+msgid "Timer Duration"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:426
+msgid "Default pomodoro session length in minutes"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:453
+msgid "Welcome Info"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:454
+msgid "View the app welcome tour and getting started guide"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:458
+msgid "Show Welcome Tour"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:459
+msgid "View the introductory slides and features overview"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:463
+msgid "Show Tour"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:478
+msgid "Compact Tracker Command"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:479
+msgid "Terminal command for launching compact tracker"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:483
+msgid "Terminal Command"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:484
+msgid "Use this command for hotkeys or scripts"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:534
+#: src/js/interface/components/PreferencesDialog.js:957
+msgid "Currency Settings"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:535
+#: src/js/interface/components/PreferencesDialog.js:958
+msgid "Manage available currencies for client billing"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:549
+msgid "Hidden Currencies"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:550
+msgid "Click to unhide currencies"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:555
+#: src/js/interface/components/PreferencesDialog.js:980
+msgid "Hidden"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:556
+#: src/js/interface/components/PreferencesDialog.js:981
+msgid "0 currencies hidden"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:600
+#: src/js/interface/components/PreferencesDialog.js:699
+msgid "Creator"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:605
+#: src/js/interface/components/PreferencesDialog.js:704
+msgid "Designer &amp; Developer"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:612
+msgid "Copyright"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:616
+msgid "Copyright © 2025 Vitaly Odnoyko"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:617
+msgid "All rights reserved under MIT License"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:624
+msgid "Repository"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:628
+msgid "Source Code"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:644
+msgid "Website"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:648
+msgid "Visit Website"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:711
+msgid "Special Thanks"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:715
+msgid "GNOME &amp; GTK Developers"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:716
+msgid "For the amazing toolkit and desktop environment"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:721
+msgid "Libadwaita Contributors"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:722
+msgid "For beautiful and consistent UI components"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:727
+msgid "Flatpak Community"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:728
+msgid "For modern app distribution and sandboxing"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:733
+msgid "Weblate"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:734
+msgid "For translation management and localization"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:776
+msgid "License"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:781
+msgid "Free and open source software"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:796
+msgid "Third Party"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:801
+msgid "Licensed under LGPL 2.1"
+msgstr ""
+
+#: src/js/interface/components/PreferencesDialog.js:1015
+#, javascript-format
+msgid "%d currencies hidden"
+msgstr ""
+
+#: src/js/interface/components/complex/ClientDialog.js:94
+msgid "Enter client name..."
+msgstr ""
+
+#: src/js/interface/components/complex/ClientDialog.js:108
+msgid "Hourly Rate & Currency"
+msgstr ""
+
+#: src/js/interface/components/complex/ClientDialog.js:350
 msgid "Update client information"
-msgstr "Update client information"
-
-#: src/js/interface/components/complex/ClientDialog.js:291
-#: src/js/interface/components/complex/ProjectDialog.js:285
-msgid "Save Changes"
-msgstr "Save Changes"
+msgstr ""
 
 #. Update dialog title
-#: src/js/interface/components/complex/ClientDialog.js:314
+#: src/js/interface/components/complex/ClientDialog.js:374
 msgid "Create New Client"
-msgstr "Create New Client"
+msgstr ""
 
-#: src/js/interface/components/complex/ClientDialog.js:315
+#: src/js/interface/components/complex/ClientDialog.js:375
 msgid "Add a new client with contact details and billing rates"
-msgstr "Add a new client with contact details and billing rates"
+msgstr ""
 
-#: src/js/interface/components/complex/ClientDialog.js:316
-msgid "Create Client"
-msgstr "Create Client"
+#: src/js/interface/components/complex/CurrencyDialog.js:26
+msgid "Edit Currency"
+msgstr ""
 
-#. Update dialog title
-#: src/js/interface/components/complex/ProjectDialog.js:283
-msgid "Edit Project"
-msgstr "Edit Project"
+#: src/js/interface/components/complex/CurrencyDialog.js:26
+msgid "Create New Currency"
+msgstr ""
 
-#: src/js/interface/components/complex/ProjectDialog.js:284
-msgid "Update project name and appearance"
-msgstr "Update project name and appearance"
+#: src/js/interface/components/complex/CurrencyDialog.js:27
+msgid "Update currency information"
+msgstr ""
 
-#. Update dialog title
-#: src/js/interface/components/complex/ProjectDialog.js:305
-msgid "Create New Project"
-msgstr "Create New Project"
+#: src/js/interface/components/complex/CurrencyDialog.js:27
+msgid "Add a new custom currency"
+msgstr ""
 
-#: src/js/interface/components/complex/ProjectDialog.js:306
-msgid "Create a new project"
-msgstr "Create a new project"
+#: src/js/interface/components/complex/CurrencyDialog.js:38
+msgid "Create Currency"
+msgstr ""
 
-#: src/js/interface/components/complex/ProjectDialog.js:307
-msgid "Create Project"
-msgstr "Create Project"
+#: src/js/interface/components/complex/CurrencyDialog.js:63
+msgid "Full Name"
+msgstr ""
 
-#: src/js/interface/components/complex/ModularDialogManager.js:203
-msgid "Confirm Action"
-msgstr "Confirm Action"
+#: src/js/interface/components/complex/CurrencyDialog.js:69
+msgid "e.g. US Dollar, Euro, Bitcoin..."
+msgstr ""
+
+#: src/js/interface/components/complex/CurrencyDialog.js:95
+msgid "Currency Symbol"
+msgstr ""
+
+#: src/js/interface/components/complex/CurrencyDialog.js:101
+msgid "e.g. $, €, ₿..."
+msgstr ""
+
+#: src/js/interface/components/complex/CurrencyDialog.js:117
+msgid "Currency Code"
+msgstr ""
+
+#: src/js/interface/components/complex/CurrencyDialog.js:123
+msgid "e.g. USD, EUR, BTC..."
+msgstr ""
+
+#: src/js/interface/components/complex/DateRangeSelector.js:61
+#: src/js/interface/pages/TasksPage.js:250 src/ui/window.blp:205
+msgid "Today"
+msgstr ""
+
+#: src/js/interface/components/complex/DateRangeSelector.js:62
+msgid "Yesterday"
+msgstr ""
+
+#: src/js/interface/components/complex/DateRangeSelector.js:63
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:133
+#: src/js/interface/pages/TasksPage.js:251 src/ui/window.blp:109
+#: src/ui/window.blp:205
+msgid "This Week"
+msgstr ""
+
+#: src/js/interface/components/complex/DateRangeSelector.js:64
+msgid "Last Week"
+msgstr ""
+
+#: src/js/interface/components/complex/DateRangeSelector.js:65
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:134
+#: src/ui/window.blp:205
+msgid "This Month"
+msgstr ""
+
+#: src/js/interface/components/complex/DateRangeSelector.js:66
+msgid "Last Month"
+msgstr ""
+
+#: src/js/interface/components/complex/DateRangeSelector.js:101
+#: src/js/interface/components/complex/DateRangeSelector.js:134
+msgid "to"
+msgstr ""
+
+#: src/js/interface/components/complex/DateRangeSelector.js:209
+msgid "Select Start Date"
+msgstr ""
+
+#: src/js/interface/components/complex/DateRangeSelector.js:209
+msgid "Select End Date"
+msgstr ""
+
+#: src/js/interface/components/complex/DateRangeSelector.js:210
+msgid "Choose the start date for the report range"
+msgstr ""
+
+#: src/js/interface/components/complex/DateRangeSelector.js:210
+msgid "Choose the end date for the report range"
+msgstr ""
+
+#: src/js/interface/components/complex/ModularDialogManager.js:137
+msgid "Task Name"
+msgstr ""
+
+#: src/js/interface/components/complex/ModularDialogManager.js:146
+msgid "Description"
+msgstr ""
+
+#: src/js/interface/components/complex/ModularDialogManager.js:165
+msgid "No client"
+msgstr ""
 
 #: src/js/interface/components/complex/ModularDialogManager.js:204
-msgid "Are you sure?"
-msgstr "Are you sure?"
+msgid "Confirm Action"
+msgstr ""
 
 #: src/js/interface/components/complex/ModularDialogManager.js:205
-msgid "Confirm"
-msgstr "Confirm"
+msgid "Are you sure?"
+msgstr ""
 
-#: src/ui/window.blp:5
-msgid "Valot"
-msgstr "Valot"
+#: src/js/interface/components/complex/ModularDialogManager.js:206
+msgid "Confirm"
+msgstr ""
+
+#: src/js/interface/components/complex/ModularDialogManager.js:247
+msgid "Error Details"
+msgstr ""
+
+#: src/js/interface/components/complex/ProjectCard.js:104
+#: src/js/interface/components/complex/TrackingWidget.js:247
+#, javascript-format
+msgid "Client: %s"
+msgstr ""
+
+#: src/js/interface/components/complex/ProjectCard.js:119
+msgid "Edit project"
+msgstr ""
+
+#: src/js/interface/components/complex/ProjectCard.js:131
+msgid "Delete project"
+msgstr ""
+
+#: src/js/interface/components/complex/ProjectCard.js:157
+#: src/js/interface/components/complex/ProjectCard.js:257
+#, javascript-format
+msgid "Total: %s"
+msgstr ""
+
+#: src/js/interface/components/complex/ProjectCard.js:165
+#: src/js/interface/components/complex/ProjectCard.js:263
+#, javascript-format
+msgid "Tasks: %d"
+msgstr ""
+
+#: src/js/interface/components/complex/ProjectCard.js:176
+#: src/js/interface/components/complex/ProjectCard.js:273
+msgid "Currently tracking"
+msgstr ""
+
+#: src/js/interface/components/complex/ProjectDialog.js:96
+msgid "Enter project name..."
+msgstr ""
+
+#: src/js/interface/components/complex/ProjectDialog.js:285
+msgid "Update project name and appearance"
+msgstr ""
+
+#: src/js/interface/components/complex/ProjectDialog.js:307
+msgid "Create a new project"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskStackTemplate.js:251
+#: src/js/interface/pages/TasksPage.js:995
+msgid "Edit Task"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:9
+msgid "Meeting"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:12
+msgid "Team Meeting - [Date]"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:13
+msgid ""
+"Weekly team sync meeting\n"
+"- Review progress\n"
+"- Discuss blockers\n"
+"- Plan next steps"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:21
+msgid "Development Task"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:24
+msgid "Implement [Feature Name]"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:25
+msgid ""
+"## Description\n"
+"Implement new feature for the application\n"
+"\n"
+"## Requirements\n"
+"- [ ] Requirement 1\n"
+"- [ ] Requirement 2\n"
+"- [ ] Requirement 3\n"
+"\n"
+"## Acceptance Criteria\n"
+"- [ ] Feature works as expected\n"
+"- [ ] Tests added\n"
+"- [ ] Documentation updated"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:33
+msgid "Bug Fix"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:36
+msgid "Fix: [Bug Description]"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:37
+msgid ""
+"## Bug Report\n"
+"**Issue:** Description of the bug\n"
+"**Steps to Reproduce:**\n"
+"1. Step 1\n"
+"2. Step 2\n"
+"3. Step 3\n"
+"\n"
+"**Expected Behavior:** What should happen\n"
+"**Actual Behavior:** What actually happens\n"
+"\n"
+"## Solution\n"
+"- [ ] Investigate root cause\n"
+"- [ ] Implement fix\n"
+"- [ ] Test fix\n"
+"- [ ] Verify no regression"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:45
+msgid "Research Task"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:48
+msgid "Research: [Topic]"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:49
+msgid ""
+"## Research Objective\n"
+"Investigate and analyze [topic]\n"
+"\n"
+"## Questions to Answer\n"
+"- Question 1?\n"
+"- Question 2?\n"
+"- Question 3?\n"
+"\n"
+"## Deliverables\n"
+"- [ ] Research summary\n"
+"- [ ] Recommendations\n"
+"- [ ] Next steps"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:57
+msgid "Code Review"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:60
+msgid "Review: [PR/MR Title]"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:61
+msgid ""
+"## Review Checklist\n"
+"- [ ] Code quality and style\n"
+"- [ ] Logic correctness\n"
+"- [ ] Performance considerations\n"
+"- [ ] Security implications\n"
+"- [ ] Test coverage\n"
+"- [ ] Documentation updates\n"
+"\n"
+"## Feedback\n"
+"[Add specific feedback here]"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:69
+msgid "Documentation"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:72
+msgid "Document: [Topic]"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:73
+msgid ""
+"## Documentation Task\n"
+"Create/update documentation for [topic]\n"
+"\n"
+"## Content to Cover\n"
+"- [ ] Overview\n"
+"- [ ] Usage examples\n"
+"- [ ] Configuration options\n"
+"- [ ] Troubleshooting\n"
+"- [ ] FAQs\n"
+"\n"
+"## Target Audience\n"
+"[Describe who will use this documentation]"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:81
+msgid "Testing Task"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:84
+msgid "Test: [Feature/Component]"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:85
+msgid ""
+"## Testing Scope\n"
+"Test [feature/component] thoroughly\n"
+"\n"
+"## Test Cases\n"
+"- [ ] Unit tests\n"
+"- [ ] Integration tests\n"
+"- [ ] Edge cases\n"
+"- [ ] Error handling\n"
+"- [ ] Performance tests\n"
+"\n"
+"## Test Environment\n"
+"- [ ] Development\n"
+"- [ ] Staging\n"
+"- [ ] Production-like"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:93
+msgid "Deployment"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:96
+msgid "Deploy: [Version/Release]"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:97
+msgid ""
+"## Deployment Plan\n"
+"Deploy [version] to [environment]\n"
+"\n"
+"## Pre-deployment Checklist\n"
+"- [ ] Code reviewed and approved\n"
+"- [ ] Tests passing\n"
+"- [ ] Database migrations ready\n"
+"- [ ] Configuration updated\n"
+"- [ ] Rollback plan prepared\n"
+"\n"
+"## Post-deployment Checklist\n"
+"- [ ] Verify deployment success\n"
+"- [ ] Run smoke tests\n"
+"- [ ] Monitor logs\n"
+"- [ ] Update documentation"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:105
+msgid "Planning Session"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:108
+msgid "Planning: [Sprint/Project]"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:109
+msgid ""
+"## Planning Session\n"
+"Plan work for [sprint/project]\n"
+"\n"
+"## Agenda\n"
+"- [ ] Review previous sprint\n"
+"- [ ] Estimate new tasks\n"
+"- [ ] Assign priorities\n"
+"- [ ] Set sprint goals\n"
+"- [ ] Identify blockers\n"
+"\n"
+"## Outcomes\n"
+"- Sprint backlog defined\n"
+"- Team capacity planned\n"
+"- Goals communicated"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:117
+msgid "Client Call"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:120
+msgid "Call: [Client Name] - [Purpose]"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplate.js:121
+msgid ""
+"## Call Details\n"
+"**Client:** [Client Name]\n"
+"**Purpose:** [Call purpose]\n"
+"**Date/Time:** [Schedule]\n"
+"\n"
+"## Agenda\n"
+"- [ ] Item 1\n"
+"- [ ] Item 2\n"
+"- [ ] Item 3\n"
+"\n"
+"## Follow-up Actions\n"
+"- [ ] Action 1\n"
+"- [ ] Action 2\n"
+"- [ ] Send meeting summary"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:21
+msgid "Choose Task Template"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:22
+msgid "Select a template to quickly create a new task with predefined content"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:38
+msgid "Search templates..."
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:58
+msgid "Select a template to see details"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:88
+msgid "Create Blank Task"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:89
+msgid "Use Template"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:214
+msgid "Customize Template"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:215
+#, javascript-format
+msgid "Customize the \"%s\" template"
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:239
+#, javascript-format
+msgid "Enter %s..."
+msgstr ""
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:250
+msgid "Show preview before creating"
+msgstr ""
+
+#: src/js/interface/components/complex/TrackingWidget.js:235
+#, javascript-format
+msgid "Project: %s"
+msgstr ""
+
+#: src/js/interface/components/primitive/ColorPicker.js:100
+msgid "Custom Color..."
+msgstr ""
+
+#: src/js/interface/components/primitive/IconPicker.js:68 src/ui/window.blp:205
+msgid "All"
+msgstr ""
+
+#: src/js/interface/components/primitive/IconPicker.js:69
+msgid "Actions"
+msgstr ""
+
+#: src/js/interface/components/primitive/IconPicker.js:70
+msgid "Apps"
+msgstr ""
+
+#: src/js/interface/components/primitive/IconPicker.js:71
+msgid "Devices"
+msgstr ""
+
+#: src/js/interface/components/primitive/IconPicker.js:72
+msgid "Emblems"
+msgstr ""
+
+#: src/js/interface/components/primitive/IconPicker.js:73
+msgid "Files"
+msgstr ""
+
+#: src/js/interface/components/primitive/IconPicker.js:74
+msgid "Places"
+msgstr ""
+
+#: src/js/interface/components/primitive/IconPicker.js:75
+msgid "Status"
+msgstr ""
+
+#: src/js/interface/components/primitive/IconPicker.js:167
+msgid "No icons found"
+msgstr ""
+
+#: src/js/interface/components/primitive/IconPicker.js:172
+msgid "Try adjusting your search or category filter"
+msgstr ""
+
+#: src/js/interface/components/selectorFactory.js:60
+msgid "No items available"
+msgstr ""
+
+#: src/js/interface/components/selectorFactory.js:61
+msgid "Go to the appropriate page to add items"
+msgstr ""
+
+#: src/js/interface/components/selectorFactory.js:114 src/js/mainwindow.js:934
+msgid "Choose a project for time tracking"
+msgstr ""
+
+#: src/js/interface/components/selectorFactory.js:132 src/js/mainwindow.js:960
+msgid "Choose a client for time tracking"
+msgstr ""
+
+#: src/js/interface/components/selectorFactory.js:199
+msgid "Choose an appropriate icon or emoji"
+msgstr ""
+
+#: src/js/interface/components/selectorFactory.js:418
+msgid "Icons"
+msgstr ""
+
+#: src/js/interface/components/selectorFactory.js:423
+msgid "Emoji"
+msgstr ""
+
+#: src/js/interface/components/widgetFactory.js:189
+#: src/js/interface/components/widgetFactory.js:248 src/ui/window.blp:227
+msgid "Previous"
+msgstr ""
+
+#: src/js/interface/components/widgetFactory.js:280
+msgid "0 selected"
+msgstr ""
+
+#. Update counter
+#: src/js/interface/components/widgetFactory.js:353
+#: src/js/interface/components/widgetFactory.js:365
+#, javascript-format
+msgid "%d selected"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:15
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:58
+msgid "PDF Export Preferences"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:71
+msgid "Export PDF"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:115
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:189
+msgid "Time Range"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:121
+msgid "Report Period"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:122
+msgid "Select the time period for your report"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:127
+msgid "Time Period"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:128
+msgid "Choose predefined period or custom range"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:135
+msgid "This Year"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:136
+msgid "Custom Range"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:151
+msgid "Custom Date Range"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:152
+msgid "Specify exact start and end dates"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:158
+msgid "Start Date"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:159
+msgid "Beginning of the report period"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:163
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:176
+msgid "Select Date"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:171
+msgid "End Date"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:172
+msgid "End of the report period"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:194
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:261
+msgid "Content"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:200
+msgid "Report Sections"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:201
+msgid "Choose which sections to include in your PDF report"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:206
+msgid "Analytics and Statistics"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:207
+msgid "Include summary statistics and analysis"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:216
+msgid "Charts and Visualizations"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:217
+msgid "Include time tracking charts and graphs"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:226
+msgid "Task Details"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:227
+msgid "Include detailed task information"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:236
+msgid "Project Information"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:237
+msgid "Include project details and summaries"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:246
+msgid "Billing and Financial Data"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:247
+msgid "Include rates, costs, and financial calculations"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:266
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:302
+msgid "Filters"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:272
+msgid "Project Filter"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:273
+msgid "Limit report to specific projects"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:278
+msgid "Select a specific project or include all projects"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:287
+msgid "Client Filter"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:288
+msgid "Limit report to specific clients"
+msgstr ""
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:293
+msgid "Select a specific client or include all clients"
+msgstr ""
+
+#. Add "All Projects" option first
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:310
+#: src/js/mainwindow.js:1991
+msgid "All Projects"
+msgstr ""
+
+#. Add "All Clients" option first
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:327
+#: src/js/mainwindow.js:2002
+msgid "All Clients"
+msgstr ""
+
+#: src/js/interface/pages/BasePage.js:70
+msgid "Refresh"
+msgstr ""
+
+#: src/js/interface/pages/BasePage.js:83
+msgid "Search"
+msgstr ""
+
+#: src/js/interface/pages/ClientsPage.js:18
+msgid "Manage your clients"
+msgstr ""
+
+#: src/js/interface/pages/ClientsPage.js:24 src/ui/window.blp:441
+msgid "Add Client"
+msgstr ""
+
+#: src/js/interface/pages/ClientsPage.js:295
+msgid "Select Currency"
+msgstr ""
+
+#: src/js/interface/pages/ClientsPage.js:296
+msgid "Choose a currency for this client"
+msgstr ""
+
+#: src/js/interface/pages/ClientsPage.js:546
+msgid "Click to change rate and currency"
+msgstr ""
+
+#: src/js/interface/pages/ClientsPage.js:628
+msgid "Edit Client Name"
+msgstr ""
+
+#: src/js/interface/pages/ClientsPage.js:629
+msgid "Enter a new name for this client"
+msgstr ""
+
+#: src/js/interface/pages/ClientsPage.js:685
+#: src/js/interface/pages/ClientsPage.js:757
+msgid "Change Currency"
+msgstr ""
+
+#: src/js/interface/pages/ClientsPage.js:686
+#, javascript-format
+msgid "Select a new currency for %s"
+msgstr ""
+
+#: src/js/interface/pages/ClientsPage.js:701
+msgid "Select Currency:"
+msgstr ""
+
+#: src/js/interface/pages/ClientsPage.js:835
+msgid "Delete Clients"
+msgstr ""
+
+#: src/js/interface/pages/ClientsPage.js:836
+#, javascript-format
+msgid ""
+"Are you sure you want to delete %d selected client(s)? This cannot be undone."
+msgstr ""
+
+#: src/js/interface/pages/ProjectsPage.js:17 src/ui/window.blp:62
+#: src/ui/window.blp:249
+msgid "Projects"
+msgstr ""
+
+#: src/js/interface/pages/ProjectsPage.js:18
+msgid "Manage your projects"
+msgstr ""
+
+#: src/js/interface/pages/ProjectsPage.js:169
+#: src/js/interface/pages/ProjectsPageInterface.js:154
+msgid "Delete Selected"
+msgstr ""
+
+#: src/js/interface/pages/ProjectsPage.js:376
+msgid "Project settings - Change color and icon"
+msgstr ""
+
+#: src/js/interface/pages/ProjectsPage.js:606
+msgid "Delete Projects"
+msgstr ""
+
+#: src/js/interface/pages/ProjectsPage.js:607
+#, javascript-format
+msgid ""
+"Are you sure you want to delete %d selected project(s)? This cannot be "
+"undone."
+msgstr ""
+
+#: src/js/interface/pages/ProjectsPage.js:860
+msgid "Edit Project Name"
+msgstr ""
+
+#: src/js/interface/pages/ProjectsPage.js:861
+#, javascript-format
+msgid "Change the name of \"%s\""
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:25 src/ui/window.blp:52
+#: src/ui/window.blp:125
+msgid "Tasks"
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:26
+msgid "Manage and track your tasks"
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:32
+msgid "Add Task"
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:38
+msgid "Add from Template"
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:249
+msgid "All Tasks"
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:252
+msgid "Active Only"
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:718
+#, javascript-format
+msgid "Tags: %s"
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:895
+#, javascript-format
+msgid "No tasks found for \"%s\""
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:900
+msgid "No tasks for today"
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:902
+msgid "No tasks for this week"
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:904
+msgid "No active tasks"
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:996
+#, javascript-format
+msgid "Modify \"%s\""
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:1285
+msgid "Select end time"
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:1397
+msgid "Select Start Date & Time"
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:1487
+msgid "Select End Date & Time"
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:1667
+#, javascript-format
+msgid ""
+"Are you sure you want to delete \"%s\"?\n"
+"\n"
+"This action cannot be undone."
+msgstr ""
+
+#: src/js/interface/pages/TasksPage.js:1748
+#, javascript-format
+msgid "Are you sure you want to delete these %d tasks?"
+msgstr ""
+
+#. Show success toast
+#: src/js/interface/pages/TasksPage.js:1788
+#, javascript-format
+msgid "%d tasks deleted successfully"
+msgstr ""
+
+#. Show success message
+#: src/js/interface/pages/TasksPage.js:2007
+#: src/js/interface/pages/TasksPage.js:2060
+#, javascript-format
+msgid "Task \"%s\" created successfully"
+msgstr ""
+
+#: src/js/mainwindow.js:717
+msgid "No projects available"
+msgstr ""
+
+#: src/js/mainwindow.js:717
+msgid "Create a project first in the Projects page"
+msgstr ""
+
+#: src/js/mainwindow.js:954
+msgid "No clients available"
+msgstr ""
+
+#: src/js/mainwindow.js:954
+msgid "Create a client first in the Clients page"
+msgstr ""
+
+#. ('❌ Failed to update weekly stats:', error);
+#: src/js/mainwindow.js:1696
+msgid "Error loading stats"
+msgstr ""
+
+#: src/js/mainwindow.js:2192
+msgid "No recent tasks"
+msgstr ""
+
+#: src/js/mainwindow.js:2193
+msgid "Tasks matching your filters will appear here"
+msgstr ""
 
 #: src/ui/window.blp:21
 msgid "Navigation"
-msgstr "Navigation"
+msgstr ""
 
 #: src/ui/window.blp:30
-msgid "Toggle Sidebar"
-msgstr "Toggle Sidebar"
-
-#: src/ui/window.blp:36
-msgid "About"
-msgstr "About"
-
-#: src/ui/window.blp:52 src/ui/window.blp:125
-msgid "Tasks"
-msgstr "Tasks"
-
-#: src/ui/window.blp:62 src/ui/window.blp:247
-msgid "Projects"
-msgstr "Projects"
-
-#: src/ui/window.blp:72 src/ui/window.blp:361
-msgid "Clients"
-msgstr "Clients"
+msgid "Hide Sidebar"
+msgstr ""
 
 #: src/ui/window.blp:82 src/ui/window.blp:476
 msgid "Reports"
-msgstr "Reports"
+msgstr ""
 
 #: src/ui/window.blp:103
 msgid "Quick Stats"
-msgstr "Quick Stats"
+msgstr ""
 
-#: src/ui/window.blp:109 src/ui/window.blp:206
-msgid "This Week"
-msgstr "This Week"
-
-#: src/ui/window.blp:134 src/ui/window.blp:255 src/ui/window.blp:369
+#: src/ui/window.blp:134 src/ui/window.blp:257 src/ui/window.blp:370
 #: src/ui/window.blp:484
 msgid "Show Sidebar"
-msgstr "Show Sidebar"
+msgstr ""
 
-#: src/ui/window.blp:145 src/ui/window.blp:266 src/ui/window.blp:380
-#: src/ui/window.blp:495 src/ui/compact-tracker.blp:35
-msgid "Task name"
-msgstr "Task name"
-
-#: src/ui/window.blp:153 src/ui/window.blp:274 src/ui/window.blp:388
-#: src/ui/window.blp:503 src/ui/compact-tracker.blp:43
-msgid "Project"
-msgstr "Project"
-
-#: src/ui/window.blp:161 src/ui/window.blp:282 src/ui/window.blp:396
-#: src/ui/window.blp:511 src/ui/compact-tracker.blp:51
-msgid "Client"
-msgstr "Client"
-
-#: src/ui/window.blp:175 src/ui/window.blp:296 src/ui/window.blp:410
-#: src/ui/window.blp:525 src/ui/compact-tracker.blp:66
-msgid "Start tracking"
-msgstr "Start tracking"
-
-#: src/ui/window.blp:183 src/ui/window.blp:304 src/ui/window.blp:418
-#: src/ui/window.blp:533
+#: src/ui/window.blp:182 src/ui/window.blp:305 src/ui/window.blp:418
+#: src/ui/window.blp:532
 msgid "Open Compact Tracker"
-msgstr "Open Compact Tracker"
+msgstr ""
 
-#: src/ui/window.blp:200
-msgid "Search tasks..."
-msgstr "Search tasks..."
-
-#: src/ui/window.blp:206
-msgid "All"
-msgstr "All"
-
-#: src/ui/window.blp:206
-msgid "Today"
-msgstr "Today"
-
-#: src/ui/window.blp:206
-msgid "This Month"
-msgstr "This Month"
-
-#: src/ui/window.blp:227
-msgid "Previous"
-msgstr "Previous"
-
-#: src/ui/window.blp:238
-msgid "Next"
-msgstr "Next"
-
-#: src/ui/window.blp:327
+#: src/ui/window.blp:328
 msgid "Add Project"
-msgstr "Add Project"
+msgstr ""
 
-#: src/ui/window.blp:335
+#: src/ui/window.blp:336
 msgid "Add project"
-msgstr "Add project"
-
-#: src/ui/window.blp:436
-msgid "Search clients..."
-msgstr "Search clients..."
-
-#: src/ui/window.blp:441
-msgid "Add Client"
-msgstr "Add Client"
+msgstr ""
 
 #: src/ui/window.blp:449
 msgid "Add client"
-msgstr "Add client"
+msgstr ""
 
-#: src/ui/window.blp:538
+#: src/ui/window.blp:537
 msgid "PDF Export Preview"
-msgstr "PDF Export Preview"
+msgstr ""
 
-#: src/ui/window.blp:553
+#: src/ui/window.blp:552
 msgid "Task Reports"
-msgstr "Task Reports"
+msgstr ""
 
-#: src/ui/window.blp:573
+#: src/ui/window.blp:572
 msgid "Week"
-msgstr "Week"
+msgstr ""
 
-#: src/ui/window.blp:573
+#: src/ui/window.blp:572
 msgid "Month"
-msgstr "Month"
+msgstr ""
 
-#: src/ui/window.blp:573
+#: src/ui/window.blp:572
 msgid "Year"
-msgstr "Year"
+msgstr ""
 
-#: src/ui/window.blp:576
+#: src/ui/window.blp:575
 msgid "Select time period"
-msgstr "Select time period"
+msgstr ""
 
-#: src/ui/window.blp:581
+#: src/ui/window.blp:580
 msgid "Filter by project"
-msgstr "Filter by project"
+msgstr ""
 
-#: src/ui/window.blp:586
+#: src/ui/window.blp:585
 msgid "Filter by client"
-msgstr "Filter by client"
+msgstr ""
 
-#: src/ui/window.blp:597
+#: src/ui/window.blp:596
 msgid "📊 Chart Visualization"
-msgstr "📊 Chart Visualization"
+msgstr ""
 
-#: src/ui/window.blp:604
+#: src/ui/window.blp:603
 msgid "Time tracking data will be visualized here"
-msgstr "Time tracking data will be visualized here"
+msgstr ""
 
-#: src/ui/window.blp:614
+#: src/ui/window.blp:613
 msgid "Summary Statistics"
-msgstr "Summary Statistics"
+msgstr ""
 
-#: src/ui/window.blp:646
+#: src/ui/window.blp:645
 msgid "Total Time"
-msgstr "Total Time"
+msgstr ""
 
-#: src/ui/window.blp:677
+#: src/ui/window.blp:676
 msgid "Active Projects"
-msgstr "Active Projects"
+msgstr ""
 
-#: src/ui/window.blp:718
+#: src/ui/window.blp:712
 msgid "Total Earnings"
-msgstr "Total Earnings"
+msgstr ""
 
-#: src/ui/window.blp:749
+#: src/ui/window.blp:743
 msgid "Tracked Tasks"
-msgstr "Tracked Tasks"
+msgstr ""
 
-#: src/ui/window.blp:758
+#: src/ui/window.blp:752
 msgid "Recent Tasks"
-msgstr "Recent Tasks"
+msgstr ""
 
-#: src/ui/window.blp:759
+#: src/ui/window.blp:753
 msgid "Your most recent completed tasks"
-msgstr "Your most recent completed tasks"
+msgstr ""
 
-#: src/ui/window.blp:764
-msgid "Delete Selected Tasks"
-msgstr "Delete Selected Tasks"
-
-#: src/ui/window.blp:775
-msgid "No tasks yet"
-msgstr "No tasks yet"
-
-#: src/ui/window.blp:776
+#: src/ui/window.blp:761
 msgid "Start tracking time to see your tasks here"
-msgstr "Start tracking time to see your tasks here"
-
-#: src/ui/compact-tracker.blp:5
-msgid "Compact Tracker"
-msgstr "Compact Tracker"
-
-#: src/ui/compact-tracker.blp:23
-msgid "Close compact tracker and open main window"
-msgstr "Close compact tracker and open main window"
+msgstr ""

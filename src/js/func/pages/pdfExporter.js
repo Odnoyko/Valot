@@ -5,6 +5,8 @@ import Gio from 'gi://Gio';
 import { TimeUtils } from 'resource:///com/odnoyko/valot/js/func/global/timeUtils.js';
 import { Config } from 'resource:///com/odnoyko/valot/config.js';
 
+const _ = (str) => str;
+
 export class PDFExporter {
     constructor(tasks, projects, clients, currentPeriod = 'week', selectedProjectId = null, selectedClientId = null) {
         this.tasks = tasks || [];
@@ -22,7 +24,7 @@ export class PDFExporter {
 
     async exportToPDF(parentWindow) {
         const dialog = new Gtk.FileDialog({
-            title: 'Export Time Report (Text)'
+            title: _('Export Time Report (Text)')
         });
 
         // Set initial folder to user documents (localized)
@@ -62,7 +64,7 @@ export class PDFExporter {
 
                 // Show success notification
                 const toast = new Gtk.AlertDialog({
-                    message: 'Report Export Complete',
+                    message: _('Report Export Complete'),
                     detail: `Report saved to: ${filepath}`
                 });
                 toast.show(parentWindow);
@@ -71,7 +73,7 @@ export class PDFExporter {
             if (error.code !== Gtk.DialogError.DISMISSED) {
                 //('PDF export error:', error);
                 const errorDialog = new Gtk.AlertDialog({
-                    message: 'Export Failed',
+                    message: _('Export Failed'),
                     detail: `Could not export PDF: ${error.message}`
                 });
                 errorDialog.show(parentWindow);

@@ -97,7 +97,7 @@ export class ColorPicker {
         this.widget.append(separator);
 
         const customButton = new Button({
-            label: 'Custom Color...',
+            label: _('Custom Color...'),
             iconName: 'color-select-symbolic',
             cssClasses: ['flat'],
             onClick: () => this._showCustomColorDialog()

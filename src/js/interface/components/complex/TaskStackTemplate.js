@@ -248,7 +248,7 @@ export class TaskStackTemplate {
         const editBtn = new Gtk.Button({
             icon_name: 'document-edit-symbolic',
             css_classes: ['flat'],
-            tooltip_text: 'Aufgabe bearbeiten'
+            tooltip_text: _('Edit Task')
         });
         editBtn.connect('clicked', () => this.parentWindow._editTask(task.id));
         taskButtonBox.append(editBtn);

@@ -128,14 +128,14 @@ export const CarouselDialog = GObject.registerClass({
         carousel.connect('notify::position', () => {
             const position = carousel.position;
             const totalPages = carousel.get_n_pages();
-            
+
             // Hide skip button on last slide
             skipButton.visible = position < totalPages - 1;
-            
+
             if (position >= totalPages - 1) {
-                nextButton.label = 'Get Started';
+                nextButton.label = _('Get Started');
             } else {
-                nextButton.label = 'Next';
+                nextButton.label = _('Next');
             }
         });
 

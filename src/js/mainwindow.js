@@ -60,6 +60,7 @@ import { ProjectsPage } from 'resource:///com/odnoyko/valot/js/interface/pages/P
 import { ClientsPage } from 'resource:///com/odnoyko/valot/js/interface/pages/ClientsPage.js';
 import { ReportsPage } from 'resource:///com/odnoyko/valot/js/interface/pages/ReportsPage.js';
 import { PDFExportPreferencesDialog } from 'resource:///com/odnoyko/valot/js/interface/dialogs/PDFExportPreferencesDialog.js';
+import { BUTTON, PLACEHOLDER, TOOLTIP } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 export const ValotWindow = GObject.registerClass({
     GTypeName: 'ValotWindow',
@@ -713,7 +714,7 @@ export const ValotWindow = GObject.registerClass({
             this._loadProjects();
             const projects = this.allProjects;
             if (projects.length === 0) {
-                this._showMessage('No projects available', 'Create a project first in the Projects page');
+                this._showMessage(_('No projects available'), _('Create a project first in the Projects page'));
                 return;
             }
 
@@ -735,7 +736,7 @@ export const ValotWindow = GObject.registerClass({
 
             // Search entry
             const searchEntry = new Gtk.SearchEntry({
-                placeholder_text: 'Search projects...',
+                placeholder_text: PLACEHOLDER.SEARCH_PROJECTS,
                 hexpand: true
             });
 
@@ -929,11 +930,11 @@ export const ValotWindow = GObject.registerClass({
             } else {
                 // Fallback to dialog-style if no trigger button
                 const dialog = new Adw.AlertDialog({
-                    heading: 'Select Project',
-                    body: 'Choose a project for time tracking'
+                    heading: _('Select Project'),
+                    body: _('Choose a project for time tracking')
                 });
                 dialog.set_extra_child(mainBox);
-                dialog.add_response('cancel', 'Cancel');
+                dialog.add_response('cancel', BUTTON.CANCEL);
                 dialog.present(this);
             }
 
@@ -950,13 +951,13 @@ export const ValotWindow = GObject.registerClass({
         try {
             const clients = this.allClients;
             if (clients.length === 0) {
-                this._showMessage('No clients available', 'Create a client first in the Clients page');
+                this._showMessage(_('No clients available'), _('Create a client first in the Clients page'));
                 return;
             }
 
             const dialog = new Adw.AlertDialog({
-                heading: 'Select Client',
-                body: 'Choose a client for time tracking'
+                heading: _('Select Client'),
+                body: _('Choose a client for time tracking')
             });
 
             const listBox = new Gtk.ListBox({
@@ -974,8 +975,8 @@ export const ValotWindow = GObject.registerClass({
             });
 
             dialog.set_extra_child(listBox);
-            dialog.add_response('cancel', 'Cancel');
-            dialog.add_response('select', 'Select');
+            dialog.add_response('cancel', BUTTON.CANCEL);
+            dialog.add_response('select', BUTTON.SELECT);
             dialog.set_response_appearance('select', Adw.ResponseAppearance.SUGGESTED);
 
             dialog.connect('response', (dialog, response) => {
@@ -1009,7 +1010,7 @@ export const ValotWindow = GObject.registerClass({
                 this.projectButton.setIcon(currentProject.icon || 'folder-symbolic');
                 this._applyStoredIconColor(currentProject.icon_color || 'white');
             } else {
-                this.projectButton.setTooltip('Select Project');
+                this.projectButton.setTooltip(TOOLTIP.SELECT_PROJECT);
                 this.projectButton.setBackgroundColor('#cccccc');
                 this.projectButton.setIcon('folder-symbolic');
                 this._applyStoredIconColor('black'); // Default icon color for gray background
@@ -1037,7 +1038,7 @@ export const ValotWindow = GObject.registerClass({
             heading: title,
             body: message
         });
-        dialog.add_response('ok', 'OK');
+        dialog.add_response('ok', BUTTON.OK);
         dialog.present(this);
     }
 
@@ -1692,7 +1693,7 @@ export const ValotWindow = GObject.registerClass({
 
         } catch (error) {
             //('❌ Failed to update weekly stats:', error);
-            this._weekly_time_row.set_subtitle('Error loading stats');
+            this._weekly_time_row.set_subtitle(_('Error loading stats'));
         }
     }
 
@@ -2188,8 +2189,8 @@ export const ValotWindow = GObject.registerClass({
             if (recentTasks.length === 0) {
                 // Show empty state
                 const emptyRow = new Adw.ActionRow({
-                    title: 'No recent tasks',
-                    subtitle: 'Tasks matching your filters will appear here',
+                    title: _('No recent tasks'),
+                    subtitle: _('Tasks matching your filters will appear here'),
                     sensitive: false
                 });
                 

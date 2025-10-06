@@ -1,6 +1,7 @@
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
 import GObject from 'gi://GObject';
+import { BUTTON } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 /**
  * Currency creation/editing dialog
@@ -22,8 +23,8 @@ export class CurrencyDialog {
         
         // Create dialog
         this.dialog = new Adw.AlertDialog({
-            heading: isEdit ? 'Edit Currency' : 'Create New Currency',
-            body: isEdit ? 'Update currency information' : 'Add a new custom currency',
+            heading: isEdit ? _('Edit Currency') : _('Create New Currency'),
+            body: isEdit ? _('Update currency information') : _('Add a new custom currency'),
         });
 
         // Store transient_for for later use
@@ -33,8 +34,8 @@ export class CurrencyDialog {
         this._createForm(isEdit, currency);
         
         // Add buttons
-        this.dialog.add_response('cancel', 'Cancel');
-        this.dialog.add_response('save', isEdit ? 'Save Changes' : 'Create Currency');
+        this.dialog.add_response('cancel', BUTTON.CANCEL);
+        this.dialog.add_response('save', isEdit ? BUTTON.SAVE_CHANGES : _('Create Currency'));
         this.dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
         
         // Connect response signal
@@ -59,13 +60,13 @@ export class CurrencyDialog {
 
         // ROW 1: Full Name (full width)
         const fullNameLabel = new Gtk.Label({
-            label: 'Full Name',
+            label: _('Full Name'),
             halign: Gtk.Align.START,
             css_classes: ['heading']
         });
-        
+
         this.nameEntry = new Gtk.Entry({
-            placeholder_text: 'e.g. US Dollar, Euro, Bitcoin...',
+            placeholder_text: _('e.g. US Dollar, Euro, Bitcoin...'),
             text: isEdit ? (currency.name || '') : '',
             hexpand: true
         });
@@ -89,15 +90,15 @@ export class CurrencyDialog {
             orientation: Gtk.Orientation.VERTICAL,
             spacing: 6
         });
-        
+
         const symbolLabel = new Gtk.Label({
-            label: 'Currency Symbol',
+            label: _('Currency Symbol'),
             halign: Gtk.Align.START,
             css_classes: ['heading']
         });
-        
+
         this.symbolEntry = new Gtk.Entry({
-            placeholder_text: 'e.g. $, €, ₿...',
+            placeholder_text: _('e.g. $, €, ₿...'),
             text: isEdit ? (currency.symbol || '') : '',
             hexpand: true,
             max_length: 5
@@ -111,15 +112,15 @@ export class CurrencyDialog {
             orientation: Gtk.Orientation.VERTICAL,
             spacing: 6
         });
-        
+
         const codeLabel = new Gtk.Label({
-            label: 'Currency Code',
+            label: _('Currency Code'),
             halign: Gtk.Align.START,
             css_classes: ['heading']
         });
-        
+
         this.codeEntry = new Gtk.Entry({
-            placeholder_text: 'e.g. USD, EUR, BTC...',
+            placeholder_text: _('e.g. USD, EUR, BTC...'),
             text: isEdit ? (currency.code || '') : '',
             hexpand: true,
             max_length: 10

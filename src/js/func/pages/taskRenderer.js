@@ -7,6 +7,7 @@ import { executeNonSelectCommand } from 'resource:///com/odnoyko/valot/js/func/g
 import { WidgetFactory } from 'resource:///com/odnoyko/valot/js/interface/components/widgetFactory.js';
 import { Button } from 'resource:///com/odnoyko/valot/js/interface/components/primitive/Button.js';
 import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/js/data/currencies.js';
+import { TOOLTIP } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 // Import template components
 import { TaskRowTemplate } from 'resource:///com/odnoyko/valot/js/interface/components/complex/TaskRowTemplate.js';
@@ -312,7 +313,7 @@ export class TaskRenderer {
         const editBtn = new Gtk.Button({
             icon_name: 'document-edit-symbolic',
             css_classes: ['flat'],
-            tooltip_text: 'Edit Task'
+            tooltip_text: TOOLTIP.EDIT_TASK
         });
         editBtn.connect('clicked', () => this.parentWindow._editTask(task.id));
         taskButtonBox.append(editBtn);
@@ -339,7 +340,7 @@ export class TaskRenderer {
         const editBtn = new Gtk.Button({
             icon_name: 'document-edit-symbolic',
             css_classes: ['flat'],
-            tooltip_text: 'Edit Task'
+            tooltip_text: TOOLTIP.EDIT_TASK
         });
         editBtn.connect('clicked', () => this.parentWindow._editTask(task.id));
         taskButtonBox.append(editBtn);
@@ -348,7 +349,7 @@ export class TaskRenderer {
         const trackBtn = new Gtk.Button({
             icon_name: 'media-playback-start-symbolic', // Will be updated by state manager
             css_classes: ['flat'],
-            tooltip_text: 'Start Tracking', // Will be updated by state manager
+            tooltip_text: TOOLTIP.START_TRACKING, // Will be updated by state manager
             width_request: 32,
             height_request: 32
         });

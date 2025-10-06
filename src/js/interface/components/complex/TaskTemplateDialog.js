@@ -1,6 +1,7 @@
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
 import { taskTemplateManager } from './TaskTemplate.js';
+import { BUTTON } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 /**
  * Task Template Selection Dialog
@@ -17,8 +18,8 @@ export class TaskTemplateDialog {
 
     _createDialog() {
         this.dialog = new Adw.AlertDialog({
-            heading: 'Choose Task Template',
-            body: 'Select a template to quickly create a new task with predefined content'
+            heading: _('Choose Task Template'),
+            body: _('Select a template to quickly create a new task with predefined content')
         });
 
         const content = new Gtk.Box({
@@ -34,7 +35,7 @@ export class TaskTemplateDialog {
 
         // Search entry
         const searchEntry = new Gtk.SearchEntry({
-            placeholder_text: 'Search templates...',
+            placeholder_text: _('Search templates...'),
             margin_bottom: 12
         });
 
@@ -54,7 +55,7 @@ export class TaskTemplateDialog {
 
         // Template details
         this.detailsLabel = new Gtk.Label({
-            label: 'Select a template to see details',
+            label: _('Select a template to see details'),
             css_classes: ['dim-label'],
             wrap: true,
             wrap_mode: 2, // WORD_CHAR
@@ -83,10 +84,10 @@ export class TaskTemplateDialog {
         });
 
         this.dialog.set_extra_child(content);
-        this.dialog.add_response('cancel', 'Cancel');
-        this.dialog.add_response('blank', 'Create Blank Task');
-        this.dialog.add_response('use_template', 'Use Template');
-        
+        this.dialog.add_response('cancel', BUTTON.CANCEL);
+        this.dialog.add_response('blank', _('Create Blank Task'));
+        this.dialog.add_response('use_template', _('Use Template'));
+
         this.dialog.set_response_appearance('blank', Adw.ResponseAppearance.DEFAULT);
         this.dialog.set_response_appearance('use_template', Adw.ResponseAppearance.SUGGESTED);
 
@@ -210,8 +211,8 @@ ${this.selectedTemplate.fields.description.slice(0, 200)}${this.selectedTemplate
 
     _showCustomizationDialog() {
         const customDialog = new Adw.AlertDialog({
-            heading: 'Customize Template',
-            body: `Customize the "${this.selectedTemplate.name}" template`
+            heading: _('Customize Template'),
+            body: _('Customize the "%s" template').format(this.selectedTemplate.name)
         });
 
         const form = new Gtk.Box({
@@ -235,7 +236,7 @@ ${this.selectedTemplate.fields.description.slice(0, 200)}${this.selectedTemplate
             });
 
             const entry = new Gtk.Entry({
-                placeholder_text: `Enter ${placeholder.toLowerCase()}...`
+                placeholder_text: _('Enter %s...').format(placeholder.toLowerCase())
             });
 
             replacementEntries[placeholder] = entry;
@@ -246,15 +247,15 @@ ${this.selectedTemplate.fields.description.slice(0, 200)}${this.selectedTemplate
 
         // Show preview checkbox
         const previewCheck = new Gtk.CheckButton({
-            label: 'Show preview before creating',
+            label: _('Show preview before creating'),
             active: false
         });
 
         form.append(previewCheck);
 
         customDialog.set_extra_child(form);
-        customDialog.add_response('cancel', 'Cancel');
-        customDialog.add_response('create', 'Create Task');
+        customDialog.add_response('cancel', BUTTON.CANCEL);
+        customDialog.add_response('create', BUTTON.CREATE_TASK);
         customDialog.set_response_appearance('create', Adw.ResponseAppearance.SUGGESTED);
 
         customDialog.connect('response', (dialog, response) => {

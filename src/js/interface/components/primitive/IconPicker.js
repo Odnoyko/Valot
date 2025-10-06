@@ -65,14 +65,14 @@ export class IconPicker {
         });
 
         const categories = [
-            { id: 'all', label: 'All', count: this.config.icons.length },
-            { id: 'actions', label: 'Actions' },
-            { id: 'apps', label: 'Apps' },
-            { id: 'devices', label: 'Devices' },
-            { id: 'emblems', label: 'Emblems' },
-            { id: 'mimetypes', label: 'Files' },
-            { id: 'places', label: 'Places' },
-            { id: 'status', label: 'Status' }
+            { id: 'all', label: _('All'), count: this.config.icons.length },
+            { id: 'actions', label: _('Actions') },
+            { id: 'apps', label: _('Apps') },
+            { id: 'devices', label: _('Devices') },
+            { id: 'emblems', label: _('Emblems') },
+            { id: 'mimetypes', label: _('Files') },
+            { id: 'places', label: _('Places') },
+            { id: 'status', label: _('Status') }
         ];
 
         categories.forEach(category => {
@@ -164,12 +164,12 @@ export class IconPicker {
         });
 
         const emptyLabel = new Gtk.Label({
-            label: 'No icons found',
+            label: _('No icons found'),
             css_classes: ['heading']
         });
 
         const emptyHint = new Gtk.Label({
-            label: 'Try adjusting your search or category filter',
+            label: _('Try adjusting your search or category filter'),
             css_classes: ['dim-label']
         });
 
