@@ -1,6 +1,7 @@
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
 import GObject from 'gi://GObject';
+import { BUTTON, LABEL } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 /**
  * PDF Export Preferences Dialog
@@ -11,7 +12,7 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
 }, class PDFExportPreferencesDialog extends Adw.Dialog {
     _init(parentWindow, reportExporter) {
         super._init({
-            title: 'PDF Export Preferences'
+            title: _('PDF Export Preferences')
         });
 
         this.parentWindow = parentWindow;
@@ -54,20 +55,20 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
         // Create header bar
         const headerBar = new Adw.HeaderBar({
             title_widget: new Adw.WindowTitle({
-                title: 'PDF Export Preferences'
+                title: _('PDF Export Preferences')
             })
         });
 
         // Add Cancel button
         const cancelButton = new Gtk.Button({
-            label: 'Cancel'
+            label: BUTTON.CANCEL
         });
         cancelButton.connect('clicked', () => this.close());
         headerBar.pack_start(cancelButton);
 
         // Add Export button
         this.exportButton = new Gtk.Button({
-            label: 'Export PDF',
+            label: _('Export PDF'),
             css_classes: ['suggested-action']
         });
         this.exportButton.connect('clicked', () => this.applyAndExport());
@@ -111,28 +112,28 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
 
     _createTimeSettingsPage() {
         const timePage = new Adw.PreferencesPage({
-            title: 'Time Range',
+            title: _('Time Range'),
             icon_name: 'clock-symbolic'
         });
 
         // Time Period Group
         const periodGroup = new Adw.PreferencesGroup({
-            title: 'Report Period',
-            description: 'Select the time period for your report'
+            title: _('Report Period'),
+            description: _('Select the time period for your report')
         });
 
         // Period selection row
         const periodRow = new Adw.ComboRow({
-            title: 'Time Period',
-            subtitle: 'Choose predefined period or custom range'
+            title: _('Time Period'),
+            subtitle: _('Choose predefined period or custom range')
         });
 
         const periodModel = new Gtk.StringList();
         periodModel.splice(0, 0, [
-            'This Week',
-            'This Month', 
-            'This Year',
-            'Custom Range'
+            _('This Week'),
+            _('This Month'),
+            _('This Year'),
+            _('Custom Range')
         ]);
         periodRow.set_model(periodModel);
         periodRow.set_selected(0); // Default to "This Week"
@@ -147,19 +148,19 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
 
         // Custom date range group (initially hidden)
         this.customDateGroup = new Adw.PreferencesGroup({
-            title: 'Custom Date Range',
-            description: 'Specify exact start and end dates',
+            title: _('Custom Date Range'),
+            description: _('Specify exact start and end dates'),
             visible: false
         });
 
         // Start date row
         const startDateRow = new Adw.ActionRow({
-            title: 'Start Date',
-            subtitle: 'Beginning of the report period'
+            title: _('Start Date'),
+            subtitle: _('Beginning of the report period')
         });
 
         this.startDateButton = new Gtk.Button({
-            label: 'Select Date',
+            label: _('Select Date'),
             css_classes: ['flat'],
             valign: Gtk.Align.CENTER
         });
@@ -167,12 +168,12 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
 
         // End date row
         const endDateRow = new Adw.ActionRow({
-            title: 'End Date', 
-            subtitle: 'End of the report period'
+            title: _('End Date'),
+            subtitle: _('End of the report period')
         });
 
         this.endDateButton = new Gtk.Button({
-            label: 'Select Date',
+            label: _('Select Date'),
             css_classes: ['flat'],
             valign: Gtk.Align.CENTER
         });
@@ -185,25 +186,25 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
         timePage.add(periodGroup);
         timePage.add(this.customDateGroup);
         
-        this.viewStack.add_titled(timePage, 'time', 'Time Range');
+        this.viewStack.add_titled(timePage, 'time', _('Time Range'));
     }
 
     _createContentSettingsPage() {
         const contentPage = new Adw.PreferencesPage({
-            title: 'Content',
+            title: _('Content'),
             icon_name: 'document-properties-symbolic'
         });
 
         // Report Sections Group
         const sectionsGroup = new Adw.PreferencesGroup({
-            title: 'Report Sections',
-            description: 'Choose which sections to include in your PDF report'
+            title: _('Report Sections'),
+            description: _('Choose which sections to include in your PDF report')
         });
 
         // Analytics switch
         const analyticsRow = new Adw.SwitchRow({
-            title: 'Analytics and Statistics',
-            subtitle: 'Include summary statistics and analysis',
+            title: _('Analytics and Statistics'),
+            subtitle: _('Include summary statistics and analysis'),
             active: this.exportConfig.includeAnalytics
         });
         analyticsRow.connect('notify::active', () => {
@@ -212,8 +213,8 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
 
         // Charts switch
         const chartsRow = new Adw.SwitchRow({
-            title: 'Charts and Visualizations',
-            subtitle: 'Include time tracking charts and graphs',
+            title: _('Charts and Visualizations'),
+            subtitle: _('Include time tracking charts and graphs'),
             active: this.exportConfig.includeCharts
         });
         chartsRow.connect('notify::active', () => {
@@ -222,8 +223,8 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
 
         // Tasks switch
         const tasksRow = new Adw.SwitchRow({
-            title: 'Task Details',
-            subtitle: 'Include detailed task information',
+            title: _('Task Details'),
+            subtitle: _('Include detailed task information'),
             active: this.exportConfig.includeTasks
         });
         tasksRow.connect('notify::active', () => {
@@ -232,8 +233,8 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
 
         // Projects switch
         const projectsRow = new Adw.SwitchRow({
-            title: 'Project Information',
-            subtitle: 'Include project details and summaries',
+            title: _('Project Information'),
+            subtitle: _('Include project details and summaries'),
             active: this.exportConfig.includeProjects
         });
         projectsRow.connect('notify::active', () => {
@@ -242,8 +243,8 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
 
         // Billing switch
         const billingRow = new Adw.SwitchRow({
-            title: 'Billing and Financial Data',
-            subtitle: 'Include rates, costs, and financial calculations',
+            title: _('Billing and Financial Data'),
+            subtitle: _('Include rates, costs, and financial calculations'),
             active: this.exportConfig.includeBilling
         });
         billingRow.connect('notify::active', () => {
@@ -257,24 +258,24 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
         sectionsGroup.add(billingRow);
 
         contentPage.add(sectionsGroup);
-        this.viewStack.add_titled(contentPage, 'content', 'Content');
+        this.viewStack.add_titled(contentPage, 'content', _('Content'));
     }
 
     _createProjectClientSettingsPage() {
         const filterPage = new Adw.PreferencesPage({
-            title: 'Filters',
+            title: _('Filters'),
             icon_name: 'funnel-symbolic'
         });
 
         // Project Filter Group
         const projectGroup = new Adw.PreferencesGroup({
-            title: 'Project Filter',
-            description: 'Limit report to specific projects'
+            title: _('Project Filter'),
+            description: _('Limit report to specific projects')
         });
 
         this.projectFilterRow = new Adw.ComboRow({
-            title: 'Project',
-            subtitle: 'Select a specific project or include all projects'
+            title: LABEL.PROJECT,
+            subtitle: _('Select a specific project or include all projects')
         });
 
         // Will be populated with actual projects
@@ -283,13 +284,13 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
 
         // Client Filter Group
         const clientGroup = new Adw.PreferencesGroup({
-            title: 'Client Filter',
-            description: 'Limit report to specific clients'
+            title: _('Client Filter'),
+            description: _('Limit report to specific clients')
         });
 
         this.clientFilterRow = new Adw.ComboRow({
-            title: 'Client',
-            subtitle: 'Select a specific client or include all clients'
+            title: LABEL.CLIENT,
+            subtitle: _('Select a specific client or include all clients')
         });
 
         // Will be populated with actual clients
@@ -298,15 +299,15 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
 
         filterPage.add(projectGroup);
         filterPage.add(clientGroup);
-        this.viewStack.add_titled(filterPage, 'filters', 'Filters');
+        this.viewStack.add_titled(filterPage, 'filters', _('Filters'));
     }
 
     _updateProjectFilter() {
         const projects = this.parentWindow?.allProjects || [];
         const projectModel = new Gtk.StringList();
-        
+
         // Add "All Projects" option first
-        const projectOptions = ['All Projects', ...projects.map(p => p.name)];
+        const projectOptions = [_('All Projects'), ...projects.map(p => p.name)];
         projectModel.splice(0, 0, projectOptions);
         
         this.projectFilterRow.set_model(projectModel);
@@ -321,9 +322,9 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
     _updateClientFilter() {
         const clients = this.parentWindow?.allClients || [];
         const clientModel = new Gtk.StringList();
-        
+
         // Add "All Clients" option first
-        const clientOptions = ['All Clients', ...clients.map(c => c.name)];
+        const clientOptions = [_('All Clients'), ...clients.map(c => c.name)];
         clientModel.splice(0, 0, clientOptions);
         
         this.clientFilterRow.set_model(clientModel);

@@ -152,12 +152,12 @@ export const ValotApplication = GObject.registerClass(
                 // Database successfully connected
                 return true;
             } catch (error) {
-                print(`Fehler bei der Datenbankverbindung: ${error.message}`);
+                print(`Database connection error: ${error.message}`);
 
                 // Show error dialog to user
                 const dialog = new Adw.AlertDialog({
-                    heading: 'Database Error',
-                    body: `Failed to initialize database: ${error.message}`
+                    heading: _('Database Error'),
+                    body: `${_('Failed to initialize database')}: ${error.message}`
                 });
 
                 if (this.active_window) {

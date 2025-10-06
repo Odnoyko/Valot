@@ -5,6 +5,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import { getCurrencySymbol, getAllCurrencies } from 'resource:///com/odnoyko/valot/js/data/currencies.js';
 import { WidgetFactory } from '../components/widgetFactory.js';
+import { BUTTON, HEADING, MESSAGE, LABEL, PLACEHOLDER, TOOLTIP, EMPTY_STATE, LOADING, ERROR } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 /**
  * Clients management page - extracted from window.js
@@ -13,14 +14,14 @@ import { WidgetFactory } from '../components/widgetFactory.js';
 export class ClientsPage {
     constructor(config = {}) {
         this.config = {
-            title: 'Clients',
-            subtitle: 'Manage your clients',
+            title: _('Clients'),
+            subtitle: _('Manage your clients'),
             showTrackingWidget: true,
             showSearchButton: true,
             actions: [
                 {
                     icon: 'list-add-symbolic',
-                    tooltip: 'Add Client',
+                    tooltip: _('Add Client'),
                     cssClasses: ['suggested-action'],
                     onClick: (page) => page.showAddClientDialog()
                 }
@@ -139,8 +140,8 @@ export class ClientsPage {
      */
     _showInlineClientDialog(initialName = '') {
         const dialog = new Adw.AlertDialog({
-            heading: 'Create Client',
-            body: 'Add a new client with name and currency'
+            heading: _('Create Client'),
+            body: _('Add a new client with name and currency')
         });
 
         // Create inline form layout with 2 rows
@@ -156,7 +157,7 @@ export class ClientsPage {
 
         // ROW 1: Client name input only
         const nameEntry = new Gtk.Entry({
-            placeholder_text: 'Client name',
+            placeholder_text: PLACEHOLDER.CLIENT_NAME,
             text: initialName,
             hexpand: true
         });
@@ -214,7 +215,7 @@ export class ClientsPage {
         const currencyButton = new Gtk.Button({
             css_classes: ['flat', 'currency-button'],
             width_request: 100,
-            tooltip_text: 'Select currency'
+            tooltip_text: _('Select currency')
         });
 
         // Default currency
@@ -247,8 +248,8 @@ export class ClientsPage {
         form.append(rateRow);
 
         dialog.set_extra_child(form);
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('create', 'Create Client');
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('create', BUTTON.CREATE_CLIENT);
         dialog.set_response_appearance('create', Adw.ResponseAppearance.SUGGESTED);
         dialog.set_default_response('create');
 
@@ -291,8 +292,8 @@ export class ClientsPage {
      */
     _showCurrencySelector(currentCurrency, onSelect) {
         const dialog = new Adw.AlertDialog({
-            heading: 'Select Currency',
-            body: 'Choose a currency for this client'
+            heading: _('Select Currency'),
+            body: _('Choose a currency for this client')
         });
 
         const scrolled = new Gtk.ScrolledWindow({
@@ -384,8 +385,8 @@ export class ClientsPage {
 
         scrolled.set_child(listBox);
         dialog.set_extra_child(scrolled);
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('select', 'Select');
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('select', BUTTON.SELECT);
         dialog.set_response_appearance('select', Adw.ResponseAppearance.SUGGESTED);
 
         dialog.connect('response', (dialog, response) => {
@@ -402,8 +403,8 @@ export class ClientsPage {
      * Load clients from database
      */
     async loadClients() {
-        this.showLoading('Loading clients...');
-        
+        this.showLoading(LOADING.LOADING_CLIENTS);
+
         try {
             this.clients = await this._fetchClients();
             this.filteredClients = [...this.clients];
@@ -411,7 +412,7 @@ export class ClientsPage {
             // Clients loaded successfully
         } catch (error) {
             //('Error loading clients:', error);
-            this.showError('Load Error', 'Failed to load clients');
+            this.showError(HEADING.LOAD_ERROR, ERROR.FAILED_LOAD_CLIENTS);
         } finally {
             this.hideLoading();
         }
@@ -542,7 +543,7 @@ export class ClientsPage {
                     halign: Gtk.Align.END,
                     valign: Gtk.Align.CENTER,
                     width_request: 120,
-                    tooltip_text: 'Click to change rate and currency'
+                    tooltip_text: _('Click to change rate and currency')
                 });
                 
                 const priceValueLabel = new Gtk.Label({
@@ -624,8 +625,8 @@ export class ClientsPage {
      */
     _editClientName(client, nameLabel) {
         const dialog = new Adw.AlertDialog({
-            heading: 'Edit Client Name',
-            body: 'Enter a new name for this client'
+            heading: _('Edit Client Name'),
+            body: _('Enter a new name for this client')
         });
 
         const entry = new Gtk.Entry({
@@ -641,8 +642,8 @@ export class ClientsPage {
         entry.select_region(0, -1);
 
         dialog.set_extra_child(entry);
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('save', 'Save');
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('save', BUTTON.SAVE);
         dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
 
         dialog.connect('response', (dialog, response) => {
@@ -681,8 +682,8 @@ export class ClientsPage {
         }
 
         const dialog = new Adw.AlertDialog({
-            heading: 'Change Currency',
-            body: `Select a new currency for ${client.name}`
+            heading: _('Change Currency'),
+            body: _('Select a new currency for %s').format(client.name)
         });
 
         const form = new Gtk.Box({
@@ -697,7 +698,7 @@ export class ClientsPage {
         // Currency selection grid
         const availableCurrencies = this._getAvailableCurrencies();
         let selectedCurrency = availableCurrencies.find(c => c.code === client.currency) || availableCurrencies[0];
-        form.append(new Gtk.Label({label: 'Select Currency:', halign: Gtk.Align.START}));
+        form.append(new Gtk.Label({label: _('Select Currency:'), halign: Gtk.Align.START}));
         
         const currencyGrid = new Gtk.Grid({
             column_spacing: 6,
@@ -752,8 +753,8 @@ export class ClientsPage {
         form.append(currencyGrid);
 
         dialog.set_extra_child(form);
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('change', 'Change Currency');
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('change', _('Change Currency'));
         dialog.set_response_appearance('change', Adw.ResponseAppearance.SUGGESTED);
 
         dialog.connect('response', (dialog, response) => {
@@ -831,12 +832,12 @@ export class ClientsPage {
 
         // Create simple confirmation dialog
         const dialog = new Adw.AlertDialog({
-            heading: 'Delete Clients',
-            body: `Are you sure you want to delete ${this.selectedClients.size} selected client(s)? This cannot be undone.`
+            heading: _('Delete Clients'),
+            body: _('Are you sure you want to delete %d selected client(s)? This cannot be undone.').format(this.selectedClients.size)
         });
 
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('delete', 'Delete');
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('delete', BUTTON.DELETE);
         dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
 
         dialog.connect('response', (dialog, response) => {
@@ -934,13 +935,13 @@ export class ClientsPage {
         });
 
         const emptyLabel = new Gtk.Label({
-            label: 'No clients found',
+            label: EMPTY_STATE.NO_CLIENTS,
             css_classes: ['title-2'],
             halign: Gtk.Align.CENTER
         });
 
         const emptySubLabel = new Gtk.Label({
-            label: 'Create your first client to get started',
+            label: EMPTY_STATE.CREATE_FIRST_CLIENT,
             css_classes: ['dim-label'],
             halign: Gtk.Align.CENTER
         });
@@ -967,19 +968,19 @@ export class ClientsPage {
 
         this.prevClientsButton = new Button({
             iconName: 'go-previous-symbolic',
-            tooltipText: 'Previous page',
+            tooltipText: TOOLTIP.PREVIOUS_PAGE,
             cssClasses: ['circular'],
             onClick: () => this._previousPage()
         });
 
         this.clientsPageInfo = new Label({
-            text: 'Page 1 of 1',
+            text: _('Page 1 of 1'),
             cssClasses: ['monospace']
         });
 
         this.nextClientsButton = new Button({
             iconName: 'go-next-symbolic',
-            tooltipText: 'Next page',
+            tooltipText: TOOLTIP.NEXT_PAGE,
             cssClasses: ['circular'],
             onClick: () => this._nextPage()
         });
@@ -995,8 +996,8 @@ export class ClientsPage {
      * Load clients from database
      */
     async loadClients() {
-        this.showLoading('Loading clients...');
-        
+        this.showLoading(LOADING.LOADING_CLIENTS);
+
         try {
             this.clients = await this._fetchClients();
             this.filteredClients = [...this.clients];
@@ -1004,7 +1005,7 @@ export class ClientsPage {
             // Clients loaded successfully
         } catch (error) {
             //('Error loading clients:', error);
-            this.showError('Load Error', 'Failed to load clients');
+            this.showError(HEADING.LOAD_ERROR, ERROR.FAILED_LOAD_CLIENTS);
         } finally {
             this.hideLoading();
         }
@@ -1042,7 +1043,7 @@ export class ClientsPage {
     /**
      * Show loading state
      */
-    showLoading(message = 'Loading...') {
+    showLoading(message = LOADING.LOADING) {
         // ClientsPage loading message
     }
 
@@ -1136,7 +1137,7 @@ export class ClientsPage {
     /**
      * Show loading state
      */
-    showLoading(message = 'Loading...') {
+    showLoading(message = LOADING.LOADING) {
         // ClientsPage loading message
         // Could show spinner in UI if needed
     }

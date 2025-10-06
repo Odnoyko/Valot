@@ -7,6 +7,7 @@ import GLib from 'gi://GLib';
 import { executeNonSelectCommand } from 'resource:///com/odnoyko/valot/js/func/global/dbinitialisation.js';
 import { InputValidator } from 'resource:///com/odnoyko/valot/js/func/global/inputValidation.js';
 import { getAllCurrencies, getCurrencySymbol } from 'resource:///com/odnoyko/valot/js/data/currencies.js';
+import { BUTTON, HEADING, MESSAGE, LABEL, PLACEHOLDER, TOOLTIP } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 export class ClientManager {
     constructor(dbConnection, executeQuery, executeNonSelectCommand, currencies) {
@@ -29,7 +30,7 @@ export class ClientManager {
             const nameValidation = InputValidator.validateClientName(name);
             if (!nameValidation.valid) {
                 //('Client validation failed:', nameValidation.error);
-                this._showError(parentWindow, 'Validation Error', nameValidation.error);
+                this._showError(parentWindow, HEADING.VALIDATION_ERROR, nameValidation.error);
                 return false;
             }
 
@@ -43,7 +44,7 @@ export class ClientManager {
             
             // Check for duplicate client names
             if (this._clientNameExists(safeName)) {
-                this._showError(parentWindow, 'Duplicate Client', 'A client with this name already exists');
+                this._showError(parentWindow, HEADING.DUPLICATE_CLIENT, MESSAGE.CLIENT_EXISTS);
                 return false;
             }
             
@@ -60,7 +61,7 @@ export class ClientManager {
             
         } catch (error) {
             //('Error creating client:', error);
-            this._showError(parentWindow, 'Database Error', 'Failed to create client. Please try again.');
+            this._showError(parentWindow, HEADING.DATABASE_ERROR, _('Failed to create client. Please try again.'));
             return false;
         }
     }
@@ -70,7 +71,7 @@ export class ClientManager {
             
             const nameValidation = InputValidator.validateClientName(name);
             if (!nameValidation.valid) {
-                this._showError(parentWindow, 'Validation Error', nameValidation.error);
+                this._showError(parentWindow, HEADING.VALIDATION_ERROR, nameValidation.error);
                 return false;
             }
 
@@ -93,7 +94,7 @@ export class ClientManager {
             
         } catch (error) {
             //('Error updating client:', error);
-            this._showError(parentWindow, 'Database Error', 'Failed to update client. Please try again.');
+            this._showError(parentWindow, HEADING.DATABASE_ERROR, _('Failed to update client. Please try again.'));
             return false;
         }
     }
@@ -103,7 +104,7 @@ export class ClientManager {
             
             // Prevent deletion of default client
             if (clientId === 1) {
-                this._showError(parentWindow, 'Cannot Delete Default Client', 'The default client cannot be deleted.');
+                this._showError(parentWindow, _('Cannot Delete Default Client'), _('The default client cannot be deleted.'));
                 return false;
             }
             
@@ -119,7 +120,7 @@ export class ClientManager {
             
         } catch (error) {
             //('Error deleting client:', error);
-            this._showError(parentWindow, 'Database Error', 'Failed to delete client. Please try again.');
+            this._showError(parentWindow, HEADING.DATABASE_ERROR, _('Failed to delete client. Please try again.'));
             return false;
         }
     }
@@ -160,7 +161,7 @@ export class ClientManager {
                 body: message
             });
             
-            errorDialog.add_response('ok', 'OK');
+            errorDialog.add_response('ok', BUTTON.OK);
             errorDialog.set_response_appearance('ok', Adw.ResponseAppearance.SUGGESTED);
             errorDialog.present(parentWindow);
         } catch (error) {
@@ -173,8 +174,8 @@ export class ClientManager {
     showCreateClientDialog(parentWindow, prefillName = '') {
         
         const dialog = new Adw.AlertDialog({
-            heading: 'Create Client',
-            body: 'Add a new client with name and currency'
+            heading: _('Create Client'),
+            body: _('Add a new client with name and currency')
         });
 
         // Create inline form layout (2 rows vertical)
@@ -252,7 +253,7 @@ export class ClientManager {
         // Currency dropdown with search (right side, fixed width)
         const currencyDropdown = new Gtk.DropDown({
             width_request: 120,
-            tooltip_text: 'Select currency',
+            tooltip_text: _('Select currency'),
             css_classes: ['currency-button']
         });
 
@@ -288,8 +289,8 @@ export class ClientManager {
         form.append(rateRow);
 
         dialog.set_extra_child(form);
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('create', 'Create Client');
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('create', BUTTON.CREATE_CLIENT);
         dialog.set_response_appearance('create', Adw.ResponseAppearance.SUGGESTED);
         dialog.set_default_response('create');
 
@@ -408,8 +409,8 @@ export class ClientManager {
 
             
             const dialog = new Adw.AlertDialog({
-                heading: 'Edit Client',
-                body: 'Modify client details'
+                heading: _('Edit Client'),
+                body: _('Modify client details')
             });
 
             const form = new Gtk.Box({
@@ -423,7 +424,7 @@ export class ClientManager {
 
             // Name entry
             const nameRow = new Adw.EntryRow({
-                title: 'Client Name'
+                title: _('Client Name')
             });
             const nameEntry = nameRow.get_delegate();
             nameEntry.set_text(currentName || '');
@@ -431,7 +432,7 @@ export class ClientManager {
 
             // Email entry
             const emailRow = new Adw.EntryRow({
-                title: 'Email'
+                title: _('Email')
             });
             const emailEntry = emailRow.get_delegate();
             emailEntry.set_text(currentEmail || '');
@@ -439,7 +440,7 @@ export class ClientManager {
 
             // Rate entry
             const rateRow = new Adw.EntryRow({
-                title: 'Hourly Rate'
+                title: LABEL.HOURLY_RATE
             });
             const rateEntry = rateRow.get_delegate();
             rateEntry.set_text(currentRate ? currentRate.toString() : '0');
@@ -461,8 +462,8 @@ export class ClientManager {
             });
 
             dialog.set_extra_child(form);
-            dialog.add_response('cancel', 'Cancel');
-            dialog.add_response('save', 'Save Changes');
+            dialog.add_response('cancel', BUTTON.CANCEL);
+            dialog.add_response('save', BUTTON.SAVE_CHANGES);
             dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
 
             dialog.connect('response', (dialog, response) => {
@@ -496,12 +497,12 @@ export class ClientManager {
     // Delete client dialog
     showDeleteClientDialog(clientId, parentWindow) {
         const dialog = new Adw.AlertDialog({
-            heading: 'Delete Client',
-            body: 'Are you sure you want to delete this client? This action cannot be undone.'
+            heading: _('Delete Client'),
+            body: _('Are you sure you want to delete this client? This action cannot be undone.')
         });
 
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('delete', 'Delete');
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('delete', BUTTON.DELETE);
         dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
 
         dialog.connect('response', (dialog, response) => {
@@ -759,8 +760,8 @@ export class ClientManager {
      */
     showCreateTaskDialog(client, parentWindow) {
         const dialog = new Adw.AlertDialog({
-            heading: `Track Time - ${client.name}`,
-            body: `Create a new time entry for ${client.name}`
+            heading: _('Track Time - %s').format(client.name),
+            body: _('Create a new time entry for %s').format(client.name)
         });
 
         const form = new Gtk.Box({
@@ -774,17 +775,17 @@ export class ClientManager {
 
         // Task description (using EntryRow like client creation)
         const descRow = new Adw.EntryRow({
-            title: 'Task Description'
+            title: _('Task Description')
         });
         const descEntry = descRow.get_delegate();
-        descEntry.set_placeholder_text('Describe what you worked on...');
+        descEntry.set_placeholder_text(_('Describe what you worked on...'));
         form.append(descRow);
 
         // Project selection using ComboRow
         let projectRow = null;
         if (parentWindow.projectManager) {
             projectRow = new Adw.ComboRow({
-                title: 'Project'
+                title: LABEL.PROJECT
             });
             
             const projectModel = new Gtk.StringList();
@@ -813,7 +814,7 @@ export class ClientManager {
 
         // Time input using SpinRows
         const hoursRow = new Adw.SpinRow({
-            title: 'Hours',
+            title: _('Hours'),
             adjustment: new Gtk.Adjustment({
                 lower: 0,
                 upper: 24,
@@ -823,7 +824,7 @@ export class ClientManager {
         });
 
         const minutesRow = new Adw.SpinRow({
-            title: 'Minutes', 
+            title: _('Minutes'),
             adjustment: new Gtk.Adjustment({
                 lower: 0,
                 upper: 59,
@@ -838,7 +839,7 @@ export class ClientManager {
         // Cost calculation display using ActionRow
         const currencySymbol = getCurrencySymbol(client.currency || 'USD');
         const costRow = new Adw.ActionRow({
-            title: 'Estimated Cost',
+            title: _('Estimated Cost'),
             subtitle: `${currencySymbol}0.00`
         });
 
@@ -857,8 +858,8 @@ export class ClientManager {
         form.append(costRow);
 
         dialog.set_extra_child(form);
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('create', 'Create Entry');
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('create', _('Create Entry'));
         dialog.set_response_appearance('create', Adw.ResponseAppearance.SUGGESTED);
 
         dialog.connect('response', (dialog, response) => {
@@ -870,10 +871,10 @@ export class ClientManager {
                 
                 if (totalSeconds === 0) {
                     const errorDialog = new Adw.AlertDialog({
-                        heading: 'Invalid Input',
-                        body: 'Please enter a time duration'
+                        heading: HEADING.INVALID_INPUT,
+                        body: _('Please enter a time duration')
                     });
-                    errorDialog.add_response('ok', 'OK');
+                    errorDialog.add_response('ok', BUTTON.OK);
                     errorDialog.present(parentWindow);
                     return;
                 }
@@ -924,10 +925,10 @@ export class ClientManager {
 
                 // Show success message
                 const successDialog = new Adw.AlertDialog({
-                    heading: 'Time Entry Created',
-                    body: `Successfully created ${Math.floor(durationSeconds / 3600)}h ${Math.floor((durationSeconds % 3600) / 60)}m time entry for ${client.name}`
+                    heading: _('Time Entry Created'),
+                    body: _('Successfully created %dh %dm time entry for %s').format(Math.floor(durationSeconds / 3600), Math.floor((durationSeconds % 3600) / 60), client.name)
                 });
-                successDialog.add_response('ok', 'OK');
+                successDialog.add_response('ok', BUTTON.OK);
                 successDialog.present(parentWindow);
 
                 // Refresh tasks page if available
@@ -940,10 +941,10 @@ export class ClientManager {
         } catch (error) {
             //('Error creating time entry:', error);
             const errorDialog = new Adw.AlertDialog({
-                heading: 'Error',
-                body: 'Failed to create time entry. Please try again.'
+                heading: HEADING.ERROR,
+                body: _('Failed to create time entry. Please try again.')
             });
-            errorDialog.add_response('ok', 'OK');
+            errorDialog.add_response('ok', BUTTON.OK);
             errorDialog.present(parentWindow);
         }
     }
@@ -954,8 +955,8 @@ export class ClientManager {
     showEditRateDialog(client, parentWindow) {
         
         const dialog = new Adw.AlertDialog({
-            heading: `Edit Rate - ${client.name}`,
-            body: 'Change hourly rate and currency for this client'
+            heading: _('Edit Rate - %s').format(client.name),
+            body: _('Change hourly rate and currency for this client')
         });
 
         // Create inline form layout (horizontal) - same as client creation
@@ -1013,7 +1014,7 @@ export class ClientManager {
         // Currency dropdown with search (right side)
         const currencyDropdown = new Gtk.DropDown({
             width_request: 120,
-            tooltip_text: 'Select currency',
+            tooltip_text: _('Select currency'),
             css_classes: ['currency-button']
         });
 
@@ -1044,8 +1045,8 @@ export class ClientManager {
         form.append(currencyDropdown);
 
         dialog.set_extra_child(form);
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('save', 'Save Changes');
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('save', BUTTON.SAVE_CHANGES);
         dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
         dialog.set_default_response('save');
 

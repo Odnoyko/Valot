@@ -5,6 +5,9 @@ import Gio from 'gi://Gio';
 import WebKit from 'gi://WebKit';
 import { TemplateEngine } from 'resource:///com/odnoyko/valot/js/func/pages/templateEngine.js';
 import { Config } from 'resource:///com/odnoyko/valot/config.js';
+import { BUTTON } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
+
+const _ = (str) => str;
 
 export class ReportPDF {
     constructor(tasks, projects, clients) {
@@ -66,13 +69,13 @@ export class ReportPDF {
     }
 
     async exportToPDF(parentWindow) {
-        
+
         // Show progress dialog
         const progressDialog = new Adw.AlertDialog({
-            heading: 'Exporting PDF',
-            body: 'Preparing PDF export...\nPlease wait while your report is being generated.'
+            heading: _('Exporting PDF'),
+            body: _('Preparing PDF export...\nPlease wait while your report is being generated.')
         });
-        progressDialog.add_response('cancel', 'Cancel');
+        progressDialog.add_response('cancel', BUTTON.CANCEL);
         progressDialog.present(parentWindow);
         
         let exportCancelled = false;
@@ -187,14 +190,14 @@ export class ReportPDF {
 
     _showSuccessDialog(filepath, reportsDir, parentWindow) {
         const fileName = filepath.split('/').pop();
-        
+
         const dialog = new Adw.AlertDialog({
-            heading: 'PDF Export Complete',
-            body: `Report saved successfully!\n\nFile: ${fileName}\nLocation: ${reportsDir}\n\nClick "Open Folder" to view the file in your file manager.`
+            heading: _('PDF Export Complete'),
+            body: _('Report saved successfully!\n\nFile: %s\nLocation: %s\n\nClick "Open Folder" to view the file in your file manager.').format(fileName, reportsDir)
         });
-        
-        dialog.add_response('close', 'Close');
-        dialog.add_response('open_folder', 'Open Folder');
+
+        dialog.add_response('close', BUTTON.CLOSE);
+        dialog.add_response('open_folder', BUTTON.OPEN_FOLDER);
         dialog.set_response_appearance('open_folder', Adw.ResponseAppearance.SUGGESTED);
         
         dialog.connect('response', (dialog, response) => {
@@ -225,10 +228,10 @@ export class ReportPDF {
         
         // If failed, show simple dialog
         const errorDialog = new Adw.AlertDialog({
-            heading: 'PDF Export Completed',
-            body: `Your report has been saved successfully!\n\nLocation: ${folderPath}\n\nPlease open this location manually in your file manager.`
+            heading: _('PDF Export Completed'),
+            body: _('Your report has been saved successfully!\n\nLocation: %s\n\nPlease open this location manually in your file manager.').format(folderPath)
         });
-        errorDialog.add_response('close', 'OK');
+        errorDialog.add_response('close', BUTTON.OK);
         errorDialog.present(null);
         return false;
     }

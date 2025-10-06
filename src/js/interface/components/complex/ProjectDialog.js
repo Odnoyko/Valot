@@ -3,6 +3,7 @@ import { FormDialog } from './FormDialog.js';
 import { InputValidator } from '../../../func/global/inputValidation.js';
 import { Button } from '../primitive/Button.js';
 import { getProjectIconColor } from '../../../func/global/colorUtils.js';
+import { TOOLTIP } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 /**
  * Project creation/editing dialog using the modular form system
@@ -81,7 +82,7 @@ export class ProjectDialog extends FormDialog {
             halign: Gtk.Align.CENTER,
             valign: Gtk.Align.CENTER,
             css_classes: ['project-settings-button', 'flat'],
-            tooltip_text: 'Change project appearance'
+            tooltip_text: TOOLTIP.CHANGE_APPEARANCE
         });
         
         this.projectButton.connect('clicked', () => this._openProjectAppearanceDialog());
@@ -92,7 +93,7 @@ export class ProjectDialog extends FormDialog {
         // Name input - use initialName from config if provided
         const initialText = isEdit ? (project.name || '') : (this.config.initialName || '');
         this.nameEntry = new Gtk.Entry({
-            placeholder_text: 'Enter project name...',
+            placeholder_text: _('Enter project name...'),
             text: initialText,
             hexpand: true,
             valign: Gtk.Align.CENTER,

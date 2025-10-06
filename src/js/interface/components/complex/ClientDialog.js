@@ -85,13 +85,13 @@ export class ClientDialog extends FormDialog {
 
         // ROW 1: Client Name only
         const nameLabel = new Gtk.Label({
-            label: 'Client Name',
+            label: _('Client Name'),
             halign: Gtk.Align.START,
             css_classes: ['heading']
         });
-        
+
         this.nameEntry = new Gtk.Entry({
-            placeholder_text: 'Enter client name...',
+            placeholder_text: _('Enter client name...'),
             text: isEdit ? (client.name || '') : '',
             hexpand: true
         });
@@ -105,7 +105,7 @@ export class ClientDialog extends FormDialog {
 
         // ROW 2: Rate input with +/- buttons + Currency
         const rateLabel = new Gtk.Label({
-            label: 'Hourly Rate & Currency',
+            label: _('Hourly Rate & Currency'),
             halign: Gtk.Align.START,
             css_classes: ['heading']
         });

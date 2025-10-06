@@ -69,7 +69,7 @@ export class TrackingWidget {
             this.projectButton = new Button({
                 iconName: 'folder-symbolic',
                 cssClasses: ['flat', 'tracking-widget-project-button'],
-                tooltipText: 'Select Project',
+                tooltipText: _('Select Project'),
                 widthRequest: 36,
                 heightRequest: 36,
                 onClick: () => {
@@ -85,7 +85,7 @@ export class TrackingWidget {
             this.clientButton = new Button({
                 iconName: 'contact-new-symbolic',
                 cssClasses: ['flat'],
-                tooltipText: 'Select Client',
+                tooltipText: _('Select Client'),
                 widthRequest: 36,
                 heightRequest: 36,
                 onClick: () => {
@@ -105,7 +105,7 @@ export class TrackingWidget {
         this.trackButton = new Button({
             iconName: this.config.isTracking ? 'media-playback-stop-symbolic' : 'media-playback-start-symbolic',
             cssClasses: ['circular'],
-            tooltipText: this.config.isTracking ? 'Stop tracking' : 'Start tracking',
+            tooltipText: this.config.isTracking ? _('Stop tracking') : _('Start tracking'),
             widthRequest: 40,
             heightRequest: 40,
             onClick: () => {
@@ -232,7 +232,7 @@ export class TrackingWidget {
         this.config.selectedProject = project;
 
         if (this.projectButton && project) {
-            this.projectButton.setTooltip(`Project: ${project.name}`);
+            this.projectButton.setTooltip(_('Project: %s').format(project.name));
             // Could also update button color/icon based on project
         }
     }
@@ -244,7 +244,7 @@ export class TrackingWidget {
         this.config.selectedClient = client;
 
         if (this.clientButton && client) {
-            this.clientButton.setTooltip(`Client: ${client.name}`);
+            this.clientButton.setTooltip(_('Client: %s').format(client.name));
         }
     }
 
@@ -268,7 +268,7 @@ export class TrackingWidget {
             this.trackButton.setIcon(
                 isTracking ? 'media-playback-stop-symbolic' : 'media-playback-start-symbolic'
             );
-            this.trackButton.setTooltip(isTracking ? 'Stop tracking' : 'Start tracking');
+            this.trackButton.setTooltip(isTracking ? _('Stop tracking') : _('Start tracking'));
         }
 
         // State change handled through direct callbacks

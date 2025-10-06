@@ -1,111 +1,1036 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE valot'S COPYRIGHT HOLDER
+# Ukrainian translation for Valot
+# Copyright (C) 2025 THE valot'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the valot package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# Vitalii Odnoiko <kontakt@odnoyko.com>, 2025.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: valot 0.6.3\n"
 "Report-Msgid-Bugs-To: vitalyod.27@gmail.com\n"
-"POT-Creation-Date: 2025-09-20 00:42+0200\n"
-"PO-Revision-Date: 2025-09-25 09:18+0000\n"
-"Last-Translator: Vitalii  Odnoiko <kontakt@odnoyko.com>\n"
-"Language-Team: Russian <https://hosted.weblate.org/projects/valot/valot/ru/>"
-"\n"
-"Language: ru\n"
+"POT-Creation-Date: 2025-10-06 12:38+0200\n"
+"PO-Revision-Date: 2025-10-06 12:04+0200\n"
+"Last-Translator: Vitalii Odnoiko <kontakt@odnoyko.com>\n"
+"Language-Team: Ukrainian\n"
+"Language: uk\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
 "n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
-"X-Generator: Weblate 5.14-dev\n"
+"X-Generator: Manual translation\n"
 
-#. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
-#: src/js/main.js:94
-msgid "translator-credits"
-msgstr "Благодарности переводчикам"
+#: data/com.odnoyko.valot.desktop.in:2 src/ui/window.blp:5
+msgid "Valot"
+msgstr "Valot"
 
-#: src/js/mainwindow.js:2012
-msgid "All Projects"
-msgstr "Все проекты"
+#: data/com.odnoyko.valot.desktop.in:3
+msgid "Time Tracker"
+msgstr "Облік часу"
 
-#: src/js/mainwindow.js:2023
-msgid "All Clients"
-msgstr "Все клиенты"
+#: data/com.odnoyko.valot.desktop.in:7
+msgid "Track time for tasks and projects"
+msgstr "Відстежуйте час для завдань та проектів"
 
-#: src/js/interface/pages/ProjectsPage.js:130 src/ui/window.blp:322
-msgid "Search projects..."
-msgstr "Найти проекты"
+#: data/com.odnoyko.valot.desktop.in:16
+msgid "time;tracker;productivity;tasks;projects;timesheet;billing;"
+msgstr "час;облік;продуктивність;завдання;проекти;табель;виставлення рахунків;"
 
-#: src/js/interface/pages/ProjectsPage.js:161
-msgid "Delete Selected"
-msgstr "Удалить выбранное"
+#: data/com.odnoyko.valot.gschema.xml:6
+msgid "Theme preference"
+msgstr "Налаштування теми"
 
-#: src/js/interface/pages/ProjectsPage.js:204
-msgid "No projects found"
-msgstr "Не найдено проектов"
+#: data/com.odnoyko.valot.gschema.xml:7
+msgid "Theme preference: 0=Auto, 1=Light, 2=Dark"
+msgstr "Налаштування теми: 0=Авто, 1=Світла, 2=Темна"
 
-#: src/js/interface/pages/ProjectsPage.js:210
-msgid "Create your first project to get started"
-msgstr "Создайте свой первый проект для начала"
+#: data/com.odnoyko.valot.gschema.xml:11
+msgid "Custom accent color"
+msgstr "Власний акцентний колір"
 
-#: src/js/interface/pages/ProjectsPage.js:237
-msgid "Previous page"
-msgstr "Попередня сторінка"
-
-#: src/js/interface/pages/ProjectsPage.js:243
-msgid "Page 1 of 1"
-msgstr "1 з 1"
-
-#: src/js/interface/pages/ProjectsPage.js:249
-msgid "Next page"
-msgstr "Наступна сторінка"
-
-#: src/js/interface/pages/ProjectsPage.js:352
-msgid "Project settings - Change color and icon"
-msgstr "Налаштування проекту - Змінити колір та значок"
-
-#: src/js/interface/pages/ProjectsPage.js:579
-msgid "Delete Projects"
-msgstr "Видалити проекти"
-
-#: src/js/interface/pages/ProjectsPage.js:580
-#, javascript-format
-msgid ""
-"Are you sure you want to delete %d selected project(s)? This cannot be "
-"undone."
+#: data/com.odnoyko.valot.gschema.xml:12
+msgid "Custom accent color in hex format (empty for system default)"
 msgstr ""
-"Ви впевнені, що хочете видалити %d вибраних проектів? Цю дію неможливо "
-"скасувати."
+"Власний акцентний колір у шістнадцятковому форматі (порожньо для системного "
+"за замовчуванням)"
 
-#: src/js/interface/pages/ProjectsPage.js:583
-#: src/js/interface/pages/ProjectsPage.js:814
-#: src/js/interface/components/complex/ModularDialogManager.js:206
+#: data/com.odnoyko.valot.gschema.xml:16
+msgid "Accent color mode"
+msgstr "Режим акцентного кольору"
+
+#: data/com.odnoyko.valot.gschema.xml:17
+msgid "Accent color mode: 0=Standard, 1=Custom"
+msgstr "Режим акцентного кольору: 0=Стандартний, 1=Власний"
+
+#: data/com.odnoyko.valot.gschema.xml:21
+msgid "Welcome dialog shown"
+msgstr "Вітальний діалог показано"
+
+#: data/com.odnoyko.valot.gschema.xml:22
+msgid "Whether the welcome carousel dialog has been shown to the user"
+msgstr "Чи було показано користувачу вітальний діалог карусель"
+
+#: data/com.odnoyko.valot.gschema.xml:26
+msgid "Sidebar behavior mode"
+msgstr "Режим поведінки бічної панелі"
+
+#: data/com.odnoyko.valot.gschema.xml:27
+msgid ""
+"Sidebar behavior: 0=Opened (always open on launch), 1=Closed (always closed "
+"on launch), 2=Dynamic (remember last state)"
+msgstr ""
+"Поведінка бічної панелі: 0=Відкрита (завжди відкривати при запуску), "
+"1=Закрита (завжди закривати при запуску), 2=Динамічна (запам'ятовувати "
+"останній стан)"
+
+#: data/com.odnoyko.valot.gschema.xml:31
+msgid "Sidebar last state"
+msgstr "Останній стан бічної панелі"
+
+#: data/com.odnoyko.valot.gschema.xml:32
+msgid "Last sidebar visibility state (used in Dynamic mode)"
+msgstr ""
+"Останній стан видимості бічної панелі (використовується в динамічному режимі)"
+
+#: src/gtk/help-overlay.ui:11
+msgctxt "shortcut window"
+msgid "General"
+msgstr "Загальні"
+
+#: src/gtk/help-overlay.ui:14
+msgctxt "shortcut window"
+msgid "Show Shortcuts"
+msgstr "Показати комбінації клавіш"
+
+#: src/gtk/help-overlay.ui:20
+msgctxt "shortcut window"
+msgid "Quit"
+msgstr "Вийти"
+
+#: src/js/compacttracker.js:21
+#: src/js/interface/components/CarouselDialog.js:202
+#: src/ui/compact-tracker.blp:5
+msgid "Compact Tracker"
+msgstr "Компактний таймер"
+
+#: src/js/compacttracker.js:68 src/ui/compact-tracker.blp:23
+msgid "Close compact tracker and open main window"
+msgstr "Закрити компактний таймер і відкрити головне вікно"
+
+#: src/js/compacttracker.js:94
+#: src/js/interface/components/complex/HeaderTrackingWidget.js:57
+#: src/js/interface/components/widgetFactory.js:45
+#: src/ui/compact-tracker.blp:43 src/ui/window.blp:152 src/ui/window.blp:275
+#: src/ui/window.blp:388 src/ui/window.blp:502
+msgid "Project"
+msgstr "Проєкт"
+
+#: src/js/compacttracker.js:113
+msgid "Select client"
+msgstr "Вибрати клієнта"
+
+#: src/js/func/global/commonStrings.js:11
+#: src/js/interface/components/complex/ModularDialogManager.js:207
+#: src/js/interface/pages/ProjectsPage.js:610
+#: src/js/interface/pages/ProjectsPage.js:870
+#: src/js/interface/components/widgetFactory.js:275
+#: src/js/interface/pages/TasksPage.js:1670
 msgid "Cancel"
 msgstr "Скасувати"
 
-#: src/js/interface/pages/ProjectsPage.js:584
-msgid "Delete"
-msgstr "Видалити"
+#: src/js/func/global/commonStrings.js:12
+#: src/js/func/pages/projectManager.js:1822
+msgid "OK"
+msgstr "Гаразд"
 
-#: src/js/interface/pages/ProjectsPage.js:804
-msgid "Edit Project Name"
-msgstr "Редагувати назву проекту"
-
-#: src/js/interface/pages/ProjectsPage.js:805
-#, javascript-format
-msgid "Change the name of \"%s\""
-msgstr "Змінити назву \"%s\""
-
-#: src/js/interface/pages/ProjectsPage.js:815
+#: src/js/func/global/commonStrings.js:13
+#: src/js/interface/pages/ProjectsPage.js:871
 msgid "Save"
 msgstr "Зберегти"
 
-#: src/js/func/pages/clientManager.js:191
+#: src/js/func/global/commonStrings.js:14
+#: src/js/interface/components/complex/ClientDialog.js:351
+#: src/js/interface/components/complex/ProjectDialog.js:286
+msgid "Save Changes"
+msgstr "Зберегти зміни"
+
+#: src/js/func/global/commonStrings.js:15
+#: src/js/interface/pages/ProjectsPage.js:611
+#: src/js/interface/components/widgetFactory.js:289
+#: src/js/interface/pages/TasksPage.js:1671
+msgid "Delete"
+msgstr "Видалити"
+
+#: src/js/func/global/commonStrings.js:16
+msgid "Create"
+msgstr "Створити"
+
+#: src/js/func/global/commonStrings.js:17
+msgid "Create Task"
+msgstr "Створити завдання"
+
+#: src/js/func/global/commonStrings.js:18
+#: src/js/interface/components/complex/ProjectDialog.js:308
+msgid "Create Project"
+msgstr "Створити проєкт"
+
+#: src/js/func/global/commonStrings.js:19
+#: src/js/func/pages/clientManager.js:177
+#: src/js/interface/components/complex/ClientDialog.js:376
+#: src/js/interface/pages/ClientsPage.js:143
+msgid "Create Client"
+msgstr "Створити клієнта"
+
+#: src/js/func/global/commonStrings.js:20
+msgid "Select"
+msgstr "Вибрати"
+
+#: src/js/func/global/commonStrings.js:21
+msgid "Close"
+msgstr "Закрити"
+
+#: src/js/func/global/commonStrings.js:22
+msgid "Open Folder"
+msgstr "Відкрити папку"
+
+#: src/js/func/global/commonStrings.js:27
+msgid "Invalid Input"
+msgstr "Неправильне введення"
+
+#: src/js/func/global/commonStrings.js:28
+msgid "Delete Task"
+msgstr "Видалити завдання"
+
+#: src/js/func/global/commonStrings.js:29
+#: src/js/interface/pages/TasksPage.js:1666
+msgid "Delete Tasks"
+msgstr "Видалити завдання"
+
+#: src/js/func/global/commonStrings.js:30
+msgid "Delete Project"
+msgstr "Видалити проєкт"
+
+#: src/js/func/global/commonStrings.js:31
+#: src/js/func/pages/clientManager.js:500
+msgid "Delete Client"
+msgstr "Видалити клієнта"
+
+#. Update dialog title
+#: src/js/func/global/commonStrings.js:32
+#: src/js/interface/components/complex/ProjectDialog.js:284
+msgid "Edit Project"
+msgstr "Редагувати проєкт"
+
+#. Update dialog title
+#: src/js/func/global/commonStrings.js:33
+#: src/js/func/pages/clientManager.js:412
+#: src/js/interface/components/complex/ClientDialog.js:349
+msgid "Edit Client"
+msgstr "Редагувати клієнта"
+
+#. Update dialog title
+#: src/js/func/global/commonStrings.js:34
+#: src/js/interface/components/complex/ProjectDialog.js:306
+msgid "Create New Project"
+msgstr "Створити новий проект"
+
+#: src/js/func/global/commonStrings.js:35
+msgid "Add New Task"
+msgstr "Додати нове завдання"
+
+#: src/js/func/global/commonStrings.js:36
+msgid "Error"
+msgstr "Помилка"
+
+#: src/js/func/global/commonStrings.js:37 src/js/main.js:159
+msgid "Database Error"
+msgstr "Помилка бази даних"
+
+#: src/js/func/global/commonStrings.js:38
+msgid "Validation Error"
+msgstr "Помилка перевірки"
+
+#: src/js/func/global/commonStrings.js:39
+msgid "Duplicate Project"
+msgstr "Дублювати проєкт"
+
+#: src/js/func/global/commonStrings.js:40
+msgid "Duplicate Client"
+msgstr "Дублювати клієнта"
+
+#: src/js/func/global/commonStrings.js:41
+msgid "Load Error"
+msgstr "Помилка завантаження"
+
+#: src/js/func/global/commonStrings.js:42
+msgid "Update Error"
+msgstr "Помилка оновлення"
+
+#: src/js/func/global/commonStrings.js:43
+msgid "Delete Error"
+msgstr "Помилка видалення"
+
+#: src/js/func/global/commonStrings.js:44
+msgid "Creation Error"
+msgstr "Помилка створення"
+
+#: src/js/func/global/commonStrings.js:45
+msgid "Invalid Date/Time"
+msgstr "Неправильна дата/час"
+
+#: src/js/func/global/commonStrings.js:50
+msgid "Task name is required"
+msgstr "Потрібна назва завдання"
+
+#: src/js/func/global/commonStrings.js:51
+msgid "Project name is required"
+msgstr "Потрібна назва проєкту"
+
+#: src/js/func/global/commonStrings.js:52
+msgid "Client name is required"
+msgstr "Потрібне ім'я клієнта"
+
+#: src/js/func/global/commonStrings.js:53
+msgid "Please enter a task name and select a project"
+msgstr "Будь ласка, введіть назву завдання та виберіть проєкт"
+
+#: src/js/func/global/commonStrings.js:54
+msgid "End time must be after start time"
+msgstr "Час закінчення повинен бути пізніше часу початку"
+
+#: src/js/func/global/commonStrings.js:55
+msgid "A project with this name already exists"
+msgstr "Проєкт з такою назвою вже існує"
+
+#: src/js/func/global/commonStrings.js:56
+msgid "A client with this name already exists"
+msgstr "Клієнт з таким іменем вже існує"
+
+#: src/js/func/global/commonStrings.js:57 src/js/main.js:160
+msgid "Failed to initialize database"
+msgstr "Не вдалося ініціалізувати базу даних"
+
+#: src/js/func/global/commonStrings.js:58
+msgid "No tasks selected. Right-click a task to select it first."
+msgstr ""
+"Завдання не вибрано. Клацніть правою кнопкою миші на завданні, щоб вибрати "
+"його."
+
+#: src/js/func/global/commonStrings.js:63
+msgid "Task Name:"
+msgstr "Назва завдання:"
+
+#: src/js/func/global/commonStrings.js:64
+msgid "Project Name:"
+msgstr "Назва проєкту:"
+
+#: src/js/func/global/commonStrings.js:65
+#: src/js/func/pages/clientManager.js:427
+#: src/js/interface/components/complex/ClientDialog.js:88
+msgid "Client Name"
+msgstr "Ім'я клієнта"
+
+#: src/js/func/global/commonStrings.js:66
+msgid "Project:"
+msgstr "Проєкт:"
+
+#: src/js/func/global/commonStrings.js:67
+#: src/js/interface/components/widgetFactory.js:58
+#: src/ui/compact-tracker.blp:51 src/ui/window.blp:160 src/ui/window.blp:283
+#: src/ui/window.blp:396 src/ui/window.blp:510
+msgid "Client"
+msgstr "Клієнт"
+
+#: src/js/func/global/commonStrings.js:68
+msgid "Description (optional):"
+msgstr "Опис (необов'язково):"
+
+#: src/js/func/global/commonStrings.js:69
+msgid "Start Time:"
+msgstr "Час початку:"
+
+#: src/js/func/global/commonStrings.js:70
+msgid "End Time:"
+msgstr "Час закінчення:"
+
+#: src/js/func/global/commonStrings.js:71
+msgid "Duration:"
+msgstr "Тривалість:"
+
+#: src/js/func/global/commonStrings.js:72
+msgid "Project Icon:"
+msgstr "Значок проєкту:"
+
+#: src/js/func/global/commonStrings.js:73
+msgid "Project Color:"
+msgstr "Колір проєкту:"
+
+#: src/js/func/global/commonStrings.js:74
+msgid "Icon Mode:"
+msgstr "Режим значка:"
+
+#: src/js/func/global/commonStrings.js:75
+msgid "Icon Color:"
+msgstr "Колір значка:"
+
+#: src/js/func/global/commonStrings.js:76
+msgid "Hourly Rate"
+msgstr "Погодинна ставка"
+
+#: src/js/func/global/commonStrings.js:81 src/ui/window.blp:199
+msgid "Search tasks..."
+msgstr "Пошук завдань..."
+
+#: src/js/func/global/commonStrings.js:82
+#: src/js/interface/pages/ProjectsPage.js:138 src/ui/window.blp:323
+msgid "Search projects..."
+msgstr "Пошук проєктів..."
+
+#: src/js/func/global/commonStrings.js:83 src/ui/window.blp:436
+msgid "Search clients..."
+msgstr "Пошук клієнтів..."
+
+#: src/js/func/global/commonStrings.js:84 src/ui/compact-tracker.blp:35
+#: src/ui/window.blp:144 src/ui/window.blp:267 src/ui/window.blp:380
+#: src/ui/window.blp:494
+msgid "Task name"
+msgstr "Назва завдання"
+
+#: src/js/func/global/commonStrings.js:85
+msgid "Enter task name..."
+msgstr "Введіть назву завдання..."
+
+#: src/js/func/global/commonStrings.js:86
+msgid "Project name"
+msgstr "Назва проєкту"
+
+#: src/js/func/global/commonStrings.js:87
+#: src/js/func/pages/clientManager.js:194
 msgid "Client name"
 msgstr "Ім'я клієнта"
 
-#: src/js/func/pages/simpleChart.js:47
+#: src/js/func/global/commonStrings.js:92
+msgid "Edit task"
+msgstr "Редагувати завдання"
+
+#: src/js/func/global/commonStrings.js:93
+msgid "Delete task"
+msgstr "Видалити завдання"
+
+#: src/js/func/global/commonStrings.js:94
+#: src/js/interface/components/complex/TrackingWidget.js:108
+#: src/js/interface/components/complex/TrackingWidget.js:271
+#: src/ui/compact-tracker.blp:66 src/ui/window.blp:174 src/ui/window.blp:297
+#: src/ui/window.blp:410 src/ui/window.blp:524
+msgid "Start tracking"
+msgstr "Почати відстеження"
+
+#: src/js/func/global/commonStrings.js:95
+#: src/js/interface/components/complex/TrackingWidget.js:108
+#: src/js/interface/components/complex/TrackingWidget.js:271
+msgid "Stop tracking"
+msgstr "Зупинити відстеження"
+
+#: src/js/func/global/commonStrings.js:96
+#: src/js/interface/components/complex/TrackingWidget.js:72
+#: src/js/interface/components/selectorFactory.js:113 src/js/mainwindow.js:933
+msgid "Select Project"
+msgstr "Вибрати проєкт"
+
+#: src/js/func/global/commonStrings.js:97
+#: src/js/interface/components/complex/TrackingWidget.js:88
+#: src/js/interface/components/selectorFactory.js:131 src/js/mainwindow.js:959
+msgid "Select Client"
+msgstr "Вибрати клієнта"
+
+#: src/js/func/global/commonStrings.js:98
+msgid "Select start date and time"
+msgstr "Виберіть дату та час початку"
+
+#: src/js/func/global/commonStrings.js:99
+msgid "Select end date and time"
+msgstr "Виберіть дату та час закінчення"
+
+#: src/js/func/global/commonStrings.js:100
+#: src/js/interface/pages/ProjectsPage.js:245
+msgid "Previous page"
+msgstr "Попередня сторінка"
+
+#: src/js/func/global/commonStrings.js:101
+#: src/js/interface/pages/ProjectsPage.js:257
+msgid "Next page"
+msgstr "Наступна сторінка"
+
+#: src/js/func/global/commonStrings.js:102
+msgid "Click to change color"
+msgstr "Клацніть, щоб змінити колір"
+
+#: src/js/func/global/commonStrings.js:103
+msgid "Click to change icon"
+msgstr "Клацніть, щоб змінити значок"
+
+#: src/js/func/global/commonStrings.js:104
+msgid "Change project appearance"
+msgstr "Змінити зовнішній вигляд проєкту"
+
+#: src/js/func/global/commonStrings.js:109 src/ui/window.blp:760
+msgid "No tasks yet"
+msgstr "Ще немає завдань"
+
+#: src/js/func/global/commonStrings.js:110
+msgid "No tasks found"
+msgstr "Завдання не знайдено"
+
+#: src/js/func/global/commonStrings.js:111
+#: src/js/interface/pages/ProjectsPage.js:212
+msgid "No projects found"
+msgstr "Проєкти не знайдено"
+
+#: src/js/func/global/commonStrings.js:112
+msgid "No clients found"
+msgstr "Клієнти не знайдено"
+
+#: src/js/func/global/commonStrings.js:113
+msgid "No Project"
+msgstr "Немає проєкту"
+
+#: src/js/func/global/commonStrings.js:114
+msgid "No data available"
+msgstr "Немає доступних даних"
+
+#: src/js/func/global/commonStrings.js:115
+msgid "No activity data"
+msgstr "Немає даних про активність"
+
+#: src/js/func/global/commonStrings.js:116
+msgid "Create your first task to get started"
+msgstr "Створіть своє перше завдання для початку"
+
+#: src/js/func/global/commonStrings.js:117
+#: src/js/interface/pages/ProjectsPage.js:218
+msgid "Create your first project to get started"
+msgstr "Створіть свій перший проєкт для початку"
+
+#: src/js/func/global/commonStrings.js:118
+msgid "Create your first client to get started"
+msgstr "Створіть свого першого клієнта для початку"
+
+#: src/js/func/global/commonStrings.js:119
+msgid "Type a task name and click track to create one"
+msgstr ""
+"Введіть назву завдання та натисніть кнопку відстеження, щоб створити його"
+
+#: src/js/func/global/commonStrings.js:124
+msgid "Loading tasks..."
+msgstr "Завантаження завдань..."
+
+#: src/js/func/global/commonStrings.js:125
+msgid "Loading projects..."
+msgstr "Завантаження проєктів..."
+
+#: src/js/func/global/commonStrings.js:126
+msgid "Loading clients..."
+msgstr "Завантаження клієнтів..."
+
+#: src/js/func/global/commonStrings.js:127
+msgid "Loading..."
+msgstr "Завантаження..."
+
+#: src/js/func/global/commonStrings.js:132
+msgid "Task created successfully"
+msgstr "Завдання успішно створено"
+
+#: src/js/func/global/commonStrings.js:133
+msgid "Task updated successfully"
+msgstr "Завдання успішно оновлено"
+
+#: src/js/func/global/commonStrings.js:134
+msgid "Task deleted successfully"
+msgstr "Завдання успішно видалено"
+
+#: src/js/func/global/commonStrings.js:135
+msgid "Project created successfully"
+msgstr "Проєкт успішно створено"
+
+#: src/js/func/global/commonStrings.js:136
+msgid "Project updated successfully"
+msgstr "Проєкт успішно оновлено"
+
+#: src/js/func/global/commonStrings.js:137
+msgid "Project deleted successfully"
+msgstr "Проєкт успішно видалено"
+
+#: src/js/func/global/commonStrings.js:138
+msgid "Client created successfully"
+msgstr "Клієнта успішно створено"
+
+#: src/js/func/global/commonStrings.js:139
+msgid "Client updated successfully"
+msgstr "Клієнта успішно оновлено"
+
+#: src/js/func/global/commonStrings.js:140
+msgid "Client deleted successfully"
+msgstr "Клієнта успішно видалено"
+
+#: src/js/func/global/commonStrings.js:145
+msgid "Failed to load tasks"
+msgstr "Не вдалося завантажити завдання"
+
+#: src/js/func/global/commonStrings.js:146
+msgid "Failed to create task"
+msgstr "Не вдалося створити завдання"
+
+#: src/js/func/global/commonStrings.js:147
+msgid "Failed to update task"
+msgstr "Не вдалося оновити завдання"
+
+#: src/js/func/global/commonStrings.js:148
+msgid "Failed to delete task"
+msgstr "Не вдалося видалити завдання"
+
+#: src/js/func/global/commonStrings.js:149
+msgid "Failed to create project"
+msgstr "Не вдалося створити проєкт"
+
+#: src/js/func/global/commonStrings.js:150
+msgid "Failed to update project"
+msgstr "Не вдалося оновити проєкт"
+
+#: src/js/func/global/commonStrings.js:151
+msgid "Failed to delete project"
+msgstr "Не вдалося видалити проєкт"
+
+#: src/js/func/global/commonStrings.js:152
+msgid "Failed to load projects"
+msgstr "Не вдалося завантажити проєкти"
+
+#: src/js/func/global/commonStrings.js:153
+msgid "Failed to load clients"
+msgstr "Не вдалося завантажити клієнтів"
+
+#: src/js/func/global/commonStrings.js:158
+#: src/js/interface/components/PreferencesDialog.js:180
+msgid "Auto"
+msgstr "Авто"
+
+#: src/js/func/global/commonStrings.js:159
+#: src/js/interface/components/PreferencesDialog.js:185
+msgid "Light"
+msgstr "Світла"
+
+#: src/js/func/global/commonStrings.js:160
+#: src/js/interface/components/PreferencesDialog.js:190
+msgid "Dark"
+msgstr "Темна"
+
+#: src/js/func/global/commonStrings.js:161
+msgid "Default"
+msgstr "За замовчуванням"
+
+#: src/js/func/global/commonStrings.js:162
+msgid "White"
+msgstr "Білий"
+
+#: src/js/func/global/commonStrings.js:163
+msgid "Black"
+msgstr "Чорний"
+
+#: src/js/func/global/commonStrings.js:168
+msgid "Currently Tracking"
+msgstr "Зараз відстежується"
+
+#: src/js/func/global/commonStrings.js:169
+msgid "Invalid range"
+msgstr "Неправильний діапазон"
+
+#: src/js/func/global/commonStrings.js:170
+msgid "Invalid format"
+msgstr "Неправильний формат"
+
+#: src/js/func/global/commonStrings.js:175
+#: src/js/interface/components/widgetFactory.js:194
+#: src/js/interface/components/widgetFactory.js:253
+#: src/js/interface/pages/ClientsPage.js:977
+#: src/js/interface/pages/ProjectsPage.js:251
+#: src/js/interface/pages/TasksPage.js:333
+msgid "Page 1 of 1"
+msgstr "1 з 1"
+
+#: src/js/func/global/commonStrings.js:180
+msgid "Create a new project with icon and color."
+msgstr "Створіть новий проєкт зі значком та кольором."
+
+#: src/js/func/global/commonStrings.js:181
+msgid "Update project name, icon, and color."
+msgstr "Оновити назву проєкту, значок та колір."
+
+#: src/js/func/global/commonStrings.js:182
+msgid "Create a new task for tracking your work"
+msgstr "Створіть нове завдання для відстеження вашої роботи"
+
+#: src/js/func/global/commonStrings.js:183
+msgid "Choose the start date and time for this task"
+msgstr "Виберіть дату та час початку для цього завдання"
+
+#: src/js/func/global/commonStrings.js:184
+msgid "Choose the end date and time for this task"
+msgstr "Виберіть дату та час закінчення для цього завдання"
+
+#: src/js/func/global/commonStrings.js:185
+msgid "Are you sure you want to delete this task?"
+msgstr "Ви впевнені, що хочете видалити це завдання?"
+
+#: src/js/func/global/commonStrings.js:186
+msgid "This action cannot be undone."
+msgstr "Цю дію неможливо скасувати."
+
+#: src/js/func/global/inputValidation.js:109
+msgid "Task description must be text"
+msgstr "Опис завдання повинен бути текстом"
+
+#: src/js/func/global/inputValidation.js:129
+msgid "Description contains potentially dangerous content"
+msgstr "Опис містить потенційно небезпечний вміст"
+
+#: src/js/func/global/inputValidation.js:163
+msgid "Value must be a number"
+msgstr "Значення має бути числом"
+
+#: src/js/func/global/inputValidation.js:200
+msgid "Color is required"
+msgstr "Потрібен колір"
+
+#: src/js/func/global/inputValidation.js:211
+msgid "Invalid color format (use #RRGGBB or #RGB)"
+msgstr "Неправильний формат кольору (використовуйте #RRGGBB або #RGB)"
+
+#: src/js/func/global/inputValidation.js:294
+msgid "Email address is required"
+msgstr "Потрібна адреса електронної пошти"
+
+#: src/js/func/global/inputValidation.js:313
+msgid "Invalid email format"
+msgstr "Неправильний формат електронної пошти"
+
+#: src/js/func/global/inputValidation.js:321
+msgid "Email address too long (max 255 characters)"
+msgstr "Адреса електронної пошти занадто довга (максимум 255 символів)"
+
+#: src/js/func/global/inputValidation.js:344
+msgid "Rate must be a number"
+msgstr "Ставка має бути числом"
+
+#: src/js/func/global/inputValidation.js:352
+msgid "Rate cannot be negative"
+msgstr "Ставка не може бути від'ємною"
+
+#: src/js/func/global/inputValidation.js:360
+msgid "Rate too high (max 10000)"
+msgstr "Ставка занадто висока (максимум 10000)"
+
+#. ('Error creating client:', error);
+#: src/js/func/pages/clientManager.js:64
+msgid "Failed to create client. Please try again."
+msgstr "Не вдалося створити клієнта. Будь ласка, спробуйте ще раз."
+
+#. ('Error updating client:', error);
+#: src/js/func/pages/clientManager.js:97
+msgid "Failed to update client. Please try again."
+msgstr "Не вдалося оновити клієнта. Будь ласка, спробуйте ще раз."
+
+#: src/js/func/pages/clientManager.js:107
+msgid "Cannot Delete Default Client"
+msgstr "Неможливо видалити клієнта за замовчуванням"
+
+#: src/js/func/pages/clientManager.js:107
+msgid "The default client cannot be deleted."
+msgstr "Клієнта за замовчуванням не можна видалити."
+
+#. ('Error deleting client:', error);
+#: src/js/func/pages/clientManager.js:123
+msgid "Failed to delete client. Please try again."
+msgstr "Не вдалося видалити клієнта. Будь ласка, спробуйте ще раз."
+
+#: src/js/func/pages/clientManager.js:178
+#: src/js/interface/pages/ClientsPage.js:144
+msgid "Add a new client with name and currency"
+msgstr "Додайте нового клієнта з іменем та валютою"
+
+#: src/js/func/pages/clientManager.js:256
+#: src/js/func/pages/clientManager.js:1017
+#: src/js/interface/pages/ClientsPage.js:218
+msgid "Select currency"
+msgstr "Виберіть валюту"
+
+#: src/js/func/pages/clientManager.js:413
+msgid "Modify client details"
+msgstr "Змінити дані клієнта"
+
+#: src/js/func/pages/clientManager.js:435
+msgid "Email"
+msgstr "Електронна пошта"
+
+#: src/js/func/pages/clientManager.js:501
+msgid ""
+"Are you sure you want to delete this client? This action cannot be undone."
+msgstr ""
+"Ви впевнені, що хочете видалити цього клієнта? Цю дію неможливо скасувати."
+
+#: src/js/func/pages/clientManager.js:763
+#, javascript-format
+msgid "Track Time - %s"
+msgstr "Облік часу - %s"
+
+#: src/js/func/pages/clientManager.js:764
+#, javascript-format
+msgid "Create a new time entry for %s"
+msgstr "Створіть новий запис часу для %s"
+
+#: src/js/func/pages/clientManager.js:778
+msgid "Task Description"
+msgstr "Опис завдання"
+
+#: src/js/func/pages/clientManager.js:781
+msgid "Describe what you worked on..."
+msgstr "Опишіть, над чим ви працювали..."
+
+#: src/js/func/pages/clientManager.js:817
+msgid "Hours"
+msgstr "Години"
+
+#: src/js/func/pages/clientManager.js:827
+msgid "Minutes"
+msgstr "Хвилини"
+
+#: src/js/func/pages/clientManager.js:842
+msgid "Estimated Cost"
+msgstr "Орієнтовна вартість"
+
+#: src/js/func/pages/clientManager.js:862
+msgid "Create Entry"
+msgstr "Створити запис"
+
+#: src/js/func/pages/clientManager.js:875
+msgid "Please enter a time duration"
+msgstr "Будь ласка, введіть тривалість часу"
+
+#: src/js/func/pages/clientManager.js:928
+msgid "Time Entry Created"
+msgstr "Запис часу створено"
+
+#: src/js/func/pages/clientManager.js:929
+#, javascript-format
+msgid "Successfully created %dh %dm time entry for %s"
+msgstr "Успішно створено запис часу %dг %dхв для %s"
+
+#: src/js/func/pages/clientManager.js:945
+msgid "Failed to create time entry. Please try again."
+msgstr "Не вдалося створити запис часу. Будь ласка, спробуйте ще раз."
+
+#: src/js/func/pages/clientManager.js:958
+#, javascript-format
+msgid "Edit Rate - %s"
+msgstr "Змінити ставку - %s"
+
+#: src/js/func/pages/clientManager.js:959
+msgid "Change hourly rate and currency for this client"
+msgstr "Змінити погодинну ставку та валюту для цього клієнта"
+
+#: src/js/func/pages/pdfExporter.js:27
+msgid "Export Time Report (Text)"
+msgstr "Експорт звіту про час (текст)"
+
+#: src/js/func/pages/pdfExporter.js:67
+msgid "Report Export Complete"
+msgstr "Експорт звіту завершено"
+
+#: src/js/func/pages/pdfExporter.js:76 src/js/func/pages/reportExporter.js:110
+#: src/js/func/pages/templatePDFGenerator.js:86
+msgid "Export Failed"
+msgstr "Експорт не вдався"
+
+#. ('Error creating project:', error);
+#: src/js/func/pages/projectManager.js:85
+msgid "Failed to create project. Please try again."
+msgstr "Не вдалося створити проєкт. Будь ласка, спробуйте ще раз."
+
+#. ('Error creating project:', error);
+#: src/js/func/pages/projectManager.js:200
+msgid "Failed to create project: "
+msgstr "Не вдалося створити проєкт: "
+
+#: src/js/func/pages/projectManager.js:242
+#: src/js/func/pages/projectManager.js:313
+msgid "Invalid Project ID"
+msgstr "Неправильний ідентифікатор проєкту"
+
+#: src/js/func/pages/projectManager.js:249
+msgid "Invalid Project Name"
+msgstr "Неправильна назва проєкту"
+
+#: src/js/func/pages/projectManager.js:256
+msgid "Invalid Project Color"
+msgstr "Неправильний колір проєкту"
+
+#. ('Error updating project:', error);
+#: src/js/func/pages/projectManager.js:302
+msgid "Project Update Failed"
+msgstr "Не вдалося оновити проєкт"
+
+#: src/js/func/pages/projectManager.js:302
+msgid "Failed to update project: "
+msgstr "Не вдалося оновити проєкт: "
+
+#: src/js/func/pages/projectManager.js:319
+msgid "Cannot Delete Default Project"
+msgstr "Неможливо видалити проєкт за замовчуванням"
+
+#: src/js/func/pages/projectManager.js:319
+msgid "The default project cannot be deleted."
+msgstr "Проєкт за замовчуванням не можна видалити."
+
+#. Set tooltip text
+#: src/js/func/pages/projectManager.js:1288
+#: src/js/interface/components/widgetFactory.js:380
+msgid "Click to change color and icon"
+msgstr "Клацніть, щоб змінити колір та значок"
+
+#: src/js/func/pages/projectManager.js:1352
+msgid "Project Appearance"
+msgstr "Зовнішній вигляд проєкту"
+
+#: src/js/func/pages/projectManager.js:1353
+msgid "Configure color and icon for "
+msgstr "Налаштувати колір та значок для "
+
+#: src/js/func/pages/projectManager.js:1548
+msgid "Select Project Color"
+msgstr "Вибрати колір проєкту"
+
+#: src/js/func/pages/projectManager.js:1586
+msgid "Select Emoji"
+msgstr "Вибрати емодзі"
+
+#: src/js/func/pages/projectManager.js:1586
+#: src/js/interface/components/selectorFactory.js:198
+msgid "Select Icon"
+msgstr "Вибрати значок"
+
+#: src/js/func/pages/projectManager.js:1587
+msgid "Choose from our comprehensive emoji collection"
+msgstr "Виберіть з нашої повної колекції емодзі"
+
+#: src/js/func/pages/projectManager.js:1587
+msgid "Choose an appropriate icon for the project"
+msgstr "Виберіть відповідний значок для проєкту"
+
+#: src/js/func/pages/reportHTML.js:94
+msgid "HTML Export Failed"
+msgstr "Експорт HTML не вдався"
+
+#: src/js/func/pages/reportHTML.js:126
+msgid "HTML Report Export Complete"
+msgstr "Експорт HTML-звіту завершено"
+
+#: src/js/func/pages/reportHTML.js:130
+msgid "PDF Export Fallback - HTML Generated"
+msgstr "Резервний варіант експорту PDF - створено HTML"
+
+#: src/js/func/pages/reportHTML.js:131
+#, javascript-format
+msgid ""
+"PDF export is not available in your environment.\n"
+"HTML report created instead.\n"
+"\n"
+"File: %s\n"
+"Location: %s\n"
+"\n"
+"📄 To create PDF: Use the Print button in your browser to save as PDF."
+msgstr ""
+"Експорт PDF недоступний у вашому середовищі.\n"
+"Замість цього створено HTML-звіт.\n"
+"\n"
+"Файл: %s\n"
+"Розташування: %s\n"
+"\n"
+"📄 Щоб створити PDF: використовуйте кнопку Друк у вашому браузері для "
+"збереження як PDF."
+
+#: src/js/func/pages/reportHTML.js:133
+#, javascript-format
+msgid ""
+"Report saved successfully!\n"
+"\n"
+"File: %s\n"
+"Location: %s\n"
+"\n"
+"📄 To create PDF: Use the Print button in your browser to save as PDF."
+msgstr ""
+"Звіт успішно збережено!\n"
+"\n"
+"Файл: %s\n"
+"Розташування: %s\n"
+"\n"
+"📄 Щоб створити PDF: використовуйте кнопку Друк у вашому браузері для "
+"збереження як PDF."
+
+#: src/js/func/pages/reportPDF.js:75
+msgid "Exporting PDF"
+msgstr "Експорт PDF"
+
+#: src/js/func/pages/reportPDF.js:76
+msgid ""
+"Preparing PDF export...\n"
+"Please wait while your report is being generated."
+msgstr ""
+"Підготовка експорту PDF...\n"
+"Будь ласка, зачекайте, поки ваш звіт створюється."
+
+#: src/js/func/pages/reportPDF.js:195
+#: src/js/func/pages/templatePDFGenerator.js:119
+msgid "PDF Export Complete"
+msgstr "Експорт PDF завершено"
+
+#: src/js/func/pages/reportPDF.js:196
+#: src/js/func/pages/templatePDFGenerator.js:120
+#, javascript-format
+msgid ""
+"Report saved successfully!\n"
+"\n"
+"File: %s\n"
+"Location: %s\n"
+"\n"
+"Click \"Open Folder\" to view the file in your file manager."
+msgstr ""
+"Звіт успішно збережено!\n"
+"\n"
+"Файл: %s\n"
+"Розташування: %s\n"
+"\n"
+"Натисніть «Відкрити папку», щоб переглянути файл у вашому файловому "
+"менеджері."
+
+#: src/js/func/pages/reportPDF.js:231
+#: src/js/func/pages/templatePDFGenerator.js:153
+msgid "PDF Export Completed"
+msgstr "Експорт PDF завершено"
+
+#: src/js/func/pages/reportPDF.js:232
+#: src/js/func/pages/templatePDFGenerator.js:154
+#, javascript-format
+msgid ""
+"Your report has been saved successfully!\n"
+"\n"
+"Location: %s\n"
+"\n"
+"Please open this location manually in your file manager."
+msgstr ""
+"Ваш звіт успішно збережено!\n"
+"\n"
+"Розташування: %s\n"
+"\n"
+"Будь ласка, відкрийте це розташування вручну у вашому файловому менеджері."
+
+#: src/js/func/pages/simpleChart.js:61
 msgid ""
 "📊 No data yet\n"
 "Start tracking time to see your productivity chart"
@@ -114,111 +1039,1463 @@ msgstr ""
 "Почніть відстежувати час, щоб переглянути діаграму продуктивності"
 
 #. Chart title - dynamic based on period with German week numbering
-#: src/js/func/pages/simpleChart.js:66
+#: src/js/func/pages/simpleChart.js:80
 msgid "📊 Weekly Activity"
 msgstr "📊 Щотижнева активність"
 
-#: src/js/func/pages/simpleChart.js:69
+#: src/js/func/pages/simpleChart.js:83
 #, javascript-format
 msgid "📊 Weekly Activity (KW %d)"
-msgstr "📊 📊 Щотижнева активність (KT %d)"
+msgstr "📊 📊 Щотижнева активність (КТ %d)"
 
-#: src/js/func/pages/simpleChart.js:71
+#: src/js/func/pages/simpleChart.js:85
 msgid "📊 Monthly Activity (4 weeks)"
 msgstr "📊 Щомісячна активність (4 тижні)"
 
-#: src/js/func/pages/simpleChart.js:72
+#: src/js/func/pages/simpleChart.js:86
 msgid "📊 Yearly Activity (12 months)"
 msgstr "📊 Річна активність (12 місяців)"
 
-#. Update dialog title
-#: src/js/interface/components/complex/ClientDialog.js:289
-msgid "Edit Client"
-msgstr "Редагувати клієнта"
+#: src/js/interface/components/CarouselDialog.js:77
+msgid "Skip"
+msgstr "Пропустити"
 
-#: src/js/interface/components/complex/ClientDialog.js:290
+#: src/js/interface/components/CarouselDialog.js:83
+#: src/js/interface/components/CarouselDialog.js:138
+#: src/js/interface/components/widgetFactory.js:202
+#: src/js/interface/components/widgetFactory.js:261 src/ui/window.blp:240
+msgid "Next"
+msgstr "Далі"
+
+#: src/js/interface/components/CarouselDialog.js:100
+#: src/js/interface/components/PreferencesDialog.js:98
+msgid "Donate"
+msgstr "Пожертвувати"
+
+#: src/js/interface/components/CarouselDialog.js:136
+msgid "Get Started"
+msgstr "Почати"
+
+#: src/js/interface/components/CarouselDialog.js:184
+msgid "Welcome to Valot"
+msgstr "Ласкаво просимо до Valot"
+
+#: src/js/interface/components/CarouselDialog.js:185
+msgid "Track your time efficiently and boost your productivity"
+msgstr "Ефективно відстежуйте свій час та підвищуйте продуктивність"
+
+#: src/js/interface/components/CarouselDialog.js:186
+msgid "Right-click to select items"
+msgstr "Клацніть правою кнопкою миші для вибору елементів"
+
+#: src/js/interface/components/CarouselDialog.js:190
+msgid "Organize Projects"
+msgstr "Організація проєктів"
+
+#: src/js/interface/components/CarouselDialog.js:191
+msgid "Create and manage projects with custom colors and icons"
+msgstr "Створюйте та керуйте проєктами з власними кольорами та значками"
+
+#: src/js/interface/components/CarouselDialog.js:192
+msgid ""
+"Double-click project names to edit • Click icons to change icon and color"
+msgstr ""
+"Двічі клацніть на назві проєкту для редагування • Клацніть на значках для "
+"зміни значка та кольору"
+
+#: src/js/interface/components/CarouselDialog.js:196
+msgid "Manage Clients"
+msgstr "Керування клієнтами"
+
+#: src/js/interface/components/CarouselDialog.js:197
+msgid "Add clients with billing rates and contact information"
+msgstr "Додавайте клієнтів зі ставками та контактною інформацією"
+
+#: src/js/interface/components/CarouselDialog.js:198
+msgid "Set custom currencies in settings"
+msgstr "Встановіть власні валюти в налаштуваннях"
+
+#: src/js/interface/components/CarouselDialog.js:203
+msgid "Launch with terminal command or setup system hotkey"
+msgstr "Запуск командою терміналу або налаштування системної гарячої клавіші"
+
+#: src/js/interface/components/CarouselDialog.js:208
+#: src/js/interface/components/PreferencesDialog.js:420
+msgid "Pomodoro Timer"
+msgstr "Таймер Помодоро"
+
+#: src/js/interface/components/CarouselDialog.js:209
+msgid "Activate 20 minutes by default and you can customize it inside settings"
+msgstr ""
+"Активуйте 20 хвилин за замовчуванням, і ви можете налаштувати це в параметрах"
+
+#: src/js/interface/components/CarouselDialog.js:210
+msgid "Shift+click track button to track items in pomodoro mode"
+msgstr ""
+"Shift+клацання на кнопку відстеження для відстеження елементів в режимі "
+"помодоро"
+
+#: src/js/interface/components/CarouselDialog.js:310
+#: src/js/interface/components/PreferencesDialog.js:502
+msgid "Copy command"
+msgstr "Копіювати команду"
+
+#: src/js/interface/components/PreferencesDialog.js:20
+msgid "Preferences"
+msgstr "Параметри"
+
+#: src/js/interface/components/PreferencesDialog.js:33 src/ui/window.blp:36
+msgid "About"
+msgstr "Про додаток"
+
+#: src/js/interface/components/PreferencesDialog.js:41
+msgid "Global"
+msgstr "Глобальні"
+
+#: src/js/interface/components/PreferencesDialog.js:49
+#: src/js/interface/pages/ClientsPage.js:17 src/ui/window.blp:72
+#: src/ui/window.blp:362
+msgid "Clients"
+msgstr "Клієнти"
+
+#: src/js/interface/components/PreferencesDialog.js:116
+#: src/js/interface/components/PreferencesDialog.js:573
+msgid "Details"
+msgstr "Подробиці"
+
+#: src/js/interface/components/PreferencesDialog.js:130
+#: src/js/interface/components/PreferencesDialog.js:672
+msgid "Credits"
+msgstr "Автори"
+
+#: src/js/interface/components/PreferencesDialog.js:144
+#: src/js/interface/components/PreferencesDialog.js:749
+msgid "Legal"
+msgstr "Правова інформація"
+
+#: src/js/interface/components/PreferencesDialog.js:162
+msgid "Appearance"
+msgstr "Зовнішній вигляд"
+
+#: src/js/interface/components/PreferencesDialog.js:167
+msgid "Theme"
+msgstr "Тема"
+
+#: src/js/interface/components/PreferencesDialog.js:168
+msgid "Choose your preferred theme"
+msgstr "Виберіть бажану тему"
+
+#: src/js/interface/components/PreferencesDialog.js:247
+msgid "Accent Color"
+msgstr "Акцентний колір"
+
+#: src/js/interface/components/PreferencesDialog.js:248
+msgid "Choose system accent or custom color"
+msgstr "Виберіть системний акцентний колір або власний колір"
+
+#: src/js/interface/components/PreferencesDialog.js:259
+msgid "Standard"
+msgstr "Стандартний"
+
+#: src/js/interface/components/PreferencesDialog.js:263
+msgid "Custom"
+msgstr "Власний"
+
+#: src/js/interface/components/PreferencesDialog.js:275
+msgid "Custom Color"
+msgstr "Власний колір"
+
+#: src/js/interface/components/PreferencesDialog.js:276
+msgid "Pick your preferred accent color"
+msgstr "Виберіть бажаний акцентний колір"
+
+#: src/js/interface/components/PreferencesDialog.js:346
+msgid "Behavior"
+msgstr "Поведінка"
+
+#: src/js/interface/components/PreferencesDialog.js:351
+msgid "Sidebar"
+msgstr "Бічна панель"
+
+#: src/js/interface/components/PreferencesDialog.js:352
+msgid "Choose sidebar behavior on launch"
+msgstr "Виберіть поведінку бічної панелі при запуску"
+
+#: src/js/interface/components/PreferencesDialog.js:363
+msgid "Opened"
+msgstr "Відкрита"
+
+#: src/js/interface/components/PreferencesDialog.js:364
+msgid "Always open on launch"
+msgstr "Завжди відкривати при запуску"
+
+#: src/js/interface/components/PreferencesDialog.js:368
+msgid "Closed"
+msgstr "Закрита"
+
+#: src/js/interface/components/PreferencesDialog.js:369
+msgid "Always closed on launch"
+msgstr "Завжди закривати при запуску"
+
+#: src/js/interface/components/PreferencesDialog.js:373
+msgid "Dynamic"
+msgstr "Динамічна"
+
+#: src/js/interface/components/PreferencesDialog.js:374
+msgid "Remember last state"
+msgstr "Запам'ятати останній стан"
+
+#: src/js/interface/components/PreferencesDialog.js:425
+msgid "Timer Duration"
+msgstr "Тривалість таймера"
+
+#: src/js/interface/components/PreferencesDialog.js:426
+msgid "Default pomodoro session length in minutes"
+msgstr "Тривалість сеансу помодоро за замовчуванням у хвилинах"
+
+#: src/js/interface/components/PreferencesDialog.js:453
+msgid "Welcome Info"
+msgstr "Вітальна інформація"
+
+#: src/js/interface/components/PreferencesDialog.js:454
+msgid "View the app welcome tour and getting started guide"
+msgstr "Переглянути вітальний тур застосунку та посібник з початку роботи"
+
+#: src/js/interface/components/PreferencesDialog.js:458
+msgid "Show Welcome Tour"
+msgstr "Показати вітальний тур"
+
+#: src/js/interface/components/PreferencesDialog.js:459
+msgid "View the introductory slides and features overview"
+msgstr "Переглянути вступні слайди та огляд функцій"
+
+#: src/js/interface/components/PreferencesDialog.js:463
+msgid "Show Tour"
+msgstr "Показати тур"
+
+#: src/js/interface/components/PreferencesDialog.js:478
+msgid "Compact Tracker Command"
+msgstr "Команда компактного таймера"
+
+#: src/js/interface/components/PreferencesDialog.js:479
+msgid "Terminal command for launching compact tracker"
+msgstr "Команда терміналу для запуску компактного таймера"
+
+#: src/js/interface/components/PreferencesDialog.js:483
+msgid "Terminal Command"
+msgstr "Команда терміналу"
+
+#: src/js/interface/components/PreferencesDialog.js:484
+msgid "Use this command for hotkeys or scripts"
+msgstr "Використовуйте цю команду для гарячих клавіш або скриптів"
+
+#: src/js/interface/components/PreferencesDialog.js:534
+#: src/js/interface/components/PreferencesDialog.js:957
+msgid "Currency Settings"
+msgstr "Налаштування валюти"
+
+#: src/js/interface/components/PreferencesDialog.js:535
+#: src/js/interface/components/PreferencesDialog.js:958
+msgid "Manage available currencies for client billing"
+msgstr "Керування доступними валютами для виставлення рахунків клієнтам"
+
+#: src/js/interface/components/PreferencesDialog.js:549
+msgid "Hidden Currencies"
+msgstr "Приховані валюти"
+
+#: src/js/interface/components/PreferencesDialog.js:550
+msgid "Click to unhide currencies"
+msgstr "Клацніть, щоб показати валюти"
+
+#: src/js/interface/components/PreferencesDialog.js:555
+#: src/js/interface/components/PreferencesDialog.js:980
+msgid "Hidden"
+msgstr "Приховано"
+
+#: src/js/interface/components/PreferencesDialog.js:556
+#: src/js/interface/components/PreferencesDialog.js:981
+msgid "0 currencies hidden"
+msgstr "0 валют приховано"
+
+#: src/js/interface/components/PreferencesDialog.js:600
+#: src/js/interface/components/PreferencesDialog.js:699
+msgid "Creator"
+msgstr "Творець"
+
+#: src/js/interface/components/PreferencesDialog.js:605
+#: src/js/interface/components/PreferencesDialog.js:704
+msgid "Designer &amp; Developer"
+msgstr "Дизайнер і розробник"
+
+#: src/js/interface/components/PreferencesDialog.js:612
+msgid "Copyright"
+msgstr "Авторські права"
+
+#: src/js/interface/components/PreferencesDialog.js:616
+msgid "Copyright © 2025 Vitaly Odnoyko"
+msgstr "Авторські права © 2025 Vitaly Odnoyko"
+
+#: src/js/interface/components/PreferencesDialog.js:617
+msgid "All rights reserved under MIT License"
+msgstr "Усі права захищено за ліцензією MIT"
+
+#: src/js/interface/components/PreferencesDialog.js:624
+msgid "Repository"
+msgstr "Репозиторій"
+
+#: src/js/interface/components/PreferencesDialog.js:628
+msgid "Source Code"
+msgstr "Вихідний код"
+
+#: src/js/interface/components/PreferencesDialog.js:644
+msgid "Website"
+msgstr "Веб-сайт"
+
+#: src/js/interface/components/PreferencesDialog.js:648
+msgid "Visit Website"
+msgstr "Відвідати веб-сайт"
+
+#: src/js/interface/components/PreferencesDialog.js:711
+msgid "Special Thanks"
+msgstr "Особлива подяка"
+
+#: src/js/interface/components/PreferencesDialog.js:715
+msgid "GNOME &amp; GTK Developers"
+msgstr "Розробники GNOME та GTK"
+
+#: src/js/interface/components/PreferencesDialog.js:716
+msgid "For the amazing toolkit and desktop environment"
+msgstr "За дивовижний інструментарій та середовище робочого столу"
+
+#: src/js/interface/components/PreferencesDialog.js:721
+msgid "Libadwaita Contributors"
+msgstr "Учасники Libadwaita"
+
+#: src/js/interface/components/PreferencesDialog.js:722
+msgid "For beautiful and consistent UI components"
+msgstr "За красиві та узгоджені компоненти користувацького інтерфейсу"
+
+#: src/js/interface/components/PreferencesDialog.js:727
+msgid "Flatpak Community"
+msgstr "Спільнота Flatpak"
+
+#: src/js/interface/components/PreferencesDialog.js:728
+msgid "For modern app distribution and sandboxing"
+msgstr "За сучасне розповсюдження застосунків та ізольоване середовище"
+
+#: src/js/interface/components/PreferencesDialog.js:733
+msgid "Weblate"
+msgstr "Weblate"
+
+#: src/js/interface/components/PreferencesDialog.js:734
+msgid "For translation management and localization"
+msgstr "За управління перекладами та локалізацію"
+
+#: src/js/interface/components/PreferencesDialog.js:776
+msgid "License"
+msgstr "Ліцензія"
+
+#: src/js/interface/components/PreferencesDialog.js:781
+msgid "Free and open source software"
+msgstr "Безкоштовне програмне забезпечення з відкритим вихідним кодом"
+
+#: src/js/interface/components/PreferencesDialog.js:796
+msgid "Third Party"
+msgstr "Сторонні"
+
+#: src/js/interface/components/PreferencesDialog.js:801
+msgid "Licensed under LGPL 2.1"
+msgstr "Ліцензовано за LGPL 2.1"
+
+#: src/js/interface/components/PreferencesDialog.js:1015
+#, javascript-format
+msgid "%d currencies hidden"
+msgstr "%d валют приховано"
+
+#: src/js/interface/components/complex/ClientDialog.js:94
+msgid "Enter client name..."
+msgstr "Введіть ім'я клієнта..."
+
+#: src/js/interface/components/complex/ClientDialog.js:108
+msgid "Hourly Rate & Currency"
+msgstr "Погодинна ставка та валюта"
+
+#: src/js/interface/components/complex/ClientDialog.js:350
 msgid "Update client information"
 msgstr "Оновлення інформації про клієнта"
 
-#: src/js/interface/components/complex/ClientDialog.js:291
-#: src/js/interface/components/complex/ProjectDialog.js:285
-msgid "Save Changes"
-msgstr "Зберегти зміни"
-
 #. Update dialog title
-#: src/js/interface/components/complex/ClientDialog.js:314
+#: src/js/interface/components/complex/ClientDialog.js:374
 msgid "Create New Client"
 msgstr "Створити нового клієнта"
 
-#: src/js/interface/components/complex/ClientDialog.js:315
+#: src/js/interface/components/complex/ClientDialog.js:375
 msgid "Add a new client with contact details and billing rates"
 msgstr "Додати нового клієнта з контактною інформацією та тарифами на рахунки"
 
-#: src/js/interface/components/complex/ClientDialog.js:316
-msgid "Create Client"
-msgstr "Створити клієнта"
+#: src/js/interface/components/complex/CurrencyDialog.js:26
+msgid "Edit Currency"
+msgstr "Змінити валюту"
 
-#. Update dialog title
-#: src/js/interface/components/complex/ProjectDialog.js:283
-msgid "Edit Project"
-msgstr "Редагувати проєкт"
+#: src/js/interface/components/complex/CurrencyDialog.js:26
+msgid "Create New Currency"
+msgstr "Створити нову валюту"
 
-#: src/js/interface/components/complex/ProjectDialog.js:284
-msgid "Update project name and appearance"
-msgstr "Оновити назву та зовнішній вигляд проекту"
+#: src/js/interface/components/complex/CurrencyDialog.js:27
+msgid "Update currency information"
+msgstr "Оновити інформацію про валюту"
 
-#. Update dialog title
-#: src/js/interface/components/complex/ProjectDialog.js:305
-msgid "Create New Project"
-msgstr "Створити новий проект"
+#: src/js/interface/components/complex/CurrencyDialog.js:27
+msgid "Add a new custom currency"
+msgstr "Додати нову власну валюту"
 
-#: src/js/interface/components/complex/ProjectDialog.js:306
-msgid "Create a new project"
-msgstr "Створити новий проект"
+#: src/js/interface/components/complex/CurrencyDialog.js:38
+msgid "Create Currency"
+msgstr "Створити валюту"
 
-#: src/js/interface/components/complex/ProjectDialog.js:307
-msgid "Create Project"
-msgstr "Створити проєкт"
+#: src/js/interface/components/complex/CurrencyDialog.js:63
+msgid "Full Name"
+msgstr "Повне ім'я"
 
-#: src/js/interface/components/complex/ModularDialogManager.js:203
+#: src/js/interface/components/complex/CurrencyDialog.js:69
+msgid "e.g. US Dollar, Euro, Bitcoin..."
+msgstr "напр. Долар США, Євро, Біткоїн..."
+
+#: src/js/interface/components/complex/CurrencyDialog.js:95
+msgid "Currency Symbol"
+msgstr "Символ валюти"
+
+#: src/js/interface/components/complex/CurrencyDialog.js:101
+msgid "e.g. $, €, ₿..."
+msgstr "напр. $, €, ₿..."
+
+#: src/js/interface/components/complex/CurrencyDialog.js:117
+msgid "Currency Code"
+msgstr "Код валюти"
+
+#: src/js/interface/components/complex/CurrencyDialog.js:123
+msgid "e.g. USD, EUR, BTC..."
+msgstr "напр. USD, EUR, BTC..."
+
+#: src/js/interface/components/complex/DateRangeSelector.js:61
+#: src/js/interface/pages/TasksPage.js:250 src/ui/window.blp:205
+msgid "Today"
+msgstr "Сьогодні"
+
+#: src/js/interface/components/complex/DateRangeSelector.js:62
+msgid "Yesterday"
+msgstr "Вчора"
+
+#: src/js/interface/components/complex/DateRangeSelector.js:63
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:133
+#: src/js/interface/pages/TasksPage.js:251 src/ui/window.blp:109
+#: src/ui/window.blp:205
+msgid "This Week"
+msgstr "Цього тижня"
+
+#: src/js/interface/components/complex/DateRangeSelector.js:64
+msgid "Last Week"
+msgstr "Минулого тижня"
+
+#: src/js/interface/components/complex/DateRangeSelector.js:65
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:134
+#: src/ui/window.blp:205
+msgid "This Month"
+msgstr "Цього місяця"
+
+#: src/js/interface/components/complex/DateRangeSelector.js:66
+msgid "Last Month"
+msgstr "Минулого місяця"
+
+#: src/js/interface/components/complex/DateRangeSelector.js:101
+#: src/js/interface/components/complex/DateRangeSelector.js:134
+msgid "to"
+msgstr "до"
+
+#: src/js/interface/components/complex/DateRangeSelector.js:209
+msgid "Select Start Date"
+msgstr "Вибрати дату початку"
+
+#: src/js/interface/components/complex/DateRangeSelector.js:209
+msgid "Select End Date"
+msgstr "Вибрати дату закінчення"
+
+#: src/js/interface/components/complex/DateRangeSelector.js:210
+msgid "Choose the start date for the report range"
+msgstr "Виберіть дату початку для діапазону звіту"
+
+#: src/js/interface/components/complex/DateRangeSelector.js:210
+msgid "Choose the end date for the report range"
+msgstr "Виберіть дату закінчення для діапазону звіту"
+
+#: src/js/interface/components/complex/ModularDialogManager.js:137
+msgid "Task Name"
+msgstr "Назва завдання"
+
+#: src/js/interface/components/complex/ModularDialogManager.js:146
+msgid "Description"
+msgstr "Опис"
+
+#: src/js/interface/components/complex/ModularDialogManager.js:165
+msgid "No client"
+msgstr "Немає клієнта"
+
+#: src/js/interface/components/complex/ModularDialogManager.js:204
 msgid "Confirm Action"
 msgstr "Підтвердити дію"
 
-#: src/js/interface/components/complex/ModularDialogManager.js:204
+#: src/js/interface/components/complex/ModularDialogManager.js:205
 msgid "Are you sure?"
 msgstr "Ви впевнені?"
 
-#: src/js/interface/components/complex/ModularDialogManager.js:205
+#: src/js/interface/components/complex/ModularDialogManager.js:206
 msgid "Confirm"
 msgstr "Підтвердити"
 
-#: src/ui/window.blp:5
-msgid "Valot"
-msgstr "Valot"
+#: src/js/interface/components/complex/ModularDialogManager.js:247
+msgid "Error Details"
+msgstr "Подробиці помилки"
+
+#: src/js/interface/components/complex/ProjectCard.js:104
+#: src/js/interface/components/complex/TrackingWidget.js:247
+#, javascript-format
+msgid "Client: %s"
+msgstr "Клієнт: %s"
+
+#: src/js/interface/components/complex/ProjectCard.js:119
+msgid "Edit project"
+msgstr "Редагувати проєкт"
+
+#: src/js/interface/components/complex/ProjectCard.js:131
+msgid "Delete project"
+msgstr "Видалити проєкт"
+
+#: src/js/interface/components/complex/ProjectCard.js:157
+#: src/js/interface/components/complex/ProjectCard.js:257
+#, javascript-format
+msgid "Total: %s"
+msgstr "Усього: %s"
+
+#: src/js/interface/components/complex/ProjectCard.js:165
+#: src/js/interface/components/complex/ProjectCard.js:263
+#, javascript-format
+msgid "Tasks: %d"
+msgstr "Завдання: %d"
+
+#: src/js/interface/components/complex/ProjectCard.js:176
+#: src/js/interface/components/complex/ProjectCard.js:273
+msgid "Currently tracking"
+msgstr "Зараз відстежується"
+
+#: src/js/interface/components/complex/ProjectDialog.js:96
+msgid "Enter project name..."
+msgstr "Введіть назву проєкту..."
+
+#: src/js/interface/components/complex/ProjectDialog.js:285
+msgid "Update project name and appearance"
+msgstr "Оновити назву та зовнішній вигляд проєкту"
+
+#: src/js/interface/components/complex/ProjectDialog.js:307
+msgid "Create a new project"
+msgstr "Створити новий проект"
+
+#: src/js/interface/components/complex/TaskStackTemplate.js:251
+#: src/js/interface/pages/TasksPage.js:995
+msgid "Edit Task"
+msgstr "Змінити завдання"
+
+#: src/js/interface/components/complex/TaskTemplate.js:9
+msgid "Meeting"
+msgstr "Зустріч"
+
+#: src/js/interface/components/complex/TaskTemplate.js:12
+msgid "Team Meeting - [Date]"
+msgstr "Командна зустріч - [Дата]"
+
+#: src/js/interface/components/complex/TaskTemplate.js:13
+msgid ""
+"Weekly team sync meeting\n"
+"- Review progress\n"
+"- Discuss blockers\n"
+"- Plan next steps"
+msgstr ""
+"Щотижнева командна зустріч\n"
+"- Огляд прогресу\n"
+"- Обговорення перешкод\n"
+"- Планування наступних кроків"
+
+#: src/js/interface/components/complex/TaskTemplate.js:21
+msgid "Development Task"
+msgstr "Завдання розробки"
+
+#: src/js/interface/components/complex/TaskTemplate.js:24
+msgid "Implement [Feature Name]"
+msgstr "Реалізувати [Назва функції]"
+
+#: src/js/interface/components/complex/TaskTemplate.js:25
+msgid ""
+"## Description\n"
+"Implement new feature for the application\n"
+"\n"
+"## Requirements\n"
+"- [ ] Requirement 1\n"
+"- [ ] Requirement 2\n"
+"- [ ] Requirement 3\n"
+"\n"
+"## Acceptance Criteria\n"
+"- [ ] Feature works as expected\n"
+"- [ ] Tests added\n"
+"- [ ] Documentation updated"
+msgstr ""
+"## Опис\n"
+"Реалізувати нову функцію для застосунку\n"
+"\n"
+"## Вимоги\n"
+"- [ ] Вимога 1\n"
+"- [ ] Вимога 2\n"
+"- [ ] Вимога 3\n"
+"\n"
+"## Критерії прийняття\n"
+"- [ ] Функція працює як очікується\n"
+"- [ ] Тести додано\n"
+"- [ ] Документацію оновлено"
+
+#: src/js/interface/components/complex/TaskTemplate.js:33
+msgid "Bug Fix"
+msgstr "Виправлення помилки"
+
+#: src/js/interface/components/complex/TaskTemplate.js:36
+msgid "Fix: [Bug Description]"
+msgstr "Виправлення: [Опис помилки]"
+
+#: src/js/interface/components/complex/TaskTemplate.js:37
+msgid ""
+"## Bug Report\n"
+"**Issue:** Description of the bug\n"
+"**Steps to Reproduce:**\n"
+"1. Step 1\n"
+"2. Step 2\n"
+"3. Step 3\n"
+"\n"
+"**Expected Behavior:** What should happen\n"
+"**Actual Behavior:** What actually happens\n"
+"\n"
+"## Solution\n"
+"- [ ] Investigate root cause\n"
+"- [ ] Implement fix\n"
+"- [ ] Test fix\n"
+"- [ ] Verify no regression"
+msgstr ""
+"## Звіт про помилку\n"
+"**Проблема:** Опис помилки\n"
+"**Кроки для відтворення:**\n"
+"1. Крок 1\n"
+"2. Крок 2\n"
+"3. Крок 3\n"
+"\n"
+"**Очікувана поведінка:** Що має відбутися\n"
+"**Фактична поведінка:** Що відбувається насправді\n"
+"\n"
+"## Рішення\n"
+"- [ ] Дослідити першопричину\n"
+"- [ ] Реалізувати виправлення\n"
+"- [ ] Перевірити виправлення\n"
+"- [ ] Переконатися у відсутності регресії"
+
+#: src/js/interface/components/complex/TaskTemplate.js:45
+msgid "Research Task"
+msgstr "Дослідницьке завдання"
+
+#: src/js/interface/components/complex/TaskTemplate.js:48
+msgid "Research: [Topic]"
+msgstr "Дослідження: [Тема]"
+
+#: src/js/interface/components/complex/TaskTemplate.js:49
+msgid ""
+"## Research Objective\n"
+"Investigate and analyze [topic]\n"
+"\n"
+"## Questions to Answer\n"
+"- Question 1?\n"
+"- Question 2?\n"
+"- Question 3?\n"
+"\n"
+"## Deliverables\n"
+"- [ ] Research summary\n"
+"- [ ] Recommendations\n"
+"- [ ] Next steps"
+msgstr ""
+"## Мета дослідження\n"
+"Дослідити та проаналізувати [тема]\n"
+"\n"
+"## Питання для відповіді\n"
+"- Питання 1?\n"
+"- Питання 2?\n"
+"- Питання 3?\n"
+"\n"
+"## Результати\n"
+"- [ ] Зведення дослідження\n"
+"- [ ] Рекомендації\n"
+"- [ ] Наступні кроки"
+
+#: src/js/interface/components/complex/TaskTemplate.js:57
+msgid "Code Review"
+msgstr "Перевірка коду"
+
+#: src/js/interface/components/complex/TaskTemplate.js:60
+msgid "Review: [PR/MR Title]"
+msgstr "Перевірка: [Назва PR/MR]"
+
+#: src/js/interface/components/complex/TaskTemplate.js:61
+msgid ""
+"## Review Checklist\n"
+"- [ ] Code quality and style\n"
+"- [ ] Logic correctness\n"
+"- [ ] Performance considerations\n"
+"- [ ] Security implications\n"
+"- [ ] Test coverage\n"
+"- [ ] Documentation updates\n"
+"\n"
+"## Feedback\n"
+"[Add specific feedback here]"
+msgstr ""
+"## Контрольний список перевірки\n"
+"- [ ] Якість та стиль коду\n"
+"- [ ] Правильність логіки\n"
+"- [ ] Міркування щодо продуктивності\n"
+"- [ ] Вплив на безпеку\n"
+"- [ ] Охоплення тестами\n"
+"- [ ] Оновлення документації\n"
+"\n"
+"## Зворотний зв'язок\n"
+"[Додайте конкретний зворотний зв'язок тут]"
+
+#: src/js/interface/components/complex/TaskTemplate.js:69
+msgid "Documentation"
+msgstr "Документація"
+
+#: src/js/interface/components/complex/TaskTemplate.js:72
+msgid "Document: [Topic]"
+msgstr "Документ: [Тема]"
+
+#: src/js/interface/components/complex/TaskTemplate.js:73
+msgid ""
+"## Documentation Task\n"
+"Create/update documentation for [topic]\n"
+"\n"
+"## Content to Cover\n"
+"- [ ] Overview\n"
+"- [ ] Usage examples\n"
+"- [ ] Configuration options\n"
+"- [ ] Troubleshooting\n"
+"- [ ] FAQs\n"
+"\n"
+"## Target Audience\n"
+"[Describe who will use this documentation]"
+msgstr ""
+"## Завдання документації\n"
+"Створити/оновити документацію для [тема]\n"
+"\n"
+"## Вміст для висвітлення\n"
+"- [ ] Огляд\n"
+"- [ ] Приклади використання\n"
+"- [ ] Параметри конфігурації\n"
+"- [ ] Усунення несправностей\n"
+"- [ ] Часті запитання\n"
+"\n"
+"## Цільова аудиторія\n"
+"[Опишіть, хто буде використовувати цю документацію]"
+
+#: src/js/interface/components/complex/TaskTemplate.js:81
+msgid "Testing Task"
+msgstr "Завдання тестування"
+
+#: src/js/interface/components/complex/TaskTemplate.js:84
+msgid "Test: [Feature/Component]"
+msgstr "Тест: [Функція/Компонент]"
+
+#: src/js/interface/components/complex/TaskTemplate.js:85
+msgid ""
+"## Testing Scope\n"
+"Test [feature/component] thoroughly\n"
+"\n"
+"## Test Cases\n"
+"- [ ] Unit tests\n"
+"- [ ] Integration tests\n"
+"- [ ] Edge cases\n"
+"- [ ] Error handling\n"
+"- [ ] Performance tests\n"
+"\n"
+"## Test Environment\n"
+"- [ ] Development\n"
+"- [ ] Staging\n"
+"- [ ] Production-like"
+msgstr ""
+"## Область тестування\n"
+"Ретельно протестувати [функцію/компонент]\n"
+"\n"
+"## Тестові випадки\n"
+"- [ ] Модульні тести\n"
+"- [ ] Інтеграційні тести\n"
+"- [ ] Граничні випадки\n"
+"- [ ] Обробка помилок\n"
+"- [ ] Тести продуктивності\n"
+"\n"
+"## Тестове середовище\n"
+"- [ ] Розробка\n"
+"- [ ] Проміжна\n"
+"- [ ] Як виробниче"
+
+#: src/js/interface/components/complex/TaskTemplate.js:93
+msgid "Deployment"
+msgstr "Розгортання"
+
+#: src/js/interface/components/complex/TaskTemplate.js:96
+msgid "Deploy: [Version/Release]"
+msgstr "Розгортання: [Версія/Реліз]"
+
+#: src/js/interface/components/complex/TaskTemplate.js:97
+msgid ""
+"## Deployment Plan\n"
+"Deploy [version] to [environment]\n"
+"\n"
+"## Pre-deployment Checklist\n"
+"- [ ] Code reviewed and approved\n"
+"- [ ] Tests passing\n"
+"- [ ] Database migrations ready\n"
+"- [ ] Configuration updated\n"
+"- [ ] Rollback plan prepared\n"
+"\n"
+"## Post-deployment Checklist\n"
+"- [ ] Verify deployment success\n"
+"- [ ] Run smoke tests\n"
+"- [ ] Monitor logs\n"
+"- [ ] Update documentation"
+msgstr ""
+"## План розгортання\n"
+"Розгорнути [версія] у [середовище]\n"
+"\n"
+"## Контрольний список перед розгортанням\n"
+"- [ ] Код перевірено та схвалено\n"
+"- [ ] Тести проходять\n"
+"- [ ] Міграції бази даних готові\n"
+"- [ ] Конфігурацію оновлено\n"
+"- [ ] План відкату підготовлено\n"
+"\n"
+"## Контрольний список після розгортання\n"
+"- [ ] Перевірити успішне розгортання\n"
+"- [ ] Виконати димові тести\n"
+"- [ ] Відстежувати журнали\n"
+"- [ ] Оновити документацію"
+
+#: src/js/interface/components/complex/TaskTemplate.js:105
+msgid "Planning Session"
+msgstr "Сесія планування"
+
+#: src/js/interface/components/complex/TaskTemplate.js:108
+msgid "Planning: [Sprint/Project]"
+msgstr "Планування: [Спринт/Проєкт]"
+
+#: src/js/interface/components/complex/TaskTemplate.js:109
+msgid ""
+"## Planning Session\n"
+"Plan work for [sprint/project]\n"
+"\n"
+"## Agenda\n"
+"- [ ] Review previous sprint\n"
+"- [ ] Estimate new tasks\n"
+"- [ ] Assign priorities\n"
+"- [ ] Set sprint goals\n"
+"- [ ] Identify blockers\n"
+"\n"
+"## Outcomes\n"
+"- Sprint backlog defined\n"
+"- Team capacity planned\n"
+"- Goals communicated"
+msgstr ""
+"## Сесія планування\n"
+"Планування роботи для [спринт/проєкт]\n"
+"\n"
+"## Порядок денний\n"
+"- [ ] Огляд попереднього спринту\n"
+"- [ ] Оцінка нових завдань\n"
+"- [ ] Призначення пріоритетів\n"
+"- [ ] Встановлення цілей спринту\n"
+"- [ ] Визначення перешкод\n"
+"\n"
+"## Результати\n"
+"- Визначено беклог спринту\n"
+"- Заплановано можливості команди\n"
+"- Доведено цілі"
+
+#: src/js/interface/components/complex/TaskTemplate.js:117
+msgid "Client Call"
+msgstr "Дзвінок клієнта"
+
+#: src/js/interface/components/complex/TaskTemplate.js:120
+msgid "Call: [Client Name] - [Purpose]"
+msgstr "Дзвінок: [Ім'я клієнта] - [Мета]"
+
+#: src/js/interface/components/complex/TaskTemplate.js:121
+msgid ""
+"## Call Details\n"
+"**Client:** [Client Name]\n"
+"**Purpose:** [Call purpose]\n"
+"**Date/Time:** [Schedule]\n"
+"\n"
+"## Agenda\n"
+"- [ ] Item 1\n"
+"- [ ] Item 2\n"
+"- [ ] Item 3\n"
+"\n"
+"## Follow-up Actions\n"
+"- [ ] Action 1\n"
+"- [ ] Action 2\n"
+"- [ ] Send meeting summary"
+msgstr ""
+"## Подробиці дзвінка\n"
+"**Клієнт:** [Ім'я клієнта]\n"
+"**Мета:** [Мета дзвінка]\n"
+"**Дата/час:** [Розклад]\n"
+"\n"
+"## Порядок денний\n"
+"- [ ] Пункт 1\n"
+"- [ ] Пункт 2\n"
+"- [ ] Пункт 3\n"
+"\n"
+"## Подальші дії\n"
+"- [ ] Дія 1\n"
+"- [ ] Дія 2\n"
+"- [ ] Надіслати зведення зустрічі"
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:21
+msgid "Choose Task Template"
+msgstr "Виберіть шаблон завдання"
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:22
+msgid "Select a template to quickly create a new task with predefined content"
+msgstr ""
+"Виберіть шаблон для швидкого створення нового завдання з визначеним вмістом"
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:38
+msgid "Search templates..."
+msgstr "Пошук шаблонів..."
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:58
+msgid "Select a template to see details"
+msgstr "Виберіть шаблон для перегляду подробиць"
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:88
+msgid "Create Blank Task"
+msgstr "Створити порожнє завдання"
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:89
+msgid "Use Template"
+msgstr "Використати шаблон"
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:214
+msgid "Customize Template"
+msgstr "Налаштувати шаблон"
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:215
+#, javascript-format
+msgid "Customize the \"%s\" template"
+msgstr "Налаштувати шаблон «%s»"
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:239
+#, javascript-format
+msgid "Enter %s..."
+msgstr "Введіть %s..."
+
+#: src/js/interface/components/complex/TaskTemplateDialog.js:250
+msgid "Show preview before creating"
+msgstr "Показати попередній перегляд перед створенням"
+
+#: src/js/interface/components/complex/TrackingWidget.js:235
+#, javascript-format
+msgid "Project: %s"
+msgstr "Проєкт: %s"
+
+#: src/js/interface/components/primitive/ColorPicker.js:100
+msgid "Custom Color..."
+msgstr "Власний колір..."
+
+#: src/js/interface/components/primitive/IconPicker.js:68 src/ui/window.blp:205
+msgid "All"
+msgstr "Усі"
+
+#: src/js/interface/components/primitive/IconPicker.js:69
+msgid "Actions"
+msgstr "Дії"
+
+#: src/js/interface/components/primitive/IconPicker.js:70
+msgid "Apps"
+msgstr "Застосунки"
+
+#: src/js/interface/components/primitive/IconPicker.js:71
+msgid "Devices"
+msgstr "Пристрої"
+
+#: src/js/interface/components/primitive/IconPicker.js:72
+msgid "Emblems"
+msgstr "Емблеми"
+
+#: src/js/interface/components/primitive/IconPicker.js:73
+msgid "Files"
+msgstr "Файли"
+
+#: src/js/interface/components/primitive/IconPicker.js:74
+msgid "Places"
+msgstr "Місця"
+
+#: src/js/interface/components/primitive/IconPicker.js:75
+msgid "Status"
+msgstr "Стан"
+
+#: src/js/interface/components/primitive/IconPicker.js:167
+msgid "No icons found"
+msgstr "Значки не знайдено"
+
+#: src/js/interface/components/primitive/IconPicker.js:172
+msgid "Try adjusting your search or category filter"
+msgstr "Спробуйте налаштувати пошук або фільтр категорій"
+
+#: src/js/interface/components/selectorFactory.js:60
+msgid "No items available"
+msgstr "Немає доступних елементів"
+
+#: src/js/interface/components/selectorFactory.js:61
+msgid "Go to the appropriate page to add items"
+msgstr "Перейдіть на відповідну сторінку, щоб додати елементи"
+
+#: src/js/interface/components/selectorFactory.js:114 src/js/mainwindow.js:934
+msgid "Choose a project for time tracking"
+msgstr "Виберіть проєкт для відстеження часу"
+
+#: src/js/interface/components/selectorFactory.js:132 src/js/mainwindow.js:960
+msgid "Choose a client for time tracking"
+msgstr "Виберіть клієнта для відстеження часу"
+
+#: src/js/interface/components/selectorFactory.js:199
+msgid "Choose an appropriate icon or emoji"
+msgstr "Виберіть відповідний значок або емодзі"
+
+#: src/js/interface/components/selectorFactory.js:418
+msgid "Icons"
+msgstr "Значки"
+
+#: src/js/interface/components/selectorFactory.js:423
+msgid "Emoji"
+msgstr "Емодзі"
+
+#: src/js/interface/components/widgetFactory.js:189
+#: src/js/interface/components/widgetFactory.js:248 src/ui/window.blp:227
+msgid "Previous"
+msgstr "Попередній"
+
+#: src/js/interface/components/widgetFactory.js:280
+msgid "0 selected"
+msgstr "0 вибрано"
+
+#. Update counter
+#: src/js/interface/components/widgetFactory.js:353
+#: src/js/interface/components/widgetFactory.js:365
+#, javascript-format
+msgid "%d selected"
+msgstr "Вибрано: %d"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:15
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:58
+msgid "PDF Export Preferences"
+msgstr "Параметри експорту PDF"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:71
+msgid "Export PDF"
+msgstr "Експортувати PDF"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:115
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:189
+msgid "Time Range"
+msgstr "Часовий діапазон"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:121
+msgid "Report Period"
+msgstr "Період звіту"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:122
+msgid "Select the time period for your report"
+msgstr "Виберіть часовий період для вашого звіту"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:127
+msgid "Time Period"
+msgstr "Часовий період"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:128
+msgid "Choose predefined period or custom range"
+msgstr "Виберіть визначений період або власний діапазон"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:135
+msgid "This Year"
+msgstr "Цього року"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:136
+msgid "Custom Range"
+msgstr "Власний діапазон"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:151
+msgid "Custom Date Range"
+msgstr "Власний діапазон дат"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:152
+msgid "Specify exact start and end dates"
+msgstr "Вкажіть точні дати початку та закінчення"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:158
+msgid "Start Date"
+msgstr "Дата початку"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:159
+msgid "Beginning of the report period"
+msgstr "Початок періоду звіту"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:163
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:176
+msgid "Select Date"
+msgstr "Вибрати дату"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:171
+msgid "End Date"
+msgstr "Дата закінчення"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:172
+msgid "End of the report period"
+msgstr "Закінчення періоду звіту"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:194
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:261
+msgid "Content"
+msgstr "Вміст"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:200
+msgid "Report Sections"
+msgstr "Розділи звіту"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:201
+msgid "Choose which sections to include in your PDF report"
+msgstr "Виберіть, які розділи включити у ваш PDF-звіт"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:206
+msgid "Analytics and Statistics"
+msgstr "Аналітика та статистика"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:207
+msgid "Include summary statistics and analysis"
+msgstr "Включити зведену статистику та аналіз"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:216
+msgid "Charts and Visualizations"
+msgstr "Діаграми та візуалізації"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:217
+msgid "Include time tracking charts and graphs"
+msgstr "Включити діаграми та графіки відстеження часу"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:226
+msgid "Task Details"
+msgstr "Подробиці завдання"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:227
+msgid "Include detailed task information"
+msgstr "Включити детальну інформацію про завдання"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:236
+msgid "Project Information"
+msgstr "Інформація про проєкт"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:237
+msgid "Include project details and summaries"
+msgstr "Включити подробиці та зведення проєкту"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:246
+msgid "Billing and Financial Data"
+msgstr "Дані про виставлення рахунків та фінанси"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:247
+msgid "Include rates, costs, and financial calculations"
+msgstr "Включити ставки, витрати та фінансові розрахунки"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:266
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:302
+msgid "Filters"
+msgstr "Фільтри"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:272
+msgid "Project Filter"
+msgstr "Фільтр проєктів"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:273
+msgid "Limit report to specific projects"
+msgstr "Обмежити звіт конкретними проєктами"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:278
+msgid "Select a specific project or include all projects"
+msgstr "Виберіть конкретний проєкт або включіть усі проєкти"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:287
+msgid "Client Filter"
+msgstr "Фільтр клієнтів"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:288
+msgid "Limit report to specific clients"
+msgstr "Обмежити звіт конкретними клієнтами"
+
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:293
+msgid "Select a specific client or include all clients"
+msgstr "Виберіть конкретного клієнта або включіть усіх клієнтів"
+
+#. Add "All Projects" option first
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:310
+#: src/js/mainwindow.js:1991
+msgid "All Projects"
+msgstr "Усі проєкти"
+
+#. Add "All Clients" option first
+#: src/js/interface/dialogs/PDFExportPreferencesDialog.js:327
+#: src/js/mainwindow.js:2002
+msgid "All Clients"
+msgstr "Усі клієнти"
+
+#: src/js/interface/pages/BasePage.js:70
+msgid "Refresh"
+msgstr "Оновити"
+
+#: src/js/interface/pages/BasePage.js:83
+msgid "Search"
+msgstr "Пошук"
+
+#: src/js/interface/pages/ClientsPage.js:18
+msgid "Manage your clients"
+msgstr "Керування вашими клієнтами"
+
+#: src/js/interface/pages/ClientsPage.js:24 src/ui/window.blp:441
+msgid "Add Client"
+msgstr "Додати клієнта"
+
+#: src/js/interface/pages/ClientsPage.js:295
+msgid "Select Currency"
+msgstr "Вибрати валюту"
+
+#: src/js/interface/pages/ClientsPage.js:296
+msgid "Choose a currency for this client"
+msgstr "Виберіть валюту для цього клієнта"
+
+#: src/js/interface/pages/ClientsPage.js:546
+msgid "Click to change rate and currency"
+msgstr "Клацніть, щоб змінити ставку та валюту"
+
+#: src/js/interface/pages/ClientsPage.js:628
+msgid "Edit Client Name"
+msgstr "Змінити ім'я клієнта"
+
+#: src/js/interface/pages/ClientsPage.js:629
+msgid "Enter a new name for this client"
+msgstr "Введіть нове ім'я для цього клієнта"
+
+#: src/js/interface/pages/ClientsPage.js:685
+#: src/js/interface/pages/ClientsPage.js:757
+msgid "Change Currency"
+msgstr "Змінити валюту"
+
+#: src/js/interface/pages/ClientsPage.js:686
+#, javascript-format
+msgid "Select a new currency for %s"
+msgstr "Виберіть нову валюту для %s"
+
+#: src/js/interface/pages/ClientsPage.js:701
+msgid "Select Currency:"
+msgstr "Вибрати валюту:"
+
+#: src/js/interface/pages/ClientsPage.js:835
+msgid "Delete Clients"
+msgstr "Видалити клієнтів"
+
+#: src/js/interface/pages/ClientsPage.js:836
+#, javascript-format
+msgid ""
+"Are you sure you want to delete %d selected client(s)? This cannot be undone."
+msgstr ""
+"Ви впевнені, що хочете видалити вибраних клієнтів (%d)? Цю дію неможливо "
+"скасувати."
+
+#: src/js/interface/pages/ProjectsPage.js:17 src/ui/window.blp:62
+#: src/ui/window.blp:249
+msgid "Projects"
+msgstr "Проєкти"
+
+#: src/js/interface/pages/ProjectsPage.js:18
+msgid "Manage your projects"
+msgstr "Керування вашими проєктами"
+
+#: src/js/interface/pages/ProjectsPage.js:169
+#: src/js/interface/pages/ProjectsPageInterface.js:154
+msgid "Delete Selected"
+msgstr "Видалити вибране"
+
+#: src/js/interface/pages/ProjectsPage.js:376
+msgid "Project settings - Change color and icon"
+msgstr "Налаштування проекту - Змінити колір та значок"
+
+#: src/js/interface/pages/ProjectsPage.js:606
+msgid "Delete Projects"
+msgstr "Видалити проекти"
+
+#: src/js/interface/pages/ProjectsPage.js:607
+#, javascript-format
+msgid ""
+"Are you sure you want to delete %d selected project(s)? This cannot be "
+"undone."
+msgstr ""
+"Ви впевнені, що хочете видалити %d вибраних проектів? Цю дію неможливо "
+"скасувати."
+
+#: src/js/interface/pages/ProjectsPage.js:860
+msgid "Edit Project Name"
+msgstr "Редагувати назву проекту"
+
+#: src/js/interface/pages/ProjectsPage.js:861
+#, javascript-format
+msgid "Change the name of \"%s\""
+msgstr "Змінити назву \"%s\""
+
+#: src/js/interface/pages/TasksPage.js:25 src/ui/window.blp:52
+#: src/ui/window.blp:125
+msgid "Tasks"
+msgstr "Завдання"
+
+#: src/js/interface/pages/TasksPage.js:26
+msgid "Manage and track your tasks"
+msgstr "Керування та відстеження ваших завдань"
+
+#: src/js/interface/pages/TasksPage.js:32
+msgid "Add Task"
+msgstr "Додати завдання"
+
+#: src/js/interface/pages/TasksPage.js:38
+msgid "Add from Template"
+msgstr "Додати з шаблону"
+
+#: src/js/interface/pages/TasksPage.js:249
+msgid "All Tasks"
+msgstr "Усі завдання"
+
+#: src/js/interface/pages/TasksPage.js:252
+msgid "Active Only"
+msgstr "Тільки активні"
+
+#: src/js/interface/pages/TasksPage.js:718
+#, javascript-format
+msgid "Tags: %s"
+msgstr "Теги: %s"
+
+#: src/js/interface/pages/TasksPage.js:895
+#, javascript-format
+msgid "No tasks found for \"%s\""
+msgstr "Не знайдено завдань для «%s»"
+
+#: src/js/interface/pages/TasksPage.js:900
+msgid "No tasks for today"
+msgstr "Немає завдань на сьогодні"
+
+#: src/js/interface/pages/TasksPage.js:902
+msgid "No tasks for this week"
+msgstr "Немає завдань на цей тиждень"
+
+#: src/js/interface/pages/TasksPage.js:904
+msgid "No active tasks"
+msgstr "Немає активних завдань"
+
+#: src/js/interface/pages/TasksPage.js:996
+#, javascript-format
+msgid "Modify \"%s\""
+msgstr "Змінити «%s»"
+
+#: src/js/interface/pages/TasksPage.js:1285
+msgid "Select end time"
+msgstr "Виберіть час закінчення"
+
+#: src/js/interface/pages/TasksPage.js:1397
+msgid "Select Start Date & Time"
+msgstr "Виберіть дату та час початку"
+
+#: src/js/interface/pages/TasksPage.js:1487
+msgid "Select End Date & Time"
+msgstr "Виберіть дату та час закінчення"
+
+#: src/js/interface/pages/TasksPage.js:1667
+#, javascript-format
+msgid ""
+"Are you sure you want to delete \"%s\"?\n"
+"\n"
+"This action cannot be undone."
+msgstr ""
+"Ви впевнені, що хочете видалити «%s»?\n"
+"\n"
+"Цю дію неможливо скасувати."
+
+#: src/js/interface/pages/TasksPage.js:1748
+#, javascript-format
+msgid "Are you sure you want to delete these %d tasks?"
+msgstr "Ви впевнені, що хочете видалити ці завдання (%d)?"
+
+#. Show success toast
+#: src/js/interface/pages/TasksPage.js:1788
+#, javascript-format
+msgid "%d tasks deleted successfully"
+msgstr "%d завдань успішно видалено"
+
+#. Show success message
+#: src/js/interface/pages/TasksPage.js:2007
+#: src/js/interface/pages/TasksPage.js:2060
+#, javascript-format
+msgid "Task \"%s\" created successfully"
+msgstr "Завдання «%s» успішно створено"
+
+#: src/js/mainwindow.js:717
+msgid "No projects available"
+msgstr "Немає доступних проєктів"
+
+#: src/js/mainwindow.js:717
+msgid "Create a project first in the Projects page"
+msgstr "Спочатку створіть проєкт на сторінці Проєкти"
+
+#: src/js/mainwindow.js:954
+msgid "No clients available"
+msgstr "Немає доступних клієнтів"
+
+#: src/js/mainwindow.js:954
+msgid "Create a client first in the Clients page"
+msgstr "Спочатку створіть клієнта на сторінці Клієнти"
+
+#. ('❌ Failed to update weekly stats:', error);
+#: src/js/mainwindow.js:1696
+msgid "Error loading stats"
+msgstr "Помилка завантаження статистики"
+
+#: src/js/mainwindow.js:2192
+msgid "No recent tasks"
+msgstr "Немає останніх завдань"
+
+#: src/js/mainwindow.js:2193
+msgid "Tasks matching your filters will appear here"
+msgstr "Завдання, що відповідають вашим фільтрам, з'являться тут"
 
 #: src/ui/window.blp:21
 msgid "Navigation"
 msgstr "Навігація"
 
 #: src/ui/window.blp:30
-msgid "Toggle Sidebar"
-msgstr "Перемикання бічної панелі"
-
-#: src/ui/window.blp:36
-msgid "About"
-msgstr "Про додаток"
-
-#: src/ui/window.blp:52 src/ui/window.blp:125
-msgid "Tasks"
-msgstr "Завдання"
-
-#: src/ui/window.blp:62 src/ui/window.blp:247
-msgid "Projects"
-msgstr "Проєкти"
-
-#: src/ui/window.blp:72 src/ui/window.blp:361
-msgid "Clients"
-msgstr "Клієнти"
+msgid "Hide Sidebar"
+msgstr "Сховати бічну панель"
 
 #: src/ui/window.blp:82 src/ui/window.blp:476
 msgid "Reports"
@@ -228,168 +2505,96 @@ msgstr "Звіти"
 msgid "Quick Stats"
 msgstr "Коротка статистика"
 
-#: src/ui/window.blp:109 src/ui/window.blp:206
-msgid "This Week"
-msgstr "Цього тижня"
-
-#: src/ui/window.blp:134 src/ui/window.blp:255 src/ui/window.blp:369
+#: src/ui/window.blp:134 src/ui/window.blp:257 src/ui/window.blp:370
 #: src/ui/window.blp:484
 msgid "Show Sidebar"
 msgstr "Показати бічну панель"
 
-#: src/ui/window.blp:145 src/ui/window.blp:266 src/ui/window.blp:380
-#: src/ui/window.blp:495 src/ui/compact-tracker.blp:35
-msgid "Task name"
-msgstr "Назва завдання"
-
-#: src/ui/window.blp:153 src/ui/window.blp:274 src/ui/window.blp:388
-#: src/ui/window.blp:503 src/ui/compact-tracker.blp:43
-msgid "Project"
-msgstr "Демонструвати"
-
-#: src/ui/window.blp:161 src/ui/window.blp:282 src/ui/window.blp:396
-#: src/ui/window.blp:511 src/ui/compact-tracker.blp:51
-msgid "Client"
-msgstr "Клієнт"
-
-#: src/ui/window.blp:175 src/ui/window.blp:296 src/ui/window.blp:410
-#: src/ui/window.blp:525 src/ui/compact-tracker.blp:66
-msgid "Start tracking"
-msgstr "Почати відстеження"
-
-#: src/ui/window.blp:183 src/ui/window.blp:304 src/ui/window.blp:418
-#: src/ui/window.blp:533
+#: src/ui/window.blp:182 src/ui/window.blp:305 src/ui/window.blp:418
+#: src/ui/window.blp:532
 msgid "Open Compact Tracker"
 msgstr "Відкрити компактний таймер"
 
-#: src/ui/window.blp:200
-msgid "Search tasks..."
-msgstr "Пошук завдань..."
-
-#: src/ui/window.blp:206
-msgid "All"
-msgstr "Усі"
-
-#: src/ui/window.blp:206
-msgid "Today"
-msgstr "Сьогодні"
-
-#: src/ui/window.blp:206
-msgid "This Month"
-msgstr "Цього місяця"
-
-#: src/ui/window.blp:227
-msgid "Previous"
-msgstr "Попередній"
-
-#: src/ui/window.blp:238
-msgid "Next"
-msgstr "Далі"
-
-#: src/ui/window.blp:327
+#: src/ui/window.blp:328
 msgid "Add Project"
 msgstr "Додати проєкт"
 
-#: src/ui/window.blp:335
+#: src/ui/window.blp:336
 msgid "Add project"
 msgstr "Додати проєкт"
-
-#: src/ui/window.blp:436
-msgid "Search clients..."
-msgstr "Пошук клієнтів..."
-
-#: src/ui/window.blp:441
-msgid "Add Client"
-msgstr "Додати клієнта"
 
 #: src/ui/window.blp:449
 msgid "Add client"
 msgstr "Додати клієнта"
 
-#: src/ui/window.blp:538
+#: src/ui/window.blp:537
 msgid "PDF Export Preview"
 msgstr "Попередній перегляд експорту PDF"
 
-#: src/ui/window.blp:553
+#: src/ui/window.blp:552
 msgid "Task Reports"
 msgstr "Звіти про завдання"
 
-#: src/ui/window.blp:573
+#: src/ui/window.blp:572
 msgid "Week"
 msgstr "Тиждень"
 
-#: src/ui/window.blp:573
+#: src/ui/window.blp:572
 msgid "Month"
 msgstr "Місяць"
 
-#: src/ui/window.blp:573
+#: src/ui/window.blp:572
 msgid "Year"
 msgstr "Рік"
 
-#: src/ui/window.blp:576
+#: src/ui/window.blp:575
 msgid "Select time period"
 msgstr "Виберіть період часу"
 
-#: src/ui/window.blp:581
+#: src/ui/window.blp:580
 msgid "Filter by project"
 msgstr "Фільтрувати за проектом"
 
-#: src/ui/window.blp:586
+#: src/ui/window.blp:585
 msgid "Filter by client"
 msgstr "Фільтрувати за клієнтом"
 
-#: src/ui/window.blp:597
+#: src/ui/window.blp:596
 msgid "📊 Chart Visualization"
 msgstr "📊 Візуалізація діаграм"
 
-#: src/ui/window.blp:604
+#: src/ui/window.blp:603
 msgid "Time tracking data will be visualized here"
 msgstr "Дані відстеження часу будуть візуалізовані тут"
 
-#: src/ui/window.blp:614
+#: src/ui/window.blp:613
 msgid "Summary Statistics"
 msgstr "Зведена статистика"
 
-#: src/ui/window.blp:646
+#: src/ui/window.blp:645
 msgid "Total Time"
 msgstr "Загальний час"
 
-#: src/ui/window.blp:677
+#: src/ui/window.blp:676
 msgid "Active Projects"
 msgstr "Активні проекти"
 
-#: src/ui/window.blp:718
+#: src/ui/window.blp:712
 msgid "Total Earnings"
 msgstr "Загальний прибуток"
 
-#: src/ui/window.blp:749
+#: src/ui/window.blp:743
 msgid "Tracked Tasks"
 msgstr "Відстежувані завдання"
 
-#: src/ui/window.blp:758
+#: src/ui/window.blp:752
 msgid "Recent Tasks"
 msgstr "Нещодавні завдання"
 
-#: src/ui/window.blp:759
+#: src/ui/window.blp:753
 msgid "Your most recent completed tasks"
 msgstr "Ваші останні виконані завдання"
 
-#: src/ui/window.blp:764
-msgid "Delete Selected Tasks"
-msgstr "Видалити вибрані завдання"
-
-#: src/ui/window.blp:775
-msgid "No tasks yet"
-msgstr "Ще немає завдань"
-
-#: src/ui/window.blp:776
+#: src/ui/window.blp:761
 msgid "Start tracking time to see your tasks here"
 msgstr "Почніть відстежувати час, щоб переглядати свої завдання тут"
-
-#: src/ui/compact-tracker.blp:5
-msgid "Compact Tracker"
-msgstr "Компактний таймер"
-
-#: src/ui/compact-tracker.blp:23
-msgid "Close compact tracker and open main window"
-msgstr "Закрити компактний таймер і відкрити головне вікно"
