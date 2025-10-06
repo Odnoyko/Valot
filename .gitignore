@@ -37,3 +37,4 @@ __pycache__/
 *$py.class
 
 data/*.metainfo.xml
+data/com.odnoyko.valot.desktop
