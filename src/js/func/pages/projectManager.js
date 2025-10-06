@@ -8,6 +8,7 @@ import { getAllEmojis } from 'resource:///com/odnoyko/valot/js/data/emojis.js';
 import { getAllIcons } from 'resource:///com/odnoyko/valot/js/data/icons.js';
 import { WidgetFactory } from 'resource:///com/odnoyko/valot/js/interface/components/widgetFactory.js';
 import { SelectorFactory } from 'resource:///com/odnoyko/valot/js/interface/components/selectorFactory.js';
+import { BUTTON, HEADING, MESSAGE, LABEL, PLACEHOLDER, TOOLTIP, ICON_MODE, DIALOG_BODY } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 // New modular dialog system
 import { ProjectDialog } from 'resource:///com/odnoyko/valot/js/interface/components/complex/ProjectDialog.js';
@@ -34,14 +35,14 @@ export class ProjectManager {
             const nameValidation = InputValidator.validateProjectName(name);
             if (!nameValidation.valid) {
                 //('Project validation failed:', nameValidation.error);
-                this._showError(parentWindow, 'Validation Error', nameValidation.error);
+                this._showError(parentWindow, HEADING.VALIDATION_ERROR, nameValidation.error);
                 return false;
             }
 
             const colorValidation = InputValidator.validateColor(color);
             if (!colorValidation.valid) {
                 //('Color validation failed:', colorValidation.error);
-                this._showError(parentWindow, 'Validation Error', colorValidation.error);
+                this._showError(parentWindow, HEADING.VALIDATION_ERROR, colorValidation.error);
                 return false;
             }
             
@@ -64,7 +65,7 @@ export class ProjectManager {
             
             // Check for duplicate project names
             if (this._projectNameExists(safeName)) {
-                this._showError(parentWindow, 'Duplicate Project', 'A project with this name already exists');
+                this._showError(parentWindow, HEADING.DUPLICATE_PROJECT, MESSAGE.PROJECT_EXISTS);
                 return false;
             }
             
@@ -81,7 +82,7 @@ export class ProjectManager {
             
         } catch (error) {
             //('Error creating project:', error);
-            this._showError(parentWindow, 'Database Error', 'Failed to create project. Please try again.');
+            this._showError(parentWindow, HEADING.DATABASE_ERROR, _('Failed to create project. Please try again.'));
             return false;
         }
     }
@@ -136,14 +137,14 @@ export class ProjectManager {
             const nameValidation = InputValidator.validateProjectName(name);
             if (!nameValidation.valid) {
                 //('Project validation failed:', nameValidation.error);
-                this._showError(parentWindow, 'Validation Error', nameValidation.error);
+                this._showError(parentWindow, HEADING.VALIDATION_ERROR, nameValidation.error);
                 return null;
             }
 
             const colorValidation = InputValidator.validateColor(color);
             if (!colorValidation.valid) {
                 //('Color validation failed:', colorValidation.error);
-                this._showError(parentWindow, 'Validation Error', colorValidation.error);
+                this._showError(parentWindow, HEADING.VALIDATION_ERROR, colorValidation.error);
                 return null;
             }
             
@@ -166,7 +167,7 @@ export class ProjectManager {
             
             // Check for duplicate project names
             if (this._projectNameExists(safeName)) {
-                this._showError(parentWindow, 'Duplicate Project', 'A project with this name already exists');
+                this._showError(parentWindow, HEADING.DUPLICATE_PROJECT, MESSAGE.PROJECT_EXISTS);
                 return null;
             }
             
@@ -196,7 +197,7 @@ export class ProjectManager {
             
         } catch (error) {
             //('Error creating project:', error);
-            this._showError(parentWindow, 'Database Error', `Failed to create project: ${error.message}`);
+            this._showError(parentWindow, HEADING.DATABASE_ERROR, _('Failed to create project: ') + error.message);
             return null;
         }
     }
@@ -238,21 +239,21 @@ export class ProjectManager {
             // Validate project ID
             const idValidation = InputValidator.validateNumber(projectId, 1);
             if (!idValidation.valid) {
-                InputValidator.showValidationError(parentWindow, 'Invalid Project ID', idValidation.error);
+                InputValidator.showValidationError(parentWindow, _('Invalid Project ID'), idValidation.error);
                 return false;
             }
-            
+
             // Validate project name
             const nameValidation = InputValidator.validateProjectName(name);
             if (!nameValidation.valid) {
-                InputValidator.showValidationError(parentWindow, 'Invalid Project Name', nameValidation.error);
+                InputValidator.showValidationError(parentWindow, _('Invalid Project Name'), nameValidation.error);
                 return false;
             }
-            
+
             // Validate color
             const colorValidation = InputValidator.validateColor(color);
             if (!colorValidation.valid) {
-                InputValidator.showValidationError(parentWindow, 'Invalid Project Color', colorValidation.error);
+                InputValidator.showValidationError(parentWindow, _('Invalid Project Color'), colorValidation.error);
                 return false;
             }
             
@@ -298,7 +299,7 @@ export class ProjectManager {
             
         } catch (error) {
             //('Error updating project:', error);
-            InputValidator.showValidationError(parentWindow, 'Project Update Failed', `Failed to update project: ${error.message}`);
+            InputValidator.showValidationError(parentWindow, _('Project Update Failed'), _('Failed to update project: ') + error.message);
             return false;
         }
     }
@@ -309,13 +310,13 @@ export class ProjectManager {
             // Validate project ID
             const idValidation = InputValidator.validateNumber(projectId, 1);
             if (!idValidation.valid) {
-                InputValidator.showValidationError(parentWindow, 'Invalid Project ID', idValidation.error);
+                InputValidator.showValidationError(parentWindow, _('Invalid Project ID'), idValidation.error);
                 return false;
             }
-            
+
             // Prevent deletion of default project
             if (idValidation.sanitized === 1) {
-                InputValidator.showValidationError(parentWindow, 'Cannot Delete Default Project', 'The default project cannot be deleted.');
+                InputValidator.showValidationError(parentWindow, _('Cannot Delete Default Project'), _('The default project cannot be deleted.'));
                 return false;
             }
             
@@ -336,8 +337,8 @@ export class ProjectManager {
 
     createNewProjectDialog(parentWindow) {
         const dialog = new Adw.AlertDialog({
-            heading: 'Create New Project',
-            body: 'Create a new project with icon and color.'
+            heading: HEADING.CREATE_PROJECT,
+            body: DIALOG_BODY.CREATE_PROJECT
         });
         
         // Main container for the entire dialog content
@@ -349,16 +350,16 @@ export class ProjectManager {
         
         // Icon color switcher (Light/Dark)
         let iconColorMode = 'auto'; // 'auto', 'light', 'dark'
-        
+
         // Create visible tab-style switcher at the top
         const tabLabel = new Gtk.Label({
-            label: 'Icon Mode:',
+            label: LABEL.ICON_MODE,
             halign: Gtk.Align.CENTER,
             margin_bottom: 8,
             css_classes: ['heading']
         });
         mainBox.append(tabLabel);
-        
+
         const tabBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 4,
@@ -366,21 +367,21 @@ export class ProjectManager {
             margin_bottom: 20,
             height_request: 40
         });
-        
+
         const autoButton = new Gtk.Button({
-            label: 'Auto',
+            label: ICON_MODE.AUTO,
             width_request: 80,
             height_request: 36,
             css_classes: ['suggested-action'] // Default selection
         });
         const lightButton = new Gtk.Button({
-            label: 'Light',
+            label: ICON_MODE.LIGHT,
             width_request: 80,
             height_request: 36,
             css_classes: ['']
         });
         const darkButton = new Gtk.Button({
-            label: 'Dark',
+            label: ICON_MODE.DARK,
             width_request: 80,
             height_request: 36,
             css_classes: ['']
@@ -423,14 +424,14 @@ export class ProjectManager {
         
         // Project name input
         const nameEntry = new Gtk.Entry({
-            placeholder_text: 'Project name'
+            placeholder_text: PLACEHOLDER.PROJECT_NAME
         });
-        
+
         // Add real-time validation while typing
         nameEntry.connect('changed', () => {
             const currentText = nameEntry.get_text();
             const validation = InputValidator.validateProjectName(currentText);
-            
+
             if (currentText.length > 0 && !validation.valid) {
                 // Show error styling
                 InputValidator.showValidationTooltip(nameEntry, validation.error, true);
@@ -439,28 +440,28 @@ export class ProjectManager {
                 InputValidator.showValidationTooltip(nameEntry, null, false);
             }
         });
-        
-        form.append(new Gtk.Label({label: 'Project Name:', halign: Gtk.Align.START}));
+
+        form.append(new Gtk.Label({label: LABEL.PROJECT_NAME, halign: Gtk.Align.START}));
         form.append(nameEntry);
-        
+
         // Icon selection
         let selectedIcon = this.projectIcons[0];
         const { iconGrid, iconSelection } = this._createIconSelection(selectedIcon);
-        form.append(new Gtk.Label({label: 'Project Icon:', halign: Gtk.Align.START}));
+        form.append(new Gtk.Label({label: LABEL.PROJECT_ICON, halign: Gtk.Align.START}));
         form.append(iconGrid);
-        
+
         // Color selection
         let selectedColor = this.projectColors[0];
         const { colorGrid, colorSelection } = this._createColorSelection(selectedColor);
-        form.append(new Gtk.Label({label: 'Project Color:', halign: Gtk.Align.START}));
+        form.append(new Gtk.Label({label: LABEL.PROJECT_COLOR, halign: Gtk.Align.START}));
         form.append(colorGrid);
         
         // Add form to main container
         mainBox.append(form);
-        
+
         dialog.set_extra_child(mainBox);
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('create', 'Create Project');
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('create', BUTTON.CREATE_PROJECT);
         dialog.set_response_appearance('create', Adw.ResponseAppearance.SUGGESTED);
         
         dialog.connect('response', (dialog, response) => {
@@ -494,10 +495,10 @@ export class ProjectManager {
     }
 
     createEditProjectDialog(project, parentWindow) {
-        
+
         const dialog = new Adw.AlertDialog({
-            heading: 'Edit Project',
-            body: 'Update project name, icon, and color.'
+            heading: HEADING.EDIT_PROJECT,
+            body: DIALOG_BODY.UPDATE_PROJECT
         });
         
         // Main container for the entire dialog content
@@ -507,7 +508,7 @@ export class ProjectManager {
             margin_top: 12
         });
         
-        
+
         // Icon color switcher (Light/Dark) - determine current mode from project data
         let iconColorMode = 'auto'; // Default
         if (project.icon_color_mode) {
@@ -517,16 +518,16 @@ export class ProjectManager {
         } else if (project.dark_icons === 2) {
             iconColorMode = 'light'; // Legacy support
         }
-        
+
         // Create visible tab-style switcher at the top
         const tabLabel = new Gtk.Label({
-            label: 'Icon Mode:',
+            label: LABEL.ICON_MODE,
             halign: Gtk.Align.CENTER,
             margin_bottom: 8,
             css_classes: ['heading']
         });
         mainBox.append(tabLabel);
-        
+
         const tabBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 4,
@@ -534,21 +535,21 @@ export class ProjectManager {
             margin_bottom: 20,
             height_request: 40
         });
-        
+
         const autoButton = new Gtk.Button({
-            label: 'Auto',
+            label: ICON_MODE.AUTO,
             width_request: 80,
             height_request: 36,
             css_classes: iconColorMode === 'auto' ? ['suggested-action'] : ['']
         });
         const lightButton = new Gtk.Button({
-            label: 'Light',
+            label: ICON_MODE.LIGHT,
             width_request: 80,
             height_request: 36,
             css_classes: iconColorMode === 'light' ? ['suggested-action'] : ['']
         });
         const darkButton = new Gtk.Button({
-            label: 'Dark',
+            label: ICON_MODE.DARK,
             width_request: 80,
             height_request: 36,
             css_classes: iconColorMode === 'dark' ? ['suggested-action'] : ['']
@@ -591,15 +592,15 @@ export class ProjectManager {
         
         // Project name input
         const nameEntry = new Gtk.Entry({
-            placeholder_text: 'Project name',
+            placeholder_text: PLACEHOLDER.PROJECT_NAME,
             text: project.name
         });
-        
+
         // Add real-time validation while typing
         nameEntry.connect('changed', () => {
             const currentText = nameEntry.get_text();
             const validation = InputValidator.validateProjectName(currentText);
-            
+
             if (currentText.length > 0 && !validation.valid) {
                 // Show error styling
                 InputValidator.showValidationTooltip(nameEntry, validation.error, true);
@@ -608,28 +609,28 @@ export class ProjectManager {
                 InputValidator.showValidationTooltip(nameEntry, null, false);
             }
         });
-        
-        form.append(new Gtk.Label({label: 'Project Name:', halign: Gtk.Align.START}));
+
+        form.append(new Gtk.Label({label: LABEL.PROJECT_NAME, halign: Gtk.Align.START}));
         form.append(nameEntry);
-        
+
         // Icon selection
         let selectedIcon = project.icon || 'folder-symbolic';
         const { iconGrid, iconSelection } = this._createIconSelection(selectedIcon, project);
-        form.append(new Gtk.Label({label: 'Project Icon:', halign: Gtk.Align.START}));
+        form.append(new Gtk.Label({label: LABEL.PROJECT_ICON, halign: Gtk.Align.START}));
         form.append(iconGrid);
-        
+
         // Color selection
         let selectedColor = this.projectColors.find(c => c.value === project.color) || this.projectColors[0];
         const { colorGrid, colorSelection } = this._createColorSelection(selectedColor, project);
-        form.append(new Gtk.Label({label: 'Project Color:', halign: Gtk.Align.START}));
+        form.append(new Gtk.Label({label: LABEL.PROJECT_COLOR, halign: Gtk.Align.START}));
         form.append(colorGrid);
         
         // Add form to main container
         mainBox.append(form);
-        
+
         dialog.set_extra_child(mainBox);
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('save', 'Save Changes');
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('save', BUTTON.SAVE_CHANGES);
         dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
         
         dialog.connect('response', (dialog, response) => {
@@ -785,10 +786,10 @@ export class ProjectManager {
 
     // Main dialog methods for project management
     showCreateProjectDialog(parentWindow) {
-        
+
         const dialog = new Adw.AlertDialog({
-            heading: 'Add New Project',
-            body: 'Create a new project with icon and color.'
+            heading: HEADING.CREATE_PROJECT,
+            body: DIALOG_BODY.CREATE_PROJECT
         });
         
         // Form
@@ -803,9 +804,9 @@ export class ProjectManager {
         
         // Project name
         const nameEntry = new Gtk.Entry({
-            placeholder_text: 'Project name'
+            placeholder_text: PLACEHOLDER.PROJECT_NAME
         });
-        form.append(new Gtk.Label({label: 'Project Name:', halign: Gtk.Align.START}));
+        form.append(new Gtk.Label({label: LABEL.PROJECT_NAME, halign: Gtk.Align.START}));
         form.append(nameEntry);
         
         // Real-time validation for name entry
@@ -825,8 +826,8 @@ export class ProjectManager {
         
         // Icon selection
         let selectedIcon = this.projectIcons[0];
-        form.append(new Gtk.Label({label: 'Project Icon:', halign: Gtk.Align.START}));
-        
+        form.append(new Gtk.Label({label: LABEL.PROJECT_ICON, halign: Gtk.Align.START}));
+
         const iconGrid = new Gtk.Grid({
             column_spacing: 6,
             row_spacing: 6,
@@ -861,8 +862,8 @@ export class ProjectManager {
         
         // Color selection
         let selectedColor = this.projectColors[0];
-        form.append(new Gtk.Label({label: 'Project Color:', halign: Gtk.Align.START}));
-        
+        form.append(new Gtk.Label({label: LABEL.PROJECT_COLOR, halign: Gtk.Align.START}));
+
         const colorGrid = new Gtk.Grid({
             column_spacing: 6,
             row_spacing: 6,
@@ -895,10 +896,10 @@ export class ProjectManager {
         }
         
         form.append(colorGrid);
-        
+
         dialog.set_extra_child(form);
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('create', 'Create Project');
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('create', BUTTON.CREATE_PROJECT);
         dialog.set_response_appearance('create', Adw.ResponseAppearance.SUGGESTED);
         
         dialog.connect('response', (dialog, response) => {
@@ -925,11 +926,11 @@ export class ProjectManager {
     showEditProjectDialog(projectId, parentWindow) {
         const project = parentWindow.allProjects.find(p => p.id === projectId);
         if (!project) return;
-        
-        
+
+
         const dialog = new Adw.AlertDialog({
-            heading: 'Edit Project',
-            body: 'Update project name, icon, and color.'
+            heading: HEADING.EDIT_PROJECT,
+            body: DIALOG_BODY.UPDATE_PROJECT
         });
         
         // Form
@@ -944,10 +945,10 @@ export class ProjectManager {
         
         // Project name
         const nameEntry = new Gtk.Entry({
-            placeholder_text: 'Project name',
+            placeholder_text: PLACEHOLDER.PROJECT_NAME,
             text: project.name
         });
-        form.append(new Gtk.Label({label: 'Project Name:', halign: Gtk.Align.START}));
+        form.append(new Gtk.Label({label: LABEL.PROJECT_NAME, halign: Gtk.Align.START}));
         form.append(nameEntry);
         
         // Real-time validation for name entry
@@ -967,8 +968,8 @@ export class ProjectManager {
         
         // Icon selection
         let selectedIcon = project.icon || 'folder-symbolic';
-        form.append(new Gtk.Label({label: 'Project Icon:', halign: Gtk.Align.START}));
-        
+        form.append(new Gtk.Label({label: LABEL.PROJECT_ICON, halign: Gtk.Align.START}));
+
         const iconGrid = new Gtk.Grid({
             column_spacing: 6,
             row_spacing: 6,
@@ -1017,8 +1018,8 @@ export class ProjectManager {
         
         // Color selection
         let selectedColor = this.projectColors.find(c => c.value === project.color) || this.projectColors[0];
-        form.append(new Gtk.Label({label: 'Project Color:', halign: Gtk.Align.START}));
-        
+        form.append(new Gtk.Label({label: LABEL.PROJECT_COLOR, halign: Gtk.Align.START}));
+
         const colorGrid = new Gtk.Grid({
             column_spacing: 6,
             row_spacing: 6,
@@ -1078,10 +1079,10 @@ export class ProjectManager {
         }
         
         form.append(colorGrid);
-        
+
         dialog.set_extra_child(form);
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('save', 'Save Changes');
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('save', BUTTON.SAVE_CHANGES);
         dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
         
         dialog.connect('response', (dialog, response) => {
@@ -1284,7 +1285,7 @@ export class ProjectManager {
         );
         
         // Set tooltip text
-        iconButton.set_tooltip_text('Click to change color and icon');
+        iconButton.set_tooltip_text(_('Click to change color and icon'));
         
         // Create and set icon widget
         const iconWidget = WidgetFactory.createProjectIconWidget(project);
@@ -1348,8 +1349,8 @@ export class ProjectManager {
 
     _showProjectAppearanceDialog(project, callback = null) {
         const dialog = new Adw.AlertDialog({
-            heading: 'Project Appearance',
-            body: `Configure color and icon for "${project.name}"`
+            heading: _('Project Appearance'),
+            body: _('Configure color and icon for ') + `"${project.name}"`
         });
 
         // Create main container with 2-column layout
@@ -1371,7 +1372,7 @@ export class ProjectManager {
         });
 
         const colorLabel = new Gtk.Label({
-            label: 'Project Color:',
+            label: LABEL.PROJECT_COLOR,
             halign: Gtk.Align.START,
             css_classes: ['heading']
         });
@@ -1382,7 +1383,7 @@ export class ProjectManager {
             height_request: 48,
             css_classes: ['flat', 'color-preview'],
             halign: Gtk.Align.CENTER,
-            tooltip_text: 'Click to change color'
+            tooltip_text: TOOLTIP.CHANGE_COLOR
         });
 
         // Apply current project color
@@ -1416,7 +1417,7 @@ export class ProjectManager {
         });
 
         const iconLabel = new Gtk.Label({
-            label: 'Project Icon:',
+            label: LABEL.PROJECT_ICON,
             halign: Gtk.Align.START,
             css_classes: ['heading']
         });
@@ -1427,7 +1428,7 @@ export class ProjectManager {
             height_request: 48,
             css_classes: ['flat', 'icon-preview'],
             halign: Gtk.Align.CENTER,
-            tooltip_text: 'Click to change icon'
+            tooltip_text: TOOLTIP.CHANGE_ICON
         });
 
         let previewIconWidget;
@@ -1516,8 +1517,8 @@ export class ProjectManager {
         mainBox.append(iconColumn);
 
         dialog.set_extra_child(mainBox);
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('save', 'Save');
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('save', BUTTON.SAVE);
         dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
 
         dialog.connect('response', (dialog, response) => {
@@ -1544,7 +1545,7 @@ export class ProjectManager {
     _showColorPicker(project, previewButton, cssProvider) {
         // Use GTK4 ColorDialog
         const colorDialog = new Gtk.ColorDialog({
-            title: 'Select Project Color',
+            title: _('Select Project Color'),
             modal: true,
             with_alpha: false
         });
@@ -1582,8 +1583,8 @@ export class ProjectManager {
 
     _showIconPicker(project, previewButton, previewWidget, isEmoji) {
         const dialog = new Adw.AlertDialog({
-            heading: isEmoji ? 'Select Emoji' : 'Select Icon',
-            body: isEmoji ? 'Choose from our comprehensive emoji collection' : 'Choose an appropriate icon for the project'
+            heading: isEmoji ? _('Select Emoji') : _('Select Icon'),
+            body: isEmoji ? _('Choose from our comprehensive emoji collection') : _('Choose an appropriate icon for the project')
         });
 
         let iconColor = 'default'; // 'default', 'white', 'black'
@@ -1601,11 +1602,11 @@ export class ProjectManager {
         // Icon color selector (only for system icons)
         if (!isEmoji) {
             const colorSelectorLabel = new Gtk.Label({
-                label: 'Icon Color:',
+                label: LABEL.ICON_COLOR,
                 halign: Gtk.Align.START,
                 css_classes: ['heading']
             });
-            
+
             const colorButtonsBox = new Gtk.Box({
                 orientation: Gtk.Orientation.HORIZONTAL,
                 spacing: 6,
@@ -1615,16 +1616,16 @@ export class ProjectManager {
             });
 
             const defaultColorBtn = new Gtk.ToggleButton({
-                label: 'Default',
+                label: ICON_MODE.DEFAULT,
                 active: true
             });
 
             const whiteColorBtn = new Gtk.ToggleButton({
-                label: 'White'
+                label: ICON_MODE.WHITE
             });
 
             const blackColorBtn = new Gtk.ToggleButton({
-                label: 'Black'
+                label: ICON_MODE.BLACK
             });
 
             // Color button handlers
@@ -1780,10 +1781,10 @@ export class ProjectManager {
         // Set up the scrolled window and container
         scrolled.set_child(iconGrid);
         mainContainer.append(scrolled);
-        
+
         // Use main container as dialog content
         dialog.set_extra_child(mainContainer);
-        dialog.add_response('cancel', 'Cancel');
+        dialog.add_response('cancel', BUTTON.CANCEL);
         dialog.present(this.parentWindow);
     }
 
@@ -1818,7 +1819,7 @@ export class ProjectManager {
                 body: message
             });
             
-            errorDialog.add_response('ok', 'OK');
+            errorDialog.add_response('ok', _('OK'));
             errorDialog.set_response_appearance('ok', Adw.ResponseAppearance.SUGGESTED);
             errorDialog.present(parentWindow);
         } catch (error) {

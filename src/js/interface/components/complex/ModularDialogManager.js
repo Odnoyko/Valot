@@ -2,6 +2,7 @@ import { ProjectDialog } from './ProjectDialog.js';
 import { ClientDialog } from './ClientDialog.js';
 import { FormDialog } from './FormDialog.js';
 import { InputValidator } from '../../../func/global/inputValidation.js';
+import { LABEL } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 /**
  * Modular dialog manager that replaces the old dialogManager.js
@@ -133,7 +134,7 @@ export class ModularDialogManager {
             {
                 type: 'entry',
                 name: 'name',
-                label: 'Task Name',
+                label: _('Task Name'),
                 placeholder: 'Enter task name...',
                 required: true,
                 validator: InputValidator.validateTaskName,
@@ -142,7 +143,7 @@ export class ModularDialogManager {
             {
                 type: 'textarea',
                 name: 'description',
-                label: 'Description',
+                label: _('Description'),
                 placeholder: 'Optional task description...',
                 validator: InputValidator.validateTaskDescription,
                 value: isEdit ? (task.description || '') : '',
@@ -151,7 +152,7 @@ export class ModularDialogManager {
             {
                 type: 'dropdown',
                 name: 'project',
-                label: 'Project',
+                label: LABEL.PROJECT,
                 required: true,
                 options: projects.map(p => ({ value: p.id, label: p.name })),
                 value: isEdit ? task.project_id : (projects[0]?.id || null)
@@ -159,9 +160,9 @@ export class ModularDialogManager {
             {
                 type: 'dropdown',
                 name: 'client',
-                label: 'Client',
+                label: LABEL.CLIENT,
                 options: [
-                    { value: null, label: 'No client' },
+                    { value: null, label: _('No client') },
                     ...clients.map(c => ({ value: c.id, label: c.name }))
                 ],
                 value: isEdit ? (task.client_id || null) : null
@@ -238,12 +239,12 @@ export class ModularDialogManager {
      */
     showErrorDialog(title, message, details = null) {
         const fields = [];
-        
+
         if (details) {
             fields.push({
                 type: 'textarea',
                 name: 'details',
-                label: 'Error Details',
+                label: _('Error Details'),
                 value: details,
                 height: 120
             });

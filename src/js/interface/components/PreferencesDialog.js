@@ -602,7 +602,7 @@ export const PreferencesDialog = GObject.registerClass({
 
         const creatorRow = new Adw.ActionRow({
             title: 'Vitaly Odnoyko',
-            subtitle: 'Designer &amp; Developer',
+            subtitle: _('Designer &amp; Developer'),
         });
         creatorGroup.add(creatorRow);
         contentBox.append(creatorGroup);
@@ -701,7 +701,7 @@ export const PreferencesDialog = GObject.registerClass({
 
         const creatorRow = new Adw.ActionRow({
             title: 'Vitaly Odnoyko',
-            subtitle: 'Designer &amp; Developer',
+            subtitle: _('Designer &amp; Developer'),
         });
         creatorGroup.add(creatorRow);
         contentBox.append(creatorGroup);
@@ -1012,7 +1012,7 @@ export const PreferencesDialog = GObject.registerClass({
         
         // Update hidden count
         const hiddenCount = this.currencySettings.hidden.length + this.currencySettings.custom.filter(c => c.hidden).length;
-        this.hiddenExpanderRow.set_subtitle(`${hiddenCount} currencies hidden`);
+        this.hiddenExpanderRow.set_subtitle(_('%d currencies hidden').format(hiddenCount));
         this.hiddenGroup.set_visible(hiddenCount > 0);
     }
     

@@ -10,6 +10,7 @@ import { WidgetFactory } from 'resource:///com/odnoyko/valot/js/interface/compon
 import { ClientDropdown } from 'resource:///com/odnoyko/valot/js/interface/components/clientDropdown.js';
 import { getProjectIconColor } from 'resource:///com/odnoyko/valot/js/func/global/colorUtils.js';
 import { pomodoroManager } from 'resource:///com/odnoyko/valot/js/func/global/pomodoroManager.js';
+import { PLACEHOLDER, TOOLTIP } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 export const CompactTrackerWindow = GObject.registerClass({
     GTypeName: 'CompactTrackerWindow'
@@ -17,7 +18,7 @@ export const CompactTrackerWindow = GObject.registerClass({
     constructor(application, mainWindow) {
         super({
             application: application,
-            title: 'Compact Tracker',
+            title: _('Compact Tracker'),
             default_width: 500,
             default_height: 50,
             height_request: 50,
@@ -64,7 +65,7 @@ export const CompactTrackerWindow = GObject.registerClass({
         this._close_open_btn = new Gtk.Button({
             icon_name: 'go-previous-symbolic',
             css_classes: ['flat'],
-            tooltip_text: 'Close compact tracker and open main window',
+            tooltip_text: _('Close compact tracker and open main window'),
             width_request: 20,
             height_request: 20
         });
@@ -80,7 +81,7 @@ export const CompactTrackerWindow = GObject.registerClass({
 
         // Create widgets
         this._task_input = new Gtk.Entry({
-            placeholder_text: 'Task name',
+            placeholder_text: PLACEHOLDER.TASK_NAME,
             width_request: 160,
             hexpand: true,
             halign: Gtk.Align.FILL,
@@ -90,7 +91,7 @@ export const CompactTrackerWindow = GObject.registerClass({
         this._project_button = new Gtk.Button({
             icon_name: 'folder-symbolic',
             css_classes: ['flat'],
-            tooltip_text: 'Project',
+            tooltip_text: _('Project'),
             width_request: 20,
             height_request: 20
         });
@@ -109,7 +110,7 @@ export const CompactTrackerWindow = GObject.registerClass({
 
         // Get the dropdown widget
         this._client_button = this._client_dropdown.getWidget();
-        this._client_button.set_tooltip_text('Select client');
+        this._client_button.set_tooltip_text(_('Select client'));
 
         this._time_display = new Gtk.Label({
             label: '00:00:00',
@@ -121,7 +122,7 @@ export const CompactTrackerWindow = GObject.registerClass({
         this._track_button = new Gtk.Button({
             icon_name: 'media-playback-start-symbolic',
             css_classes: ['suggested-action', 'circular'],
-            tooltip_text: 'Start tracking',
+            tooltip_text: TOOLTIP.START_TRACKING,
             width_request: 24,
             height_request: 24
         });

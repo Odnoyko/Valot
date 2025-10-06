@@ -14,8 +14,8 @@ import { getProjectIconColor, calculateColorBrightness } from 'resource:///com/o
 export class ProjectsPage {
     constructor(config = {}) {
         this.config = {
-            title: 'Projects',
-            subtitle: 'Manage your projects',
+            title: _('Projects'),
+            subtitle: _('Manage your projects'),
             showTrackingWidget: true,
             showSearchButton: true,
             actions: [

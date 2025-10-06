@@ -8,6 +8,7 @@ import { Button } from '../primitive/Button.js';
 import { getProjectIconColor } from '../../../func/global/colorUtils.js';
 import { ClientDropdown } from '../clientDropdown.js';
 import { pomodoroManager } from '../../../func/global/pomodoroManager.js';
+import { PLACEHOLDER, TOOLTIP } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 /**
  * Unified header tracking widget that can be shared across all pages
@@ -41,7 +42,7 @@ export class HeaderTrackingWidget {
 
         // Task name entry
         this.taskEntry = new Gtk.Entry({
-            placeholder_text: 'Task name',
+            placeholder_text: PLACEHOLDER.TASK_NAME,
             hexpand: true,
             hexpand_set: true
         });
@@ -53,7 +54,7 @@ export class HeaderTrackingWidget {
             halign: Gtk.Align.CENTER,
             valign: Gtk.Align.CENTER,
             css_classes: ['flat', 'header-tracking-project-button'],
-            tooltip_text: 'Project'
+            tooltip_text: _('Project')
         });
 
         // Create default icon
@@ -97,7 +98,7 @@ export class HeaderTrackingWidget {
         this.trackButton = new Gtk.Button({
             icon_name: 'media-playback-start-symbolic',
             css_classes: ['suggested-action', 'circular'],
-            tooltip_text: 'Start tracking'
+            tooltip_text: TOOLTIP.START_TRACKING
         });
 
         // Assemble widgets

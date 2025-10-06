@@ -14,6 +14,7 @@ import { executeQuery, executeNonSelectCommand } from '../../func/global/dbiniti
 import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/js/data/currencies.js';
 import { getProjectIconColor } from 'resource:///com/odnoyko/valot/js/func/global/colorUtils.js';
 import { ClientDropdown } from '../components/clientDropdown.js';
+import { BUTTON, HEADING, MESSAGE, LABEL, PLACEHOLDER, TOOLTIP, EMPTY_STATE, LOADING, SUCCESS, ERROR, STATUS, DIALOG_BODY } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 /**
  * Tasks page component with task list and management
@@ -221,7 +222,7 @@ export class TasksPage {
         });
 
         const searchEntry = new Gtk.SearchEntry({
-            placeholder_text: 'Search tasks...',
+            placeholder_text: PLACEHOLDER.SEARCH_TASKS,
             hexpand: true
         });
 
@@ -290,13 +291,13 @@ export class TasksPage {
         });
 
         const emptyLabel = new Label({
-            text: 'No tasks found',
+            text: EMPTY_STATE.NO_TASKS_FOUND,
             cssClasses: ['title-2'],
             halign: Gtk.Align.CENTER
         });
 
         const emptySubLabel = new Label({
-            text: 'Create your first task to get started',
+            text: EMPTY_STATE.CREATE_FIRST_TASK,
             cssClasses: ['dim-label'],
             halign: Gtk.Align.CENTER
         });
@@ -323,19 +324,19 @@ export class TasksPage {
 
         this.prevButton = new Button({
             iconName: 'go-previous-symbolic',
-            tooltipText: 'Previous page',
+            tooltipText: TOOLTIP.PREVIOUS_PAGE,
             cssClasses: ['circular'],
             onClick: () => this._previousPage()
         });
 
         this.pageInfo = new Label({
-            text: 'Page 1 of 1',
+            text: _('Page 1 of 1'),
             cssClasses: ['monospace']
         });
 
         this.nextButton = new Button({
             iconName: 'go-next-symbolic',
-            tooltipText: 'Next page',
+            tooltipText: TOOLTIP.NEXT_PAGE,
             cssClasses: ['circular'],
             onClick: () => this._nextPage()
         });
@@ -356,7 +357,7 @@ export class TasksPage {
         const trackingData = widget.getTrackingData();
         
         if (!trackingData.isValid) {
-            this.showError('Invalid Input', 'Please enter a task name and select a project');
+            this.showError(HEADING.INVALID_INPUT, MESSAGE.INVALID_INPUT_MSG);
             return;
         }
 
@@ -692,16 +693,16 @@ export class TasksPage {
             taskNameBox.append(templateBadge);
         }
 
-        let detailsText = `${task.project_name || 'No Project'} • ${this._formatDate(task.created_at)} • ${this._formatDuration(task.duration || 0)}`;
-        
+        let detailsText = `${task.project_name || EMPTY_STATE.NO_PROJECT} • ${this._formatDate(task.created_at)} • ${this._formatDuration(task.duration || 0)}`;
+
         // Add client information if available
         if (task.client_name) {
-            detailsText = `${task.project_name || 'No Project'} • ${task.client_name} • ${this._formatDate(task.created_at)} • ${this._formatDuration(task.duration || 0)}`;
+            detailsText = `${task.project_name || EMPTY_STATE.NO_PROJECT} • ${task.client_name} • ${this._formatDate(task.created_at)} • ${this._formatDuration(task.duration || 0)}`;
         }
-        
+
         // Add status information
         if (task.is_active) {
-            detailsText += ' • Currently Tracking';
+            detailsText += ' • ' + STATUS.CURRENTLY_TRACKING;
         }
 
         const detailsLabel = new Label({
@@ -714,7 +715,7 @@ export class TasksPage {
         // Tags display
         if (task.tags && task.tags.length > 0) {
             const tagsLabel = new Label({
-                text: `Tags: ${task.tags.join(', ')}`,
+                text: _('Tags: %s').format(task.tags.join(', ')),
                 cssClasses: ['caption', 'dim-label'],
                 halign: Gtk.Align.START,
                 ellipsize: Pango.EllipsizeMode.END
@@ -736,14 +737,14 @@ export class TasksPage {
         const editButton = new Button({
             iconName: 'document-edit-symbolic',
             cssClasses: ['flat', 'circular'],
-            tooltipText: 'Edit task',
+            tooltipText: TOOLTIP.EDIT_TASK,
             onClick: () => this._editTask(task)
         });
 
         const deleteButton = new Button({
             iconName: 'edit-delete-symbolic',
             cssClasses: ['flat', 'circular', 'destructive-action'],
-            tooltipText: 'Delete task',
+            tooltipText: TOOLTIP.DELETE_TASK,
             onClick: () => this._deleteTask(task)
         });
 
@@ -779,7 +780,7 @@ export class TasksPage {
             this.allProjects = this.parentWindow.allProjects;
         }
 
-        this.showLoading('Loading tasks...');
+        this.showLoading(LOADING.LOADING_TASKS);
         
         try {
             // Get tasks from database with filtering options
@@ -815,7 +816,7 @@ export class TasksPage {
             
         } catch (error) {
             //('❌ Error loading tasks:', error);
-            this.showError('Load Error', 'Failed to load tasks: ' + error.message);
+            this.showError(HEADING.LOAD_ERROR, ERROR.FAILED_LOAD_TASKS + ': ' + error.message);
             this.tasks = [];
             this.filteredTasks = [];
         } finally {
@@ -867,7 +868,7 @@ export class TasksPage {
 
         // Helpful hint
         const hint = new Gtk.Label({
-            label: _('Type a task name and click track to create one'),
+            label: EMPTY_STATE.TYPE_TASK_NAME,
             css_classes: ['caption', 'dim-label'],
             halign: Gtk.Align.CENTER,
             wrap: true,
@@ -891,7 +892,7 @@ export class TasksPage {
      */
     _getEmptyStateMessage() {
         if (this.searchQuery) {
-            return `No tasks found for "${this.searchQuery}"`;
+            return _('No tasks found for "%s"').format(this.searchQuery);
         }
 
         switch (this.activeFilter) {
@@ -902,7 +903,7 @@ export class TasksPage {
             case 'active':
                 return _('No active tasks');
             default:
-                return _('No tasks yet');
+                return EMPTY_STATE.NO_TASKS;
         }
     }
 
@@ -1015,7 +1016,7 @@ export class TasksPage {
         // 1. Task name input
         const nameEntry = new Gtk.Entry({
             text: task.name || '',
-            placeholder_text: 'Task name',
+            placeholder_text: PLACEHOLDER.TASK_NAME,
             hexpand: true
         });
 
@@ -1158,7 +1159,7 @@ export class TasksPage {
         });
         
         const startLabel = new Gtk.Label({
-            label: 'Start Time:',
+            label: LABEL.START_TIME,
             halign: Gtk.Align.START,
             css_classes: ['caption']
         });
@@ -1224,7 +1225,7 @@ export class TasksPage {
         
         const startTimeButton = new Gtk.Button({
             css_classes: ['flat'],
-            tooltip_text: 'Select start date and time',
+            tooltip_text: TOOLTIP.SELECT_START_DATETIME,
             width_request: 180
         });
         startTimeButton.set_child(updateStartButtonContent());
@@ -1239,7 +1240,7 @@ export class TasksPage {
         });
         
         const endLabel = new Gtk.Label({
-            label: 'End Time:',
+            label: LABEL.END_TIME,
             halign: Gtk.Align.START,
             css_classes: ['caption']
         });
@@ -1281,7 +1282,7 @@ export class TasksPage {
                 });
                 
                 const placeholderLabel = new Gtk.Label({
-                    label: 'Select end time',
+                    label: _('Select end time'),
                     css_classes: ['caption', 'dim-label']
                 });
                 
@@ -1322,7 +1323,7 @@ export class TasksPage {
         
         const endTimeButton = new Gtk.Button({
             css_classes: ['flat'],
-            tooltip_text: 'Select end date and time',
+            tooltip_text: TOOLTIP.SELECT_END_DATETIME,
             width_request: 180
         });
         endTimeButton.set_child(updateEndButtonContent());
@@ -1337,7 +1338,7 @@ export class TasksPage {
         });
         
         const durationLabel = new Gtk.Label({
-            label: 'Duration:',
+            label: LABEL.DURATION,
             halign: Gtk.Align.START,
             css_classes: ['caption']
         });
@@ -1371,17 +1372,17 @@ export class TasksPage {
                     
                     if (durationMs > 0) {
                         const durationSeconds = Math.floor(durationMs / 1000);
-                        const formattedDuration = this.parentWindow?.timeUtils ? 
-                            this.parentWindow.timeUtils.formatDuration(durationSeconds) : 
+                        const formattedDuration = this.parentWindow?.timeUtils ?
+                            this.parentWindow.timeUtils.formatDuration(durationSeconds) :
                             `${Math.floor(durationSeconds / 3600)}:${Math.floor((durationSeconds % 3600) / 60).toString().padStart(2, '0')}:${(durationSeconds % 60).toString().padStart(2, '0')}`;
                         durationDisplay.set_label(formattedDuration);
                         return durationSeconds;
                     } else {
-                        durationDisplay.set_label('Invalid range');
+                        durationDisplay.set_label(STATUS.INVALID_RANGE);
                         return null;
                     }
                 } catch (error) {
-                    durationDisplay.set_label('Invalid format');
+                    durationDisplay.set_label(STATUS.INVALID_FORMAT);
                     return null;
                 }
             } else {
@@ -1393,8 +1394,8 @@ export class TasksPage {
         // Add calendar popup for start time
         startTimeButton.connect('clicked', () => {
             const calendarDialog = new Adw.AlertDialog({
-                heading: 'Select Start Date & Time',
-                body: 'Choose the start date and time for this task'
+                heading: _('Select Start Date & Time'),
+                body: DIALOG_BODY.SELECT_START_DATETIME
             });
 
             const calendarBox = new Gtk.Box({
@@ -1447,44 +1448,44 @@ export class TasksPage {
             timeBox.append(hourSpin);
             timeBox.append(new Gtk.Label({ label: ':' }));
             timeBox.append(minuteSpin);
-            
+
             calendarBox.append(calendar);
             calendarBox.append(timeBox);
             calendarDialog.set_extra_child(calendarBox);
-            
-            calendarDialog.add_response('cancel', 'Cancel');
-            calendarDialog.add_response('ok', 'OK');
+
+            calendarDialog.add_response('cancel', BUTTON.CANCEL);
+            calendarDialog.add_response('ok', BUTTON.OK);
             calendarDialog.set_response_appearance('ok', Adw.ResponseAppearance.SUGGESTED);
-            
+
             calendarDialog.connect('response', (dialog, response) => {
                 if (response === 'ok') {
                     const selectedDate = calendar.get_date();
                     // Convert GDateTime to JavaScript Date
                     currentStartDate = new Date(
-                        selectedDate.get_year(), 
+                        selectedDate.get_year(),
                         selectedDate.get_month() - 1, // GLib months are 1-based, JS months are 0-based
                         selectedDate.get_day_of_month()
                     );
-                    
+
                     const hours = hourSpin.get_value_as_int();
                     const minutes = minuteSpin.get_value_as_int();
                     currentStartDate.setHours(hours, minutes, 0, 0);
-                    
+
                     // Update button content
                     startTimeButton.set_child(updateStartButtonContent());
                     recalculateDuration();
                 }
                 dialog.close();
             });
-            
+
             calendarDialog.present(this.parentWindow);
         });
 
         // Add calendar popup for end time
         endTimeButton.connect('clicked', () => {
             const calendarDialog = new Adw.AlertDialog({
-                heading: 'Select End Date & Time',
-                body: 'Choose the end date and time for this task'
+                heading: _('Select End Date & Time'),
+                body: DIALOG_BODY.SELECT_END_DATETIME
             });
 
             const calendarBox = new Gtk.Box({
@@ -1537,29 +1538,29 @@ export class TasksPage {
             timeBox.append(hourSpin);
             timeBox.append(new Gtk.Label({ label: ':' }));
             timeBox.append(minuteSpin);
-            
+
             calendarBox.append(calendar);
             calendarBox.append(timeBox);
             calendarDialog.set_extra_child(calendarBox);
-            
-            calendarDialog.add_response('cancel', 'Cancel');
-            calendarDialog.add_response('ok', 'OK');
+
+            calendarDialog.add_response('cancel', BUTTON.CANCEL);
+            calendarDialog.add_response('ok', BUTTON.OK);
             calendarDialog.set_response_appearance('ok', Adw.ResponseAppearance.SUGGESTED);
-            
+
             calendarDialog.connect('response', (dialog, response) => {
                 if (response === 'ok') {
                     const selectedDate = calendar.get_date();
                     // Convert GDateTime to JavaScript Date
                     currentEndDate = new Date(
-                        selectedDate.get_year(), 
+                        selectedDate.get_year(),
                         selectedDate.get_month() - 1, // GLib months are 1-based, JS months are 0-based
                         selectedDate.get_day_of_month()
                     );
-                    
+
                     const hours = hourSpin.get_value_as_int();
                     const minutes = minuteSpin.get_value_as_int();
                     currentEndDate.setHours(hours, minutes, 0, 0);
-                    
+
                     // Update button content and mark that end time is now set
                     task.end = 'set'; // Flag to show we have an end time
                     endTimeButton.set_child(updateEndButtonContent());
@@ -1567,7 +1568,7 @@ export class TasksPage {
                 }
                 dialog.close();
             });
-            
+
             calendarDialog.present(this.parentWindow);
         });
 
@@ -1579,20 +1580,20 @@ export class TasksPage {
         form.append(datetimeRow);
 
         dialog.set_extra_child(form);
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('save', 'Save Changes');
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('save', BUTTON.SAVE_CHANGES);
         dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
 
         dialog.connect('response', (dialog, response) => {
             if (response === 'save') {
                 const name = nameEntry.get_text().trim();
-                
+
                 if (!name) {
                     const errorDialog = new Adw.AlertDialog({
-                        heading: 'Invalid Input',
-                        body: 'Task name is required'
+                        heading: HEADING.INVALID_INPUT,
+                        body: MESSAGE.TASK_NAME_REQUIRED
                     });
-                    errorDialog.add_response('ok', 'OK');
+                    errorDialog.add_response('ok', BUTTON.OK);
                     errorDialog.present(this.parentWindow);
                     return;
                 }
@@ -1629,10 +1630,10 @@ export class TasksPage {
                     calculatedDuration = recalculateDuration();
                     if (calculatedDuration === null && currentEndDate <= currentStartDate) {
                         const errorDialog = new Adw.AlertDialog({
-                            heading: 'Invalid Date/Time',
-                            body: 'End time must be after start time'
+                            heading: HEADING.INVALID_DATETIME,
+                            body: MESSAGE.END_TIME_AFTER_START
                         });
-                        errorDialog.add_response('ok', 'OK');
+                        errorDialog.add_response('ok', BUTTON.OK);
                         errorDialog.present(this.parentWindow);
                         return;
                     }
@@ -1659,15 +1660,15 @@ export class TasksPage {
         dialog.present(this.parentWindow);
     }
     
-    _deleteTask(task) { 
-        
+    _deleteTask(task) {
+
         const dialog = new Adw.AlertDialog({
-            heading: 'Delete Task',
-            body: `Are you sure you want to delete "${task.name}"?\n\nThis action cannot be undone.`
+            heading: _('Delete Tasks'),
+            body: _('Are you sure you want to delete "%s"?\n\nThis action cannot be undone.').format(task.name)
         });
 
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('delete', 'Delete');
+        dialog.add_response('cancel', _('Cancel'));
+        dialog.add_response('delete', _('Delete'));
         dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
 
         dialog.connect('response', (dialog, response) => {
@@ -1689,15 +1690,15 @@ export class TasksPage {
         try {
             this.taskManager.updateTask(taskId, taskData);
             this.loadTasks(); // Reload to show updated task
-            
-            const toast = Adw.Toast.new('Task updated successfully');
+
+            const toast = Adw.Toast.new(SUCCESS.TASK_UPDATED);
             if (this.parentWindow.toast_overlay) {
                 this.parentWindow.toast_overlay.add_toast(toast);
             }
-            
+
         } catch (error) {
             //('❌ Error updating task:', error);
-            this.showError('Update Error', 'Failed to update task: ' + error.message);
+            this.showError(HEADING.UPDATE_ERROR, ERROR.FAILED_UPDATE_TASK + ': ' + error.message);
         }
     }
 
@@ -1710,15 +1711,15 @@ export class TasksPage {
         try {
             this.taskManager.deleteTask(taskId);
             this.loadTasks(); // Reload to remove deleted task
-            
-            const toast = Adw.Toast.new('Task deleted successfully');
+
+            const toast = Adw.Toast.new(SUCCESS.TASK_DELETED);
             if (this.parentWindow.toast_overlay) {
                 this.parentWindow.toast_overlay.add_toast(toast);
             }
-            
+
         } catch (error) {
             //('❌ Error deleting task:', error);
-            this.showError('Delete Error', 'Failed to delete task: ' + error.message);
+            this.showError(HEADING.DELETE_ERROR, ERROR.FAILED_DELETE_TASK + ': ' + error.message);
         }
     }
     
@@ -1728,9 +1729,9 @@ export class TasksPage {
         const selectedTasks = this.selectedTasks;
         
         if (!selectedTasks || selectedTasks.size === 0) {
-            
+
             // Show a toast to inform user
-            const toast = Adw.Toast.new('No tasks selected. Right-click a task to select it first.');
+            const toast = Adw.Toast.new(MESSAGE.NO_TASKS_SELECTED);
             if (this.parentWindow.toast_overlay) {
                 this.parentWindow.toast_overlay.add_toast(toast);
             }
@@ -1740,22 +1741,22 @@ export class TasksPage {
         const selectedTaskIds = Array.from(selectedTasks);
         const taskCount = selectedTaskIds.length;
         
-        
+
         // Show confirmation dialog
-        const message = taskCount === 1 ? 
-            'Are you sure you want to delete this task?' : 
-            `Are you sure you want to delete these ${taskCount} tasks?`;
-            
-            
+        const message = taskCount === 1 ?
+            DIALOG_BODY.DELETE_TASK_CONFIRM :
+            _('Are you sure you want to delete these %d tasks?').format(taskCount);
+
+
         const dialog = new Adw.MessageDialog({
             transient_for: this.parentWindow,
             modal: true,
-            heading: 'Delete Tasks',
+            heading: HEADING.DELETE_TASKS,
             body: message
         });
-        
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('delete', 'Delete');
+
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('delete', BUTTON.DELETE);
         dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
         dialog.set_default_response('delete');
         
@@ -1782,18 +1783,18 @@ export class TasksPage {
             
             // Reload task list
             this.loadTasks();
-            
+
             // Show success toast
-            const message = taskCount === 1 ? 'Task deleted successfully' : `${taskCount} tasks deleted successfully`;
+            const message = taskCount === 1 ? SUCCESS.TASK_DELETED : _('%d tasks deleted successfully').format(taskCount);
             const toast = Adw.Toast.new(message);
             if (this.parentWindow.toast_overlay) {
                 this.parentWindow.toast_overlay.add_toast(toast);
             }
-            
+
         } catch (error) {
             //('❌ Error deleting selected tasks:', error);
             //('❌ Stack trace:', error.stack);
-            this.showError('Delete Error', 'Failed to delete selected tasks: ' + error.message);
+            this.showError(HEADING.DELETE_ERROR, ERROR.FAILED_DELETE_TASK + ': ' + error.message);
         }
     }
     
@@ -1870,8 +1871,8 @@ export class TasksPage {
     }
     showAddTaskDialog() {
         const dialog = new Adw.AlertDialog({
-            heading: 'Add New Task',
-            body: 'Create a new task for tracking your work'
+            heading: HEADING.ADD_NEW_TASK,
+            body: DIALOG_BODY.CREATE_TASK
         });
 
         const form = new Gtk.Box({
@@ -1886,17 +1887,17 @@ export class TasksPage {
 
         // Task name
         const nameLabel = new Gtk.Label({
-            label: 'Task Name:',
+            label: LABEL.TASK_NAME,
             halign: Gtk.Align.START
         });
-        
+
         const nameEntry = new Gtk.Entry({
-            placeholder_text: 'Enter task name...'
+            placeholder_text: PLACEHOLDER.ENTER_TASK_NAME
         });
 
         // Task description
         const descLabel = new Gtk.Label({
-            label: 'Description (optional):',
+            label: LABEL.DESCRIPTION,
             halign: Gtk.Align.START
         });
 
@@ -1915,7 +1916,7 @@ export class TasksPage {
         let projectCombo = null;
         if (this.parentWindow.projectManager) {
             const projectLabel = new Gtk.Label({
-                label: 'Project:',
+                label: LABEL.PROJECT,
                 halign: Gtk.Align.START
             });
 
@@ -1945,8 +1946,8 @@ export class TasksPage {
         form.append(descScrolled);
 
         dialog.set_extra_child(form);
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('create', 'Create Task');
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('create', BUTTON.CREATE_TASK);
         dialog.set_response_appearance('create', Adw.ResponseAppearance.SUGGESTED);
 
         dialog.connect('response', (dialog, response) => {
@@ -1957,13 +1958,13 @@ export class TasksPage {
                     descTextView.get_buffer().get_end_iter(),
                     false
                 ).trim();
-                
+
                 if (!name) {
                     const errorDialog = new Adw.AlertDialog({
-                        heading: 'Invalid Input',
-                        body: 'Task name is required'
+                        heading: HEADING.INVALID_INPUT,
+                        body: MESSAGE.TASK_NAME_REQUIRED
                     });
-                    errorDialog.add_response('ok', 'OK');
+                    errorDialog.add_response('ok', BUTTON.OK);
                     errorDialog.present(this.parentWindow);
                     return;
                 }
@@ -2001,16 +2002,16 @@ export class TasksPage {
             // Reload tasks to show the new one
             this.loadTasks();
             
-            
+
             // Show success message
-            const toast = Adw.Toast.new(`Task "${taskData.name}" created successfully`);
+            const toast = Adw.Toast.new(_('Task "%s" created successfully').format(taskData.name));
             if (this.parentWindow.toast_overlay) {
                 this.parentWindow.toast_overlay.add_toast(toast);
             }
-            
+
         } catch (error) {
             //('❌ Error creating task:', error);
-            this.showError('Creation Error', 'Failed to create task: ' + error.message);
+            this.showError(HEADING.CREATION_ERROR, ERROR.FAILED_CREATE_TASK + ': ' + error.message);
         }
     }
 
@@ -2054,16 +2055,16 @@ export class TasksPage {
             // Reload tasks to show the new one
             this.loadTasks();
             
-            
+
             // Show success message
-            const toast = Adw.Toast.new(`Task "${templateTask.name}" created successfully`);
+            const toast = Adw.Toast.new(_('Task "%s" created successfully').format(templateTask.name));
             if (this.parentWindow.toast_overlay) {
                 this.parentWindow.toast_overlay.add_toast(toast);
             }
-            
+
         } catch (error) {
             //('❌ Error creating task from template:', error);
-            this.showError('Creation Error', 'Failed to create task: ' + error.message);
+            this.showError(HEADING.CREATION_ERROR, ERROR.FAILED_CREATE_TASK + ': ' + error.message);
         }
     }
     

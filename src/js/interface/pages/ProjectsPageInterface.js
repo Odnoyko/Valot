@@ -2,6 +2,7 @@ import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
 import { ButtonInterface } from '../primitive/Button.js';
 import { EntryInterface } from '../primitive/Entry.js';
+import { EMPTY_STATE, LOADING } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 /**
  * Interface: Projects Page UI Structure
@@ -92,12 +93,12 @@ export class ProjectsPageInterface {
         });
 
         const title = new Gtk.Label({
-            label: 'No projects found',
+            label: EMPTY_STATE.NO_PROJECTS,
             css_classes: ['title-2']
         });
 
         const subtitle = new Gtk.Label({
-            label: 'Create your first project to get started',
+            label: EMPTY_STATE.CREATE_FIRST_PROJECT,
             css_classes: ['dim-label']
         });
 
@@ -125,7 +126,7 @@ export class ProjectsPageInterface {
         });
 
         const label = new Gtk.Label({
-            label: 'Loading projects...',
+            label: LOADING.LOADING_PROJECTS,
             css_classes: ['dim-label']
         });
 
@@ -150,7 +151,7 @@ export class ProjectsPageInterface {
 
         this.elements.deleteSelectedButton = new ButtonInterface({
             iconName: 'edit-delete-symbolic',
-            label: 'Delete Selected',
+            label: _('Delete Selected'),
             cssClasses: ['flat', 'destructive-action']
         });
 

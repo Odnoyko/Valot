@@ -1,11 +1,13 @@
 /* Input Validation Utility Module for Valot
- * 
+ *
  * Provides comprehensive validation for user inputs to prevent:
  * - SQL injection attacks
  * - Data corruption
  * - Application crashes
  * - Security vulnerabilities
  */
+
+import { BUTTON } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 export class InputValidator {
     
@@ -104,7 +106,7 @@ export class InputValidator {
         if (typeof description !== 'string') {
             return {
                 valid: false,
-                error: 'Task description must be text',
+                error: _('Task description must be text'),
                 sanitized: ''
             };
         }
@@ -124,7 +126,7 @@ export class InputValidator {
         if (this.SQL_INJECTION_PATTERNS.test(trimmed)) {
             return {
                 valid: false,
-                error: 'Description contains potentially dangerous content',
+                error: _('Description contains potentially dangerous content'),
                 sanitized: trimmed.replace(this.SQL_INJECTION_PATTERNS, '')
             };
         }
@@ -158,7 +160,7 @@ export class InputValidator {
         if (isNaN(num)) {
             return {
                 valid: false,
-                error: 'Value must be a number',
+                error: _('Value must be a number'),
                 sanitized: min
             };
         }
@@ -195,7 +197,7 @@ export class InputValidator {
         if (!color || typeof color !== 'string') {
             return {
                 valid: false,
-                error: 'Color is required',
+                error: _('Color is required'),
                 sanitized: '#cccccc'
             };
         }
@@ -206,7 +208,7 @@ export class InputValidator {
         if (!hexPattern.test(trimmed)) {
             return {
                 valid: false,
-                error: 'Invalid color format (use #RRGGBB or #RGB)',
+                error: _('Invalid color format (use #RRGGBB or #RGB)'),
                 sanitized: '#cccccc'
             };
         }
@@ -289,7 +291,7 @@ export class InputValidator {
         if (!email || typeof email !== 'string') {
             return {
                 valid: false,
-                error: 'Email address is required',
+                error: _('Email address is required'),
                 sanitized: ''
             };
         }
@@ -308,7 +310,7 @@ export class InputValidator {
         if (!emailPattern.test(trimmed)) {
             return {
                 valid: false,
-                error: 'Invalid email format',
+                error: _('Invalid email format'),
                 sanitized: trimmed
             };
         }
@@ -316,7 +318,7 @@ export class InputValidator {
         if (trimmed.length > 255) {
             return {
                 valid: false,
-                error: 'Email address too long (max 255 characters)',
+                error: _('Email address too long (max 255 characters)'),
                 sanitized: trimmed.substring(0, 255)
             };
         }
@@ -339,7 +341,7 @@ export class InputValidator {
         if (isNaN(num)) {
             return {
                 valid: false,
-                error: 'Rate must be a number',
+                error: _('Rate must be a number'),
                 sanitized: 0
             };
         }
@@ -347,7 +349,7 @@ export class InputValidator {
         if (num < 0) {
             return {
                 valid: false,
-                error: 'Rate cannot be negative',
+                error: _('Rate cannot be negative'),
                 sanitized: 0
             };
         }
@@ -355,7 +357,7 @@ export class InputValidator {
         if (num > 10000) {
             return {
                 valid: false,
-                error: 'Rate too high (max 10000)',
+                error: _('Rate too high (max 10000)'),
                 sanitized: 10000
             };
         }
@@ -388,8 +390,8 @@ export class InputValidator {
                 heading: title || 'Input Error',
                 body: message || 'Invalid input provided'
             });
-            
-            errorDialog.add_response('ok', 'OK');
+
+            errorDialog.add_response('ok', BUTTON.OK);
             errorDialog.set_response_appearance('ok', Adw.ResponseAppearance.SUGGESTED);
             errorDialog.present(parentWindow);
             

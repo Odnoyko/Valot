@@ -2,6 +2,8 @@ import Gtk from 'gi://Gtk';
 import { ReportPDF } from 'resource:///com/odnoyko/valot/js/func/pages/reportPDF.js';
 import { ReportHTML } from 'resource:///com/odnoyko/valot/js/func/pages/reportHTML.js';
 
+const _ = (str) => str;
+
 export class ReportExporter {
     constructor(tasks, projects, clients) {
         this.tasks = tasks || [];
@@ -105,7 +107,7 @@ export class ReportExporter {
                 // Show error dialog if both fail
                 //('🚨 Showing error dialog to user...');
                 const errorDialog = new Gtk.AlertDialog({
-                    message: 'Export Failed',
+                    message: _('Export Failed'),
                     detail: `Both PDF and HTML export failed.\n\nPDF Error: ${pdfError.message}\nHTML Error: ${htmlError.message}`
                 });
                 errorDialog.show(parentWindow);

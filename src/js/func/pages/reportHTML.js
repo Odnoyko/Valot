@@ -4,6 +4,9 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import { TemplateEngine } from 'resource:///com/odnoyko/valot/js/func/pages/templateEngine.js';
 import { Config } from 'resource:///com/odnoyko/valot/config.js';
+import { BUTTON } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
+
+const _ = (str) => str;
 
 export class ReportHTML {
     constructor(tasks, projects, clients) {
@@ -88,7 +91,7 @@ export class ReportHTML {
         } catch (error) {
             //('HTML export error:', error);
             const errorDialog = new Gtk.AlertDialog({
-                message: 'HTML Export Failed',
+                message: _('HTML Export Failed'),
                 detail: `Could not export HTML: ${error.message}`
             });
             errorDialog.show(parentWindow);
@@ -120,14 +123,14 @@ export class ReportHTML {
     _showSuccessDialog(filepath, reportsDir, parentWindow, reason) {
         const fileName = filepath.split('/').pop();
 
-        let message = 'HTML Report Export Complete';
+        let message = _('HTML Report Export Complete');
         let body = '';
 
         if (reason === 'fallback') {
-            message = 'PDF Export Fallback - HTML Generated';
-            body = `PDF export is not available in your environment.\nHTML report created instead.\n\nFile: ${fileName}\nLocation: ${reportsDir}\n\n📄 To create PDF: Use the Print button in your browser to save as PDF.`;
+            message = _('PDF Export Fallback - HTML Generated');
+            body = _('PDF export is not available in your environment.\nHTML report created instead.\n\nFile: %s\nLocation: %s\n\n📄 To create PDF: Use the Print button in your browser to save as PDF.').format(fileName, reportsDir);
         } else {
-            body = `Report saved successfully!\n\nFile: ${fileName}\nLocation: ${reportsDir}\n\n📄 To create PDF: Use the Print button in your browser to save as PDF.`;
+            body = _('Report saved successfully!\n\nFile: %s\nLocation: %s\n\n📄 To create PDF: Use the Print button in your browser to save as PDF.').format(fileName, reportsDir);
         }
 
         const dialog = new Adw.AlertDialog({
@@ -135,8 +138,8 @@ export class ReportHTML {
             body: body
         });
 
-        dialog.add_response('close', 'Close');
-        dialog.add_response('open_folder', 'Open Folder');
+        dialog.add_response('close', BUTTON.CLOSE);
+        dialog.add_response('open_folder', BUTTON.OPEN_FOLDER);
         dialog.set_response_appearance('open_folder', Adw.ResponseAppearance.SUGGESTED);
 
         dialog.connect('response', (dialog, response) => {

@@ -6,11 +6,11 @@ export class TaskTemplate {
         this.templates = [
             {
                 id: 'meeting',
-                name: 'Meeting',
+                name: _('Meeting'),
                 icon: '🤝',
                 fields: {
-                    name: 'Team Meeting - [Date]',
-                    description: 'Weekly team sync meeting\n- Review progress\n- Discuss blockers\n- Plan next steps',
+                    name: _('Team Meeting - [Date]'),
+                    description: _('Weekly team sync meeting\n- Review progress\n- Discuss blockers\n- Plan next steps'),
                     estimatedHours: 1.0,
                     priority: 'medium',
                     tags: ['meeting', 'team', 'sync']
@@ -18,11 +18,11 @@ export class TaskTemplate {
             },
             {
                 id: 'development',
-                name: 'Development Task',
+                name: _('Development Task'),
                 icon: '💻',
                 fields: {
-                    name: 'Implement [Feature Name]',
-                    description: '## Description\nImplement new feature for the application\n\n## Requirements\n- [ ] Requirement 1\n- [ ] Requirement 2\n- [ ] Requirement 3\n\n## Acceptance Criteria\n- [ ] Feature works as expected\n- [ ] Tests added\n- [ ] Documentation updated',
+                    name: _('Implement [Feature Name]'),
+                    description: _('## Description\nImplement new feature for the application\n\n## Requirements\n- [ ] Requirement 1\n- [ ] Requirement 2\n- [ ] Requirement 3\n\n## Acceptance Criteria\n- [ ] Feature works as expected\n- [ ] Tests added\n- [ ] Documentation updated'),
                     estimatedHours: 4.0,
                     priority: 'high',
                     tags: ['development', 'feature', 'coding']
@@ -30,11 +30,11 @@ export class TaskTemplate {
             },
             {
                 id: 'bug-fix',
-                name: 'Bug Fix',
+                name: _('Bug Fix'),
                 icon: '🐛',
                 fields: {
-                    name: 'Fix: [Bug Description]',
-                    description: '## Bug Report\n**Issue:** Description of the bug\n**Steps to Reproduce:**\n1. Step 1\n2. Step 2\n3. Step 3\n\n**Expected Behavior:** What should happen\n**Actual Behavior:** What actually happens\n\n## Solution\n- [ ] Investigate root cause\n- [ ] Implement fix\n- [ ] Test fix\n- [ ] Verify no regression',
+                    name: _('Fix: [Bug Description]'),
+                    description: _('## Bug Report\n**Issue:** Description of the bug\n**Steps to Reproduce:**\n1. Step 1\n2. Step 2\n3. Step 3\n\n**Expected Behavior:** What should happen\n**Actual Behavior:** What actually happens\n\n## Solution\n- [ ] Investigate root cause\n- [ ] Implement fix\n- [ ] Test fix\n- [ ] Verify no regression'),
                     estimatedHours: 2.0,
                     priority: 'high',
                     tags: ['bug', 'fix', 'maintenance']
@@ -42,11 +42,11 @@ export class TaskTemplate {
             },
             {
                 id: 'research',
-                name: 'Research Task',
+                name: _('Research Task'),
                 icon: '🔍',
                 fields: {
-                    name: 'Research: [Topic]',
-                    description: '## Research Objective\nInvestigate and analyze [topic]\n\n## Questions to Answer\n- Question 1?\n- Question 2?\n- Question 3?\n\n## Deliverables\n- [ ] Research summary\n- [ ] Recommendations\n- [ ] Next steps',
+                    name: _('Research: [Topic]'),
+                    description: _('## Research Objective\nInvestigate and analyze [topic]\n\n## Questions to Answer\n- Question 1?\n- Question 2?\n- Question 3?\n\n## Deliverables\n- [ ] Research summary\n- [ ] Recommendations\n- [ ] Next steps'),
                     estimatedHours: 3.0,
                     priority: 'medium',
                     tags: ['research', 'analysis', 'investigation']
@@ -54,11 +54,11 @@ export class TaskTemplate {
             },
             {
                 id: 'review',
-                name: 'Code Review',
+                name: _('Code Review'),
                 icon: '👀',
                 fields: {
-                    name: 'Review: [PR/MR Title]',
-                    description: '## Review Checklist\n- [ ] Code quality and style\n- [ ] Logic correctness\n- [ ] Performance considerations\n- [ ] Security implications\n- [ ] Test coverage\n- [ ] Documentation updates\n\n## Feedback\n[Add specific feedback here]',
+                    name: _('Review: [PR/MR Title]'),
+                    description: _('## Review Checklist\n- [ ] Code quality and style\n- [ ] Logic correctness\n- [ ] Performance considerations\n- [ ] Security implications\n- [ ] Test coverage\n- [ ] Documentation updates\n\n## Feedback\n[Add specific feedback here]'),
                     estimatedHours: 1.0,
                     priority: 'medium',
                     tags: ['review', 'code-review', 'quality']
@@ -66,11 +66,11 @@ export class TaskTemplate {
             },
             {
                 id: 'documentation',
-                name: 'Documentation',
+                name: _('Documentation'),
                 icon: '📖',
                 fields: {
-                    name: 'Document: [Topic]',
-                    description: '## Documentation Task\nCreate/update documentation for [topic]\n\n## Content to Cover\n- [ ] Overview\n- [ ] Usage examples\n- [ ] Configuration options\n- [ ] Troubleshooting\n- [ ] FAQs\n\n## Target Audience\n[Describe who will use this documentation]',
+                    name: _('Document: [Topic]'),
+                    description: _('## Documentation Task\nCreate/update documentation for [topic]\n\n## Content to Cover\n- [ ] Overview\n- [ ] Usage examples\n- [ ] Configuration options\n- [ ] Troubleshooting\n- [ ] FAQs\n\n## Target Audience\n[Describe who will use this documentation]'),
                     estimatedHours: 2.0,
                     priority: 'low',
                     tags: ['documentation', 'writing', 'knowledge-share']
@@ -78,11 +78,11 @@ export class TaskTemplate {
             },
             {
                 id: 'testing',
-                name: 'Testing Task',
+                name: _('Testing Task'),
                 icon: '🧪',
                 fields: {
-                    name: 'Test: [Feature/Component]',
-                    description: '## Testing Scope\nTest [feature/component] thoroughly\n\n## Test Cases\n- [ ] Unit tests\n- [ ] Integration tests\n- [ ] Edge cases\n- [ ] Error handling\n- [ ] Performance tests\n\n## Test Environment\n- [ ] Development\n- [ ] Staging\n- [ ] Production-like',
+                    name: _('Test: [Feature/Component]'),
+                    description: _('## Testing Scope\nTest [feature/component] thoroughly\n\n## Test Cases\n- [ ] Unit tests\n- [ ] Integration tests\n- [ ] Edge cases\n- [ ] Error handling\n- [ ] Performance tests\n\n## Test Environment\n- [ ] Development\n- [ ] Staging\n- [ ] Production-like'),
                     estimatedHours: 3.0,
                     priority: 'medium',
                     tags: ['testing', 'qa', 'validation']
@@ -90,11 +90,11 @@ export class TaskTemplate {
             },
             {
                 id: 'deployment',
-                name: 'Deployment',
+                name: _('Deployment'),
                 icon: '🚀',
                 fields: {
-                    name: 'Deploy: [Version/Release]',
-                    description: '## Deployment Plan\nDeploy [version] to [environment]\n\n## Pre-deployment Checklist\n- [ ] Code reviewed and approved\n- [ ] Tests passing\n- [ ] Database migrations ready\n- [ ] Configuration updated\n- [ ] Rollback plan prepared\n\n## Post-deployment Checklist\n- [ ] Verify deployment success\n- [ ] Run smoke tests\n- [ ] Monitor logs\n- [ ] Update documentation',
+                    name: _('Deploy: [Version/Release]'),
+                    description: _('## Deployment Plan\nDeploy [version] to [environment]\n\n## Pre-deployment Checklist\n- [ ] Code reviewed and approved\n- [ ] Tests passing\n- [ ] Database migrations ready\n- [ ] Configuration updated\n- [ ] Rollback plan prepared\n\n## Post-deployment Checklist\n- [ ] Verify deployment success\n- [ ] Run smoke tests\n- [ ] Monitor logs\n- [ ] Update documentation'),
                     estimatedHours: 1.5,
                     priority: 'high',
                     tags: ['deployment', 'release', 'devops']
@@ -102,11 +102,11 @@ export class TaskTemplate {
             },
             {
                 id: 'planning',
-                name: 'Planning Session',
+                name: _('Planning Session'),
                 icon: '📋',
                 fields: {
-                    name: 'Planning: [Sprint/Project]',
-                    description: '## Planning Session\nPlan work for [sprint/project]\n\n## Agenda\n- [ ] Review previous sprint\n- [ ] Estimate new tasks\n- [ ] Assign priorities\n- [ ] Set sprint goals\n- [ ] Identify blockers\n\n## Outcomes\n- Sprint backlog defined\n- Team capacity planned\n- Goals communicated',
+                    name: _('Planning: [Sprint/Project]'),
+                    description: _('## Planning Session\nPlan work for [sprint/project]\n\n## Agenda\n- [ ] Review previous sprint\n- [ ] Estimate new tasks\n- [ ] Assign priorities\n- [ ] Set sprint goals\n- [ ] Identify blockers\n\n## Outcomes\n- Sprint backlog defined\n- Team capacity planned\n- Goals communicated'),
                     estimatedHours: 2.0,
                     priority: 'medium',
                     tags: ['planning', 'sprint', 'organization']
@@ -114,11 +114,11 @@ export class TaskTemplate {
             },
             {
                 id: 'client-call',
-                name: 'Client Call',
+                name: _('Client Call'),
                 icon: '📞',
                 fields: {
-                    name: 'Call: [Client Name] - [Purpose]',
-                    description: '## Call Details\n**Client:** [Client Name]\n**Purpose:** [Call purpose]\n**Date/Time:** [Schedule]\n\n## Agenda\n- [ ] Item 1\n- [ ] Item 2\n- [ ] Item 3\n\n## Follow-up Actions\n- [ ] Action 1\n- [ ] Action 2\n- [ ] Send meeting summary',
+                    name: _('Call: [Client Name] - [Purpose]'),
+                    description: _('## Call Details\n**Client:** [Client Name]\n**Purpose:** [Call purpose]\n**Date/Time:** [Schedule]\n\n## Agenda\n- [ ] Item 1\n- [ ] Item 2\n- [ ] Item 3\n\n## Follow-up Actions\n- [ ] Action 1\n- [ ] Action 2\n- [ ] Send meeting summary'),
                     estimatedHours: 1.0,
                     priority: 'medium',
                     tags: ['client', 'call', 'communication']

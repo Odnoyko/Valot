@@ -101,7 +101,7 @@ export class ProjectCard {
 
         // Client info if available
         if (project.client_name) {
-            this.clientLabel = Label.createCaption(`Client: ${project.client_name}`);
+            this.clientLabel = Label.createCaption(_('Client: %s').format(project.client_name));
             infoBox.append(this.clientLabel.widget);
         }
 
@@ -116,7 +116,7 @@ export class ProjectCard {
                 this.editButton = new Button({
                     iconName: 'document-edit-symbolic',
                     cssClasses: ['flat', 'circular'],
-                    tooltipText: 'Edit project',
+                    tooltipText: _('Edit project'),
                     widthRequest: 32,
                     heightRequest: 32,
                     onClick: () => this.config.onEdit(project, this)
@@ -128,7 +128,7 @@ export class ProjectCard {
                 this.deleteButton = new Button({
                     iconName: 'edit-delete-symbolic',
                     cssClasses: ['flat', 'circular', 'destructive-action'],
-                    tooltipText: 'Delete project',
+                    tooltipText: _('Delete project'),
                     widthRequest: 32,
                     heightRequest: 32,
                     onClick: () => this.config.onDelete(project, this)
@@ -154,7 +154,7 @@ export class ProjectCard {
         // Total time
         const totalTime = this._formatTime(project.total_time || 0);
         this.totalTimeLabel = new Label({
-            text: `Total: ${totalTime}`,
+            text: _('Total: %s').format(totalTime),
             cssClasses: ['monospace', 'dim-label']
         });
         stats.append(this.totalTimeLabel.widget);
@@ -162,7 +162,7 @@ export class ProjectCard {
         // Task count if available
         if (project.task_count !== undefined) {
             this.taskCountLabel = new Label({
-                text: `Tasks: ${project.task_count}`,
+                text: _('Tasks: %d').format(project.task_count),
                 cssClasses: ['dim-label']
             });
             stats.append(this.taskCountLabel.widget);
@@ -173,7 +173,7 @@ export class ProjectCard {
             this.activeIndicator = new Label({
                 text: '●',
                 cssClasses: ['success', 'heading'],
-                tooltipText: 'Currently tracking'
+                tooltipText: _('Currently tracking')
             });
             stats.append(this.activeIndicator.widget);
         }
@@ -254,13 +254,13 @@ export class ProjectCard {
     updateStats(stats) {
         if (stats.totalTime !== undefined) {
             if (this.totalTimeLabel) {
-                this.totalTimeLabel.setText(`Total: ${this._formatTime(stats.totalTime)}`);
+                this.totalTimeLabel.setText(_('Total: %s').format(this._formatTime(stats.totalTime)));
             }
         }
 
         if (stats.taskCount !== undefined) {
             if (this.taskCountLabel) {
-                this.taskCountLabel.setText(`Tasks: ${stats.taskCount}`);
+                this.taskCountLabel.setText(_('Tasks: %d').format(stats.taskCount));
             }
         }
 
@@ -270,7 +270,7 @@ export class ProjectCard {
                 this.activeIndicator = new Label({
                     text: '●',
                     cssClasses: ['success', 'heading'],
-                    tooltipText: 'Currently tracking'
+                    tooltipText: _('Currently tracking')
                 });
                 // Would need to add to stats container here if needed
             } else if (!stats.isActive && this.activeIndicator) {

@@ -1,3 +1,5 @@
+import { HEADING, BUTTON } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.jsw';
+
 /**
  * Functionality: Project Card Business Logic and Interactions
  * Handles events, data management, and project-specific actions
@@ -117,12 +119,12 @@ export class ProjectCardBehavior {
         // For now, just return a simple confirmation
         return new Promise((resolve) => {
             const dialog = new Adw.AlertDialog({
-                heading: 'Delete Project',
-                body: `Are you sure you want to delete "${this.project.name}"?`
+                heading: HEADING.DELETE_PROJECT,
+                body: _(`Are you sure you want to delete "${this.project.name}"?`)
             });
 
-            dialog.add_response('cancel', 'Cancel');
-            dialog.add_response('delete', 'Delete');
+            dialog.add_response('cancel', BUTTON.CANCEL);
+            dialog.add_response('delete', BUTTON.DELETE);
             dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
 
             dialog.connect('response', (dialog, response) => {

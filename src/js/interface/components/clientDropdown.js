@@ -1,5 +1,6 @@
 import Gtk from 'gi://Gtk';
 import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/js/data/currencies.js';
+import { PLACEHOLDER } from 'resource:///com/odnoyko/valot/js/func/global/commonStrings.js';
 
 /**
  * Custom client dropdown with search functionality
@@ -46,7 +47,7 @@ export class ClientDropdown {
 
         // Create search entry
         const searchEntry = new Gtk.SearchEntry({
-            placeholder_text: 'Search clients...',
+            placeholder_text: PLACEHOLDER.SEARCH_CLIENTS,
             margin_top: 6,
             margin_bottom: 6,
             margin_start: 6,
