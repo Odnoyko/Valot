@@ -1,0 +1,2087 @@
+import Gtk from 'gi://Gtk';
+import Gdk from 'gi://Gdk';
+import Adw from 'gi://Adw?version=1';
+import Pango from 'gi://Pango';
+import GLib from 'gi://GLib';
+import { Button } from '../../components/primitive/Button.js';
+import { Label } from '../../components/primitive/Label.js';
+import { WidgetFactory } from '../../utils/widgetFactory.js';
+// TODO: Restore when migrated to new architecture
+// import { TaskManager } from '../../func/pages/taskManager.js';
+// import { TaskRenderer } from '../../func/pages/taskRenderer.js';
+import { DateFilters, ColorUtils } from 'resource:///com/odnoyko/valot/ui/utils/CoreImports.js';
+// TODO: Restore when migrated to new architecture
+// import { trackingStateManager } from '../../func/global/trackingStateManager.js';
+// import { executeQuery, executeNonSelectCommand } from '../../func/global/dbinitialisation.js';
+import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/data/currencies.js';
+import { ClientDropdown } from '../../utils/clientDropdown.js';
+import { BUTTON, HEADING, MESSAGE, LABEL, PLACEHOLDER, TOOLTIP, EMPTY_STATE, LOADING, SUCCESS, ERROR, STATUS, DIALOG_BODY } from 'resource:///com/odnoyko/valot/ui/utils/commonStrings.js';
+
+// Translation helper
+const translate = (str) => (typeof _ !== 'undefined' && _ !== null) ? _(str) : str;
+
+/**
+ * Tasks page component with task list and management
+ */
+export class TasksPage {
+    constructor(config = {}) {
+        this.config = {
+            title: _('Tasks'),
+            subtitle: _('Manage and track your tasks'),
+            showTrackingWidget: true,
+            showSearchButton: true,
+            actions: [
+                {
+                    icon: 'list-add-symbolic',
+                    tooltip: _('Add Task'),
+                    cssClasses: ['suggested-action'],
+                    onClick: (page) => page.showAddTaskDialog()
+                },
+                {
+                    icon: 'document-properties-symbolic',
+                    tooltip: _('Add from Template'),
+                    cssClasses: ['flat'],
+                    onClick: (page) => page.showTaskTemplateDialog()
+                }
+            ],
+            ...config
+        };
+
+        // Base page properties
+        this.app = config.app;
+        this.parentWindow = config.parentWindow;
+        this.coreBridge = config.coreBridge; // New Core API bridge
+        this.isLoading = false;
+        this.currentPage = 0;
+        this.itemsPerPage = 30;
+        
+        this.tasks = [];
+        this.filteredTasks = [];
+        this.allTasks = []; // For task renderer compatibility
+        this.searchQuery = '';
+        this.activeFilter = 'all';
+        
+        // Task selection state (for original functionality)
+        this.selectedTasks = new Set();
+        this.selectedStacks = new Set(); 
+        this.taskRowMap = new Map();
+        this.stackRowMap = new Map();
+        
+        // TODO: Restore when migrated
+        // Initialize task manager and renderer
+        // this._initializeTaskManager();
+        // this._initializeTaskRenderer();
+
+        // Connect to existing UI elements
+        // this._connectToExistingUI();
+
+        // Enable cost tracking by default (can be overridden by parent window setting)
+        this.showCostTracking = this.parentWindow?.showCostTracking !== false;
+
+        // Subscribe to tracking state changes for automatic task list updates
+        // this._subscribeToTrackingStateChanges();
+    }
+
+    _initializeTaskManager() {
+        if (this.parentWindow && this.parentWindow.dbConnection) {
+            this.taskManager = new TaskManager(
+                this.parentWindow.dbConnection,
+                executeQuery,
+                executeNonSelectCommand
+            );
+        } else {
+            //('❌ No database connection available for TaskManager');
+        }
+    }
+
+    _initializeTaskRenderer() {
+        if (this.parentWindow && this.parentWindow.timeUtils) {
+            // Pass this TasksPage as parentWindow to TaskRenderer so it can access our methods
+            this.taskRenderer = new TaskRenderer(
+                this.parentWindow.timeUtils,
+                this.parentWindow.allProjects || [],
+                this // Use TasksPage as parent for method access
+            );
+
+            // Set selection change callback for TaskRenderer
+            this.taskRenderer.onSelectionChanged = () => {
+                this._updateSelectionUI();
+            };
+
+            // Ensure TasksPage has access to allProjects from main window
+            this.allProjects = this.parentWindow.allProjects || [];
+
+        } else {
+            //('❌ Missing dependencies for TaskRenderer');
+        }
+    }
+
+    _connectToExistingUI() {
+        if (!this.parentWindow) {
+            //('TasksPage: No parent window provided');
+            return;
+        }
+
+        // Get references to existing UI elements from the template
+        this.taskSearch = this.parentWindow._task_search;
+        this.taskFilter = this.parentWindow._task_filter;
+        this.taskList = this.parentWindow._task_list;
+        this.prevPageBtn = this.parentWindow._prev_page_btn;
+        this.nextPageBtn = this.parentWindow._next_page_btn;
+        this.pageInfo = this.parentWindow._page_info;
+        this.paginationBox = this.parentWindow._pagination_box;
+
+        // Replace simple pagination with pagination/context bar
+        this._replacePaginationWithContextBar();
+
+        // TasksPage UI elements initialized
+
+        // Connect event handlers to existing UI elements
+        this._connectEventHandlers();
+
+    }
+    
+    /**
+     * Replace simple pagination with combined pagination/context bar
+     */
+    _replacePaginationWithContextBar() {
+        if (!this.paginationBox) {
+            return;
+        }
+
+        // Create new pagination/context bar widget
+        this.paginationContextBarWidget = WidgetFactory.createPaginationContextBar({
+            onPreviousClick: () => this._previousPage(),
+            onNextClick: () => this._nextPage(),
+            onCancelClick: () => this._clearSelection(),
+            onDeleteClick: () => this._deleteSelectedTasks()
+        });
+
+        // Clear the pagination box and add our new widget
+        let child = this.paginationBox.get_first_child();
+        while (child) {
+            const next = child.get_next_sibling();
+            this.paginationBox.remove(child);
+            child = next;
+        }
+
+        // Add the new pagination/context bar widget
+        this.paginationBox.append(this.paginationContextBarWidget.widget);
+
+        // Make sure the widget is visible
+        this.paginationContextBarWidget.widget.set_visible(true);
+    }
+
+    _connectEventHandlers() {
+        if (this.taskSearch) {
+            this.taskSearch.connect('search-changed', () => {
+                this.searchQuery = this.taskSearch.get_text();
+                this._filterTasks();
+            });
+        }
+
+        if (this.taskFilter) {
+            this.taskFilter.connect('notify::selected', () => {
+                const selectedIndex = this.taskFilter.get_selected();
+                // Map dropdown indices to filter strings
+                const filterMap = ['all', 'today', 'week', 'month'];
+                this.activeFilter = filterMap[selectedIndex] || 'all';
+                this._filterTasks();
+            });
+        }
+
+    }
+    
+    _subscribeToTrackingStateChanges() {
+        
+        if (this.parentWindow && this.parentWindow.trackingStateManager) {
+            // Subscribe to tracking state changes for automatic task list updates
+            this.trackingUnsubscribe = this.parentWindow.trackingStateManager.subscribe((event, data) => {
+                // Update task list when tracking starts, stops, task is saved, or when updateTaskList is triggered
+                if (event === 'start') {
+                    // Add 500ms delay for tracking start to ensure UI state is fully updated
+                    setTimeout(() => {
+                        this.loadTasks();
+                    }, 500);
+                } else if (event === 'stop' || event === 'updateTaskList' || event === 'taskStarted' || event === 'taskUpdated') {
+                    this.loadTasks();
+                } else if (event === 'updateTaskListRealTime') {
+                    // Update only the duration of the active task without full refresh
+                    this._updateActiveTaskDuration(data.taskInfo, data.elapsedTime);
+                }
+            });
+            
+        } else {
+        }
+    }
+
+    // This method is kept for compatibility but now connects to existing UI
+    _createMainContent() {
+        // This page uses existing UI template, so we don't create new content
+        // Instead, we've connected to existing elements in _connectToExistingUI()
+        return null;
+    }
+
+    _createSearchBar(container) {
+        this.searchBar = new Gtk.SearchBar({
+            visible: false
+        });
+
+        const searchEntry = new Gtk.SearchEntry({
+            placeholder_text: PLACEHOLDER.SEARCH_TASKS,
+            hexpand: true
+        });
+
+        searchEntry.connect('search-changed', () => {
+            this.searchQuery = searchEntry.get_text();
+            this._filterTasks();
+        });
+
+        this.searchBar.set_child(searchEntry);
+        this.searchBar.connect_entry(searchEntry);
+        
+        container.append(this.searchBar);
+    }
+
+    _createFilterBar(container) {
+        const filterBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 6,
+            css_classes: ['filter-bar']
+        });
+
+        // Filter buttons
+        const filters = [
+            { id: 'all', label: _('All Tasks'), active: true },
+            { id: 'today', label: _('Today') },
+            { id: 'week', label: _('This Week') },
+            { id: 'active', label: _('Active Only') }
+        ];
+
+        this.filterButtons = new Map();
+
+        filters.forEach(filter => {
+            const button = new Button({
+                label: filter.label,
+                cssClasses: filter.active ? ['filter-button', 'suggested-action'] : ['filter-button', 'flat'],
+                onClick: () => this._setFilter(filter.id)
+            });
+
+            this.filterButtons.set(filter.id, button);
+            filterBox.append(button.widget);
+        });
+
+        container.append(filterBox);
+    }
+
+    _createTaskList(container) {
+        // Create scrollable list for tasks
+        this.taskList = WidgetFactory.createScrollableList({
+            height_request: 400,
+            cssClasses: ['task-list']
+        });
+
+        // Empty state
+        this.emptyState = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 12,
+            halign: Gtk.Align.CENTER,
+            valign: Gtk.Align.CENTER,
+            css_classes: ['empty-state']
+        });
+
+        const emptyIcon = new Gtk.Image({
+            icon_name: 'view-list-symbolic',
+            pixel_size: 64,
+            css_classes: ['dim-label']
+        });
+
+        const emptyLabel = new Label({
+            text: EMPTY_STATE.NO_TASKS_FOUND,
+            cssClasses: ['title-2'],
+            halign: Gtk.Align.CENTER
+        });
+
+        const emptySubLabel = new Label({
+            text: EMPTY_STATE.CREATE_FIRST_TASK,
+            cssClasses: ['dim-label'],
+            halign: Gtk.Align.CENTER
+        });
+
+        this.emptyState.append(emptyIcon);
+        this.emptyState.append(emptyLabel.widget);
+        this.emptyState.append(emptySubLabel.widget);
+
+        // Stack to switch between list and empty state
+        this.listStack = new Gtk.Stack();
+        this.listStack.add_named(this.taskList.widget, 'list');
+        this.listStack.add_named(this.emptyState, 'empty');
+
+        container.append(this.listStack);
+    }
+
+    _createPagination(container) {
+        const paginationBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            halign: Gtk.Align.CENTER,
+            margin_top: 12
+        });
+
+        this.prevButton = new Button({
+            iconName: 'go-previous-symbolic',
+            tooltipText: TOOLTIP.PREVIOUS_PAGE,
+            cssClasses: ['circular'],
+            onClick: () => this._previousPage()
+        });
+
+        this.pageInfo = new Label({
+            text: _('Page 1 of 1'),
+            cssClasses: ['monospace']
+        });
+
+        this.nextButton = new Button({
+            iconName: 'go-next-symbolic',
+            tooltipText: TOOLTIP.NEXT_PAGE,
+            cssClasses: ['circular'],
+            onClick: () => this._nextPage()
+        });
+
+        paginationBox.append(this.prevButton.widget);
+        paginationBox.append(this.pageInfo.widget);
+        paginationBox.append(this.nextButton.widget);
+
+        container.append(paginationBox);
+    }
+
+    // Override tracking widget events
+    _onTrackingTaskChanged(text, widget) {
+        // Handle task name changes
+    }
+
+    _onTrackingClick(widget) {
+        const trackingData = widget.getTrackingData();
+        
+        if (!trackingData.isValid) {
+            this.showError(HEADING.INVALID_INPUT, MESSAGE.INVALID_INPUT_MSG);
+            return;
+        }
+
+        if (widget.config.isTracking) {
+            this._stopTracking();
+        } else {
+            this._startTracking(trackingData);
+        }
+    }
+
+    /**
+     * Toggle search bar visibility
+     */
+    toggleSearch() {
+        const isVisible = this.searchBar.get_search_mode();
+        this.searchBar.set_search_mode(!isVisible);
+    }
+
+    /**
+     * Set active filter
+     */
+    _setFilter(filterId) {
+        // Update button states
+        this.filterButtons.forEach((button, id) => {
+            if (id === filterId) {
+                button.addClass('suggested-action');
+                button.removeClass('flat');
+            } else {
+                button.removeClass('suggested-action');
+                button.addClass('flat');
+            }
+        });
+
+        this.activeFilter = filterId;
+        this._filterTasks();
+    }
+
+    /**
+     * Filter tasks based on search and filter criteria
+     */
+    _filterTasks() {
+        this.filteredTasks = this.tasks.filter(task => {
+            // Search filter
+            if (this.searchQuery) {
+                const query = this.searchQuery.toLowerCase();
+                if (!task.name.toLowerCase().includes(query) &&
+                    !task.project_name.toLowerCase().includes(query)) {
+                    return false;
+                }
+            }
+
+            // Date/status filters - use start date (when work was done) instead of created_at
+            switch (this.activeFilter) {
+                case 'today':
+                    return DateFilters.isToday(task.start);
+                case 'week':
+                    return DateFilters.isThisWeek(task.start);
+                case 'month':
+                    return DateFilters.isThisMonth(task.start);
+                case 'active':
+                    return task.is_active === 1;
+                default:
+                    return true;
+            }
+        });
+
+        this._updateTaskDisplay();
+    }
+
+    /**
+     * Update task list display with original grouping logic
+     */
+    _updateTaskDisplay() {
+        // Clear existing tasks
+        if (this.taskList) {
+            let child = this.taskList.get_first_child();
+            while (child) {
+                const next = child.get_next_sibling();
+                this.taskList.remove(child);
+                child = next;
+            }
+        }
+
+        // Clear row maps (but keep selections to preserve user's selection across refreshes)
+        this.taskRowMap.clear();
+        this.stackRowMap.clear();
+
+        // Clear active task tracking in TaskRenderer for real-time updates
+        if (this.taskRenderer) {
+            this.taskRenderer.clearAllActiveTaskTracking();
+        }
+
+        if (!this.filteredTasks || this.filteredTasks.length === 0) {
+            this.currentPage = 0;
+            this._showEmptyState();
+            return;
+        }
+
+        // Displaying tasks
+
+        // Store as allTasks for taskRenderer compatibility
+        this.allTasks = [...this.filteredTasks];
+        this.parentWindow.allTasks = this.allTasks;
+
+        // Group all tasks first
+        const allTaskGroups = this._groupSimilarTasks(this.filteredTasks);
+
+        // Calculate pagination based on GROUPS (stacks + singles count as 1 item each)
+        const totalPages = Math.ceil(allTaskGroups.length / this.itemsPerPage);
+
+        // If current page is beyond total pages, go to last page
+        if (this.currentPage >= totalPages && totalPages > 0) {
+            this.currentPage = totalPages - 1;
+        }
+
+        const start = this.currentPage * this.itemsPerPage;
+        const end = Math.min(start + this.itemsPerPage, allTaskGroups.length);
+        const groupsToShow = allTaskGroups.slice(start, end);
+
+        // Render paginated groups
+        this._renderTaskGroups(groupsToShow);
+
+        // Update pagination/selection UI
+        this._updatePaginationInfo(totalPages);
+        this._updateSelectionUI();
+    }
+
+    /**
+     * Group tasks by name, project, and client (original logic)
+     */
+    _groupSimilarTasks(tasks) {
+        const groups = new Map();
+        
+        tasks.forEach(task => {
+            // Get base name by removing numbers in parentheses
+            const baseNameMatch = task.name.match(/^(.+?)\s*(?:\(\d+\))?$/);
+            const baseName = baseNameMatch ? baseNameMatch[1].trim() : task.name;
+            
+            // Create unique key combining base name, project, and client for proper stacking
+            const groupKey = `${baseName}::${task.project_name}::${task.client_name || ''}`;
+            
+            // Keep tracking tasks in their stack - don't separate them
+            
+            if (!groups.has(groupKey)) {
+                groups.set(groupKey, {
+                    groupKey: groupKey,
+                    baseName: baseName,
+                    tasks: [],
+                    totalDuration: 0,
+                    totalCost: 0,
+                    hasActive: false,
+                    latestTask: null
+                });
+            }
+            
+            const group = groups.get(groupKey);
+            group.tasks.push(task);
+            group.totalDuration += task.duration || 0;
+            
+            // Calculate cost if client rate exists
+            const clientRate = task.client_rate || 0;
+            group.totalCost += (task.duration / 3600) * clientRate;
+            
+            if (task.is_active) {
+                group.hasActive = true;
+            }
+            
+            // Keep track of the most recent task
+            if (!group.latestTask || new Date(task.created_at) > new Date(group.latestTask.created_at)) {
+                group.latestTask = task;
+            }
+        });
+        
+        return Array.from(groups.values());
+    }
+
+    /**
+     * Render task groups using TaskRenderer
+     */
+    _renderTaskGroups(taskGroups) {
+        if (!this.taskRenderer) {
+            //('TaskRenderer not initialized');
+            return;
+        }
+
+        taskGroups.forEach(group => {
+            if (group.tasks.length === 1 || group.isIndividual) {
+                // Single task OR individual tracking task - render using TaskRenderer
+                const row = this.taskRenderer.renderSingleTask(group.tasks[0]);
+
+                // Force re-apply selection styling if this task is selected
+                if (this.selectedTasks.has(group.tasks[0].id)) {
+                    row.add_css_class('selected-task');
+                }
+
+                this.taskList.append(row);
+            } else {
+                // Multiple tasks - render as expandable group using TaskRenderer
+                const groupRow = this.taskRenderer.renderTaskGroup(group);
+
+                // Force re-apply selection styling if this stack is selected
+                if (this.selectedStacks.has(group.groupKey)) {
+                    groupRow.add_css_class('selected-task');
+                }
+
+                this.taskList.append(groupRow);
+            }
+        });
+
+        // Update all buttons to reflect current tracking state after rendering
+        if (this.parentWindow && this.parentWindow.trackingStateManager) {
+            this.parentWindow.trackingStateManager._updateStackButtons();
+        }
+    }
+
+    // Add missing methods that TaskRenderer expects in parentWindow
+    _editTask(taskId) {
+        const task = this.allTasks.find(t => t.id === taskId);
+        if (task) {
+            this._editTaskById(task);
+        }
+    }
+
+    _editTaskById(task) {
+        // Use the existing edit functionality
+        this._editTaskObject(task);
+    }
+
+    _startTrackingFromTask(task) {
+        
+        // Set the main tracking widget context from task
+        if (this.parentWindow) {
+            
+            // Start tracking through trackingStateManager - it will handle all synchronization
+            const currentProject = this.parentWindow.allProjects?.find(p => p.id === task.project_id);
+            const currentClient = this.parentWindow.allClients?.find(c => c.id === task.client_id);
+            
+            if (this.parentWindow.trackingStateManager) {
+                this.parentWindow.trackingStateManager.startTracking({
+                    name: task.name,
+                    baseName: task.name.match(/^(.+?)\s*(?:\(\d+\))?$/)?.[1]?.trim() || task.name,
+                    projectId: task.project_id,
+                    projectName: task.project_name || currentProject?.name || 'Default Project',
+                    clientId: task.client_id,
+                    clientName: task.client_name || currentClient?.name || 'Default Client',
+                    startTime: new Date().toISOString()
+                });
+            }
+        } else {
+        }
+    }
+
+    _stopCurrentTracking() {
+        if (this.parentWindow.trackingStateManager) {
+            const currentTracking = this.parentWindow.trackingStateManager.getCurrentTracking();
+            if (currentTracking) {
+                
+                // Calculate elapsed time
+                const startTime = new Date(currentTracking.startTime);
+                const endTime = new Date();
+                const elapsedSeconds = Math.floor((endTime - startTime) / 1000);
+                
+                
+                // Stop tracking in state manager
+                const stoppedTask = this.parentWindow.trackingStateManager.stopTracking();
+                
+                // Database update is now handled by trackingStateManager._updateTaskInDatabase()
+                // No need to call updateTaskWhenTrackingStops again here
+                if (stoppedTask) {
+                    // Just refresh the task list to show updated time
+                    this.loadTasks();
+                } else {
+                }
+            }
+        }
+    }
+
+    /**
+     * Create widget for individual task (removed - using TaskRenderer)
+     */
+    _createTaskWidget_OLD(task) {
+        const taskBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            margin_top: 8,
+            margin_bottom: 8,
+            margin_start: 12,
+            margin_end: 12
+        });
+
+        // Template icon (if created from template)
+        if (task.createdFromTemplate && task.templateIcon) {
+            const templateIcon = new Gtk.Label({
+                label: task.templateIcon,
+                css_classes: ['template-icon', 'dim-label'],
+                width_request: 24,
+                height_request: 24,
+                halign: Gtk.Align.CENTER,
+                valign: Gtk.Align.CENTER
+            });
+            taskBox.append(templateIcon);
+        }
+
+        // Task info
+        const infoBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 4,
+            hexpand: true
+        });
+
+        // Task name with template indicator
+        const taskNameBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 6,
+            halign: Gtk.Align.START
+        });
+
+        const nameLabel = new Label({
+            text: task.name,
+            cssClasses: ['heading'],
+            halign: Gtk.Align.START,
+            ellipsize: Pango.EllipsizeMode.END
+        });
+        taskNameBox.append(nameLabel.widget);
+
+        // Template badge if created from template
+        if (task.createdFromTemplate && task.templateName) {
+            const templateBadge = new Gtk.Label({
+                label: task.templateName,
+                css_classes: ['caption', 'dim-label', 'template-badge'],
+                halign: Gtk.Align.START
+            });
+            taskNameBox.append(templateBadge);
+        }
+
+        let detailsText = `${task.project_name || EMPTY_STATE.NO_PROJECT} • ${this._formatDate(task.created_at)} • ${this._formatDuration(task.duration || 0)}`;
+
+        // Add client information if available
+        if (task.client_name) {
+            detailsText = `${task.project_name || EMPTY_STATE.NO_PROJECT} • ${task.client_name} • ${this._formatDate(task.created_at)} • ${this._formatDuration(task.duration || 0)}`;
+        }
+
+        // Add status information
+        if (task.is_active) {
+            detailsText += ' • ' + STATUS.CURRENTLY_TRACKING;
+        }
+
+        const detailsLabel = new Label({
+            text: detailsText,
+            cssClasses: ['caption', 'dim-label'],
+            halign: Gtk.Align.START,
+            ellipsize: Pango.EllipsizeMode.END
+        });
+
+        // Tags display
+        if (task.tags && task.tags.length > 0) {
+            const tagsLabel = new Label({
+                text: _('Tags: %s').format(task.tags.join(', ')),
+                cssClasses: ['caption', 'dim-label'],
+                halign: Gtk.Align.START,
+                ellipsize: Pango.EllipsizeMode.END
+            });
+            infoBox.append(taskNameBox);
+            infoBox.append(detailsLabel.widget);
+            infoBox.append(tagsLabel.widget);
+        } else {
+            infoBox.append(taskNameBox);
+            infoBox.append(detailsLabel.widget);
+        }
+
+        // Action buttons
+        const actionsBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 6
+        });
+
+        const editButton = new Button({
+            iconName: 'document-edit-symbolic',
+            cssClasses: ['flat', 'circular'],
+            tooltipText: TOOLTIP.EDIT_TASK,
+            onClick: () => this._editTask(task)
+        });
+
+        const deleteButton = new Button({
+            iconName: 'edit-delete-symbolic',
+            cssClasses: ['flat', 'circular', 'destructive-action'],
+            tooltipText: TOOLTIP.DELETE_TASK,
+            onClick: () => this._deleteTask(task)
+        });
+
+        actionsBox.append(editButton.widget);
+        actionsBox.append(deleteButton.widget);
+
+        // Active indicator
+        if (task.is_active) {
+            const activeIndicator = new Gtk.Box({
+                css_classes: ['active-indicator'],
+                width_request: 4
+            });
+            taskBox.append(activeIndicator);
+        }
+
+        taskBox.append(infoBox);
+        taskBox.append(actionsBox);
+
+        return taskBox;
+    }
+
+    /**
+     * Load tasks from database
+     */
+    async loadTasks() {
+        // Use new Core API via coreBridge
+        if (!this.coreBridge || !this.coreBridge.database) {
+            console.log('TasksPage: CoreBridge not initialized');
+            return;
+        }
+
+        this.showLoading(LOADING);
+
+        try {
+            // TODO: Use Core TaskService when available
+            // For now, query database directly
+            const query = `SELECT * FROM tasks ORDER BY created_at DESC LIMIT 100`;
+            const result = await this.coreBridge.database.executeQuery(query);
+
+            // Ensure we always have an array
+            this.tasks = Array.isArray(result) ? result : [];
+            this.filteredTasks = [...this.tasks];
+            this._updateTaskDisplay();
+            
+        } catch (error) {
+            //('❌ Error loading tasks:', error);
+            this.showError(HEADING.LOAD_ERROR, ERROR.FAILED_LOAD_TASKS + ': ' + error.message);
+            this.tasks = [];
+            this.filteredTasks = [];
+        } finally {
+            this.hideLoading();
+            
+            // Update weekly time in sidebar after loading tasks
+            if (this.parentWindow && typeof this.parentWindow.updateWeeklyTime === 'function') {
+                await this.parentWindow.updateWeeklyTime();
+            }
+        }
+    }
+
+    /**
+     * Show empty state with helpful hint
+     */
+    _showEmptyState() {
+        if (!this.taskList) return;
+
+        // Create empty state hint
+        const emptyStateRow = new Adw.ActionRow();
+        
+        const hintBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 8,
+            halign: Gtk.Align.CENTER,
+            valign: Gtk.Align.CENTER,
+            margin_top: 32,
+            margin_bottom: 32,
+            margin_start: 24,
+            margin_end: 24
+        });
+
+        // Icon
+        const icon = new Gtk.Image({
+            icon_name: 'view-list-symbolic',
+            pixel_size: 48,
+            css_classes: ['dim-label']
+        });
+
+        // Main message
+        const message = new Gtk.Label({
+            label: this._getEmptyStateMessage(),
+            css_classes: ['title-3'],
+            halign: Gtk.Align.CENTER,
+            wrap: true,
+            wrap_mode: Pango.WrapMode.WORD_CHAR,
+            justify: Gtk.Justification.CENTER
+        });
+
+        // Helpful hint
+        const hint = new Gtk.Label({
+            label: EMPTY_STATE.TYPE_TASK_NAME,
+            css_classes: ['caption', 'dim-label'],
+            halign: Gtk.Align.CENTER,
+            wrap: true,
+            wrap_mode: Pango.WrapMode.WORD_CHAR,
+            justify: Gtk.Justification.CENTER
+        });
+
+        hintBox.append(icon);
+        hintBox.append(message);
+        hintBox.append(hint);
+
+        emptyStateRow.set_child(hintBox);
+        emptyStateRow.set_activatable(false);
+        emptyStateRow.set_selectable(false);
+
+        this.taskList.append(emptyStateRow);
+    }
+
+    /**
+     * Get appropriate empty state message based on current filter
+     */
+    _getEmptyStateMessage() {
+        if (this.searchQuery) {
+            return _('No tasks found for "%s"').format(this.searchQuery);
+        }
+
+        switch (this.activeFilter) {
+            case 'today':
+                return _('No tasks for today');
+            case 'week':
+                return _('No tasks for this week');
+            case 'active':
+                return _('No active tasks');
+            default:
+                return EMPTY_STATE.NO_TASKS;
+        }
+    }
+
+    /**
+     * Get widget (compatibility method for page components)
+     */
+    getWidget() {
+        // Simple placeholder - will implement full UI later
+        const statusPage = new Adw.StatusPage({
+            title: _('Tasks'),
+            description: _('Task list will be implemented here'),
+            icon_name: 'checkbox-checked-symbolic',
+        });
+        return statusPage;
+    }
+
+    /**
+     * Refresh page data
+     */
+    async refresh() {
+        try {
+            await this.loadTasks();
+        } catch (error) {
+            //('TasksPage refresh failed:', error);
+        }
+    }
+
+    /**
+     * Show loading state
+     */
+    showLoading(message = 'Loading...') {
+        // TasksPage loading message
+        // Could show spinner in UI if needed
+    }
+
+    /**
+     * Hide loading state
+     */
+    hideLoading() {
+        // TasksPage loading finished
+        // Could hide spinner in UI if needed
+    }
+
+    /**
+     * Show error message
+     */
+    showError(message) {
+        //(`TasksPage Error: ${message}`);
+        // Could show error dialog in UI if needed
+    }
+
+    // Helper methods (stubs - would be implemented with actual logic)
+    _fetchTasks() { return Promise.resolve([]); }
+    _formatDate(date) { return new Date(date).toLocaleDateString(); }
+    _formatDuration(seconds) { return `${Math.floor(seconds/60)}m`; }
+    _isToday(date) {
+        if (!date) return false;
+        const today = new Date();
+        const taskDate = new Date(date);
+        return today.toDateString() === taskDate.toDateString();
+    }
+    
+    _isThisWeek(date) {
+        if (!date) return false;
+        const today = new Date();
+        const taskDate = new Date(date);
+        
+        // Get start of week (Monday)
+        const startOfWeek = new Date(today);
+        const day = today.getDay();
+        const diff = today.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is Sunday
+        startOfWeek.setDate(diff);
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        // Get end of week (Sunday)
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+        
+        return taskDate >= startOfWeek && taskDate <= endOfWeek;
+    }
+    
+    _isThisMonth(date) {
+        if (!date) return false;
+        const today = new Date();
+        const taskDate = new Date(date);
+        const match = today.getFullYear() === taskDate.getFullYear() && 
+                     today.getMonth() === taskDate.getMonth();
+        return match;
+    }
+    _editTaskObject(task) {
+        const dialog = new Adw.AlertDialog({
+            heading: _('Edit Task'),
+            body: _('Modify "%s"').format(task.name)
+        });
+
+        // Create inline form layout
+        const form = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 12,
+            margin_top: 12,
+            margin_bottom: 12,
+            margin_start: 12,
+            margin_end: 12,
+            width_request: 600
+        });
+
+        // Create first row for name, project, and client
+        const firstRow = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12
+        });
+
+        // 1. Task name input
+        const nameEntry = new Gtk.Entry({
+            text: task.name || '',
+            placeholder_text: PLACEHOLDER.TASK_NAME,
+            hexpand: true
+        });
+
+        // 2. Project button with dropdown selector
+        let selectedProject = this.parentWindow?.allProjects?.find(p => p.id === task.project_id) || 
+                             { id: 1, name: 'Default', color: '#cccccc', icon: 'folder-symbolic' };
+
+        const projectButton = new Gtk.Button({
+            width_request: 150,
+            css_classes: ['flat']
+        });
+
+        // Create CSS provider once and reuse it
+        let projectButtonProvider = null;
+
+        const updateProjectButton = (project) => {
+            const projectBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 6
+            });
+
+            // Project icon
+            let projectIcon;
+            if (project.icon && project.icon.startsWith('emoji:')) {
+                const emoji = project.icon.substring(6);
+                projectIcon = new Gtk.Label({
+                    label: emoji,
+                    css_classes: ['emoji-icon']
+                });
+            } else {
+                projectIcon = new Gtk.Image({
+                    icon_name: project.icon || 'folder-symbolic',
+                    pixel_size: 16
+                });
+            }
+
+            // Project name
+            const projectLabel = new Gtk.Label({
+                label: project.name,
+                ellipsize: Pango.EllipsizeMode.END,
+                max_width_chars: 13
+            });
+
+            // Dropdown arrow
+            const arrow = new Gtk.Image({
+                icon_name: 'pan-down-symbolic',
+                pixel_size: 12,
+                opacity: 0.7
+            });
+
+            projectBox.append(projectIcon);
+            projectBox.append(projectLabel);
+            projectBox.append(arrow);
+
+            // Apply project color styling - reuse provider
+            const iconColor = getProjectIconColor(project);
+            if (!projectButtonProvider) {
+                projectButtonProvider = new Gtk.CssProvider();
+                projectButton.get_style_context().add_provider(projectButtonProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+            }
+            projectButtonProvider.load_from_string(`
+                button {
+                    background-color: ${project.color};
+                    border-radius: 6px;
+                    padding: 6px 10px;
+                }
+                button:hover {
+                    filter: brightness(1.1);
+                }
+                label {
+                    color: ${iconColor};
+                    font-weight: 500;
+                }
+            `);
+
+            projectButton.set_child(projectBox);
+        };
+
+        // Initialize button display
+        updateProjectButton(selectedProject);
+
+        // Project button click handler
+        projectButton.connect('clicked', () => {
+            if (this.parentWindow && this.parentWindow._showProjectSelector) {
+                // Create a callback to update the selection
+                const originalMethod = this.parentWindow._updateProjectButtonsDisplay;
+                this.parentWindow._updateProjectButtonsDisplay = (projectName) => {
+                    // Find and update selected project
+                    const newProject = this.parentWindow.allProjects?.find(p => p.name === projectName);
+                    if (newProject) {
+                        selectedProject = newProject;
+                        updateProjectButton(newProject);
+                    }
+                    // Call original method
+                    if (originalMethod) {
+                        originalMethod.call(this.parentWindow, projectName);
+                    }
+                };
+                
+                this.parentWindow._showProjectSelector(projectButton);
+            }
+        });
+
+        // 3. Client dropdown selector
+        let selectedClient = this.parentWindow?.allClients?.find(c => c.id === task.client_id) || 
+                            { id: 1, name: 'Default Client', rate: 0, currency: 'USD' };
+
+        const clientDropdown = new ClientDropdown(
+            this.parentWindow?.allClients || [],
+            selectedClient.id,
+            (newSelectedClient) => {
+                selectedClient = newSelectedClient;
+                if (this.parentWindow) {
+                    this.parentWindow.currentClientId = newSelectedClient.id;
+                    if (this.parentWindow._updateClientButtonsDisplay) {
+                        this.parentWindow._updateClientButtonsDisplay(newSelectedClient.name);
+                    }
+                }
+            }
+        );
+
+        const clientButton = clientDropdown.getWidget();
+        clientButton.set_size_request(36, 36);
+
+        // Assemble first row
+        firstRow.append(nameEntry);
+        firstRow.append(projectButton);
+        firstRow.append(clientButton);
+
+        // Create datetime fields
+        const datetimeRow = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12
+        });
+
+        // Start time input with button
+        const startTimeBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 4
+        });
+        
+        const startLabel = new Gtk.Label({
+            label: LABEL.START_TIME,
+            halign: Gtk.Align.START,
+            css_classes: ['caption']
+        });
+        
+        // Parse existing start time or set defaults
+        let startDate = new Date();
+        if (task.start || task.start_time) {
+            // Try both field names since database uses start_time
+            const startTimeValue = task.start || task.start_time;
+            
+            // Parse as local time - database stores local time without timezone info
+            if (startTimeValue.includes('T')) {
+                // ISO format - force local interpretation by removing timezone info
+                const localTimeStr = startTimeValue.replace('T', ' ').substring(0, 19);
+                const [datePart, timePart] = localTimeStr.split(' ');
+                const [year, month, day] = datePart.split('-').map(Number);
+                const [hours, minutes, seconds] = timePart.split(':').map(Number);
+                startDate = new Date(year, month - 1, day, hours, minutes, seconds || 0);
+            } else {
+                // Format: "YYYY-MM-DD HH:MM:SS" - parse as local time
+                const [datePart, timePart] = startTimeValue.split(' ');
+                const [year, month, day] = datePart.split('-').map(Number);
+                const [hours, minutes, seconds] = (timePart || '00:00:00').split(':').map(Number);
+                startDate = new Date(year, month - 1, day, hours, minutes, seconds || 0);
+            }
+        }
+        
+        // Store current date for start time
+        let currentStartDate = startDate;
+        
+        // Create button content with time and date
+        const updateStartButtonContent = () => {
+            const timeStr = `${currentStartDate.getHours().toString().padStart(2, '0')}:${currentStartDate.getMinutes().toString().padStart(2, '0')}`;
+            const dateStr = `${currentStartDate.getDate().toString().padStart(2, '0')}/${(currentStartDate.getMonth() + 1).toString().padStart(2, '0')}/${currentStartDate.getFullYear()}`;
+            
+            const buttonBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 8,
+                halign: Gtk.Align.CENTER
+            });
+            
+            const timeLabel = new Gtk.Label({
+                label: timeStr,
+                css_classes: ['monospace', 'title-4']
+            });
+            
+            const dateLabel = new Gtk.Label({
+                label: dateStr,
+                css_classes: ['caption', 'dim-label']
+            });
+            
+            const separatorLabel = new Gtk.Label({
+                label: '•',
+                css_classes: ['caption', 'dim-label']
+            });
+            
+            buttonBox.append(timeLabel);
+            buttonBox.append(separatorLabel);
+            buttonBox.append(dateLabel);
+            
+            return buttonBox;
+        };
+        
+        const startTimeButton = new Gtk.Button({
+            css_classes: ['flat'],
+            tooltip_text: TOOLTIP.SELECT_START_DATETIME,
+            width_request: 180
+        });
+        startTimeButton.set_child(updateStartButtonContent());
+        
+        startTimeBox.append(startLabel);
+        startTimeBox.append(startTimeButton);
+
+        // End time input with button
+        const endTimeBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 4
+        });
+        
+        const endLabel = new Gtk.Label({
+            label: LABEL.END_TIME,
+            halign: Gtk.Align.START,
+            css_classes: ['caption']
+        });
+        
+        // Parse existing end time or set defaults
+        let endDate = new Date();
+        if (task.end || task.end_time) {
+            // Try both field names since database uses end_time
+            const endTimeValue = task.end || task.end_time;
+            
+            // Parse as local time - database stores local time without timezone info
+            if (endTimeValue.includes('T')) {
+                // ISO format - force local interpretation by removing timezone info
+                const localTimeStr = endTimeValue.replace('T', ' ').substring(0, 19);
+                const [datePart, timePart] = localTimeStr.split(' ');
+                const [year, month, day] = datePart.split('-').map(Number);
+                const [hours, minutes, seconds] = timePart.split(':').map(Number);
+                endDate = new Date(year, month - 1, day, hours, minutes, seconds || 0);
+            } else {
+                // Format: "YYYY-MM-DD HH:MM:SS" - parse as local time
+                const [datePart, timePart] = endTimeValue.split(' ');
+                const [year, month, day] = datePart.split('-').map(Number);
+                const [hours, minutes, seconds] = (timePart || '00:00:00').split(':').map(Number);
+                endDate = new Date(year, month - 1, day, hours, minutes, seconds || 0);
+            }
+        }
+        
+        // Store current date for end time
+        let currentEndDate = endDate;
+        
+        // Create button content with time and date
+        const updateEndButtonContent = () => {
+            if (!task.end && !task.end_time) {
+                // Show placeholder when no end time is set
+                const placeholderBox = new Gtk.Box({
+                    orientation: Gtk.Orientation.HORIZONTAL,
+                    spacing: 8,
+                    halign: Gtk.Align.CENTER
+                });
+                
+                const placeholderLabel = new Gtk.Label({
+                    label: _('Select end time'),
+                    css_classes: ['caption', 'dim-label']
+                });
+                
+                placeholderBox.append(placeholderLabel);
+                return placeholderBox;
+            }
+            
+            const timeStr = `${currentEndDate.getHours().toString().padStart(2, '0')}:${currentEndDate.getMinutes().toString().padStart(2, '0')}`;
+            const dateStr = `${currentEndDate.getDate().toString().padStart(2, '0')}/${(currentEndDate.getMonth() + 1).toString().padStart(2, '0')}/${currentEndDate.getFullYear()}`;
+            
+            const buttonBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 8,
+                halign: Gtk.Align.CENTER
+            });
+            
+            const timeLabel = new Gtk.Label({
+                label: timeStr,
+                css_classes: ['monospace', 'title-4']
+            });
+            
+            const dateLabel = new Gtk.Label({
+                label: dateStr,
+                css_classes: ['caption', 'dim-label']
+            });
+            
+            const separatorLabel = new Gtk.Label({
+                label: '•',
+                css_classes: ['caption', 'dim-label']
+            });
+            
+            buttonBox.append(timeLabel);
+            buttonBox.append(separatorLabel);
+            buttonBox.append(dateLabel);
+            
+            return buttonBox;
+        };
+        
+        const endTimeButton = new Gtk.Button({
+            css_classes: ['flat'],
+            tooltip_text: TOOLTIP.SELECT_END_DATETIME,
+            width_request: 180
+        });
+        endTimeButton.set_child(updateEndButtonContent());
+        
+        endTimeBox.append(endLabel);
+        endTimeBox.append(endTimeButton);
+
+        // Duration display (calculated automatically)
+        const durationBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 4
+        });
+        
+        const durationLabel = new Gtk.Label({
+            label: LABEL.DURATION,
+            halign: Gtk.Align.START,
+            css_classes: ['caption']
+        });
+        
+        const durationDisplay = new Gtk.Label({
+            label: task.duration ? (this.parentWindow?.timeUtils ? this.parentWindow.timeUtils.formatDuration(task.duration) : '00:00:00') : '00:00:00',
+            halign: Gtk.Align.START,
+            css_classes: ['monospace', 'dim-label']
+        });
+        
+        durationBox.append(durationLabel);
+        durationBox.append(durationDisplay);
+
+        datetimeRow.append(startTimeBox);
+        datetimeRow.append(endTimeBox);
+        datetimeRow.append(durationBox);
+
+        // Function to create datetime from date and time string
+        const createDateTime = (date, timeString) => {
+            const [hours, minutes] = timeString.split(':').map(Number);
+            const result = new Date(date);
+            result.setHours(hours, minutes, 0, 0);
+            return result;
+        };
+
+        // Function to recalculate duration
+        const recalculateDuration = () => {
+            if (currentStartDate && currentEndDate && (task.end || task.end_time)) {
+                try {
+                    const durationMs = currentEndDate - currentStartDate;
+                    
+                    if (durationMs > 0) {
+                        const durationSeconds = Math.floor(durationMs / 1000);
+                        const formattedDuration = this.parentWindow?.timeUtils ?
+                            this.parentWindow.timeUtils.formatDuration(durationSeconds) :
+                            `${Math.floor(durationSeconds / 3600)}:${Math.floor((durationSeconds % 3600) / 60).toString().padStart(2, '0')}:${(durationSeconds % 60).toString().padStart(2, '0')}`;
+                        durationDisplay.set_label(formattedDuration);
+                        return durationSeconds;
+                    } else {
+                        durationDisplay.set_label(STATUS.INVALID_RANGE);
+                        return null;
+                    }
+                } catch (error) {
+                    durationDisplay.set_label(STATUS.INVALID_FORMAT);
+                    return null;
+                }
+            } else {
+                durationDisplay.set_label('--:--:--');
+                return null;
+            }
+        };
+
+        // Add calendar popup for start time
+        startTimeButton.connect('clicked', () => {
+            const calendarDialog = new Adw.AlertDialog({
+                heading: _('Select Start Date & Time'),
+                body: DIALOG_BODY.SELECT_START_DATETIME
+            });
+
+            const calendarBox = new Gtk.Box({
+                orientation: Gtk.Orientation.VERTICAL,
+                spacing: 12,
+                margin_top: 12,
+                margin_bottom: 12,
+                margin_start: 12,
+                margin_end: 12
+            });
+
+            const calendar = new Gtk.Calendar();
+            // Set calendar to the current start date
+            const startGDate = GLib.DateTime.new_local(
+                currentStartDate.getFullYear(),
+                currentStartDate.getMonth() + 1, // GLib months are 1-based
+                currentStartDate.getDate(),
+                currentStartDate.getHours(),
+                currentStartDate.getMinutes(),
+                currentStartDate.getSeconds()
+            );
+            calendar.select_day(startGDate);
+            
+            const timeBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 6,
+                halign: Gtk.Align.CENTER
+            });
+            
+            const hourSpin = new Gtk.SpinButton({
+                adjustment: new Gtk.Adjustment({
+                    lower: 0,
+                    upper: 23,
+                    step_increment: 1,
+                    value: currentStartDate.getHours()
+                }),
+                width_request: 60
+            });
+            
+            const minuteSpin = new Gtk.SpinButton({
+                adjustment: new Gtk.Adjustment({
+                    lower: 0,
+                    upper: 59,
+                    step_increment: 1,
+                    value: currentStartDate.getMinutes()
+                }),
+                width_request: 60
+            });
+            
+            timeBox.append(hourSpin);
+            timeBox.append(new Gtk.Label({ label: ':' }));
+            timeBox.append(minuteSpin);
+
+            calendarBox.append(calendar);
+            calendarBox.append(timeBox);
+            calendarDialog.set_extra_child(calendarBox);
+
+            calendarDialog.add_response('cancel', BUTTON.CANCEL);
+            calendarDialog.add_response('ok', BUTTON.OK);
+            calendarDialog.set_response_appearance('ok', Adw.ResponseAppearance.SUGGESTED);
+
+            calendarDialog.connect('response', (dialog, response) => {
+                if (response === 'ok') {
+                    const selectedDate = calendar.get_date();
+                    // Convert GDateTime to JavaScript Date
+                    currentStartDate = new Date(
+                        selectedDate.get_year(),
+                        selectedDate.get_month() - 1, // GLib months are 1-based, JS months are 0-based
+                        selectedDate.get_day_of_month()
+                    );
+
+                    const hours = hourSpin.get_value_as_int();
+                    const minutes = minuteSpin.get_value_as_int();
+                    currentStartDate.setHours(hours, minutes, 0, 0);
+
+                    // Update button content
+                    startTimeButton.set_child(updateStartButtonContent());
+                    recalculateDuration();
+                }
+                dialog.close();
+            });
+
+            calendarDialog.present(this.parentWindow);
+        });
+
+        // Add calendar popup for end time
+        endTimeButton.connect('clicked', () => {
+            const calendarDialog = new Adw.AlertDialog({
+                heading: _('Select End Date & Time'),
+                body: DIALOG_BODY.SELECT_END_DATETIME
+            });
+
+            const calendarBox = new Gtk.Box({
+                orientation: Gtk.Orientation.VERTICAL,
+                spacing: 12,
+                margin_top: 12,
+                margin_bottom: 12,
+                margin_start: 12,
+                margin_end: 12
+            });
+
+            const calendar = new Gtk.Calendar();
+            // Set calendar to the current end date
+            const endGDate = GLib.DateTime.new_local(
+                currentEndDate.getFullYear(),
+                currentEndDate.getMonth() + 1, // GLib months are 1-based
+                currentEndDate.getDate(),
+                currentEndDate.getHours(),
+                currentEndDate.getMinutes(),
+                currentEndDate.getSeconds()
+            );
+            calendar.select_day(endGDate);
+            
+            const timeBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 6,
+                halign: Gtk.Align.CENTER
+            });
+            
+            const hourSpin = new Gtk.SpinButton({
+                adjustment: new Gtk.Adjustment({
+                    lower: 0,
+                    upper: 23,
+                    step_increment: 1,
+                    value: currentEndDate.getHours()
+                }),
+                width_request: 60
+            });
+            
+            const minuteSpin = new Gtk.SpinButton({
+                adjustment: new Gtk.Adjustment({
+                    lower: 0,
+                    upper: 59,
+                    step_increment: 1,
+                    value: currentEndDate.getMinutes()
+                }),
+                width_request: 60
+            });
+            
+            timeBox.append(hourSpin);
+            timeBox.append(new Gtk.Label({ label: ':' }));
+            timeBox.append(minuteSpin);
+
+            calendarBox.append(calendar);
+            calendarBox.append(timeBox);
+            calendarDialog.set_extra_child(calendarBox);
+
+            calendarDialog.add_response('cancel', BUTTON.CANCEL);
+            calendarDialog.add_response('ok', BUTTON.OK);
+            calendarDialog.set_response_appearance('ok', Adw.ResponseAppearance.SUGGESTED);
+
+            calendarDialog.connect('response', (dialog, response) => {
+                if (response === 'ok') {
+                    const selectedDate = calendar.get_date();
+                    // Convert GDateTime to JavaScript Date
+                    currentEndDate = new Date(
+                        selectedDate.get_year(),
+                        selectedDate.get_month() - 1, // GLib months are 1-based, JS months are 0-based
+                        selectedDate.get_day_of_month()
+                    );
+
+                    const hours = hourSpin.get_value_as_int();
+                    const minutes = minuteSpin.get_value_as_int();
+                    currentEndDate.setHours(hours, minutes, 0, 0);
+
+                    // Update button content and mark that end time is now set
+                    task.end = 'set'; // Flag to show we have an end time
+                    endTimeButton.set_child(updateEndButtonContent());
+                    recalculateDuration();
+                }
+                dialog.close();
+            });
+
+            calendarDialog.present(this.parentWindow);
+        });
+
+        // Initial duration calculation
+        recalculateDuration();
+
+        // Assemble the form
+        form.append(firstRow);
+        form.append(datetimeRow);
+
+        dialog.set_extra_child(form);
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('save', BUTTON.SAVE_CHANGES);
+        dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
+
+        dialog.connect('response', (dialog, response) => {
+            if (response === 'save') {
+                const name = nameEntry.get_text().trim();
+
+                if (!name) {
+                    const errorDialog = new Adw.AlertDialog({
+                        heading: HEADING.INVALID_INPUT,
+                        body: MESSAGE.TASK_NAME_REQUIRED
+                    });
+                    errorDialog.add_response('ok', BUTTON.OK);
+                    errorDialog.present(this.parentWindow);
+                    return;
+                }
+
+                // Get datetime values from the button data
+                let calculatedDuration = null;
+                let startTimeFormatted = null;
+                let endTimeFormatted = null;
+                
+                // Always save start time since we have it
+                if (currentStartDate) {
+                    // Format as local time for database (YYYY-MM-DD HH:MM:SS)
+                    const year = currentStartDate.getFullYear();
+                    const month = (currentStartDate.getMonth() + 1).toString().padStart(2, '0');
+                    const day = currentStartDate.getDate().toString().padStart(2, '0');
+                    const hours = currentStartDate.getHours().toString().padStart(2, '0');
+                    const minutes = currentStartDate.getMinutes().toString().padStart(2, '0');
+                    const seconds = currentStartDate.getSeconds().toString().padStart(2, '0');
+                    startTimeFormatted = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                }
+                
+                // Save end time only if it was set
+                if ((task.end || task.end_time) && currentEndDate) {
+                    // Format as local time for database (YYYY-MM-DD HH:MM:SS)
+                    const year = currentEndDate.getFullYear();
+                    const month = (currentEndDate.getMonth() + 1).toString().padStart(2, '0');
+                    const day = currentEndDate.getDate().toString().padStart(2, '0');
+                    const hours = currentEndDate.getHours().toString().padStart(2, '0');
+                    const minutes = currentEndDate.getMinutes().toString().padStart(2, '0');
+                    const seconds = currentEndDate.getSeconds().toString().padStart(2, '0');
+                    endTimeFormatted = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                    
+                    // Calculate duration if both times are set
+                    calculatedDuration = recalculateDuration();
+                    if (calculatedDuration === null && currentEndDate <= currentStartDate) {
+                        const errorDialog = new Adw.AlertDialog({
+                            heading: HEADING.INVALID_DATETIME,
+                            body: MESSAGE.END_TIME_AFTER_START
+                        });
+                        errorDialog.add_response('ok', BUTTON.OK);
+                        errorDialog.present(this.parentWindow);
+                        return;
+                    }
+                }
+
+                // Prepare update data
+                const updateData = { 
+                    name,
+                    project_id: selectedProject.id,
+                    client_id: selectedClient.id
+                };
+                
+                // Add datetime fields if provided
+                if (startTimeFormatted) updateData.start = startTimeFormatted;
+                if (endTimeFormatted) updateData.end = endTimeFormatted;
+                if (calculatedDuration !== null) updateData.duration = calculatedDuration;
+
+                // Update task with new data
+                this._updateTask(task.id, updateData);
+            }
+            dialog.close();
+        });
+
+        dialog.present(this.parentWindow);
+    }
+    
+    _deleteTask(task) {
+
+        const dialog = new Adw.AlertDialog({
+            heading: _('Delete Tasks'),
+            body: _('Are you sure you want to delete "%s"?\n\nThis action cannot be undone.').format(task.name)
+        });
+
+        dialog.add_response('cancel', _('Cancel'));
+        dialog.add_response('delete', _('Delete'));
+        dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
+
+        dialog.connect('response', (dialog, response) => {
+            if (response === 'delete') {
+                this._performDeleteTask(task.id);
+            }
+            dialog.close();
+        });
+
+        dialog.present(this.parentWindow);
+    }
+
+    _updateTask(taskId, taskData) {
+        if (!this.taskManager) {
+            //('TasksPage: TaskManager not initialized');
+            return;
+        }
+
+        try {
+            this.taskManager.updateTask(taskId, taskData);
+            this.loadTasks(); // Reload to show updated task
+
+            const toast = Adw.Toast.new(SUCCESS.TASK_UPDATED);
+            if (this.parentWindow.toast_overlay) {
+                this.parentWindow.toast_overlay.add_toast(toast);
+            }
+
+        } catch (error) {
+            //('❌ Error updating task:', error);
+            this.showError(HEADING.UPDATE_ERROR, ERROR.FAILED_UPDATE_TASK + ': ' + error.message);
+        }
+    }
+
+    _performDeleteTask(taskId) {
+        if (!this.taskManager) {
+            //('TasksPage: TaskManager not initialized');
+            return;
+        }
+
+        try {
+            this.taskManager.deleteTask(taskId);
+            this.loadTasks(); // Reload to remove deleted task
+
+            const toast = Adw.Toast.new(SUCCESS.TASK_DELETED);
+            if (this.parentWindow.toast_overlay) {
+                this.parentWindow.toast_overlay.add_toast(toast);
+            }
+
+        } catch (error) {
+            //('❌ Error deleting task:', error);
+            this.showError(HEADING.DELETE_ERROR, ERROR.FAILED_DELETE_TASK + ': ' + error.message);
+        }
+    }
+    
+    _deleteSelectedTasks() {
+        
+        // TaskRenderer uses TasksPage (this) as parentWindow, so selectedTasks are stored in this.selectedTasks
+        const selectedTasks = this.selectedTasks;
+        
+        if (!selectedTasks || selectedTasks.size === 0) {
+
+            // Show a toast to inform user
+            const toast = Adw.Toast.new(MESSAGE.NO_TASKS_SELECTED);
+            if (this.parentWindow.toast_overlay) {
+                this.parentWindow.toast_overlay.add_toast(toast);
+            }
+            return;
+        }
+        
+        const selectedTaskIds = Array.from(selectedTasks);
+        const taskCount = selectedTaskIds.length;
+        
+
+        // Show confirmation dialog
+        const message = taskCount === 1 ?
+            DIALOG_BODY.DELETE_TASK_CONFIRM :
+            _('Are you sure you want to delete these %d tasks?').format(taskCount);
+
+
+        const dialog = new Adw.MessageDialog({
+            transient_for: this.parentWindow,
+            modal: true,
+            heading: HEADING.DELETE_TASKS,
+            body: message
+        });
+
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('delete', BUTTON.DELETE);
+        dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
+        dialog.set_default_response('delete');
+        
+        dialog.connect('response', (dialog, response) => {
+            if (response === 'delete') {
+                this._performTaskDeletion(selectedTasks, selectedTaskIds, taskCount);
+            } else {
+            }
+            dialog.close();
+        });
+        
+        dialog.present();
+    }
+    
+    _performTaskDeletion(selectedTasks, selectedTaskIds, taskCount) {
+        
+        try {
+            
+            // Use the taskManager's deleteTasks method for multiple deletions
+            const deleteResult = this.taskManager.deleteTasks(selectedTaskIds);
+            
+            // Clear selection
+            selectedTasks.clear();
+            
+            // Reload task list
+            this.loadTasks();
+
+            // Show success toast
+            const message = taskCount === 1 ? SUCCESS.TASK_DELETED : _('%d tasks deleted successfully').format(taskCount);
+            const toast = Adw.Toast.new(message);
+            if (this.parentWindow.toast_overlay) {
+                this.parentWindow.toast_overlay.add_toast(toast);
+            }
+
+        } catch (error) {
+            //('❌ Error deleting selected tasks:', error);
+            //('❌ Stack trace:', error.stack);
+            this.showError(HEADING.DELETE_ERROR, ERROR.FAILED_DELETE_TASK + ': ' + error.message);
+        }
+    }
+    
+    _previousPage() {
+        if (this.currentPage > 0) {
+            this.currentPage--;
+            this._updateTaskDisplay();
+        }
+    }
+
+    _nextPage() {
+        this.currentPage++;
+        this._updateTaskDisplay();
+    }
+
+    _updatePaginationInfo(totalPages) {
+        // Store totalPages for use in _updateSelectionUI
+        this._totalPages = totalPages;
+    }
+
+    _clearSelection() {
+        this.selectedTasks.clear();
+        this.selectedStacks.clear();
+
+        // Remove selection CSS from all rows
+        let child = this.taskList.get_first_child();
+        while (child) {
+            if (child.remove_css_class) {
+                child.remove_css_class('selected-task');
+                child.remove_css_class('selected-client');
+                child.remove_css_class('selected-project');
+            }
+            child = child.get_next_sibling();
+        }
+
+        // Update the UI to show pagination instead of context menu
+        this._updateSelectionUI();
+    }
+
+    _updateSelectionUI() {
+        // Prevent recursive calls
+        if (this._isUpdatingSelectionUI) {
+            return;
+        }
+        this._isUpdatingSelectionUI = true;
+
+        try {
+            // Only count actual tasks, not stacks (since selecting a stack adds all its tasks to selectedTasks)
+            const selectedCount = this.selectedTasks.size;
+
+            if (!this.paginationContextBarWidget) {
+                return;
+            }
+
+            if (selectedCount > 0) {
+                // Show context actions mode
+                this.paginationContextBarWidget.show();
+                this.paginationContextBarWidget.showContextActions(selectedCount);
+            } else {
+                // Show pagination mode - use stored totalPages or recalculate
+                const totalPages = this._totalPages || Math.ceil(this._groupSimilarTasks(this.filteredTasks).length / this.itemsPerPage);
+
+                if (totalPages > 1) {
+                    this.paginationContextBarWidget.show();
+                    this.paginationContextBarWidget.showPagination(this.currentPage + 1, totalPages);
+                } else {
+                    // Hide pagination when no selection and only 1 page
+                    this.paginationContextBarWidget.hide();
+                }
+            }
+        } finally {
+            this._isUpdatingSelectionUI = false;
+        }
+    }
+    showAddTaskDialog() {
+        const dialog = new Adw.AlertDialog({
+            heading: HEADING.ADD_NEW_TASK,
+            body: DIALOG_BODY.CREATE_TASK
+        });
+
+        const form = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 12,
+            margin_top: 12,
+            margin_bottom: 12,
+            margin_start: 12,
+            margin_end: 12,
+            width_request: 400
+        });
+
+        // Task name
+        const nameLabel = new Gtk.Label({
+            label: LABEL.TASK_NAME,
+            halign: Gtk.Align.START
+        });
+
+        const nameEntry = new Gtk.Entry({
+            placeholder_text: PLACEHOLDER.ENTER_TASK_NAME
+        });
+
+        // Task description
+        const descLabel = new Gtk.Label({
+            label: LABEL.DESCRIPTION,
+            halign: Gtk.Align.START
+        });
+
+        const descScrolled = new Gtk.ScrolledWindow({
+            height_request: 100,
+            hscrollbar_policy: Gtk.PolicyType.NEVER
+        });
+
+        const descTextView = new Gtk.TextView({
+            wrap_mode: Gtk.WrapMode.WORD
+        });
+        
+        descScrolled.set_child(descTextView);
+
+        // Project selection (if available)
+        let projectCombo = null;
+        if (this.parentWindow.projectManager) {
+            const projectLabel = new Gtk.Label({
+                label: LABEL.PROJECT,
+                halign: Gtk.Align.START
+            });
+
+            projectCombo = new Gtk.ComboBoxText();
+            
+            try {
+                const projects = this.parentWindow.projectManager.getAllProjects();
+                projects.forEach(project => {
+                    projectCombo.append(project.id.toString(), project.name);
+                });
+                
+                // Set current project as default
+                if (this.parentWindow.currentProjectId) {
+                    projectCombo.set_active_id(this.parentWindow.currentProjectId.toString());
+                }
+            } catch (error) {
+                //('Error loading projects for task dialog:', error);
+            }
+
+            form.append(projectLabel);
+            form.append(projectCombo);
+        }
+
+        form.append(nameLabel);
+        form.append(nameEntry);
+        form.append(descLabel);
+        form.append(descScrolled);
+
+        dialog.set_extra_child(form);
+        dialog.add_response('cancel', BUTTON.CANCEL);
+        dialog.add_response('create', BUTTON.CREATE_TASK);
+        dialog.set_response_appearance('create', Adw.ResponseAppearance.SUGGESTED);
+
+        dialog.connect('response', (dialog, response) => {
+            if (response === 'create') {
+                const name = nameEntry.get_text().trim();
+                const description = descTextView.get_buffer().get_text(
+                    descTextView.get_buffer().get_start_iter(),
+                    descTextView.get_buffer().get_end_iter(),
+                    false
+                ).trim();
+
+                if (!name) {
+                    const errorDialog = new Adw.AlertDialog({
+                        heading: HEADING.INVALID_INPUT,
+                        body: MESSAGE.TASK_NAME_REQUIRED
+                    });
+                    errorDialog.add_response('ok', BUTTON.OK);
+                    errorDialog.present(this.parentWindow);
+                    return;
+                }
+
+                // Get selected project ID
+                let projectId = this.parentWindow.currentProjectId || 1;
+                if (projectCombo && projectCombo.get_active_id()) {
+                    projectId = parseInt(projectCombo.get_active_id());
+                }
+
+                this._createTask({ name, description, projectId });
+            }
+            dialog.close();
+        });
+
+        // Focus task name entry
+        nameEntry.grab_focus();
+        
+        dialog.present(this.parentWindow);
+    }
+
+    /**
+     * Create a regular task
+     */
+    _createTask(taskData) {
+        if (!this.taskManager) {
+            //('TasksPage: TaskManager not initialized');
+            return;
+        }
+
+        
+        try {
+            this.taskManager.createTask(taskData);
+            
+            // Reload tasks to show the new one
+            this.loadTasks();
+            
+
+            // Show success message
+            const toast = Adw.Toast.new(_('Task "%s" created successfully').format(taskData.name));
+            if (this.parentWindow.toast_overlay) {
+                this.parentWindow.toast_overlay.add_toast(toast);
+            }
+
+        } catch (error) {
+            //('❌ Error creating task:', error);
+            this.showError(HEADING.CREATION_ERROR, ERROR.FAILED_CREATE_TASK + ': ' + error.message);
+        }
+    }
+
+    /**
+     * Show task template selection dialog
+     */
+    showTaskTemplateDialog() {
+        const templateDialog = new TaskTemplateDialog(this.parentWindow, (task) => {
+            if (task) {
+                this._createTaskFromTemplate(task);
+            } else {
+                // User selected blank task, show regular add dialog
+                this.showAddTaskDialog();
+            }
+        });
+        
+        templateDialog.show();
+    }
+
+    /**
+     * Create task from template data
+     */
+    _createTaskFromTemplate(templateTask) {
+        if (!this.taskManager) {
+            //('TasksPage: TaskManager not initialized');
+            return;
+        }
+
+        
+        try {
+            // Create task data for database
+            const taskData = {
+                name: templateTask.name,
+                description: templateTask.description,
+                projectId: this.parentWindow.currentProjectId || 1 // Use current project selection
+            };
+            
+            // Create task in database
+            this.taskManager.createTask(taskData);
+            
+            // Reload tasks to show the new one
+            this.loadTasks();
+            
+
+            // Show success message
+            const toast = Adw.Toast.new(_('Task "%s" created successfully').format(templateTask.name));
+            if (this.parentWindow.toast_overlay) {
+                this.parentWindow.toast_overlay.add_toast(toast);
+            }
+
+        } catch (error) {
+            //('❌ Error creating task from template:', error);
+            this.showError(HEADING.CREATION_ERROR, ERROR.FAILED_CREATE_TASK + ': ' + error.message);
+        }
+    }
+    
+    /**
+     * Update the duration display of the active task in real-time
+     */
+    _updateActiveTaskDuration(taskInfo, elapsedTime) {
+        if (!taskInfo || !this.taskRenderer) return;
+        
+        try {
+            // Format elapsed time as HH:MM:SS
+            const hours = Math.floor(elapsedTime / 3600);
+            const minutes = Math.floor((elapsedTime % 3600) / 60);
+            const seconds = elapsedTime % 60;
+            const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Find and update the active task in the UI
+            // The TaskRenderer should provide a method to update active task duration
+            if (this.taskRenderer.updateActiveTaskDuration) {
+                this.taskRenderer.updateActiveTaskDuration(taskInfo.name, formattedTime);
+            }
+        } catch (error) {
+            //('❌ Error updating active task duration:', error);
+        }
+    }
+    
+    /**
+     * Cleanup method to unsubscribe from tracking state changes
+     */
+    destroy() {
+        if (this.trackingUnsubscribe) {
+            this.trackingUnsubscribe();
+        }
+    }
+}

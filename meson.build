@@ -1,11 +1,14 @@
 project('valot',
-          version: '0.8.4',
+          version: '0.9.0',
     meson_version: '>= 1.0.0',
   default_options: [ 'warning_level=2', 'werror=false', ],
 )
 
 i18n = import('i18n')
 gnome = import('gnome')
+
+profile = get_option('profile')
+application_id = profile == 'development' ? 'com.odnoyko.valot.Devel' : 'com.odnoyko.valot'
 
 
 

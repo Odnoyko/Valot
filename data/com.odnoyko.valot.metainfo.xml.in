@@ -71,7 +71,7 @@
     <display_length compare="ge">768</display_length>
   </recommends>
   <releases>
-    <release version="0.8.4" date="2025-10-04">
+    <release version="0.8.4" date="2025-10-06">
       <description>
         <p>Fix App icon for KDE by Surjyadip Sen, App optimisations, Delete context menu update, updated Sidebar, updated Task page information,Updated Translations</p>
       </description>
