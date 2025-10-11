@@ -1,34 +1,14 @@
 pkgdatadir = get_option('datadir') / meson.project_name()
 gnome = import('gnome')
 
-# Compile TypeScript Core to JavaScript
-typescript = find_program('tsc', required: false)
-
-if typescript.found()
-  message('✅ TypeScript compiler found - Core will be compiled')
-
-  # Compile TypeScript files
-  # Note: Using a marker file since custom_target requires explicit outputs
-  core_compiled = custom_target('compile-typescript',
-    output: '.core-compiled-marker',
-    command: [
-      'sh', '-c',
-      typescript.full_path() + ' --project ' + (meson.current_source_dir() / 'core/tsconfig.json') + ' --outDir ' + (meson.current_build_dir() / 'core-compiled') + ' && touch ' + '@OUTPUT@'
-    ],
-    build_by_default: true,
-    build_always_stale: true,
-  )
-else
-  message('⚠️ TypeScript Core compilation disabled - using UI-only mode')
-  core_compiled = []
-endif
+# Core is now JavaScript (no TypeScript compilation needed)
+message('✅ Core uses JavaScript - no compilation required')
 
 data_res = gnome.compile_resources('com.odnoyko.valot.data',
   'com.odnoyko.valot.data.gresource.xml',
   gresource_bundle: true,
   install: true,
   install_dir: pkgdatadir,
-  dependencies: typescript.found() ? [core_compiled] : [],
 )
 
 bin_conf = configuration_data()
@@ -54,7 +34,8 @@ src_res = gnome.compile_resources('com.odnoyko.valot.src',
   gresource_bundle: true,
   install: true,
   install_dir: pkgdatadir,
-  dependencies: typescript.found() ? [config_js, core_compiled] : [config_js],
+  dependencies: [config_js],
+  source_dir: meson.current_source_dir(),
 )
 
 configure_file(

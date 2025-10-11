@@ -9,8 +9,11 @@ import Gtk from 'gi://Gtk?version=4.0';
 import Adw from 'gi://Adw?version=1';
 import Gdk from 'gi://Gdk?version=4.0';
 
+// Import Core
+import { CoreAPI } from 'resource:///com/odnoyko/valot/core/api/CoreAPI.js';
+
 // Import bridges
-import { GdaDatabaseBridge } from 'resource:///com/odnoyko/valot/ui/bridges/GdaDatabaseBridge.js';
+import { GdaDatabaseBridge } from 'resource:///com/odnoyko/valot/data/gdaDBBridge/GdaDatabaseBridge.js';
 import { CoreBridge } from 'resource:///com/odnoyko/valot/ui/bridges/CoreBridge.js';
 
 // Import UI components
@@ -88,8 +91,8 @@ export const ValotApplication = GObject.registerClass(
     class ValotApplication extends Adw.Application {
         constructor() {
             super({
-                application_id: Config.APPLICATION_ID,
-                flags: Gio.ApplicationFlags.HANDLES_COMMAND_LINE | Gio.ApplicationFlags.REPLACE,
+                application_id: 'com.odnoyko.valot.Devel', // TEMP HARDCODED - Config.APPLICATION_ID mismatch
+                flags: Gio.ApplicationFlags.FLAGS_NONE,
                 resource_base_path: '/com/odnoyko/valot'
             });
 
@@ -101,14 +104,13 @@ export const ValotApplication = GObject.registerClass(
             // Windows
             this.compactMode = false;
             this.compactWindow = null;
+        }
 
-            // Setup
+        vfunc_startup() {
+            super.vfunc_startup();
+
+            // Setup actions AFTER D-Bus registration
             this._setupActions();
-
-            // Command line options
-            this.add_main_option('compact', 'c'.charCodeAt(0),
-                0, 0,
-                'Launch in compact tracker mode', null);
         }
 
         /**
@@ -158,20 +160,12 @@ export const ValotApplication = GObject.registerClass(
                 console.log('✅ Database initialized');
 
                 // TODO: Initialize Core API with TypeScript compiled code
-                // For now, we'll use the database bridge directly
-                // this.coreAPI = new CoreAPI();
-                // await this.coreAPI.initialize(this.databaseBridge);
+                // Initialize Core API
+                this.coreAPI = new CoreAPI();
+                await this.coreAPI.initialize(this.databaseBridge);
 
-                // Create Core Bridge (simplified for now)
-                // this.coreBridge = new CoreBridge(this.coreAPI);
-
-                // Temporary: Create a mock core bridge
-                this.coreBridge = {
-                    database: this.databaseBridge,
-                    onUIEvent: () => {},
-                    getTrackingState: () => ({ isTracking: false }),
-                    _notifyUI: () => {},
-                };
+                // Create Core Bridge
+                this.coreBridge = new CoreBridge(this.coreAPI);
 
                 console.log('✅ Core API initialized');
 

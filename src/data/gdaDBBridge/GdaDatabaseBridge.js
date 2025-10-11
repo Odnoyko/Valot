@@ -142,8 +142,36 @@ export class GdaDatabaseBridge {
         }
 
         try {
-            // For now, we don't use params (need to implement prepared statements)
-            const dataModel = this.connection.execute_select_command(sql);
+            let dataModel;
+
+            // If no params, execute directly
+            if (!params || params.length === 0) {
+                dataModel = this.connection.execute_select_command(sql);
+            } else {
+                // Simple approach: escape and substitute params
+                // For SQLite, we can safely escape strings
+                let processedSql = sql;
+                for (let i = 0; i < params.length; i++) {
+                    const value = params[i];
+                    let escapedValue;
+
+                    if (value === null || value === undefined) {
+                        escapedValue = 'NULL';
+                    } else if (typeof value === 'number') {
+                        escapedValue = value.toString();
+                    } else if (typeof value === 'boolean') {
+                        escapedValue = value ? '1' : '0';
+                    } else {
+                        // Escape string: replace ' with ''
+                        escapedValue = "'" + String(value).replace(/'/g, "''") + "'";
+                    }
+
+                    // Replace first occurrence of ?
+                    processedSql = processedSql.replace('?', escapedValue);
+                }
+
+                dataModel = this.connection.execute_select_command(processedSql);
+            }
 
             if (!dataModel) {
                 return [];
@@ -161,7 +189,13 @@ export class GdaDatabaseBridge {
                     const value = dataModel.get_value_at(j, i);
 
                     // Convert GDA value to JavaScript value
-                    if (value) {
+                    if (value === null || value === undefined) {
+                        row[columnName] = null;
+                    } else if (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') {
+                        // Already a JS primitive (happens when we use escaped params)
+                        row[columnName] = value;
+                    } else if (typeof value === 'object' && typeof value.get_value_type === 'function') {
+                        // GDA Value object
                         const gType = value.get_value_type();
                         if (gType === GLib.TYPE_INT64 || gType === GLib.TYPE_INT) {
                             row[columnName] = value.get_int();
@@ -173,7 +207,8 @@ export class GdaDatabaseBridge {
                             row[columnName] = value.get_string();
                         }
                     } else {
-                        row[columnName] = null;
+                        // Fallback: convert to string
+                        row[columnName] = String(value);
                     }
                 }
                 results.push(row);
@@ -196,15 +231,54 @@ export class GdaDatabaseBridge {
         }
 
         try {
-            // For now, we don't use params (need to implement prepared statements)
-            const result = this.connection.execute_non_select_command(sql);
+            let processedSql = sql;
+
+            // If params provided, escape and substitute
+            if (params && params.length > 0) {
+                for (let i = 0; i < params.length; i++) {
+                    const value = params[i];
+                    let escapedValue;
+
+                    if (value === null || value === undefined) {
+                        escapedValue = 'NULL';
+                    } else if (typeof value === 'number') {
+                        escapedValue = value.toString();
+                    } else if (typeof value === 'boolean') {
+                        escapedValue = value ? '1' : '0';
+                    } else {
+                        // Escape string: replace ' with ''
+                        escapedValue = "'" + String(value).replace(/'/g, "''") + "'";
+                    }
+
+                    // Replace first occurrence of ?
+                    processedSql = processedSql.replace('?', escapedValue);
+                }
+            }
+
+            // Execute
+            const result = this.connection.execute_non_select_command(processedSql);
 
             // For INSERT, get last insert rowid
             if (sql.trim().toUpperCase().startsWith('INSERT')) {
                 const lastIdResult = this.connection.execute_select_command('SELECT last_insert_rowid() as id');
                 if (lastIdResult && lastIdResult.get_n_rows() > 0) {
                     const value = lastIdResult.get_value_at(0, 0);
-                    return value ? value.get_int() : result;
+
+                    if (value !== null && value !== undefined) {
+                        // After escaped params, GDA returns JS primitives
+                        if (typeof value === 'number') {
+                            return value;
+                        } else if (typeof value === 'string') {
+                            return parseInt(value) || result;
+                        } else if (typeof value === 'object' && typeof value.get_int === 'function') {
+                            // GDA Value object
+                            return value.get_int();
+                        } else {
+                            // Fallback
+                            return parseInt(String(value)) || result;
+                        }
+                    }
+                    return result;
                 }
             }
 

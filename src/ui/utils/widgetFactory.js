@@ -508,7 +508,7 @@ export class WidgetFactory {
             const editBtn = new Gtk.Button({
                 icon_name: 'document-edit-symbolic',
                 css_classes: ['flat'],
-                tooltip_text: TOOLTIP.EDIT_TASK
+                tooltip_text: TOOLTIP.EDIT
             });
 
             if (onEditClick) {
@@ -523,7 +523,7 @@ export class WidgetFactory {
             const trackBtn = new Gtk.Button({
                 icon_name: 'media-playback-start-symbolic',
                 css_classes: ['flat'],
-                tooltip_text: TOOLTIP.START_TRACKING
+                tooltip_text: _('Start tracking')
             });
 
             if (onTrackClick) {

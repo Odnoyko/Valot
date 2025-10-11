@@ -10,7 +10,6 @@
     <file>ui/windows/CompactTracker.js</file>
 
     <!-- UI Bridges -->
-    <file>ui/bridges/GdaDatabaseBridge.js</file>
     <file>ui/bridges/CoreBridge.js</file>
 
     <!-- UI Pages -->
@@ -61,5 +60,45 @@
     <file>data/currencies.js</file>
     <file>data/emojis.js</file>
     <file>data/icons.js</file>
+
+    <!-- Database Adapters -->
+    <file>data/gdaDBBridge/GdaDatabaseBridge.js</file>
+
+    <!-- Core API (JavaScript) -->
+    <file>core/api/CoreAPI.js</file>
+    <file>core/index.js</file>
+
+    <!-- Core Services -->
+    <file>core/services/BaseService.js</file>
+    <file>core/services/ClientService.js</file>
+    <file>core/services/ProjectService.js</file>
+    <file>core/services/ReportService.js</file>
+    <file>core/services/TaskInstanceService.js</file>
+    <file>core/services/TaskService.js</file>
+    <file>core/services/TimeTrackingService.js</file>
+
+    <!-- Core Models -->
+    <file>core/models/Client.js</file>
+    <file>core/models/Project.js</file>
+    <file>core/models/Task.js</file>
+    <file>core/models/TaskInstance.js</file>
+    <file>core/models/TimeEntry.js</file>
+
+    <!-- Core Database -->
+    <file>core/database/DatabaseAdapter.js</file>
+    <file>core/database/GdaAdapter.js</file>
+
+    <!-- Core State -->
+    <file>core/state/StateManager.js</file>
+
+    <!-- Core Events -->
+    <file>core/events/EventBus.js</file>
+    <file>core/events/CoreEvents.js</file>
+
+    <!-- Core Utils -->
+    <file>core/utils/TimeUtils.js</file>
+    <file>core/utils/ColorUtils.js</file>
+    <file>core/utils/DateFilters.js</file>
+    <file>core/utils/ValidationUtils.js</file>
   </gresource>
 </gresources>

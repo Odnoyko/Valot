@@ -1,532 +1,455 @@
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw?version=1';
-import { Button } from '../../components/primitive/Button.js';
-import { Label } from '../../components/primitive/Label.js';
-import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/data/currencies.js';
+import Gdk from 'gi://Gdk';
+import GLib from 'gi://GLib';
 
 /**
- * Reports management page - extracted from window.js
- * Handles all report-related functionality
+ * Reports management page
+ * Recreates the old UI from window.blp programmatically
  */
 export class ReportsPage {
     constructor(config = {}) {
-        // ReportsPage constructor
-        
-        // Base page properties
         this.app = config.app;
         this.parentWindow = config.parentWindow;
-        
-        // Report-specific state - will be updated from UI filters
-        this.chartFilters = {
-            period: 'week',
-            project: null,
-            client: null
-        };
-        
-        // Get managers from parent window
-        this.reportExporter = config.reportExporter;
-        this.simpleChart = config.simpleChart;
-        this.timeUtils = config.timeUtils;
-        
-        // Component assignments
-        
-        if (!this.reportExporter) {
-            console.warn('⚠️ WARNING: reportExporter not provided in config!');
-        } else {
-            // reportExporter found
-        }
-        
-        // ReportsPage constructor completed
-    }
+        this.coreBridge = config.coreBridge;
 
-    getWidget() {
-        // TODO: Build programmatic UI (was using Blueprint template)
-        const statusPage = new Adw.StatusPage({
-            title: _('Reports'),
-            description: _('Reports and analytics - UI migration in progress'),
-            icon_name: 'document-properties-symbolic',
-        });
-        return statusPage;
+        // Report-specific state
+        this.reports = [];
     }
 
     /**
-     * Update chart filters (called by main window when UI filters change)
+     * Create and return the main widget for this page
      */
-    updateFilters(period, projectId, clientId) {
-        this.chartFilters = {
-            period: period || 'week',
-            project: projectId,
-            client: clientId
-        };
-        
-        // Update reports immediately when filters change - delegate to main window
-        if (this.parentWindow && typeof this.parentWindow._updateReportsStatistics === 'function') {
-            this.parentWindow._updateReportsStatistics();
+    getWidget() {
+        // Main page container
+        const page = new Adw.ToolbarView();
+
+        // Create header bar
+        const headerBar = this._createHeaderBar();
+        page.add_top_bar(headerBar);
+
+        // Create content
+        const content = this._createContent();
+        page.set_content(content);
+
+        return page;
+    }
+
+    _createHeaderBar() {
+        const headerBar = new Adw.HeaderBar();
+
+        // Show sidebar button (start)
+        const showSidebarBtn = new Gtk.Button({
+            icon_name: 'sidebar-show-symbolic',
+            tooltip_text: _('Show Sidebar'),
+        });
+        showSidebarBtn.connect('clicked', () => {
+            if (this.parentWindow && this.parentWindow.splitView) {
+                this.parentWindow.splitView.set_show_sidebar(true);
+            }
+        });
+        headerBar.pack_start(showSidebarBtn);
+
+        // Tracking widget (title area)
+        const trackingWidget = this._createTrackingWidget();
+        headerBar.set_title_widget(trackingWidget);
+
+        // Compact tracker button (end)
+        const compactTrackerBtn = new Gtk.Button({
+            icon_name: 'view-restore-symbolic',
+            css_classes: ['flat', 'circular'],
+            tooltip_text: _('Open Compact Tracker'),
+        });
+        headerBar.pack_end(compactTrackerBtn);
+
+        return headerBar;
+    }
+
+    _createTrackingWidget() {
+        // Original design adapted to Core architecture
+        const box = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 8,
+            hexpand: true,
+            hexpand_set: true,
+        });
+
+        // Task name entry
+        this.taskNameEntry = new Gtk.Entry({
+            placeholder_text: _('Task name'),
+            hexpand: true,
+            hexpand_set: true,
+        });
+        box.append(this.taskNameEntry);
+
+        // Project context button
+        this.projectBtn = new Gtk.Button({
+            icon_name: 'folder-symbolic',
+            css_classes: ['flat'],
+            tooltip_text: _('Project'),
+            width_request: 36,
+            height_request: 36,
+        });
+        this.projectBtn.connect('clicked', () => this._selectProject());
+        box.append(this.projectBtn);
+
+        // Client context button
+        this.clientBtn = new Gtk.Button({
+            icon_name: 'contact-new-symbolic',
+            css_classes: ['flat'],
+            tooltip_text: _('Client'),
+            width_request: 36,
+            height_request: 36,
+        });
+        this.clientBtn.connect('clicked', () => this._selectClient());
+        box.append(this.clientBtn);
+
+        // Actual time label
+        this.actualTimeLabel = new Gtk.Label({
+            label: '00:00:00',
+            css_classes: ['title-4'],
+            margin_start: 8,
+        });
+        box.append(this.actualTimeLabel);
+
+        // Track button
+        this.trackButton = new Gtk.Button({
+            icon_name: 'media-playback-start-symbolic',
+            css_classes: ['suggested-action', 'circular'],
+            tooltip_text: _('Start tracking'),
+        });
+        this.trackButton.connect('clicked', () => this._toggleTracking());
+        box.append(this.trackButton);
+
+        // Connect to Core for synchronization
+        this._connectTrackingToCore();
+
+        return box;
+    }
+
+    /**
+     * Connect tracking widget to Core for state synchronization
+     */
+    _connectTrackingToCore() {
+        if (!this.coreBridge) {
+            console.warn('⚠️ CoreBridge not available - tracking disabled');
+            return;
+        }
+
+        // Subscribe to Core events
+        this.coreBridge.onUIEvent('tracking-started', (data) => {
+            this._onTrackingStarted(data);
+        });
+
+        this.coreBridge.onUIEvent('tracking-stopped', (data) => {
+            this._onTrackingStopped(data);
+        });
+
+        this.coreBridge.onUIEvent('tracking-updated', (data) => {
+            this._onTrackingUpdated(data);
+        });
+
+        // Load initial state
+        this._updateTrackingUIFromCore();
+
+        console.log('✅ ReportsPage tracking widget connected to Core');
+    }
+
+    /**
+     * Update UI from Core state (no local state!)
+     */
+    _updateTrackingUIFromCore() {
+        if (!this.coreBridge) return;
+
+        const state = this.coreBridge.getTrackingState();
+
+        if (state.isTracking) {
+            // Tracking active
+            this.taskNameEntry.set_text(state.currentTaskName || '');
+            this.taskNameEntry.set_sensitive(false);
+            this.projectBtn.set_sensitive(false);
+            this.clientBtn.set_sensitive(false);
+
+            this.trackButton.set_icon_name('media-playback-stop-symbolic');
+            this.trackButton.set_tooltip_text(_('Stop tracking'));
+            this.trackButton.remove_css_class('suggested-action');
+            this.trackButton.add_css_class('destructive-action');
+
+            this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+
+            // Start UI update timer
+            this._startTrackingUITimer();
+        } else {
+            // Tracking idle
+            this.taskNameEntry.set_text('');
+            this.taskNameEntry.set_sensitive(true);
+            this.projectBtn.set_sensitive(true);
+            this.clientBtn.set_sensitive(true);
+
+            this.trackButton.set_icon_name('media-playback-start-symbolic');
+            this.trackButton.set_tooltip_text(_('Start tracking'));
+            this.trackButton.remove_css_class('destructive-action');
+            this.trackButton.add_css_class('suggested-action');
+
+            this.actualTimeLabel.set_label('00:00:00');
+
+            // Stop UI update timer
+            this._stopTrackingUITimer();
         }
     }
 
+    /**
+     * Core event: tracking started
+     */
+    _onTrackingStarted(data) {
+        console.log('📡 ReportsPage: Tracking started');
+        this._updateTrackingUIFromCore();
+    }
 
     /**
-     * Load and update all report data
+     * Core event: tracking stopped
+     */
+    _onTrackingStopped(data) {
+        console.log('📡 ReportsPage: Tracking stopped');
+        this._updateTrackingUIFromCore();
+    }
+
+    /**
+     * Core event: tracking updated (every second)
+     */
+    _onTrackingUpdated(data) {
+        const state = this.coreBridge.getTrackingState();
+        this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+    }
+
+    /**
+     * User clicked track button
+     */
+    async _toggleTracking() {
+        if (!this.coreBridge) return;
+
+        const state = this.coreBridge.getTrackingState();
+
+        if (state.isTracking) {
+            // Stop tracking
+            try {
+                await this.coreBridge.stopTracking();
+            } catch (error) {
+                console.error('Error stopping tracking:', error);
+            }
+        } else {
+            // Start tracking - create or find task (ALL LOGIC IN CORE!)
+            try {
+                const taskName = this.taskNameEntry.get_text().trim();
+                let task;
+
+                if (taskName === '' || taskName.length === 0) {
+                    // Empty input - create auto-indexed task via Core
+                    task = await this.coreBridge.createAutoIndexedTask();
+                    console.log(`Created auto-indexed task: ${task.name}`);
+                } else {
+                    // Has text - find or create task via Core
+                    task = await this.coreBridge.findOrCreateTask(taskName);
+                    console.log(`Using task: ${task.name}`);
+                }
+
+                // Start tracking with task ID
+                await this.coreBridge.startTracking(task.id, null, null);
+            } catch (error) {
+                console.error('Error starting tracking:', error);
+            }
+        }
+    }
+
+    /**
+     * UI update timer - refreshes time display from Core
+     */
+    _startTrackingUITimer() {
+        if (this.trackingTimerId) return;
+
+        this.trackingTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+            const state = this.coreBridge.getTrackingState();
+            if (state.isTracking) {
+                this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+                return true; // Continue
+            } else {
+                this.trackingTimerId = null;
+                return false; // Stop
+            }
+        });
+    }
+
+    _stopTrackingUITimer() {
+        if (this.trackingTimerId) {
+            GLib.Source.remove(this.trackingTimerId);
+            this.trackingTimerId = null;
+        }
+    }
+
+    _formatDuration(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    _selectProject() {
+        // TODO: Open project selector
+        console.log('TODO: Select project');
+    }
+
+    _selectClient() {
+        // TODO: Open client selector
+        console.log('TODO: Select client');
+    }
+
+    _createContent() {
+        const contentBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 12,
+            margin_top: 12,
+            margin_bottom: 12,
+            margin_start: 12,
+            margin_end: 12,
+        });
+
+        // Statistics cards
+        const statsBox = this._createStatsBox();
+        contentBox.append(statsBox);
+
+        // Export buttons
+        const exportBox = this._createExportBox();
+        contentBox.append(exportBox);
+
+        return contentBox;
+    }
+
+    _createStatsBox() {
+        const box = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            homogeneous: true,
+            margin_bottom: 12,
+        });
+
+        // Total time card
+        const timeCard = this._createStatCard(_('Total Time'), '0:00:00', 'alarm-symbolic');
+        box.append(timeCard);
+
+        // Total projects card
+        const projectsCard = this._createStatCard(_('Active Projects'), '0', 'folder-symbolic');
+        box.append(projectsCard);
+
+        // Total tasks card
+        const tasksCard = this._createStatCard(_('Tracked Tasks'), '0', 'checkbox-checked-symbolic');
+        box.append(tasksCard);
+
+        return box;
+    }
+
+    _createStatCard(title, value, iconName) {
+        const card = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 6,
+            css_classes: ['card'],
+            margin_start: 6,
+            margin_end: 6,
+            margin_top: 12,
+            margin_bottom: 12,
+        });
+
+        const icon = new Gtk.Image({
+            icon_name: iconName,
+            pixel_size: 32,
+            css_classes: ['accent'],
+        });
+
+        const titleLabel = new Gtk.Label({
+            label: title,
+            css_classes: ['caption', 'dim-label'],
+        });
+
+        const valueLabel = new Gtk.Label({
+            label: value,
+            css_classes: ['title-2'],
+        });
+
+        card.append(icon);
+        card.append(titleLabel);
+        card.append(valueLabel);
+
+        return card;
+    }
+
+    _createExportBox() {
+        const box = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            halign: Gtk.Align.CENTER,
+            margin_top: 12,
+        });
+
+        // Export PDF button
+        const pdfBtn = new Gtk.Button({
+            label: _('Export PDF'),
+            css_classes: ['suggested-action'],
+        });
+        pdfBtn.connect('clicked', () => {
+            this.exportPDFReport();
+        });
+        box.append(pdfBtn);
+
+        // Export HTML button
+        const htmlBtn = new Gtk.Button({
+            label: _('Export HTML'),
+            css_classes: ['flat'],
+        });
+        htmlBtn.connect('clicked', () => {
+            this.exportHTMLReport();
+        });
+        box.append(htmlBtn);
+
+        return box;
+    }
+
+    /**
+     * Load reports from Core
      */
     async loadReports() {
-        this.showLoading('Loading reports...');
-        
+        if (!this.coreBridge) {
+            console.error('No coreBridge available');
+            return;
+        }
+
         try {
-            // Delegate to main window for statistics update
-            if (this.parentWindow && typeof this.parentWindow._updateReportsStatistics === 'function') {
-                this.parentWindow._updateReportsStatistics();
-            }
-            await this._updateWeeklyTime();
-            this._updateChart();
-            // Reports loaded successfully
+            // Get reports data from Core
+            const reports = await this.coreBridge.getReports();
+            this.reports = reports || [];
         } catch (error) {
             console.error('Error loading reports:', error);
-            console.warn('⚠️ Reports page failed to load completely');
-        } finally {
-            this.hideLoading();
-            
-            // Update weekly time in sidebar after loading reports
-            if (this.parentWindow && typeof this.parentWindow.updateWeeklyTime === 'function') {
-                await this.parentWindow.updateWeeklyTime();
-            }
         }
     }
 
     /**
-     * Update report statistics based on current chart filters
-     */
-    async _updateReports() {
-        if (!this.parentWindow || !this.parentWindow.allTasks) {
-            return;
-        }
-
-        const tasks = this.parentWindow.allTasks || [];
-        const projects = this.parentWindow.allProjects || [];
-        
-        // Get filtered tasks based on current chart filters
-        const filteredTasks = this._getFilteredTasks(tasks);
-        
-        // Calculate total time for filtered tasks
-        const totalTime = filteredTasks.reduce((sum, task) => sum + (task.duration || 0), 0);
-        
-        // Update Total Time UI
-        if (this.parentWindow._reports_total_time_value) {
-            this.parentWindow._reports_total_time_value.set_label(this._formatDuration(totalTime));
-        }
-        
-        // Calculate active projects (projects that have tasks in the filtered period)
-        const activeProjectIds = new Set(filteredTasks.map(task => task.project_id).filter(id => id));
-        const activeProjectsCount = activeProjectIds.size;
-        
-        // Update Active Projects UI
-        if (this.parentWindow._reports_total_projects_value) {
-            this.parentWindow._reports_total_projects_value.set_label(activeProjectsCount.toString());
-        }
-        
-        // Calculate total tracked tasks (excluding active tasks)
-        const completedTasks = filteredTasks.filter(task => !task.isActive);
-        
-        // Update Tracked Tasks UI
-        if (this.parentWindow._reports_total_tasks_value) {
-            this.parentWindow._reports_total_tasks_value.set_label(completedTasks.length.toString());
-        }
-        
-        // Calculate earnings (if task has hourly rate)
-        let totalEarnings = 0;
-        const currencyTotals = new Map(); // Track earnings by currency
-        
-        filteredTasks.forEach(task => {
-            if (task.hourly_rate && task.duration) {
-                const hours = task.duration / 3600;
-                const earnings = hours * task.hourly_rate;
-                const currency = task.currency || 'USD';
-                
-                totalEarnings += earnings;
-                currencyTotals.set(currency, (currencyTotals.get(currency) || 0) + earnings);
-            }
-        });
-        
-        // Update Currency Carousel with earnings
-        this._updateCurrencyCarousel(currencyTotals);
-
-        // Reports updated with current filter-based statistics
-    }
-
-    /**
-     * Update weekly time tracking
-     */
-    async _updateWeeklyTime() {
-        // This would integrate with the weekly time calculation logic
-        // Weekly time updated
-    }
-
-    /**
-     * Update chart visualization
-     */
-    _updateChart() {
-        if (this.simpleChart && this.parentWindow) {
-            this.simpleChart.createChart(
-                this.parentWindow.allTasks || [],
-                this.parentWindow.allProjects || [],
-                this.parentWindow.allClients || []
-            );
-        }
-    }
-
-    /**
-     * Export PDF report with current filter settings
+     * Export PDF report
      */
     exportPDFReport() {
-        if (!this.reportExporter) {
-            console.error('❌ Report exporter not available - this.reportExporter is null/undefined');
-            return;
-        }
-
-        try {
-            // Update the report exporter with current data
-            this._updateReportExporterData();
-
-            // Configure filters based on current chart filters
-            this.reportExporter.configurePeriod(this.chartFilters.period);
-
-            if (this.chartFilters.project) {
-                this.reportExporter.configureProjectFilter(this.chartFilters.project);
-            }
-
-            if (this.chartFilters.client) {
-                this.reportExporter.configureClientFilter(this.chartFilters.client);
-            }
-
-            // Configure sections based on UI switches
-            const sections = {
-                showAnalytics: this.includeAnalyticsSwitch?.get_active() ?? true,
-                showCharts: this.includeChartsSwitch?.get_active() ?? true,
-                showTasks: this.includeTasksSwitch?.get_active() ?? true,
-                showProjects: this.includeProjectsSwitch?.get_active() ?? true,
-                showBilling: this.includeBillingSwitch?.get_active() ?? false
-            };
-
-            this.reportExporter.configureSections(sections);
-            this.reportExporter.configureBilling(sections.showBilling);
-
-            // Export the report
-            this.reportExporter.exportReport(this.parentWindow);
-
-        } catch (error) {
-            console.error('💥 Error configuring PDF export:', error);
-            console.error('📍 Error stack:', error.stack);
-        }
+        // TODO: Implement via Core
+        console.log('Export PDF report');
     }
 
     /**
-     * Export HTML report with current filter settings
+     * Export HTML report
      */
     exportHTMLReport() {
-        if (!this.reportExporter) {
-            console.error('Report exporter not available');
-            return;
-        }
-
-        try {
-            // Update the report exporter with current data
-            this._updateReportExporterData();
-
-            // Configure filters based on current chart filters
-            this.reportExporter.configurePeriod(this.chartFilters.period);
-
-            if (this.chartFilters.project) {
-                this.reportExporter.configureProjectFilter(this.chartFilters.project);
-            }
-
-            if (this.chartFilters.client) {
-                this.reportExporter.configureClientFilter(this.chartFilters.client);
-            }
-
-            // Configure sections with default values (can be enhanced later with UI switches)
-            const sections = {
-                showAnalytics: true,
-                showCharts: true,
-                showTasks: true,
-                showProjects: true,
-                showBilling: false
-            };
-
-            this.reportExporter.configureSections(sections);
-            this.reportExporter.configureBilling(sections.showBilling);
-
-            // Export HTML report
-            this.reportExporter.exportHTML(this.parentWindow);
-
-        } catch (error) {
-            console.error('Error configuring HTML export:', error);
-        }
+        // TODO: Implement via Core
+        console.log('Export HTML report');
     }
 
     /**
      * Refresh page data
      */
     async refresh() {
-        try {
-            await this.loadReports();
-        } catch (error) {
-            console.error('ReportsPage refresh failed:', error);
-        }
-    }
-
-    /**
-     * Show loading state
-     */
-    showLoading(message = 'Loading...') {
-        // ReportsPage loading message
-        // Could show spinner in UI if needed
-    }
-
-    /**
-     * Hide loading state
-     */
-    hideLoading() {
-        // ReportsPage loading finished
-        // Could hide spinner in UI if needed
-    }
-
-    /**
-     * Format duration in seconds to human readable format
-     */
-    _formatDuration(seconds) {
-        if (!seconds) return '0m';
-        
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        
-        if (hours > 0) {
-            return `${hours}h ${minutes}m`;
-        } else {
-            return `${minutes}m`;
-        }
-    }
-
-    /**
-     * Update report exporter with current task data
-     */
-    _updateReportExporterData() {
-        if (!this.reportExporter) {
-            console.error('❌ No report exporter available in _updateReportExporterData');
-            return;
-        }
-
-        if (!this.parentWindow) {
-            console.error('❌ No parent window available in _updateReportExporterData');
-            return;
-        }
-
-        const tasks = this.parentWindow.allTasks || [];
-        const projects = this.parentWindow.allProjects || [];
-        const clients = this.parentWindow.allClients || [];
-
-        // Update the data in both PDF and HTML exporters
-        this.reportExporter.tasks = tasks;
-        this.reportExporter.projects = projects;
-        this.reportExporter.clients = clients;
-
-        // Update the underlying exporters
-        if (this.reportExporter.pdfExporter) {
-            this.reportExporter.pdfExporter.tasks = tasks;
-            this.reportExporter.pdfExporter.projects = projects;
-            this.reportExporter.pdfExporter.clients = clients;
-        } else {
-            console.warn('⚠️ PDF exporter not found in report exporter');
-        }
-
-        if (this.reportExporter.htmlExporter) {
-            this.reportExporter.htmlExporter.tasks = tasks;
-            this.reportExporter.htmlExporter.projects = projects;
-            this.reportExporter.htmlExporter.clients = clients;
-        } else {
-            console.warn('⚠️ HTML exporter not found in report exporter');
-        }
-    }
-
-    /**
-     * Get tasks filtered by current chart filters (period, project, client)
-     */
-    _getFilteredTasks(tasks) {
-        let filteredTasks = tasks.filter(task => !task.isActive); // Exclude active tasks
-        
-        // Apply project filter
-        if (this.chartFilters.project) {
-            filteredTasks = filteredTasks.filter(task => task.project_id === this.chartFilters.project);
-        }
-        
-        // Apply client filter
-        if (this.chartFilters.client) {
-            filteredTasks = filteredTasks.filter(task => task.client_id === this.chartFilters.client);
-        }
-        
-        // Apply period filter
-        filteredTasks = this._filterTasksByPeriod(filteredTasks, this.chartFilters.period);
-        
-        return filteredTasks;
-    }
-    
-    /**
-     * Filter tasks by time period (same logic as chart uses)
-     */
-    _filterTasksByPeriod(tasks, period) {
-        const now = new Date();
-        
-        switch (period) {
-            case 'week': {
-                // Current week (Monday to Sunday)
-                const monday = new Date(now);
-                const dayOfWeek = now.getDay();
-                const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-                monday.setDate(now.getDate() - daysToMonday);
-                monday.setHours(0, 0, 0, 0);
-                
-                const sunday = new Date(monday);
-                sunday.setDate(monday.getDate() + 6);
-                sunday.setHours(23, 59, 59, 999);
-                
-                return tasks.filter(task => {
-                    if (!task.start) return false;
-                    const taskDate = new Date(task.start);
-                    return taskDate >= monday && taskDate <= sunday;
-                });
-            }
-            
-            case 'month': {
-                // Last 4 weeks
-                const fourWeeksAgo = new Date(now);
-                fourWeeksAgo.setDate(now.getDate() - 28);
-                fourWeeksAgo.setHours(0, 0, 0, 0);
-                
-                return tasks.filter(task => {
-                    if (!task.start) return false;
-                    const taskDate = new Date(task.start);
-                    return taskDate >= fourWeeksAgo;
-                });
-            }
-            
-            case 'year': {
-                // Last 12 months
-                const twelveMonthsAgo = new Date(now);
-                twelveMonthsAgo.setMonth(now.getMonth() - 12);
-                twelveMonthsAgo.setHours(0, 0, 0, 0);
-                
-                return tasks.filter(task => {
-                    if (!task.start) return false;
-                    const taskDate = new Date(task.start);
-                    return taskDate >= twelveMonthsAgo;
-                });
-            }
-            
-            case 'custom': {
-                // Use custom date range from simpleChart
-                if (this.simpleChart && this.simpleChart.customDateRange) {
-                    const { fromDate, toDate } = this.simpleChart.customDateRange;
-                    return tasks.filter(task => {
-                        if (!task.start) return false;
-                        const taskDate = new Date(task.start);
-                        return taskDate >= fromDate && taskDate <= toDate;
-                    });
-                }
-                // Fallback to week if no custom range
-                return this._filterTasksByPeriod(tasks, 'week');
-            }
-            
-            default:
-                return this._filterTasksByPeriod(tasks, 'week');
-        }
-    }
-    
-    /**
-     * Update currency carousel with earnings data
-     */
-    _updateCurrencyCarousel(currencyTotals) {
-        const carousel = this.parentWindow._reports_currency_carousel;
-        if (!carousel) return;
-        
-        // Clear existing carousel content
-        while (carousel.get_first_child()) {
-            carousel.remove(carousel.get_first_child());
-        }
-        
-        if (currencyTotals.size === 0) {
-            // Show 0.00 if no earnings
-            const zeroBox = this._createCurrencyBox('0.00', 'USD');
-            carousel.append(zeroBox);
-        } else {
-            // Add a page for each currency
-            for (const [currency, amount] of currencyTotals) {
-                const formattedAmount = amount.toFixed(2); // Remove currency symbol
-                const currencyBox = this._createCurrencyBox(formattedAmount, currency);
-                carousel.append(currencyBox);
-            }
-        }
-    }
-    
-    /**
-     * Create a currency display box for the carousel
-     */
-    _createCurrencyBox(formattedAmount, currency) {
-        const box = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 4,
-            halign: Gtk.Align.CENTER,
-            valign: Gtk.Align.CENTER
-        });
-        
-        // Get currency symbol and show it as icon
-        const currencySymbol = getCurrencySymbol(currency);
-        const symbolLabel = new Gtk.Label({
-            label: currencySymbol,
-            css_classes: ['title-1', 'accent']
-        });
-        
-        const amountLabel = new Gtk.Label({
-            label: formattedAmount,
-            css_classes: ['title-1']
-        });
-        
-        const currencyLabel = new Gtk.Label({
-            label: currency,
-            css_classes: ['caption']
-        });
-        
-        box.append(symbolLabel);
-        box.append(amountLabel);
-        box.append(currencyLabel);
-        
-        return box;
-    }
-    
-    /**
-     * Format currency amount
-     */
-    _formatCurrency(amount, currency = 'USD') {
-        const symbols = {
-            'USD': '$',
-            'EUR': '€',
-            'GBP': '£',
-            'JPY': '¥'
-        };
-        
-        const symbol = symbols[currency] || '$';
-        return `${symbol}${amount.toFixed(2)}`;
-    }
-
-    /**
-     * Show error message (simplified version)
-     */
-    showError(title, message) {
-        console.error(`${title}: ${message}`);
-    }
-
-    /**
-     * Toggle search bar visibility (not used in reports page)
-     */
-    toggleSearch() {
-        // Reports page doesn't have search functionality
+        await this.loadReports();
     }
 }

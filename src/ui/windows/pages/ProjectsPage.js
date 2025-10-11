@@ -1,299 +1,437 @@
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw?version=1';
 import Gdk from 'gi://Gdk';
-import { ProjectCard } from '../../components/complex/ProjectCard.js';
-import { Button } from '../../components/primitive/Button.js';
-import { Label } from '../../components/primitive/Label.js';
-import { WidgetFactory } from '../../utils/widgetFactory.js';
-import { ColorUtils } from 'resource:///com/odnoyko/valot/ui/utils/CoreImports.js';
+import GLib from 'gi://GLib';
 
 /**
- * Projects management page - extracted from window.js
- * Handles all project-related functionality
+ * Projects management page
+ * Original UI from main branch - adapted to Core architecture
  */
 export class ProjectsPage {
     constructor(config = {}) {
-        this.config = {
-            title: _('Projects'),
-            subtitle: _('Manage your projects'),
-            showTrackingWidget: true,
-            showSearchButton: true,
-            actions: [
-                {
-                    icon: 'list-add-symbolic',
-                    tooltip: 'Add Project',
-                    cssClasses: ['suggested-action'],
-                    onClick: (page) => page.showAddProjectDialog()
-                }
-            ],
-            ...config
-        };
-
-        // Base page properties
         this.app = config.app;
         this.parentWindow = config.parentWindow;
-        this.isLoading = false;
-        this.currentPage = 0;
-        this.itemsPerPage = 30;
-        
+        this.coreBridge = config.coreBridge;
+
         // Project-specific state
         this.projects = [];
         this.filteredProjects = [];
         this.selectedProjects = new Set();
         this.currentProjectsPage = 0;
         this.projectsPerPage = 10;
-        
-        // Get managers from parent window
-        this.projectManager = config.projectManager;
-        this.modularDialogManager = config.modularDialogManager;
-        
-        // Connect to existing template UI instead of creating new widgets
-        this._connectToExistingUI();
-        this._setupEventHandlers();
-        this.setupKeyboardShortcuts();
+
+        // Subscribe to Core events for automatic updates
+        this._subscribeToCore();
     }
 
     /**
-     * Connect to existing UI elements from window template
+     * Subscribe to Core events to auto-update project list
      */
-    _connectToExistingUI() {
-        if (!this.parentWindow) {
-            //('ProjectsPage: No parent window provided');
-            return;
-        }
+    _subscribeToCore() {
+        if (!this.coreBridge) return;
 
-        // Get references to existing UI elements from the template
-        this.projectSearch = this.parentWindow._project_search;
-        this.addProjectBtn = this.parentWindow._add_project_btn;
-        this.projectList = this.parentWindow._project_list;
+        // Reload projects when tracking starts/stops
+        this.coreBridge.onUIEvent('tracking-started', () => {
+            setTimeout(() => this.loadProjects(), 300);
+        });
 
-        // Try to get pagination box from template, or create one
-        this.paginationContextBar = this.parentWindow._projects_pagination_box;
+        this.coreBridge.onUIEvent('tracking-stopped', () => {
+            this.loadProjects();
+        });
 
-        // If no pagination bar in template, we need to create one
-        if (!this.paginationContextBar) {
-            this._createPaginationContextBar();
-        }
+        // Reload when projects are created/updated
+        this.coreBridge.onUIEvent('project-created', () => {
+            this.loadProjects();
+        });
 
+        this.coreBridge.onUIEvent('project-updated', () => {
+            this.loadProjects();
+        });
+
+        this.coreBridge.onUIEvent('project-deleted', () => {
+            this.loadProjects();
+        });
     }
 
     /**
-     * Setup event handlers for UI elements
-     */
-    _setupEventHandlers() {
-        // Connect search functionality
-        if (this.projectSearch) {
-            this.projectSearch.connect('search-changed', () => {
-                const query = this.projectSearch.get_text();
-                this._filterProjects(query);
-            });
-        }
-
-        // Connect add project button
-        if (this.addProjectBtn) {
-            this.addProjectBtn.connect('clicked', () => {
-                this.showAddProjectDialog();
-            });
-        }
-
-    }
-
-
-    /**
-     * Get the main widget for this page - returns null since we use template
+     * Create and return the main widget for this page
      */
     getWidget() {
-        // Simple placeholder - will implement full UI later
-        const statusPage = new Adw.StatusPage({
-            title: _('Projects'),
-            description: _('Project management will be implemented here'),
-            icon_name: 'folder-symbolic',
-        });
-        return statusPage;
+        // Main page container
+        const page = new Adw.ToolbarView();
+
+        // Create header bar
+        const headerBar = this._createHeaderBar();
+        page.add_top_bar(headerBar);
+
+        // Create content
+        const content = this._createContent();
+        page.set_content(content);
+
+        // Load projects on initialization
+        this.loadProjects();
+
+        return page;
     }
 
-    _createMainContent() {
-        const mainContent = new Gtk.Box({
+    _createHeaderBar() {
+        const headerBar = new Adw.HeaderBar();
+
+        // Show sidebar button (start)
+        const showSidebarBtn = new Gtk.Button({
+            icon_name: 'sidebar-show-symbolic',
+            tooltip_text: _('Show Sidebar'),
+        });
+        showSidebarBtn.connect('clicked', () => {
+            if (this.parentWindow && this.parentWindow.splitView) {
+                this.parentWindow.splitView.set_show_sidebar(true);
+            }
+        });
+        headerBar.pack_start(showSidebarBtn);
+
+        // Tracking widget (title area)
+        const trackingWidget = this._createTrackingWidget();
+        headerBar.set_title_widget(trackingWidget);
+
+        // Compact tracker button (end)
+        const compactTrackerBtn = new Gtk.Button({
+            icon_name: 'view-restore-symbolic',
+            css_classes: ['flat', 'circular'],
+            tooltip_text: _('Open Compact Tracker'),
+        });
+        headerBar.pack_end(compactTrackerBtn);
+
+        return headerBar;
+    }
+
+    _createTrackingWidget() {
+        // Reuse same tracking widget as TasksPage (adapted to Core)
+        const box = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 8,
+            hexpand: true,
+            hexpand_set: true,
+        });
+
+        // Task name entry
+        this.taskNameEntry = new Gtk.Entry({
+            placeholder_text: _('Task name'),
+            hexpand: true,
+            hexpand_set: true,
+        });
+        this.taskNameEntry.connect('activate', () => this._onTaskNameChanged());
+        box.append(this.taskNameEntry);
+
+        // Project context button
+        this.projectBtn = new Gtk.Button({
+            icon_name: 'folder-symbolic',
+            css_classes: ['flat'],
+            tooltip_text: _('Project'),
+            width_request: 36,
+            height_request: 36,
+        });
+        this.projectBtn.connect('clicked', () => this._selectProject());
+        box.append(this.projectBtn);
+
+        // Client context button
+        this.clientBtn = new Gtk.Button({
+            icon_name: 'contact-new-symbolic',
+            css_classes: ['flat'],
+            tooltip_text: _('Client'),
+            width_request: 36,
+            height_request: 36,
+        });
+        this.clientBtn.connect('clicked', () => this._selectClient());
+        box.append(this.clientBtn);
+
+        // Actual time label
+        this.actualTimeLabel = new Gtk.Label({
+            label: '00:00:00',
+            css_classes: ['title-4'],
+            margin_start: 8,
+        });
+        box.append(this.actualTimeLabel);
+
+        // Track button
+        this.trackButton = new Gtk.Button({
+            icon_name: 'media-playback-start-symbolic',
+            css_classes: ['suggested-action', 'circular'],
+            tooltip_text: _('Start tracking'),
+        });
+        this.trackButton.connect('clicked', () => this._toggleTracking());
+        box.append(this.trackButton);
+
+        // Connect to Core for synchronization
+        this._connectTrackingToCore();
+
+        return box;
+    }
+
+    /**
+     * Connect tracking widget to Core (same as TasksPage)
+     */
+    _connectTrackingToCore() {
+        if (!this.coreBridge) return;
+
+        this.coreBridge.onUIEvent('tracking-started', (data) => {
+            this._updateTrackingUIFromCore();
+        });
+
+        this.coreBridge.onUIEvent('tracking-stopped', (data) => {
+            this._updateTrackingUIFromCore();
+        });
+
+        this.coreBridge.onUIEvent('tracking-updated', (data) => {
+            const state = this.coreBridge.getTrackingState();
+            this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+
+            if (state.currentTaskName && this.taskNameEntry.get_text() !== state.currentTaskName) {
+                this.taskNameEntry.set_text(state.currentTaskName);
+            }
+        });
+
+        this._updateTrackingUIFromCore();
+    }
+
+    _updateTrackingUIFromCore() {
+        if (!this.coreBridge) return;
+
+        const state = this.coreBridge.getTrackingState();
+
+        if (state.isTracking) {
+            this.taskNameEntry.set_text(state.currentTaskName || '');
+            this.taskNameEntry.set_sensitive(true);
+            this.projectBtn.set_sensitive(true);
+            this.clientBtn.set_sensitive(true);
+
+            this.trackButton.set_icon_name('media-playback-stop-symbolic');
+            this.trackButton.set_tooltip_text(_('Stop tracking'));
+            this.trackButton.remove_css_class('suggested-action');
+            this.trackButton.add_css_class('destructive-action');
+
+            this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+            this._startTrackingUITimer();
+        } else {
+            this.taskNameEntry.set_text('');
+            this.taskNameEntry.set_sensitive(true);
+            this.projectBtn.set_sensitive(true);
+            this.clientBtn.set_sensitive(true);
+
+            this.trackButton.set_icon_name('media-playback-start-symbolic');
+            this.trackButton.set_tooltip_text(_('Start tracking'));
+            this.trackButton.remove_css_class('destructive-action');
+            this.trackButton.add_css_class('suggested-action');
+
+            this.actualTimeLabel.set_label('00:00:00');
+            this._stopTrackingUITimer();
+        }
+    }
+
+    async _toggleTracking() {
+        if (!this.coreBridge) return;
+
+        const state = this.coreBridge.getTrackingState();
+
+        if (state.isTracking) {
+            try {
+                await this.coreBridge.stopTracking();
+            } catch (error) {
+                console.error('Error stopping tracking:', error);
+            }
+        } else {
+            try {
+                const taskName = this.taskNameEntry.get_text().trim();
+                let task;
+
+                if (taskName === '' || taskName.length === 0) {
+                    task = await this.coreBridge.createAutoIndexedTask();
+                } else {
+                    task = await this.coreBridge.findOrCreateTask(taskName);
+                }
+
+                await this.coreBridge.startTracking(task.id, null, null);
+            } catch (error) {
+                console.error('Error starting tracking:', error);
+            }
+        }
+    }
+
+    _startTrackingUITimer() {
+        if (this.trackingTimerId) return;
+
+        this.trackingTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+            const state = this.coreBridge.getTrackingState();
+            if (state.isTracking) {
+                this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+                return true;
+            } else {
+                this.trackingTimerId = null;
+                return false;
+            }
+        });
+    }
+
+    _stopTrackingUITimer() {
+        if (this.trackingTimerId) {
+            GLib.Source.remove(this.trackingTimerId);
+            this.trackingTimerId = null;
+        }
+    }
+
+    _formatDuration(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    async _onTaskNameChanged() {
+        if (!this.coreBridge) return;
+
+        const state = this.coreBridge.getTrackingState();
+        if (!state.isTracking) return;
+
+        const newName = this.taskNameEntry.get_text().trim();
+        if (!newName || newName === state.currentTaskName) return;
+
+        try {
+            await this.coreBridge.updateCurrentTaskName(newName);
+        } catch (error) {
+            console.error('Error updating task name:', error);
+        }
+    }
+
+    _selectProject() {
+        console.log('TODO: Select project');
+    }
+
+    _selectClient() {
+        console.log('TODO: Select client');
+    }
+
+    _createContent() {
+        const contentBox = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
             spacing: 12,
-            hexpand: true,
-            vexpand: true
+            margin_top: 12,
+            margin_bottom: 12,
+            margin_start: 12,
+            margin_end: 12,
         });
 
-        // Search bar (initially hidden)
-        this._createSearchBar(mainContent);
+        // Search and toolbar
+        const toolbar = this._createToolbar();
+        contentBox.append(toolbar);
 
-        // Projects toolbar
-        this._createProjectsToolbar(mainContent);
-
-        // Projects grid/list
-        this._createProjectsList(mainContent);
+        // Projects list
+        const scrolledWindow = this._createProjectsList();
+        contentBox.append(scrolledWindow);
 
         // Pagination
-        this._createPagination(mainContent);
+        const pagination = this._createPagination();
+        contentBox.append(pagination);
 
-        return mainContent;
+        return contentBox;
     }
 
-    _createSearchBar(container) {
-        this.searchBar = new Gtk.SearchBar({
-            visible: false
-        });
-
-        const searchEntry = new Gtk.SearchEntry({
-            placeholder_text: _('Search projects...'),
-            hexpand: true
-        });
-
-        searchEntry.connect('search-changed', () => {
-            const query = searchEntry.get_text();
-            this._filterProjects(query);
-        });
-
-        this.searchBar.set_child(searchEntry);
-        this.searchBar.connect_entry(searchEntry);
-        
-        container.append(this.searchBar);
-    }
-
-    _createProjectsToolbar(container) {
+    _createToolbar() {
         const toolbar = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 6,
-            css_classes: ['toolbar']
         });
 
-        // Bulk actions (shown when projects are selected)
-        this.bulkActionsBox = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 6,
-            visible: false
+        // Search entry
+        this.projectSearch = new Gtk.SearchEntry({
+            placeholder_text: _('Search projects...'),
+            hexpand: true,
         });
 
-        const deleteSelectedBtn = new Button({
-            iconName: 'edit-delete-symbolic',
-            label: _('Delete Selected'),
-            cssClasses: ['flat', 'destructive-action'],
-            onClick: () => this._deleteSelectedProjects()
+        this.projectSearch.connect('search-changed', () => {
+            const query = this.projectSearch.get_text();
+            this._filterProjects(query);
         });
 
-        this.bulkActionsBox.append(deleteSelectedBtn.widget);
+        toolbar.append(this.projectSearch);
 
-        // Selection info
-        this.selectionLabel = new Gtk.Label({
-            label: '',
-            css_classes: ['dim-label'],
-            visible: false
+        // Add project button
+        this.addProjectBtn = new Gtk.Button({
+            icon_name: 'list-add-symbolic',
+            css_classes: ['suggested-action'],
+            tooltip_text: _('Add Project'),
         });
+        this.addProjectBtn.connect('clicked', () => this._showAddProjectDialog());
+        toolbar.append(this.addProjectBtn);
 
-        toolbar.append(this.bulkActionsBox);
-        toolbar.append(this.selectionLabel);
-
-        container.append(toolbar);
+        return toolbar;
     }
 
-    _createProjectsList(container) {
-        // Projects container
-        this.projectsContainer = WidgetFactory.createScrollableList({
-            height_request: 400,
-            cssClasses: ['projects-list']
+    _createProjectsList() {
+        const scrolledWindow = new Gtk.ScrolledWindow({
+            vexpand: true,
+            hscrollbar_policy: Gtk.PolicyType.NEVER,
         });
 
-        // Empty state
-        this.emptyState = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 12,
-            halign: Gtk.Align.CENTER,
-            valign: Gtk.Align.CENTER,
-            css_classes: ['empty-state']
+        this.projectList = new Gtk.ListBox({
+            css_classes: ['content-box'],
+            selection_mode: Gtk.SelectionMode.NONE,
         });
 
-        const emptyIcon = new Gtk.Image({
-            icon_name: 'folder-symbolic',
-            pixel_size: 64,
-            css_classes: ['dim-label']
-        });
+        scrolledWindow.set_child(this.projectList);
 
-        const emptyLabel = new Gtk.Label({
-            label: _('No projects found'),
-            css_classes: ['title-2'],
-            halign: Gtk.Align.CENTER
-        });
-
-        const emptySubLabel = new Gtk.Label({
-            label: _('Create your first project to get started'),
-            css_classes: ['dim-label'],
-            halign: Gtk.Align.CENTER
-        });
-
-        this.emptyState.append(emptyIcon);
-        this.emptyState.append(emptyLabel);
-        this.emptyState.append(emptySubLabel);
-
-        // Stack to switch between list and empty state
-        this.listStack = new Gtk.Stack();
-        this.listStack.add_named(this.projectsContainer.widget, 'list');
-        this.listStack.add_named(this.emptyState, 'empty');
-
-        container.append(this.listStack);
+        return scrolledWindow;
     }
 
-    _createPagination(container) {
+    _createPagination() {
         const paginationBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 12,
             halign: Gtk.Align.CENTER,
-            margin_top: 12
+            margin_top: 12,
         });
 
-        this.prevProjectsButton = new Button({
-            iconName: 'go-previous-symbolic',
-            tooltipText: _('Previous page'),
-            cssClasses: ['circular'],
-            onClick: () => this._previousPage()
+        this.prevProjectsButton = new Gtk.Button({
+            icon_name: 'go-previous-symbolic',
+            tooltip_text: _('Previous page'),
+            css_classes: ['circular'],
+        });
+        this.prevProjectsButton.connect('clicked', () => this._previousPage());
+
+        this.projectsPageInfo = new Gtk.Label({
+            label: _('Page 1 of 1'),
+            css_classes: ['monospace'],
         });
 
-        this.projectsPageInfo = new Label({
-            text: _('Page 1 of 1'),
-            cssClasses: ['monospace']
+        this.nextProjectsButton = new Gtk.Button({
+            icon_name: 'go-next-symbolic',
+            tooltip_text: _('Next page'),
+            css_classes: ['circular'],
         });
+        this.nextProjectsButton.connect('clicked', () => this._nextPage());
 
-        this.nextProjectsButton = new Button({
-            iconName: 'go-next-symbolic',
-            tooltipText: _('Next page'),
-            cssClasses: ['circular'],
-            onClick: () => this._nextPage()
-        });
+        paginationBox.append(this.prevProjectsButton);
+        paginationBox.append(this.projectsPageInfo);
+        paginationBox.append(this.nextProjectsButton);
 
-        paginationBox.append(this.prevProjectsButton.widget);
-        paginationBox.append(this.projectsPageInfo.widget);
-        paginationBox.append(this.nextProjectsButton.widget);
-
-        container.append(paginationBox);
+        return paginationBox;
     }
 
     /**
-     * Load projects from database
+     * Load projects from Core
      */
     async loadProjects() {
-        this.showLoading('Loading projects...');
-        
+        if (!this.coreBridge) {
+            console.error('No coreBridge available');
+            return;
+        }
+
         try {
-            // This would connect to actual data source
-            this.projects = await this._fetchProjects();
+            // Get projects from Core
+            const projects = await this.coreBridge.getAllProjects();
+            this.projects = projects || [];
             this.filteredProjects = [...this.projects];
             this._updateProjectsDisplay();
-            // Projects loaded successfully
         } catch (error) {
-            //('Error loading projects:', error);
-            this.showError('Load Error', 'Failed to load projects');
-        } finally {
-            this.hideLoading();
-            
-            // Update weekly time in sidebar after loading projects
-            if (this.parentWindow && typeof this.parentWindow.updateWeeklyTime === 'function') {
-                await this.parentWindow.updateWeeklyTime();
-            }
+            console.error('Error loading projects:', error);
         }
     }
 
@@ -305,9 +443,8 @@ export class ProjectsPage {
             this.filteredProjects = [...this.projects];
         } else {
             const lowerQuery = query.toLowerCase();
-            this.filteredProjects = this.projects.filter(project => 
-                project.name.toLowerCase().includes(lowerQuery) ||
-                (project.client_name && project.client_name.toLowerCase().includes(lowerQuery))
+            this.filteredProjects = this.projects.filter(project =>
+                project.name.toLowerCase().includes(lowerQuery)
             );
         }
 
@@ -316,31 +453,26 @@ export class ProjectsPage {
     }
 
     /**
-     * Update projects display
+     * Update projects display (ORIGINAL UI from main branch)
      */
     _updateProjectsDisplay() {
-        // Clear existing projects from template UI
-        if (this.projectList) {
-            // Remove all existing children
-            let child = this.projectList.get_first_child();
-            while (child) {
-                const next = child.get_next_sibling();
-                this.projectList.remove(child);
-                child = next;
-            }
+        // Clear existing projects
+        let child = this.projectList.get_first_child();
+        while (child) {
+            const next = child.get_next_sibling();
+            this.projectList.remove(child);
+            child = next;
         }
 
         if (!this.filteredProjects || this.filteredProjects.length === 0) {
-            this.currentProjectsPage = 0;
+            this._showEmptyState();
             this._updatePaginationInfo();
-            this._updateSelectionUI();
             return;
         }
 
         // Calculate pagination
         const totalPages = Math.ceil(this.filteredProjects.length / this.projectsPerPage);
 
-        // If current page is beyond total pages, go to last page
         if (this.currentProjectsPage >= totalPages && totalPages > 0) {
             this.currentProjectsPage = totalPages - 1;
         }
@@ -349,407 +481,162 @@ export class ProjectsPage {
         const end = Math.min(start + this.projectsPerPage, this.filteredProjects.length);
         const projectsToShow = this.filteredProjects.slice(start, end);
 
-        // Displaying filtered projects (page ${this.currentProjectsPage + 1} of ${totalPages})
-
-        // Add only paginated projects
+        // Render each project (SAME UI as main branch)
         projectsToShow.forEach(project => {
-            if (this.projectList) {
-                // Create ListBoxRow with custom content
-                const row = new Gtk.ListBoxRow({
-                    activatable: false,
-                    selectable: false,
-                    css_classes: ['bright-subtitle']
-                });
-                
-                // Create main horizontal box
-                const mainBox = new Gtk.Box({
-                    orientation: Gtk.Orientation.HORIZONTAL,
-                    spacing: 12,
-                    margin_start: 16,
-                    margin_end: 16,
-                    margin_top: 12,
-                    margin_bottom: 12,
-                    hexpand: true
-                });
-                
-                // Left: Settings button with color and icon
-                const settingsButton = new Gtk.Button({
-                    width_request: 40,
-                    height_request: 40,
-                    halign: Gtk.Align.CENTER,
-                    valign: Gtk.Align.CENTER,
-                    css_classes: ['project-settings-button', 'flat'],
-                    tooltip_text: _('Project settings - Change color and icon')
-                });
-                
-                // Create icon widget (handle both emoji and system icons)
-                let iconWidget;
-                if (project.icon && project.icon.startsWith('emoji:')) {
-                    const emoji = project.icon.substring(6);
-                    iconWidget = new Gtk.Label({
-                        label: emoji,
-                        css_classes: ['emoji-icon'],
-                        halign: Gtk.Align.CENTER,
-                        valign: Gtk.Align.CENTER
-                    });
-                } else {
-                    iconWidget = new Gtk.Image({
-                        icon_name: project.icon || 'folder-symbolic',
-                        pixel_size: 20
-                    });
-                }
-                
-                // Apply background color and icon color
-                const iconColor = ColorUtils.getContrastTextColor(project.color);
-                const provider = new Gtk.CssProvider();
-                provider.load_from_string(
-                    `.project-settings-button { 
-                        background-color: ${project.color}; 
-                        border-radius: 6px; 
-                        color: ${iconColor}; 
-                        min-width: 40px;
-                        min-height: 40px;
-                        padding: 0;
-                    }
-                    .project-settings-button:hover {
-                        filter: brightness(1.1);
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                    }
-                    .emoji-icon {
-                        font-size: 18px;
-                    }`
-                );
-                settingsButton.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
-                
-                settingsButton.set_child(iconWidget);
-                
-                // Connect settings dialog
-                settingsButton.connect('clicked', () => {
-                    this._showProjectSettings(project);
-                });
-                
-                // Center: Simple label with manual editing
-                const nameLabel = new Gtk.Label({
-                    label: project.name,
-                    hexpand: true,
-                    halign: Gtk.Align.START,
-                    valign: Gtk.Align.CENTER,
-                    css_classes: ['project-name-label']
-                });
-
-                // Add double-click to edit via dialog
-                const nameClickGesture = new Gtk.GestureClick({
-                    button: 1 // Left mouse button only
-                });
-                nameClickGesture.connect('pressed', (gesture, n_press, x, y) => {
-                    if (n_press === 2) { // Double-click
-                        this._showProjectNameEditDialog(project, nameLabel);
-                    }
-                });
-                nameLabel.add_controller(nameClickGesture);
-                
-                // Right: Time display only
-                const timeLabel = new Gtk.Label({
-                    label: this._formatDurationHMS(project.totalTime || 0),
-                    css_classes: ['time-display', 'monospace', 'dim-label'],
-                    valign: Gtk.Align.CENTER,
-                    halign: Gtk.Align.END,
-                    width_request: 100
-                });
-                
-                // Add right-click selection handlers
-                this._addProjectSelectionHandlers(row, project);
-                
-                // Assemble the row
-                mainBox.append(settingsButton);
-                mainBox.append(nameLabel);
-                mainBox.append(timeLabel);
-                
-                row.set_child(mainBox);
-                
-                // Apply selection styling if selected
-                if (this.selectedProjects.has(project.id)) {
-                    row.add_css_class('selected-project');
-                }
-                
-                this.projectList.append(row);
-            }
+            const row = this._createProjectRow(project);
+            this.projectList.append(row);
         });
 
-        // Update pagination info
         this._updatePaginationInfo();
-        this._updateSelectionUI();
     }
 
     /**
-     * Generate unique project name
+     * Create project row (ORIGINAL UI from main branch)
      */
-    _generateUniqueProjectName() {
-        const now = new Date();
-        const index = now.getTime().toString().slice(-4); // Last 4 digits of timestamp
-        return `Default (${index})`;
-    }
+    _createProjectRow(project) {
+        const row = new Gtk.ListBoxRow({
+            activatable: false,
+            selectable: false,
+        });
 
-    /**
-     * Show add project dialog
-     */
-    showAddProjectDialog() {
-        if (this.modularDialogManager && this.projectManager) {
-            // Get text from search input to use as initial project name
-            const searchText = this.projectSearch ? this.projectSearch.get_text().trim() : '';
-            const initialName = searchText || this._generateUniqueProjectName();
-            
-            
-            // STEP 1: Create project immediately with default values
-            const newProjectId = this.projectManager.createProjectAndGetId(
-                initialName,
-                '#3584e4', // Default blue color
-                'folder-symbolic', // Default icon
-                this.parentWindow,
-                'auto' // Default icon color mode
-            );
-            
-            if (!newProjectId) {
-                return;
-            }
-            
-            // STEP 2: Get the created project data
-            const createdProject = this.projectManager.getProjectById(newProjectId);
-            if (!createdProject) {
-                return;
-            }
-            
-            // STEP 3: Show "editing" dialog for the newly created project
-            this.modularDialogManager.showProjectDialog({
-                mode: 'edit', // This is now an EDIT dialog internally
-                project: createdProject, // Pass the real project with ID
-                forceCreateAppearance: true, // But make it LOOK like a create dialog
-                onSave: (projectData, mode, dialog) => {
-                    // Save changes to the existing project
-                    if (this.projectManager) {
-                        const success = this.projectManager.updateProject(
-                            createdProject.id,
-                            projectData.name,
-                            projectData.color,
-                            projectData.icon,
-                            this.parentWindow,
-                            projectData.iconColorMode
-                        );
-                        
-                        if (success) {
-                            this.loadProjects();
-                            return true; // Close dialog
-                        } else {
-                            dialog.showFieldError('name', 'Failed to save project changes');
-                            return false; // Keep dialog open
-                        }
-                    }
-                    return false;
-                },
-                onCancel: (dialog) => {
-                    // CANCEL: Delete the project we just created
-                    const deleteSuccess = this.projectManager.deleteProject(createdProject.id, this.parentWindow);
-                    if (deleteSuccess) {
-                        this.loadProjects(); // Refresh the project list
-                    }
-                }
+        const mainBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            margin_start: 16,
+            margin_end: 16,
+            margin_top: 12,
+            margin_bottom: 12,
+            hexpand: true,
+        });
+
+        // Left: Settings button with color and icon
+        const settingsButton = new Gtk.Button({
+            width_request: 40,
+            height_request: 40,
+            halign: Gtk.Align.CENTER,
+            valign: Gtk.Align.CENTER,
+            css_classes: ['project-settings-button', 'flat'],
+            tooltip_text: _('Project settings - Change color and icon'),
+        });
+
+        // Create icon widget
+        let iconWidget;
+        if (project.icon && project.icon.startsWith('emoji:')) {
+            const emoji = project.icon.substring(6);
+            iconWidget = new Gtk.Label({
+                label: emoji,
+                css_classes: ['emoji-icon'],
+                halign: Gtk.Align.CENTER,
+                valign: Gtk.Align.CENTER,
             });
-        }
-    }
-
-    /**
-     * Edit project
-     */
-    _editProject(project) {
-        if (this.modularDialogManager) {
-            this.modularDialogManager.editProject(project, () => {
-                this.loadProjects();
-                return true;
-            });
-        }
-    }
-
-    /**
-     * Delete project with confirmation
-     */
-    _deleteProject(project) {
-        if (this.modularDialogManager) {
-            this.modularDialogManager.confirmDelete('project', project.name, () => {
-                // Call project manager delete method
-                if (this.projectManager) {
-                    const success = this.projectManager.deleteProject(project.id, this.parentWindow);
-                    if (success) {
-                        this.loadProjects();
-                    }
-                    return success;
-                }
-                return false;
-            });
-        }
-    }
-
-    /**
-     * Select/deselect project
-     */
-    _selectProject(project) {
-        if (this.selectedProjects.has(project.id)) {
-            this.selectedProjects.delete(project.id);
         } else {
-            this.selectedProjects.add(project.id);
+            iconWidget = new Gtk.Image({
+                icon_name: project.icon || 'folder-symbolic',
+                pixel_size: 20,
+            });
         }
-        
-        this._updateSelectionUI();
-    }
 
-    /**
-     * Delete selected projects
-     */
-    _deleteSelectedProjects() {
-        if (this.selectedProjects.size === 0) return;
+        // Apply background color
+        const iconColor = this._getProjectIconColor(project);
+        const provider = new Gtk.CssProvider();
+        provider.load_from_string(
+            `.project-settings-button {
+                background-color: ${project.color};
+                border-radius: 6px;
+                color: ${iconColor};
+                min-width: 40px;
+                min-height: 40px;
+                padding: 0;
+            }
+            .project-settings-button:hover {
+                filter: brightness(1.1);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .emoji-icon {
+                font-size: 18px;
+            }`
+        );
+        settingsButton.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
 
-        // Create simple confirmation dialog
-        const dialog = new Adw.AlertDialog({
-            heading: _('Delete Projects'),
-            body: _('Are you sure you want to delete %d selected project(s)? This cannot be undone.').replace('%d', this.selectedProjects.size)
+        settingsButton.set_child(iconWidget);
+        settingsButton.connect('clicked', () => this._showProjectSettings(project));
+
+        // Center: Project name label
+        const nameLabel = new Gtk.Label({
+            label: project.name,
+            hexpand: true,
+            halign: Gtk.Align.START,
+            valign: Gtk.Align.CENTER,
+            css_classes: ['project-name-label'],
         });
 
-        dialog.add_response('cancel', _('Cancel'));
-        dialog.add_response('delete', _('Delete'));
-        dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
-
-        dialog.connect('response', (dialog, response) => {
-            if (response === 'delete') {
-                // Delete all selected projects
-                this.selectedProjects.forEach(projectId => {
-                    if (this.projectManager) {
-                        this.projectManager.deleteProject(projectId, this.parentWindow);
-                    }
-                });
-
-                this.selectedProjects.clear();
-                this._updateSelectionUI();
-                this.loadProjects();
+        // Double-click to edit
+        const nameClickGesture = new Gtk.GestureClick({
+            button: 1,
+        });
+        nameClickGesture.connect('pressed', (gesture, n_press, x, y) => {
+            if (n_press === 2) {
+                this._showProjectNameEditDialog(project);
             }
-            dialog.close();
+        });
+        nameLabel.add_controller(nameClickGesture);
+
+        // Right: Time display
+        const totalTime = project.total_time || 0;
+        const timeLabel = new Gtk.Label({
+            label: this._formatDurationHMS(totalTime),
+            css_classes: ['time-display', 'monospace', 'dim-label'],
+            valign: Gtk.Align.CENTER,
+            halign: Gtk.Align.END,
+            width_request: 100,
         });
 
-        dialog.present(this.parentWindow);
+        mainBox.append(settingsButton);
+        mainBox.append(nameLabel);
+        mainBox.append(timeLabel);
+
+        row.set_child(mainBox);
+
+        return row;
     }
 
-    /**
-     * Create pagination/context bar if not in template
-     */
-    _createPaginationContextBar() {
-        this.paginationContextBarWidget = WidgetFactory.createPaginationContextBar({
-            onPreviousClick: () => this._previousPage(),
-            onNextClick: () => this._nextPage(),
-            onCancelClick: () => this._clearSelection(),
-            onDeleteClick: () => this._deleteSelectedProjects()
+    _getProjectIconColor(project) {
+        // Simple brightness calculation
+        const color = project.color || '#3584e4';
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        return brightness > 128 ? '#000000' : '#ffffff';
+    }
+
+    _formatDurationHMS(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    _showEmptyState() {
+        const emptyRow = new Adw.ActionRow({
+            title: _('No projects found'),
+            subtitle: _('Create your first project to get started'),
+            sensitive: false,
         });
-
-        // Try to find a container to append to
-        if (this.projectList) {
-            // Navigate up the widget hierarchy to find a Box container
-            let parent = this.projectList.get_parent();
-            while (parent && !parent.append) {
-                parent = parent.get_parent();
-            }
-
-            if (parent && parent.append) {
-                parent.append(this.paginationContextBarWidget.widget);
-            } else {
-                console.warn('Could not find suitable container for pagination bar');
-            }
-        }
+        this.projectList.append(emptyRow);
     }
 
-    /**
-     * Update selection UI
-     */
-    _updateSelectionUI() {
-        const selectedCount = this.selectedProjects.size;
+    _updatePaginationInfo() {
+        const totalPages = Math.max(1, Math.ceil(this.filteredProjects.length / this.projectsPerPage));
+        const currentPage = this.currentProjectsPage + 1;
 
-        if (!this.paginationContextBarWidget) return;
+        this.projectsPageInfo.set_label(`Page ${currentPage} of ${totalPages}`);
 
-        if (selectedCount > 0) {
-            // Show context actions mode (always visible when items selected)
-            this.paginationContextBarWidget.show();
-            this.paginationContextBarWidget.showContextActions(selectedCount);
-        } else {
-            // Show pagination mode - use stored totalPages
-            const totalPages = this._totalPages || Math.ceil(this.filteredProjects.length / this.projectsPerPage);
-
-            if (totalPages > 1) {
-                this.paginationContextBarWidget.show();
-                this.paginationContextBarWidget.showPagination(this.currentProjectsPage + 1, totalPages);
-            } else {
-                // Hide pagination when no selection and only 1 page
-                this.paginationContextBarWidget.hide();
-            }
-        }
+        this.prevProjectsButton.set_sensitive(this.currentProjectsPage > 0);
+        this.nextProjectsButton.set_sensitive(this.currentProjectsPage < totalPages - 1);
     }
 
-    /**
-     * Toggle search bar visibility
-     */
-    toggleSearch() {
-        const isVisible = this.searchBar.get_search_mode();
-        this.searchBar.set_search_mode(!isVisible);
-    }
-
-    /**
-     * Refresh page data
-     */
-    async refresh() {
-        try {
-            await this.loadProjects();
-            // Update header project buttons after refresh
-            if (this.parentWindow) {
-                // Reload projects from database
-                if (this.parentWindow._loadProjects) {
-                    this.parentWindow._loadProjects();
-                }
-                // Update header buttons for currently selected project
-                if (this.parentWindow.currentProjectId && this.parentWindow.allProjects) {
-                    const currentProject = this.parentWindow.allProjects.find(p => p.id === this.parentWindow.currentProjectId);
-                    if (currentProject && this.parentWindow._updateProjectButtonsDisplay) {
-                        // Refreshing header buttons
-                        this.parentWindow._updateProjectButtonsDisplay(currentProject.name);
-                    }
-                }
-            }
-        } catch (error) {
-            //('ProjectsPage refresh failed:', error);
-        }
-    }
-
-    /**
-     * Show loading state
-     */
-    showLoading(message = 'Loading...') {
-        // ProjectsPage loading message
-        // Could show spinner in UI if needed
-    }
-
-    /**
-     * Hide loading state
-     */
-    hideLoading() {
-        // ProjectsPage loading finished
-        // Could hide spinner in UI if needed
-    }
-
-    /**
-     * Show error message
-     */
-    showError(message) {
-        //(`ProjectsPage Error: ${message}`);
-        // Could show error dialog in UI if needed
-    }
-
-    /**
-     * Navigate to previous page
-     */
     _previousPage() {
         if (this.currentProjectsPage > 0) {
             this.currentProjectsPage--;
@@ -757,9 +644,6 @@ export class ProjectsPage {
         }
     }
 
-    /**
-     * Navigate to next page
-     */
     _nextPage() {
         const totalPages = Math.ceil(this.filteredProjects.length / this.projectsPerPage);
         if (this.currentProjectsPage < totalPages - 1) {
@@ -768,316 +652,22 @@ export class ProjectsPage {
         }
     }
 
-    /**
-     * Update pagination info
-     */
-    _updatePaginationInfo() {
-        // Store totalPages for use in _updateSelectionUI
-        this._totalPages = Math.ceil(this.filteredProjects.length / this.projectsPerPage);
+    _showAddProjectDialog() {
+        console.log('TODO: Show add project dialog');
     }
 
-    // Helper methods
-    _getSearchText() {
-        const searchEntry = this.searchBar?.get_child();
-        return searchEntry ? searchEntry.get_text().trim() : '';
-    }
-
-    _clearSearch() {
-        const searchEntry = this.searchBar?.get_child();
-        if (searchEntry) {
-            searchEntry.set_text('');
-        }
-    }
-
-    async _fetchProjects() {
-        if (!this.projectManager || !this.projectManager.dbConnection) {
-            return [];
-        }
-
-        try {
-            // Calculate total tracked time for each project from tasks
-            const sql = `
-                SELECT 
-                    p.id, 
-                    p.name, 
-                    p.color, 
-                    p.icon, 
-                    p.dark_icons, 
-                    p.icon_color_mode,
-                    COALESCE(SUM(t.time_spent), 0) as total_time
-                FROM Project p
-                LEFT JOIN Task t ON p.id = t.project_id
-                GROUP BY p.id, p.name, p.color, p.icon, p.dark_icons, p.icon_color_mode
-                ORDER BY p.id
-            `;
-            const result = this.projectManager.dbConnection.execute_select_command(sql);
-            const projects = [];
-
-            if (result && result.get_n_rows() > 0) {
-                for (let i = 0; i < result.get_n_rows(); i++) {
-                    const project = {
-                        id: result.get_value_at(0, i),
-                        name: result.get_value_at(1, i),
-                        color: result.get_value_at(2, i) || '#cccccc',
-                        icon: result.get_value_at(3, i) || 'folder-symbolic',
-                        dark_icons: result.get_value_at(4, i) || 0,
-                        icon_color_mode: result.get_value_at(5, i) || 'auto',
-                        totalTime: result.get_value_at(6, i) || 0
-                    };
-                    projects.push(project);
-                }
-            }
-
-            // Loaded projects from database
-            return projects;
-        } catch (error) {
-            //('Error loading projects:', error);
-            return [];
-        }
-    }
-
-    async _getProjectsFromManager() {
-        return await this._fetchProjects();
-    }
-
-    /**
-     * Show project settings dialog with color picker and icon selector
-     */
     _showProjectSettings(project) {
-        if (!this.parentWindow || !this.projectManager) {
-            //('Missing dependencies for project settings');
-            return;
-        }
+        console.log('TODO: Show project settings for:', project.name);
+    }
 
-        // Use the existing project manager dialog system
-        this.projectManager._showProjectAppearanceDialog(project);
+    _showProjectNameEditDialog(project) {
+        console.log('TODO: Show edit name dialog for:', project.name);
     }
 
     /**
-     * Show dialog to edit project name
+     * Refresh page data
      */
-    _showProjectNameEditDialog(project, nameLabel) {
-        if (!this.modularDialogManager) {
-            //('No modular dialog manager available');
-            return;
-        }
-
-        const dialog = new Adw.AlertDialog({
-            heading: _('Edit Project Name'),
-            body: _('Change the name of "%s"').replace('%s', project.name)
-        });
-
-        const entry = new Gtk.Entry({
-            text: project.name,
-            hexpand: true
-        });
-
-        dialog.set_extra_child(entry);
-        dialog.add_response('cancel', _('Cancel'));
-        dialog.add_response('save', _('Save'));
-        dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
-
-        dialog.connect('response', (dialog, response) => {
-            if (response === 'save') {
-                const newName = entry.get_text().trim();
-                if (newName && newName !== project.name) {
-                    this._handleProjectNameChange(project.id, newName, nameLabel);
-                }
-            }
-            dialog.close();
-        });
-
-        dialog.present(this.parentWindow);
+    async refresh() {
+        await this.loadProjects();
     }
-
-
-    /**
-     * Handle project name changes with validation
-     */
-    _handleProjectNameChange(projectId, newName, nameLabel) {
-        if (!this.projectManager) {
-            //('No project manager available');
-            return;
-        }
-
-        // Find the project
-        const project = this.projects.find(p => p.id === projectId);
-        if (!project) {
-            //('Project not found:', projectId);
-            return;
-        }
-
-        // Validate new name (basic validation for now)
-        if (newName.length < 1 || newName.length > 100) {
-            // Revert to original name (using set_text for Gtk.EditableLabel)
-            nameLabel.set_text(project.name);
-            return;
-        }
-
-        // Update project via manager
-        const success = this.projectManager.updateProject(
-            projectId,
-            newName,
-            project.color,
-            project.icon,
-            this.parentWindow,
-            project.icon_color_mode || 'auto'
-        );
-
-        if (!success) {
-            // Revert to original name (using set_label for Gtk.Label)
-            nameLabel.set_label(project.name);
-        } else {
-            // Update the label with the new name
-            nameLabel.set_label(newName);
-            // Update header project buttons after name change (avoid infinite loop)
-            if (this.parentWindow && this.parentWindow._loadProjects) {
-                this.parentWindow._loadProjects();
-            }
-        }
-    }
-
-    /**
-     * Add right-click selection handlers for multiple selection
-     */
-    _addProjectSelectionHandlers(row, project) {
-        // Add right-click gesture for selection
-        const rightClick = new Gtk.GestureClick({
-            button: 3 // Right mouse button
-        });
-
-        rightClick.connect('pressed', (gesture, n_press, x, y) => {
-            this._toggleProjectSelection(project.id, row);
-            gesture.set_state(Gtk.EventSequenceState.CLAIMED);
-        });
-
-        row.add_controller(rightClick);
-
-        // Handle keyboard shortcuts on the row
-        const rowKeyController = new Gtk.EventControllerKey();
-        rowKeyController.connect('key-pressed', (controller, keyval, keycode, state) => {
-            // Delete key
-            if (keyval === 65535) { // Delete key
-                // If this project is selected, delete all selected projects
-                if (this.selectedProjects.has(project.id)) {
-                    this._deleteSelectedProjects();
-                    return true;
-                } else {
-                    // If not selected, select it first and then delete
-                    this._toggleProjectSelection(project.id, row);
-                    this._deleteSelectedProjects();
-                    return true;
-                }
-            }
-            return false;
-        });
-
-        row.add_controller(rowKeyController);
-        
-        // Make the row focusable so it can receive keyboard events
-        row.set_focusable(true);
-        row.set_can_focus(true);
-    }
-
-    /**
-     * Toggle project selection
-     */
-    _toggleProjectSelection(projectId, row) {
-        if (this.selectedProjects.has(projectId)) {
-            this.selectedProjects.delete(projectId);
-            row.remove_css_class('selected-project');
-        } else {
-            this.selectedProjects.add(projectId);
-            row.add_css_class('selected-project');
-        }
-
-        this._updateSelectionUI();
-    }
-
-    /**
-     * Format duration helper (legacy)
-     */
-    _formatDuration(totalSeconds) {
-        if (!totalSeconds) return '0h 0m';
-        
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        
-        if (hours > 0) {
-            return `${hours}h ${minutes}m`;
-        } else {
-            return `${minutes}m`;
-        }
-    }
-
-    /**
-     * Format duration in HH:MM:SS format
-     */
-    _formatDurationHMS(totalSeconds) {
-        if (!totalSeconds) return '00:00:00';
-        
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-        
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-
-    /**
-     * Setup keyboard shortcuts for the page
-     */
-    setupKeyboardShortcuts() {
-        if (!this.parentWindow) return;
-
-        const keyController = new Gtk.EventControllerKey();
-        keyController.connect('key-pressed', (controller, keyval, keycode, state) => {
-            
-            // Delete key - delete selected projects
-            if (keyval === 65535) { // Delete key
-                if (this.selectedProjects.size > 0) {
-                    this._deleteSelectedProjects();
-                    return true;
-                } else {
-                }
-            }
-            
-            // Ctrl+A - select all projects
-            if ((state & Gdk.ModifierType.CONTROL_MASK) && keyval === 97) { // Ctrl+A
-                this._selectAllProjects();
-                return true;
-            }
-            
-            // Escape - clear selection
-            if (keyval === 65307) { // Escape
-                this._clearSelection();
-                return true;
-            }
-
-            return false;
-        });
-
-        this.parentWindow.add_controller(keyController);
-    }
-
-    /**
-     * Select all projects
-     */
-    _selectAllProjects() {
-        this.selectedProjects.clear();
-        this.filteredProjects.forEach(project => {
-            this.selectedProjects.add(project.id);
-        });
-        this._updateProjectsDisplay(); // Refresh to show selection
-        this._updateSelectionUI();
-    }
-
-    /**
-     * Clear all selection
-     */
-    _clearSelection() {
-        this.selectedProjects.clear();
-        this._updateProjectsDisplay(); // Refresh to remove selection styling
-        this._updateSelectionUI();
-    }
-
 }

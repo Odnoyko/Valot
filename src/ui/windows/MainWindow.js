@@ -10,7 +10,6 @@ import Gio from 'gi://Gio';
 import { Config } from 'resource:///com/odnoyko/valot/config.js';
 import { PreferencesDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/PreferencesDialog.js';
 import { GestureController } from 'resource:///com/odnoyko/valot/ui/utils/GestureController.js';
-import { HeaderTrackingWidget } from 'resource:///com/odnoyko/valot/ui/components/complex/HeaderTrackingWidget.js';
 
 // Import pages
 import { TasksPage } from 'resource:///com/odnoyko/valot/ui/windows/pages/TasksPage.js';
@@ -30,7 +29,14 @@ export const ValotMainWindow = GObject.registerClass({
         });
 
         this.coreBridge = coreBridge;
-        this.settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
+
+        // Try to load settings, but don't fail if schema not available
+        try {
+            this.settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
+        } catch (error) {
+            console.warn('GSettings schema not available, using defaults:', error.message);
+            this.settings = null;
+        }
 
         // Add .devel CSS class for development builds
         if (Config.APPLICATION_ID.endsWith('.Devel')) {
@@ -84,6 +90,12 @@ export const ValotMainWindow = GObject.registerClass({
      * Apply sidebar visibility settings from preferences
      */
     _applySidebarSettings() {
+        if (!this.settings) {
+            // No settings available, use default
+            this.splitView.set_show_sidebar(true);
+            return;
+        }
+
         const sidebarMode = this.settings.get_int('sidebar-mode');
 
         switch (sidebarMode) {
@@ -101,7 +113,7 @@ export const ValotMainWindow = GObject.registerClass({
 
         // Save sidebar state changes if in dynamic mode
         this.splitView.connect('notify::show-sidebar', () => {
-            if (this.settings.get_int('sidebar-mode') === 2) {
+            if (this.settings && this.settings.get_int('sidebar-mode') === 2) {
                 this.settings.set_boolean('sidebar-last-state', this.splitView.get_show_sidebar());
             }
         });
@@ -251,12 +263,6 @@ export const ValotMainWindow = GObject.registerClass({
                     tag: pageInfo.id,
                 });
 
-                const toolbarView = new Adw.ToolbarView();
-
-                // Create HeaderBar with tracking widget
-                const headerBar = this._createPageHeader(pageInfo.id);
-                toolbarView.add_top_bar(headerBar);
-
                 // Create page instance
                 const pageInstance = new pageInfo.class({
                     app: this.application,
@@ -264,57 +270,22 @@ export const ValotMainWindow = GObject.registerClass({
                     coreBridge: this.coreBridge,
                 });
 
-                // Get page widget
+                // Get page widget (pages provide complete ToolbarView with header)
                 let pageWidget = pageInstance.getWidget ? pageInstance.getWidget() : null;
                 if (!pageWidget) {
                     pageWidget = this._createPagePlaceholder(pageInfo.title);
                 }
 
-                toolbarView.set_content(pageWidget);
-                navPage.set_child(toolbarView);
+                navPage.set_child(pageWidget);
 
                 // Add to navigation view
-                if (index === 0) {
-                    this.navigationView.add(navPage);
-                } else {
-                    this.navigationView.add(navPage);
-                }
+                this.navigationView.add(navPage);
 
                 console.log(`✅ Page loaded: ${pageInfo.id}`);
             } catch (error) {
                 console.error(`❌ Error loading page ${pageInfo.id}:`, error);
             }
         });
-    }
-
-    /**
-     * Create header bar for each page with tracking widget
-     */
-    _createPageHeader(pageId) {
-        const headerBar = new Adw.HeaderBar({
-            css_classes: [`${pageId}Header`],
-        });
-
-        // Show sidebar button
-        const showSidebarBtn = new Gtk.Button({
-            icon_name: 'sidebar-show-symbolic',
-            tooltip_text: _('Show Sidebar'),
-        });
-        showSidebarBtn.connect('clicked', () => {
-            this.splitView.set_show_sidebar(true);
-        });
-        headerBar.pack_start(showSidebarBtn);
-
-        // Tracking widget connected to Core
-        const trackingWidgetComponent = new HeaderTrackingWidget({
-            parentWindow: this,
-            coreBridge: this.coreBridge,
-        });
-        const trackingWidget = trackingWidgetComponent.getWidget();
-
-        headerBar.set_title_widget(trackingWidget);
-
-        return headerBar;
     }
 
     /**

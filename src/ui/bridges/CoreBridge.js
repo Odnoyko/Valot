@@ -201,10 +201,38 @@ export class CoreBridge {
         return await this.core.services.tasks.getCount();
     }
 
+    // ==================== Task Instances API ====================
+
+    async getAllTaskInstances(options) {
+        return await this.core.services.taskInstances.getAllViews(options);
+    }
+
+    async getTaskInstance(id) {
+        return await this.core.services.taskInstances.getView(id);
+    }
+
+    async findOrCreateTask(name) {
+        return await this.core.services.tasks.findOrCreate(name);
+    }
+
+    async createAutoIndexedTask() {
+        return await this.core.services.tasks.createAutoIndexed();
+    }
+
+    async getNextTaskAutoIndex() {
+        return await this.core.services.tasks.getNextAutoIndex();
+    }
+
     // ==================== Time Tracking API ====================
 
-    async startTracking(taskId, taskName, projectId) {
-        return await this.core.services.tracking.start(taskId, taskName, projectId);
+    /**
+     * Start tracking a task
+     * @param {number} taskId - Task ID
+     * @param {number|null} projectId - Project ID (optional)
+     * @param {number|null} clientId - Client ID (optional)
+     */
+    async startTracking(taskId, projectId = null, clientId = null) {
+        return await this.core.services.tracking.start(taskId, projectId, clientId);
     }
 
     async stopTracking() {
@@ -219,6 +247,14 @@ export class CoreBridge {
         return await this.core.services.tracking.resume();
     }
 
+    async updateCurrentTaskName(newName) {
+        return await this.core.services.tracking.updateCurrentTaskName(newName);
+    }
+
+    async updateCurrentProjectClient(projectId = null, clientId = null) {
+        return await this.core.services.tracking.updateCurrentProjectClient(projectId, clientId);
+    }
+
     getCurrentTracking() {
         return this.core.services.tracking.getCurrentTracking();
     }
@@ -227,8 +263,12 @@ export class CoreBridge {
         return await this.core.services.tracking.getAllTimeEntries();
     }
 
-    async getTimeEntriesByTask(taskId) {
-        return await this.core.services.tracking.getTimeEntriesByTask(taskId);
+    async getTimeEntriesByInstance(instanceId) {
+        return await this.core.services.tracking.getTimeEntriesByInstance(instanceId);
+    }
+
+    async deleteTimeEntry(entryId) {
+        return await this.core.services.tracking.deleteTimeEntry(entryId);
     }
 
     // ==================== State API ====================

@@ -1,47 +1,34 @@
-import { BaseService } from './BaseService';
-import { CoreAPI } from '../api/CoreAPI';
-import { TimeEntry, TimeEntryCreateInput } from '../models/TimeEntry';
-import { CoreEvents } from '../events/CoreEvents';
-import { TimeUtils } from '../utils/TimeUtils';
-
+import { BaseService } from './BaseService.js';
+import { CoreEvents } from '../events/CoreEvents.js';
+import { TimeUtils } from '../utils/TimeUtils.js';
 export class TimeTrackingService extends BaseService {
-    private trackingTimer: any = null;
-
-    constructor(core: CoreAPI) {
+    trackingTimer = null;
+    constructor(core) {
         super(core);
     }
-
     /**
      * Start tracking a task instance
      */
-    async start(
-        taskId: number,
-        projectId: number | null = null,
-        clientId: number | null = null
-    ): Promise<void> {
-        // Check if already tracking
+    async start(taskId, projectId = null, clientId = null) {
+        // If already tracking, stop current task first (like old system)
         const currentState = this.state.getTrackingState();
         if (currentState.isTracking) {
-            throw new Error('Already tracking a task. Stop current task first.');
+            await this.stop();
         }
-
-        // Find or create task instance for this combination
-        const taskInstance = await this.core.services.taskInstances.findOrCreate(
-            taskId,
-            projectId,
-            clientId
-        );
-
+        // Always create new task instance for each tracking session (like old system)
+        const taskInstance = await this.core.services.taskInstances.create({
+            task_id: taskId,
+            project_id: projectId,
+            client_id: clientId
+        });
         // Get task name for state
         const task = await this.core.services.tasks.getById(taskId);
-
         // Create time entry for this instance
         const startTime = TimeUtils.getCurrentTimestamp();
         const entryId = await this.createTimeEntry({
             task_instance_id: taskInstance.id,
             start_time: startTime,
         });
-
         // Update state
         this.state.updateTrackingState({
             isTracking: true,
@@ -51,10 +38,8 @@ export class TimeTrackingService extends BaseService {
             startTime: startTime,
             elapsedSeconds: 0,
         });
-
         // Start timer
         this.startTimer();
-
         this.events.emit(CoreEvents.TRACKING_STARTED, {
             taskId,
             taskName: task.name,
@@ -65,22 +50,18 @@ export class TimeTrackingService extends BaseService {
             timeEntryId: entryId,
         });
     }
-
     /**
      * Stop tracking
      */
-    async stop(): Promise<void> {
+    async stop() {
         const currentState = this.state.getTrackingState();
         if (!currentState.isTracking || !currentState.currentTaskId) {
             throw new Error('Not currently tracking');
         }
-
         // Stop timer
         this.stopTimer();
-
         const endTime = TimeUtils.getCurrentTimestamp();
         const duration = currentState.elapsedSeconds;
-
         // Get current time entry
         const timeEntry = await this.getCurrentTimeEntry();
         if (timeEntry) {
@@ -89,11 +70,9 @@ export class TimeTrackingService extends BaseService {
                 end_time: endTime,
                 duration: duration,
             });
-
             // Update TaskInstance total_time cache
             await this.core.services.taskInstances.updateTotalTime(timeEntry.task_instance_id);
         }
-
         const trackingData = {
             taskId: currentState.currentTaskId,
             taskName: currentState.currentTaskName,
@@ -102,7 +81,6 @@ export class TimeTrackingService extends BaseService {
             endTime,
             duration,
         };
-
         // Reset state
         this.state.updateTrackingState({
             isTracking: false,
@@ -112,74 +90,100 @@ export class TimeTrackingService extends BaseService {
             startTime: null,
             elapsedSeconds: 0,
         });
-
         this.events.emit(CoreEvents.TRACKING_STOPPED, trackingData);
+    }
+    /**
+     * Update current tracking task name
+     */
+    async updateCurrentTaskName(newName) {
+        const currentState = this.state.getTrackingState();
+        if (!currentState.isTracking || !currentState.currentTaskId) {
+            throw new Error('Not currently tracking');
+        }
+
+        // Update task in database
+        await this.core.services.tasks.update(currentState.currentTaskId, { name: newName });
+
+        // Update state
+        this.state.updateTrackingState({
+            currentTaskName: newName,
+        });
+
+        this.events.emit(CoreEvents.TRACKING_UPDATED, {
+            taskId: currentState.currentTaskId,
+            taskName: newName,
+        });
+    }
+
+    /**
+     * Update current tracking project/client
+     * This will create a new TaskInstance and TimeEntry
+     */
+    async updateCurrentProjectClient(projectId = null, clientId = null) {
+        const currentState = this.state.getTrackingState();
+        if (!currentState.isTracking || !currentState.currentTaskId) {
+            throw new Error('Not currently tracking');
+        }
+
+        // Stop current tracking
+        await this.stop();
+
+        // Start new tracking with same task but different project/client
+        await this.start(currentState.currentTaskId, projectId, clientId);
     }
 
     /**
      * Pause tracking
      */
-    async pause(): Promise<void> {
+    async pause() {
         const currentState = this.state.getTrackingState();
         if (!currentState.isTracking) {
             throw new Error('Not currently tracking');
         }
-
         this.stopTimer();
-
         this.events.emit(CoreEvents.TRACKING_PAUSED, {
             taskId: currentState.currentTaskId,
             elapsedSeconds: currentState.elapsedSeconds,
         });
     }
-
     /**
      * Resume tracking
      */
-    async resume(): Promise<void> {
+    async resume() {
         const currentState = this.state.getTrackingState();
         if (!currentState.isTracking) {
             throw new Error('Not currently tracking');
         }
-
         this.startTimer();
-
         this.events.emit(CoreEvents.TRACKING_RESUMED, {
             taskId: currentState.currentTaskId,
             elapsedSeconds: currentState.elapsedSeconds,
         });
     }
-
     /**
      * Get current tracking state
      */
     getCurrentTracking() {
         return this.state.getTrackingState();
     }
-
     /**
      * Create a time entry
      */
-    private async createTimeEntry(input: TimeEntryCreateInput): Promise<number> {
+    async createTimeEntry(input) {
         const sql = `
             INSERT INTO TimeEntry (task_instance_id, start_time, end_time, duration, created_at)
             VALUES (?, ?, NULL, 0, datetime('now'))
         `;
-
         const entryId = await this.execute(sql, [input.task_instance_id, input.start_time]);
-
         this.events.emit(CoreEvents.TIME_ENTRY_CREATED, { id: entryId, ...input });
-
         return entryId;
     }
-
     /**
      * Update a time entry
      */
-    private async updateTimeEntry(id: number, input: { end_time?: string; duration?: number }): Promise<void> {
-        const updates: string[] = [];
-        const params: any[] = [];
-
+    async updateTimeEntry(id, input) {
+        const updates = [];
+        const params = [];
         if (input.end_time !== undefined) {
             updates.push('end_time = ?');
             params.push(input.end_time);
@@ -188,41 +192,34 @@ export class TimeTrackingService extends BaseService {
             updates.push('duration = ?');
             params.push(input.duration);
         }
-
-        if (updates.length === 0) return;
-
+        if (updates.length === 0)
+            return;
         params.push(id);
         const sql = `UPDATE TimeEntry SET ${updates.join(', ')} WHERE id = ?`;
-
         await this.execute(sql, params);
-
         this.events.emit(CoreEvents.TIME_ENTRY_UPDATED, { id, ...input });
     }
-
     /**
      * Get current time entry (active tracking)
      */
-    private async getCurrentTimeEntry(): Promise<TimeEntry | null> {
+    async getCurrentTimeEntry() {
         const sql = `SELECT * FROM TimeEntry WHERE end_time IS NULL ORDER BY id DESC LIMIT 1`;
-        const results = await this.query<TimeEntry>(sql);
+        const results = await this.query(sql);
         return results.length > 0 ? results[0] : null;
     }
-
     /**
      * Start internal timer
      */
-    private startTimer(): void {
+    startTimer() {
         if (this.trackingTimer) {
             clearInterval(this.trackingTimer);
         }
-
         this.trackingTimer = setInterval(() => {
             const currentState = this.state.getTrackingState();
             if (currentState.isTracking) {
                 this.state.updateTrackingState({
                     elapsedSeconds: currentState.elapsedSeconds + 1,
                 });
-
                 this.events.emit(CoreEvents.TRACKING_UPDATED, {
                     taskId: currentState.currentTaskId,
                     elapsedSeconds: currentState.elapsedSeconds + 1,
@@ -230,50 +227,42 @@ export class TimeTrackingService extends BaseService {
             }
         }, 1000);
     }
-
     /**
      * Stop internal timer
      */
-    private stopTimer(): void {
+    stopTimer() {
         if (this.trackingTimer) {
             clearInterval(this.trackingTimer);
             this.trackingTimer = null;
         }
     }
-
     /**
      * Get all time entries
      */
-    async getAllTimeEntries(): Promise<TimeEntry[]> {
+    async getAllTimeEntries() {
         const sql = `SELECT * FROM TimeEntry ORDER BY start_time DESC`;
-        return await this.query<TimeEntry>(sql);
+        return await this.query(sql);
     }
-
     /**
      * Get time entries for a task instance
      */
-    async getTimeEntriesByInstance(instanceId: number): Promise<TimeEntry[]> {
+    async getTimeEntriesByInstance(instanceId) {
         const sql = `SELECT * FROM TimeEntry WHERE task_instance_id = ? ORDER BY start_time DESC`;
-        return await this.query<TimeEntry>(sql, [instanceId]);
+        return await this.query(sql, [instanceId]);
     }
-
     /**
      * Delete a time entry
      */
-    async deleteTimeEntry(entryId: number): Promise<void> {
+    async deleteTimeEntry(entryId) {
         // Get entry to update instance total_time after deletion
         const sql = `SELECT task_instance_id FROM TimeEntry WHERE id = ?`;
         const results = await this.query(sql, [entryId]);
-
         if (results.length > 0) {
             const instanceId = results[0].task_instance_id;
-
             // Delete entry
             await this.execute(`DELETE FROM TimeEntry WHERE id = ?`, [entryId]);
-
             // Update instance total_time
             await this.core.services.taskInstances.updateTotalTime(instanceId);
-
             this.events.emit(CoreEvents.TIME_ENTRY_DELETED, { id: entryId });
         }
     }

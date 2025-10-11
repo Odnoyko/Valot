@@ -1,48 +1,15 @@
-import { EventBus } from '../events/EventBus';
-
-/**
- * Application state interface
- */
-export interface AppState {
-    tracking: TrackingState;
-    ui: UIState;
-}
-
-/**
- * Tracking state
- */
-export interface TrackingState {
-    isTracking: boolean;
-    currentTaskId: number | null;
-    currentTaskName: string | null;
-    currentProjectId: number | null;
-    startTime: string | null;
-    elapsedSeconds: number;
-}
-
-/**
- * UI state
- */
-export interface UIState {
-    currentPage: string;
-    sidebarVisible: boolean;
-    compactMode: boolean;
-}
-
 /**
  * State Manager
  * Manages application state with event notifications
  */
 export class StateManager {
-    private state: AppState;
-    private events: EventBus;
-
-    constructor(events: EventBus) {
+    state;
+    events;
+    constructor(events) {
         this.events = events;
         this.state = this.getInitialState();
     }
-
-    private getInitialState(): AppState {
+    getInitialState() {
         return {
             tracking: {
                 isTracking: false,
@@ -59,69 +26,61 @@ export class StateManager {
             },
         };
     }
-
     /**
      * Get current state
      */
-    getState(): AppState {
+    getState() {
         return { ...this.state };
     }
-
     /**
      * Get tracking state
      */
-    getTrackingState(): TrackingState {
+    getTrackingState() {
         return { ...this.state.tracking };
     }
-
     /**
      * Update tracking state
      */
-    updateTrackingState(update: Partial<TrackingState>): void {
+    updateTrackingState(update) {
         this.state.tracking = {
             ...this.state.tracking,
             ...update,
         };
         this.events.emit('state:tracking-updated', this.state.tracking);
     }
-
     /**
      * Get UI state
      */
-    getUIState(): UIState {
+    getUIState() {
         return { ...this.state.ui };
     }
-
     /**
      * Update UI state
      */
-    updateUIState(update: Partial<UIState>): void {
+    updateUIState(update) {
         this.state.ui = {
             ...this.state.ui,
             ...update,
         };
         this.events.emit('state:ui-updated', this.state.ui);
     }
-
     /**
      * Reset state to initial
      */
-    reset(): void {
+    reset() {
         this.state = this.getInitialState();
         this.events.emit('state:reset', this.state);
     }
-
     /**
      * Check if currently tracking
      */
-    isTracking(): boolean {
+    isTracking() {
         return this.state.tracking.isTracking;
     }
-
     /**
      * Get current task ID
      */
-    getCurrentTaskId(): number | null {
+    getCurrentTaskId() {
         return this.state.tracking.currentTaskId;
     }
 }

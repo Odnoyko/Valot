@@ -1,20 +1,15 @@
-type EventHandler = (data: any) => void | Promise<void>;
-
 export class EventBus {
-    private handlers: Map<string, Set<EventHandler>>;
-
+    handlers;
     constructor() {
         this.handlers = new Map();
     }
-
-    on(event: string, handler: EventHandler): void {
+    on(event, handler) {
         if (!this.handlers.has(event)) {
             this.handlers.set(event, new Set());
         }
-        this.handlers.get(event)!.add(handler);
+        this.handlers.get(event).add(handler);
     }
-
-    off(event: string, handler: EventHandler): void {
+    off(event, handler) {
         const eventHandlers = this.handlers.get(event);
         if (eventHandlers) {
             eventHandlers.delete(handler);
@@ -23,31 +18,27 @@ export class EventBus {
             }
         }
     }
-
-    emit(event: string, data?: any): void {
+    emit(event, data) {
         const eventHandlers = this.handlers.get(event);
         if (eventHandlers) {
             eventHandlers.forEach(handler => {
                 try {
                     handler(data);
-                } catch (error) {
+                }
+                catch (error) {
                     console.error(`Error in event handler for ${event}:`, error);
                 }
             });
         }
     }
-
-    async emitAsync(event: string, data?: any): Promise<void> {
+    async emitAsync(event, data) {
         const eventHandlers = this.handlers.get(event);
         if (eventHandlers) {
-            const promises = Array.from(eventHandlers).map(handler =>
-                Promise.resolve(handler(data))
-            );
+            const promises = Array.from(eventHandlers).map(handler => Promise.resolve(handler(data)));
             await Promise.all(promises);
         }
     }
-
-    clear(): void {
+    clear() {
         this.handlers.clear();
     }
 }

@@ -2,25 +2,16 @@
  * Task Instance Service
  * Manages unique combinations of Task + Project + Client
  */
-
-import { BaseService } from './BaseService';
-import { CoreAPI } from '../api/CoreAPI';
-import { TaskInstance, TaskInstanceCreateInput, TaskInstanceUpdateInput, TaskInstanceView } from '../models/TaskInstance';
-
+import { BaseService } from './BaseService.js';
 export class TaskInstanceService extends BaseService {
-    constructor(coreAPI: CoreAPI) {
+    constructor(coreAPI) {
         super(coreAPI);
     }
-
     /**
      * Find or create task instance for given combination
      * This ensures UNIQUE constraint: one combination = one instance
      */
-    async findOrCreate(
-        taskId: number,
-        projectId: number | null = null,
-        clientId: number | null = null
-    ): Promise<TaskInstance> {
+    async findOrCreate(taskId, projectId = null, clientId = null) {
         // Try to find existing instance
         const existing = await this.findByCombo(taskId, projectId, clientId);
         if (existing) {
@@ -28,7 +19,6 @@ export class TaskInstanceService extends BaseService {
             await this.updateLastUsed(existing.id);
             return existing;
         }
-
         // Create new instance
         return await this.create({
             task_id: taskId,
@@ -36,15 +26,10 @@ export class TaskInstanceService extends BaseService {
             client_id: clientId,
         });
     }
-
     /**
      * Find instance by exact combination
      */
-    async findByCombo(
-        taskId: number,
-        projectId: number | null = null,
-        clientId: number | null = null
-    ): Promise<TaskInstance | null> {
+    async findByCombo(taskId, projectId = null, clientId = null) {
         const sql = `
             SELECT * FROM TaskInstance
             WHERE task_id = ${taskId}
@@ -52,15 +37,13 @@ export class TaskInstanceService extends BaseService {
                 AND (client_id IS ${clientId === null ? 'NULL' : clientId})
             LIMIT 1
         `;
-
         const results = await this.query(sql);
         return results.length > 0 ? this.mapToModel(results[0]) : null;
     }
-
     /**
      * Get instance with related data for UI
      */
-    async getView(id: number): Promise<TaskInstanceView | null> {
+    async getView(id) {
         const sql = `
             SELECT
                 ti.*,
@@ -76,34 +59,28 @@ export class TaskInstanceService extends BaseService {
             WHERE ti.id = ${id}
             GROUP BY ti.id
         `;
-
         const results = await this.query(sql);
         return results.length > 0 ? this.mapToView(results[0]) : null;
     }
-
     /**
      * Get all instances with related data for UI
      */
-    async getAllViews(options?: {
-        taskId?: number;
-        projectId?: number;
-        clientId?: number;
-        favoritesOnly?: boolean;
-        sortBy?: 'last_used' | 'total_time' | 'name';
-    }): Promise<TaskInstanceView[]> {
-        let where: string[] = [];
-
-        if (options?.taskId) where.push(`ti.task_id = ${options.taskId}`);
-        if (options?.projectId) where.push(`ti.project_id = ${options.projectId}`);
-        if (options?.clientId) where.push(`ti.client_id = ${options.clientId}`);
-        if (options?.favoritesOnly) where.push(`ti.is_favorite = 1`);
-
+    async getAllViews(options) {
+        let where = [];
+        if (options?.taskId)
+            where.push(`ti.task_id = ${options.taskId}`);
+        if (options?.projectId)
+            where.push(`ti.project_id = ${options.projectId}`);
+        if (options?.clientId)
+            where.push(`ti.client_id = ${options.clientId}`);
+        if (options?.favoritesOnly)
+            where.push(`ti.is_favorite = 1`);
         const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
-
         let orderBy = 'ti.last_used_at DESC';
-        if (options?.sortBy === 'total_time') orderBy = 'ti.total_time DESC';
-        if (options?.sortBy === 'name') orderBy = 't.name ASC';
-
+        if (options?.sortBy === 'total_time')
+            orderBy = 'ti.total_time DESC';
+        if (options?.sortBy === 'name')
+            orderBy = 't.name ASC';
         const sql = `
             SELECT
                 ti.*,
@@ -120,56 +97,51 @@ export class TaskInstanceService extends BaseService {
             GROUP BY ti.id
             ORDER BY ${orderBy}
         `;
-
         const results = await this.query(sql);
-        return results.map((row: any) => this.mapToView(row));
+        return results.map((row) => this.mapToView(row));
     }
-
     /**
      * Create new task instance
      */
-    async create(data: TaskInstanceCreateInput): Promise<TaskInstance> {
+    async create(data) {
         const sql = `
             INSERT INTO TaskInstance (task_id, project_id, client_id, last_used_at)
             VALUES (${data.task_id}, ${data.project_id || 'NULL'}, ${data.client_id || 'NULL'}, datetime('now'))
         `;
-
         const result = await this.execute(sql);
         return await this.getById(result);
     }
-
     /**
      * Update instance
      */
-    async update(id: number, data: TaskInstanceUpdateInput): Promise<TaskInstance> {
-        const updates: string[] = [];
-
-        if (data.task_id !== undefined) updates.push(`task_id = ${data.task_id}`);
-        if (data.project_id !== undefined) updates.push(`project_id = ${data.project_id || 'NULL'}`);
-        if (data.client_id !== undefined) updates.push(`client_id = ${data.client_id || 'NULL'}`);
-        if (data.total_time !== undefined) updates.push(`total_time = ${data.total_time}`);
-        if (data.is_favorite !== undefined) updates.push(`is_favorite = ${data.is_favorite ? 1 : 0}`);
-
+    async update(id, data) {
+        const updates = [];
+        if (data.task_id !== undefined)
+            updates.push(`task_id = ${data.task_id}`);
+        if (data.project_id !== undefined)
+            updates.push(`project_id = ${data.project_id || 'NULL'}`);
+        if (data.client_id !== undefined)
+            updates.push(`client_id = ${data.client_id || 'NULL'}`);
+        if (data.total_time !== undefined)
+            updates.push(`total_time = ${data.total_time}`);
+        if (data.is_favorite !== undefined)
+            updates.push(`is_favorite = ${data.is_favorite ? 1 : 0}`);
         updates.push(`updated_at = datetime('now')`);
-
         const sql = `UPDATE TaskInstance SET ${updates.join(', ')} WHERE id = ${id}`;
         await this.execute(sql);
-
         return await this.getById(id);
     }
-
     /**
      * Update last_used_at timestamp
      */
-    async updateLastUsed(id: number): Promise<void> {
+    async updateLastUsed(id) {
         const sql = `UPDATE TaskInstance SET last_used_at = datetime('now') WHERE id = ${id}`;
         await this.execute(sql);
     }
-
     /**
      * Update total_time cache
      */
-    async updateTotalTime(id: number): Promise<void> {
+    async updateTotalTime(id) {
         const sql = `
             UPDATE TaskInstance
             SET total_time = (
@@ -181,50 +153,43 @@ export class TaskInstanceService extends BaseService {
         `;
         await this.execute(sql);
     }
-
     /**
      * Toggle favorite status
      */
-    async toggleFavorite(id: number): Promise<TaskInstance> {
+    async toggleFavorite(id) {
         const instance = await this.getById(id);
         return await this.update(id, { is_favorite: !instance.is_favorite });
     }
-
     /**
      * Delete instance (will cascade delete all TimeEntries)
      */
-    async delete(id: number): Promise<void> {
+    async delete(id) {
         const sql = `DELETE FROM TaskInstance WHERE id = ${id}`;
         await this.execute(sql);
     }
-
     /**
      * Get instance by ID
      */
-    async getById(id: number): Promise<TaskInstance> {
+    async getById(id) {
         const sql = `SELECT * FROM TaskInstance WHERE id = ${id} LIMIT 1`;
         const results = await this.query(sql);
-
         if (results.length === 0) {
             throw new Error(`TaskInstance not found: ${id}`);
         }
-
         return this.mapToModel(results[0]);
     }
-
     /**
      * Get all instances
      */
-    async getAll(): Promise<TaskInstance[]> {
+    async getAll() {
         const sql = `SELECT * FROM TaskInstance ORDER BY last_used_at DESC`;
         const results = await this.query(sql);
-        return results.map((row: any) => this.mapToModel(row));
+        return results.map((row) => this.mapToModel(row));
     }
-
     /**
      * Map database row to TaskInstance model
      */
-    private mapToModel(row: any): TaskInstance {
+    mapToModel(row) {
         return {
             id: row.id,
             task_id: row.task_id,
@@ -237,11 +202,10 @@ export class TaskInstanceService extends BaseService {
             updated_at: row.updated_at,
         };
     }
-
     /**
      * Map database row to TaskInstanceView
      */
-    private mapToView(row: any): TaskInstanceView {
+    mapToView(row) {
         return {
             ...this.mapToModel(row),
             task_name: row.task_name,

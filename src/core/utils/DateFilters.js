@@ -2,33 +2,6 @@
  * Date filtering and range utilities
  * Pure business logic - NO UI dependencies
  */
-
-/**
- * Date range representation
- */
-export interface DateRange {
-    start: Date;
-    end: Date;
-}
-
-/**
- * Date filter preset types
- */
-export type DateFilterPreset =
-    | 'today'
-    | 'yesterday'
-    | 'this-week'
-    | 'last-week'
-    | 'this-month'
-    | 'last-month'
-    | 'this-year'
-    | 'last-year'
-    | 'last-7-days'
-    | 'last-30-days'
-    | 'last-90-days'
-    | 'all-time'
-    | 'custom';
-
 /**
  * Date filtering utilities
  */
@@ -36,86 +9,77 @@ export class DateFilters {
     /**
      * Get start of day (00:00:00)
      */
-    static startOfDay(date: Date): Date {
+    static startOfDay(date) {
         const result = new Date(date);
         result.setHours(0, 0, 0, 0);
         return result;
     }
-
     /**
      * Get end of day (23:59:59.999)
      */
-    static endOfDay(date: Date): Date {
+    static endOfDay(date) {
         const result = new Date(date);
         result.setHours(23, 59, 59, 999);
         return result;
     }
-
     /**
      * Get start of week (Monday 00:00:00)
      */
-    static startOfWeek(date: Date, startOnMonday: boolean = true): Date {
+    static startOfWeek(date, startOnMonday = true) {
         const result = new Date(date);
         const day = result.getDay();
         const diff = startOnMonday ? (day === 0 ? -6 : 1 - day) : -day;
         result.setDate(result.getDate() + diff);
         return this.startOfDay(result);
     }
-
     /**
      * Get end of week (Sunday 23:59:59)
      */
-    static endOfWeek(date: Date, startOnMonday: boolean = true): Date {
+    static endOfWeek(date, startOnMonday = true) {
         const result = new Date(date);
         const day = result.getDay();
         const diff = startOnMonday ? (day === 0 ? 0 : 7 - day) : 6 - day;
         result.setDate(result.getDate() + diff);
         return this.endOfDay(result);
     }
-
     /**
      * Get start of month (1st day 00:00:00)
      */
-    static startOfMonth(date: Date): Date {
+    static startOfMonth(date) {
         return this.startOfDay(new Date(date.getFullYear(), date.getMonth(), 1));
     }
-
     /**
      * Get end of month (last day 23:59:59)
      */
-    static endOfMonth(date: Date): Date {
+    static endOfMonth(date) {
         return this.endOfDay(new Date(date.getFullYear(), date.getMonth() + 1, 0));
     }
-
     /**
      * Get start of year (Jan 1 00:00:00)
      */
-    static startOfYear(date: Date): Date {
+    static startOfYear(date) {
         return this.startOfDay(new Date(date.getFullYear(), 0, 1));
     }
-
     /**
      * Get end of year (Dec 31 23:59:59)
      */
-    static endOfYear(date: Date): Date {
+    static endOfYear(date) {
         return this.endOfDay(new Date(date.getFullYear(), 11, 31));
     }
-
     /**
      * Get date range for "today"
      */
-    static getToday(): DateRange {
+    static getToday() {
         const now = new Date();
         return {
             start: this.startOfDay(now),
             end: this.endOfDay(now),
         };
     }
-
     /**
      * Get date range for "yesterday"
      */
-    static getYesterday(): DateRange {
+    static getYesterday() {
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         return {
@@ -123,22 +87,20 @@ export class DateFilters {
             end: this.endOfDay(yesterday),
         };
     }
-
     /**
      * Get date range for "this week"
      */
-    static getThisWeek(startOnMonday: boolean = true): DateRange {
+    static getThisWeek(startOnMonday = true) {
         const now = new Date();
         return {
             start: this.startOfWeek(now, startOnMonday),
             end: this.endOfWeek(now, startOnMonday),
         };
     }
-
     /**
      * Get date range for "last week"
      */
-    static getLastWeek(startOnMonday: boolean = true): DateRange {
+    static getLastWeek(startOnMonday = true) {
         const lastWeek = new Date();
         lastWeek.setDate(lastWeek.getDate() - 7);
         return {
@@ -146,22 +108,20 @@ export class DateFilters {
             end: this.endOfWeek(lastWeek, startOnMonday),
         };
     }
-
     /**
      * Get date range for "this month"
      */
-    static getThisMonth(): DateRange {
+    static getThisMonth() {
         const now = new Date();
         return {
             start: this.startOfMonth(now),
             end: this.endOfMonth(now),
         };
     }
-
     /**
      * Get date range for "last month"
      */
-    static getLastMonth(): DateRange {
+    static getLastMonth() {
         const lastMonth = new Date();
         lastMonth.setMonth(lastMonth.getMonth() - 1);
         return {
@@ -169,22 +129,20 @@ export class DateFilters {
             end: this.endOfMonth(lastMonth),
         };
     }
-
     /**
      * Get date range for "this year"
      */
-    static getThisYear(): DateRange {
+    static getThisYear() {
         const now = new Date();
         return {
             start: this.startOfYear(now),
             end: this.endOfYear(now),
         };
     }
-
     /**
      * Get date range for "last year"
      */
-    static getLastYear(): DateRange {
+    static getLastYear() {
         const lastYear = new Date();
         lastYear.setFullYear(lastYear.getFullYear() - 1);
         return {
@@ -192,11 +150,10 @@ export class DateFilters {
             end: this.endOfYear(lastYear),
         };
     }
-
     /**
      * Get date range for "last N days"
      */
-    static getLastNDays(days: number): DateRange {
+    static getLastNDays(days) {
         const now = new Date();
         const start = new Date(now);
         start.setDate(now.getDate() - days + 1);
@@ -205,21 +162,19 @@ export class DateFilters {
             end: this.endOfDay(now),
         };
     }
-
     /**
      * Get date range for "all time"
      */
-    static getAllTime(): DateRange {
+    static getAllTime() {
         return {
             start: new Date(1970, 0, 1),
             end: new Date(2099, 11, 31),
         };
     }
-
     /**
      * Get date range by preset
      */
-    static getRangeByPreset(preset: DateFilterPreset, customRange?: DateRange): DateRange {
+    static getRangeByPreset(preset, customRange) {
         switch (preset) {
             case 'today':
                 return this.getToday();
@@ -251,81 +206,70 @@ export class DateFilters {
                 return this.getAllTime();
         }
     }
-
     /**
      * Check if a date is today
      */
-    static isToday(date: Date | string): boolean {
+    static isToday(date) {
         const checkDate = typeof date === 'string' ? new Date(date) : date;
         const today = new Date();
         return checkDate.toDateString() === today.toDateString();
     }
-
     /**
      * Check if a date is in this week
      */
-    static isThisWeek(date: Date | string): boolean {
+    static isThisWeek(date) {
         const checkDate = typeof date === 'string' ? new Date(date) : date;
         const range = this.getThisWeek();
         return checkDate >= range.start && checkDate <= range.end;
     }
-
     /**
      * Check if a date is in this month
      */
-    static isThisMonth(date: Date | string): boolean {
+    static isThisMonth(date) {
         const checkDate = typeof date === 'string' ? new Date(date) : date;
         const today = new Date();
-        return (
-            checkDate.getMonth() === today.getMonth() &&
-            checkDate.getFullYear() === today.getFullYear()
-        );
+        return (checkDate.getMonth() === today.getMonth() &&
+            checkDate.getFullYear() === today.getFullYear());
     }
-
     /**
      * Check if a date is in the last N days
      */
-    static isInLastDays(date: Date | string, days: number): boolean {
+    static isInLastDays(date, days) {
         const checkDate = typeof date === 'string' ? new Date(date) : date;
         const range = this.getLastNDays(days);
         return checkDate >= range.start && checkDate <= range.end;
     }
-
     /**
      * Check if a date is in a date range
      */
-    static isInRange(date: Date | string, range: DateRange): boolean {
+    static isInRange(date, range) {
         const checkDate = typeof date === 'string' ? new Date(date) : date;
         return checkDate >= range.start && checkDate <= range.end;
     }
-
     /**
      * Format date range for display
      */
-    static formatRange(range: DateRange): string {
-        const formatDate = (date: Date): string => {
+    static formatRange(range) {
+        const formatDate = (date) => {
             return date.toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',
             });
         };
-
         return `${formatDate(range.start)} - ${formatDate(range.end)}`;
     }
-
     /**
      * Get number of days in a range
      */
-    static getDaysInRange(range: DateRange): number {
+    static getDaysInRange(range) {
         const msPerDay = 24 * 60 * 60 * 1000;
         return Math.round((range.end.getTime() - range.start.getTime()) / msPerDay) + 1;
     }
-
     /**
      * Check if two date ranges overlap
      */
-    static rangesOverlap(range1: DateRange, range2: DateRange): boolean {
+    static rangesOverlap(range1, range2) {
         return range1.start <= range2.end && range2.start <= range1.end;
     }
 }

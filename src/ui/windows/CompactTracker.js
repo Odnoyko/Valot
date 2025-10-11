@@ -182,10 +182,9 @@ export const ValotCompactTracker = GObject.registerClass({
      * Event: Tracking updated
      */
     _onTrackingUpdated(data) {
-        this._updateUI({
-            isTracking: true,
-            elapsedSeconds: data.elapsedSeconds,
-        });
+        // Read from Core state, not from event data
+        const state = this.coreBridge.getTrackingState();
+        this._updateTime(state.elapsedSeconds);
     }
 
     /**
