@@ -100,6 +100,7 @@ export const TOOLTIP = {
     EDIT: translate('Edit'),
     ADD: translate('Add'),
     SETTINGS: translate('Settings'),
+    CHANGE_APPEARANCE: translate('Change color and icon'),
 };
 
 // Empty state messages

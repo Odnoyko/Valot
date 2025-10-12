@@ -31,17 +31,25 @@ export class ProjectService extends BaseService {
      * Create a new project
      */
     async create(input) {
-        // Check for duplicate name
-        const existing = await this.getByName(input.name);
-        if (existing) {
-            throw new Error('Project with this name already exists');
+        // Ensure unique name - add suffix if exists
+        let finalName = input.name;
+        let suffix = 2;
+
+        while (true) {
+            const existing = await this.getByName(finalName);
+            if (!existing) {
+                break; // Name is unique
+            }
+            finalName = `${input.name} (${suffix})`;
+            suffix++;
         }
+
         const sql = `
             INSERT INTO Project (name, color, icon, client_id, total_time, dark_icons, icon_color, icon_color_mode)
             VALUES (?, ?, ?, ?, 0, ?, ?, ?)
         `;
         const projectId = await this.execute(sql, [
-            input.name,
+            finalName,
             input.color || '#cccccc',
             input.icon || 'folder-symbolic',
             input.client_id || null,
@@ -49,7 +57,7 @@ export class ProjectService extends BaseService {
             input.icon_color || '#cccccc',
             input.icon_color_mode || 'auto',
         ]);
-        this.events.emit(CoreEvents.PROJECT_CREATED, { id: projectId, ...input });
+        this.events.emit(CoreEvents.PROJECT_CREATED, { id: projectId, name: finalName, ...input });
         return projectId;
     }
     /**

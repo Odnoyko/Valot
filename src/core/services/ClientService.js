@@ -31,21 +31,29 @@ export class ClientService extends BaseService {
      * Create a new client
      */
     async create(input) {
-        // Check for duplicate name
-        const existing = await this.getByName(input.name);
-        if (existing) {
-            throw new Error('Client with this name already exists');
+        // Ensure unique name - add suffix if exists
+        let finalName = input.name;
+        let suffix = 2;
+
+        while (true) {
+            const existing = await this.getByName(finalName);
+            if (!existing) {
+                break; // Name is unique
+            }
+            finalName = `${input.name} (${suffix})`;
+            suffix++;
         }
+
         const sql = `
             INSERT INTO Client (name, rate, currency)
             VALUES (?, ?, ?)
         `;
         const clientId = await this.execute(sql, [
-            input.name,
+            finalName,
             input.rate || 0,
             input.currency || 'USD',
         ]);
-        this.events.emit(CoreEvents.CLIENT_CREATED, { id: clientId, ...input });
+        this.events.emit(CoreEvents.CLIENT_CREATED, { id: clientId, name: finalName, ...input });
         return clientId;
     }
     /**

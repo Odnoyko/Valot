@@ -1,10 +1,30 @@
 import Gtk from 'gi://Gtk';
 import { FormDialog } from './FormDialog.js';
-// TODO: Restore when migrated
-// import { InputValidator } from '../../../func/global/inputValidation.js';
 import { ValidationUtils, ColorUtils } from 'resource:///com/odnoyko/valot/ui/utils/CoreImports.js';
 import { Button } from '../primitive/Button.js';
 import { TOOLTIP } from 'resource:///com/odnoyko/valot/ui/utils/commonStrings.js';
+
+/**
+ * Get icon color based on background brightness and mode
+ */
+function getProjectIconColor(project) {
+    const mode = project.icon_color_mode || 'auto';
+
+    if (mode === 'light') {
+        return '#ffffff';
+    } else if (mode === 'dark') {
+        return '#000000';
+    }
+
+    // Auto mode: calculate based on color brightness
+    const color = project.color || '#3584e4';
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 128 ? '#000000' : '#ffffff';
+}
 
 /**
  * Project creation/editing dialog using the modular form system
@@ -244,9 +264,13 @@ export class ProjectDialog extends FormDialog {
 
     _validateProjectData(formData) {
         // Project name validation
-        const nameValidation = InputValidator.validateProjectName(formData.name);
-        if (!nameValidation.valid) {
-            this._showNameError(nameValidation.error);
+        if (!formData.name || formData.name.trim().length === 0) {
+            this._showNameError('Project name is required');
+            return false;
+        }
+
+        if (formData.name.trim().length > 100) {
+            this._showNameError('Project name is too long (max 100 characters)');
             return false;
         }
 

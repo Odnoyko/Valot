@@ -105,13 +105,19 @@ export class CoreBridge {
         return await this.core.services.projects.getById(id);
     }
 
-    async createProject(name, color, icon, clientId) {
-        return await this.core.services.projects.create({
-            name,
-            color,
-            icon,
-            client_id: clientId,
-        });
+    async createProject(input) {
+        // Support both old (name, color, icon, clientId) and new (object) format
+        const projectData = typeof input === 'string' ? {
+            name: input,
+            color: arguments[1],
+            icon: arguments[2],
+            client_id: arguments[3],
+        } : input;
+
+        const projectId = await this.core.services.projects.create(projectData);
+
+        // Return full project object
+        return await this.core.services.projects.getById(projectId);
     }
 
     async updateProject(id, data) {
@@ -137,11 +143,14 @@ export class CoreBridge {
     }
 
     async createClient(name, rate, currency) {
-        return await this.core.services.clients.create({
+        const clientId = await this.core.services.clients.create({
             name,
             rate,
             currency,
         });
+
+        // Return full client object
+        return await this.core.services.clients.getById(clientId);
     }
 
     async updateClient(id, data) {

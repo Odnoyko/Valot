@@ -1,5 +1,5 @@
 import Gtk from 'gi://Gtk';
-import { InputValidator } from '../../../func/global/inputValidation.js';
+import { InputValidator } from 'resource:///com/odnoyko/valot/utils/InputValidator.js';
 
 /**
  * Reusable Entry component with validation and consistent styling

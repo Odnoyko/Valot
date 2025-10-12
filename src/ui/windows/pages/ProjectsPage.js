@@ -2,6 +2,8 @@ import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw?version=1';
 import Gdk from 'gi://Gdk';
 import GLib from 'gi://GLib';
+import { ProjectDialog } from 'resource:///com/odnoyko/valot/ui/components/complex/ProjectDialog.js';
+import { ProjectAppearanceDialog } from 'resource:///com/odnoyko/valot/ui/components/complex/ProjectAppearanceDialog.js';
 
 /**
  * Projects management page
@@ -337,7 +339,9 @@ export class ProjectsPage {
     _createToolbar() {
         const toolbar = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 6,
+            spacing: 0,
+            margin_bottom: 12,
+            css_classes: ['search-button-box'],
         });
 
         // Search entry
@@ -353,12 +357,30 @@ export class ProjectsPage {
 
         toolbar.append(this.projectSearch);
 
-        // Add project button
+        // Add project button (same style as Add Client button)
         this.addProjectBtn = new Gtk.Button({
-            icon_name: 'list-add-symbolic',
-            css_classes: ['suggested-action'],
             tooltip_text: _('Add Project'),
+            css_classes: ['flat'],
         });
+
+        const btnBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 6,
+            halign: Gtk.Align.CENTER,
+        });
+
+        const btnLabel = new Gtk.Label({
+            label: _('Add project'),
+        });
+        btnBox.append(btnLabel);
+
+        const btnIcon = new Gtk.Image({
+            icon_name: 'list-add-symbolic',
+        });
+        btnBox.append(btnIcon);
+
+        this.addProjectBtn.set_child(btnBox);
+
         this.addProjectBtn.connect('clicked', () => this._showAddProjectDialog());
         toolbar.append(this.addProjectBtn);
 
@@ -652,16 +674,151 @@ export class ProjectsPage {
         }
     }
 
-    _showAddProjectDialog() {
-        console.log('TODO: Show add project dialog');
+    async _showAddProjectDialog() {
+        try {
+            // Get project name from search or generate indexed name
+            const searchText = this.projectSearch.get_text().trim();
+            let projectName;
+
+            if (searchText === '') {
+                // Generate auto-indexed name - find first available index
+                const existingProjects = await this.coreBridge.getAllProjects();
+                const existingNames = new Set(existingProjects.map(p => p.name));
+
+                let nextIndex = 1;
+                while (existingNames.has(`Project - ${nextIndex}`)) {
+                    nextIndex++;
+                }
+
+                projectName = `Project - ${nextIndex}`;
+            } else {
+                projectName = searchText;
+            }
+
+            // Create project immediately in DB (Core will ensure unique name)
+            const createdProject = await this.coreBridge.createProject({
+                name: projectName,
+                color: '#3584e4',
+                icon: 'folder-symbolic',
+                icon_color_mode: 'auto',
+            });
+
+            // Clear search
+            this.projectSearch.set_text('');
+
+            // Reload list
+            await this.loadProjects();
+
+            let wasSaved = false;
+
+            // Open edit dialog
+            const dialog = ProjectDialog.createEdit(createdProject, {
+                parentWindow: this.parentWindow,
+                onProjectSave: async (projectData, mode, dialogInstance) => {
+                    try {
+                        // Update project
+                        await this.coreBridge.updateProject(createdProject.id, {
+                            name: projectData.name,
+                            color: projectData.color,
+                            icon: projectData.icon,
+                            icon_color_mode: projectData.iconColorMode,
+                        });
+
+                        await this.loadProjects();
+                        wasSaved = true;
+                        return true;
+                    } catch (error) {
+                        console.error('Error updating project:', error);
+                        dialogInstance.showFieldError('name', 'Failed to update project');
+                        return false;
+                    }
+                }
+            });
+
+            // Handle cancel - delete project if not saved
+            dialog.widget.connect('response', async (dialog, response) => {
+                if (response === 'cancel' && !wasSaved) {
+                    try {
+                        await this.coreBridge.deleteProject(createdProject.id);
+                        await this.loadProjects();
+                    } catch (error) {
+                        console.error('Error deleting cancelled project:', error);
+                    }
+                }
+            });
+
+            dialog.present(this.parentWindow);
+
+        } catch (error) {
+            console.error('Error in add project flow:', error);
+        }
     }
 
     _showProjectSettings(project) {
-        console.log('TODO: Show project settings for:', project.name);
+        const appearanceDialog = new ProjectAppearanceDialog({
+            project: project,
+            parentWindow: this.parentWindow,
+            onSave: async (updatedProject) => {
+                try {
+                    await this.coreBridge.updateProject(updatedProject.id, {
+                        color: updatedProject.color,
+                        icon: updatedProject.icon,
+                        icon_color_mode: updatedProject.icon_color_mode,
+                    });
+
+                    await this.loadProjects();
+                } catch (error) {
+                    console.error('Error updating project:', error);
+                }
+            }
+        });
+
+        appearanceDialog.present();
     }
 
     _showProjectNameEditDialog(project) {
-        console.log('TODO: Show edit name dialog for:', project.name);
+        const dialog = new Adw.AlertDialog({
+            heading: _('Projektname bearbeiten'),
+            body: _('Name von "{oldName}" ändern').replace('{oldName}', project.name),
+        });
+
+        const nameEntry = new Gtk.Entry({
+            text: project.name,
+            hexpand: true,
+            margin_top: 12,
+            margin_bottom: 12,
+            margin_start: 12,
+            margin_end: 12,
+        });
+
+        dialog.set_extra_child(nameEntry);
+        dialog.add_response('cancel', _('Abbrechen'));
+        dialog.add_response('save', _('Speichern'));
+        dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
+
+        dialog.connect('response', async (dialog, response) => {
+            if (response === 'save') {
+                const newName = nameEntry.get_text().trim();
+
+                if (!newName || newName === project.name) {
+                    dialog.close();
+                    return;
+                }
+
+                try {
+                    await this.coreBridge.updateProject(project.id, {
+                        name: newName,
+                    });
+
+                    await this.loadProjects();
+                } catch (error) {
+                    console.error('Error updating project name:', error);
+                }
+            }
+            dialog.close();
+        });
+
+        dialog.present(this.parentWindow);
     }
 
     /**

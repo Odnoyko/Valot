@@ -26,6 +26,7 @@
     <file>ui/components/complex/ProjectCard.js</file>
     <file>ui/components/complex/FormDialog.js</file>
     <file>ui/components/complex/ProjectDialog.js</file>
+    <file>ui/components/complex/ProjectAppearanceDialog.js</file>
     <file>ui/components/complex/ClientDialog.js</file>
     <file>ui/components/complex/CurrencyDialog.js</file>
     <file>ui/components/complex/ModularDialogManager.js</file>
@@ -60,6 +61,9 @@
     <file>data/currencies.js</file>
     <file>data/emojis.js</file>
     <file>data/icons.js</file>
+
+    <!-- Global Utils -->
+    <file>utils/InputValidator.js</file>
 
     <!-- Database Adapters -->
     <file>data/gdaDBBridge/GdaDatabaseBridge.js</file>
