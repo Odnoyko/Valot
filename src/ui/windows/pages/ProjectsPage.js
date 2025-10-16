@@ -53,6 +53,10 @@ export class ProjectsPage {
         this.coreBridge.onUIEvent('project-deleted', () => {
             this.loadProjects();
         });
+
+        this.coreBridge.onUIEvent('projects-deleted', () => {
+            this.loadProjects();
+        });
     }
 
     /**
@@ -404,37 +408,77 @@ export class ProjectsPage {
     }
 
     _createPagination() {
-        const paginationBox = new Gtk.Box({
+        // Context bar (pagination or selection mode)
+        this.contextBar = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 12,
             halign: Gtk.Align.CENTER,
             margin_top: 12,
+            visible: false, // Hidden by default
+        });
+
+        // Pagination mode widgets
+        this.paginationBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            halign: Gtk.Align.CENTER,
         });
 
         this.prevProjectsButton = new Gtk.Button({
-            icon_name: 'go-previous-symbolic',
-            tooltip_text: _('Previous page'),
-            css_classes: ['circular'],
+            label: _('Back'),
+            css_classes: ['flat'],
         });
         this.prevProjectsButton.connect('clicked', () => this._previousPage());
 
         this.projectsPageInfo = new Gtk.Label({
             label: _('Page 1 of 1'),
-            css_classes: ['monospace'],
+            css_classes: ['dim-label'],
         });
 
         this.nextProjectsButton = new Gtk.Button({
-            icon_name: 'go-next-symbolic',
-            tooltip_text: _('Next page'),
-            css_classes: ['circular'],
+            label: _('Next'),
+            css_classes: ['flat'],
         });
         this.nextProjectsButton.connect('clicked', () => this._nextPage());
 
-        paginationBox.append(this.prevProjectsButton);
-        paginationBox.append(this.projectsPageInfo);
-        paginationBox.append(this.nextProjectsButton);
+        this.paginationBox.append(this.prevProjectsButton);
+        this.paginationBox.append(this.projectsPageInfo);
+        this.paginationBox.append(this.nextProjectsButton);
 
-        return paginationBox;
+        // Selection mode widgets
+        this.selectionBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            halign: Gtk.Align.CENTER,
+            visible: false,
+        });
+
+        const cancelBtn = new Gtk.Button({
+            label: _('Cancel'),
+            css_classes: ['flat'],
+        });
+        cancelBtn.connect('clicked', () => this._clearSelection());
+
+        this.selectionLabel = new Gtk.Label({
+            label: '0 selected',
+            css_classes: ['dim-label'],
+        });
+
+        const deleteBtn = new Gtk.Button({
+            label: _('Delete'),
+            css_classes: ['destructive-action'],
+        });
+        deleteBtn.connect('clicked', () => this._deleteSelectedProjects());
+
+        this.selectionBox.append(cancelBtn);
+        this.selectionBox.append(this.selectionLabel);
+        this.selectionBox.append(deleteBtn);
+
+        // Add both to context bar
+        this.contextBar.append(this.paginationBox);
+        this.contextBar.append(this.selectionBox);
+
+        return this.contextBar;
     }
 
     /**
@@ -489,6 +533,7 @@ export class ProjectsPage {
         if (!this.filteredProjects || this.filteredProjects.length === 0) {
             this._showEmptyState();
             this._updatePaginationInfo();
+            this._updateSelectionUI();
             return;
         }
 
@@ -510,6 +555,7 @@ export class ProjectsPage {
         });
 
         this._updatePaginationInfo();
+        this._updateSelectionUI();
     }
 
     /**
@@ -619,7 +665,56 @@ export class ProjectsPage {
 
         row.set_child(mainBox);
 
+        // Add right-click selection handler
+        this._addProjectSelectionHandlers(row, project);
+
+        // Apply selection styling if selected
+        if (this.selectedProjects.has(project.id)) {
+            row.add_css_class('selected-project');
+        }
+
         return row;
+    }
+
+    /**
+     * Add right-click selection handlers
+     */
+    _addProjectSelectionHandlers(row, project) {
+        const rightClick = new Gtk.GestureClick({
+            button: 3, // Right mouse button
+        });
+
+        rightClick.connect('pressed', (gesture, n_press, x, y) => {
+            this._toggleProjectSelection(project.id, row);
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED);
+        });
+
+        row.add_controller(rightClick);
+    }
+
+    /**
+     * Toggle project selection
+     */
+    _toggleProjectSelection(projectId, row) {
+        // Prevent selection of default project (ID = 1)
+        if (projectId === 1) {
+            console.log('⚠️ Cannot select default project');
+            // Show toast notification
+            if (this.parentWindow && this.parentWindow.showToast) {
+                this.parentWindow.showToast(_('Default Project cannot be selected'));
+            }
+            return;
+        }
+
+        if (this.selectedProjects.has(projectId)) {
+            this.selectedProjects.delete(projectId);
+            row.remove_css_class('selected-project');
+        } else {
+            this.selectedProjects.add(projectId);
+            row.add_css_class('selected-project');
+        }
+
+        this._updateSelectionUI();
     }
 
     _getProjectIconColor(project) {
@@ -672,6 +767,123 @@ export class ProjectsPage {
             this.currentProjectsPage++;
             this._updateProjectsDisplay();
         }
+    }
+
+    /**
+     * Update pagination info
+     */
+    _updatePaginationInfo() {
+        const totalPages = Math.max(1, Math.ceil(this.filteredProjects.length / this.projectsPerPage));
+        const currentPage = Math.min(this.currentProjectsPage + 1, totalPages);
+
+        this.projectsPageInfo.set_label(`Page ${currentPage} of ${totalPages}`);
+        this.prevProjectsButton.set_sensitive(this.currentProjectsPage > 0);
+        this.nextProjectsButton.set_sensitive(this.currentProjectsPage < totalPages - 1);
+    }
+
+    /**
+     * Update selection UI
+     */
+    _updateSelectionUI() {
+        const selectedCount = this.selectedProjects.size;
+        const totalPages = Math.ceil(this.filteredProjects.length / this.projectsPerPage);
+
+        if (selectedCount > 0) {
+            // Show selection mode
+            this.contextBar.set_visible(true);
+            this.paginationBox.set_visible(false);
+            this.selectionBox.set_visible(true);
+            this.selectionLabel.set_label(`${selectedCount} selected`);
+        } else {
+            // Show pagination mode only if more than 1 page
+            if (totalPages > 1) {
+                this.contextBar.set_visible(true);
+                this.paginationBox.set_visible(true);
+                this.selectionBox.set_visible(false);
+            } else {
+                // Hide context bar when 1 page and no selection
+                this.contextBar.set_visible(false);
+            }
+        }
+    }
+
+    /**
+     * Clear selection
+     */
+    _clearSelection() {
+        this.selectedProjects.clear();
+        this._updateProjectsDisplay();
+    }
+
+    /**
+     * Delete selected projects
+     */
+    async _deleteSelectedProjects() {
+        if (this.selectedProjects.size === 0) return;
+
+        // Filter out default project (should never be selected, but double-check)
+        const idsToDelete = Array.from(this.selectedProjects).filter(id => id !== 1);
+
+        if (idsToDelete.length === 0) {
+            console.log('⚠️ No projects to delete (default project cannot be deleted)');
+            return;
+        }
+
+        // Show confirmation dialog
+        const dialog = new Adw.AlertDialog({
+            heading: _('Delete Projects'),
+            body: `Are you sure you want to delete ${idsToDelete.length} selected project(s)?`,
+        });
+
+        dialog.add_response('cancel', _('Cancel'));
+        dialog.add_response('delete', _('Delete'));
+        dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
+
+        dialog.connect('response', async (dialog, response) => {
+            if (response === 'delete') {
+                try {
+                    // Save project data for undo
+                    const deletedProjects = this.projects.filter(p => idsToDelete.includes(p.id));
+
+                    // Delete via Core
+                    await this.coreBridge.deleteMultipleProjects(idsToDelete);
+
+                    // Clear selection
+                    this.selectedProjects.clear();
+
+                    // Reload projects
+                    await this.loadProjects();
+
+                    // Show toast with Undo
+                    const message = idsToDelete.length === 1
+                        ? _('Project deleted')
+                        : _(`${idsToDelete.length} projects deleted`);
+
+                    if (this.parentWindow && this.parentWindow.showToastWithAction) {
+                        this.parentWindow.showToastWithAction(message, _('Undo'), async () => {
+                            // Restore deleted projects
+                            for (const project of deletedProjects) {
+                                await this.coreBridge.createProject({
+                                    name: project.name,
+                                    color: project.color,
+                                    icon: project.icon,
+                                    client_id: project.client_id,
+                                    dark_icons: project.dark_icons,
+                                    icon_color: project.icon_color,
+                                    icon_color_mode: project.icon_color_mode,
+                                });
+                            }
+                            await this.loadProjects();
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error deleting projects:', error);
+                }
+            }
+            dialog.close();
+        });
+
+        dialog.present(this.parentWindow);
     }
 
     async _showAddProjectDialog() {

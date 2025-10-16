@@ -73,6 +73,12 @@ export class GdaDatabaseBridge {
                 )`;
             await this.execute(createProjectTable);
 
+            // Insert default project (ID = 1)
+            const insertDefaultProject = `
+                INSERT OR IGNORE INTO Project (id, name, color, icon)
+                VALUES (1, 'Default', '#3584e4', 'folder-symbolic')`;
+            await this.execute(insertDefaultProject);
+
             // Create Client table
             const createClientTable = `
                 CREATE TABLE IF NOT EXISTS Client (
@@ -84,6 +90,12 @@ export class GdaDatabaseBridge {
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )`;
             await this.execute(createClientTable);
+
+            // Insert default client (ID = 1)
+            const insertDefaultClient = `
+                INSERT OR IGNORE INTO Client (id, name, rate, currency)
+                VALUES (1, 'Default Client', 0.0, 'USD')`;
+            await this.execute(insertDefaultClient);
 
             // Create Task table (template - only name)
             const createTaskTable = `

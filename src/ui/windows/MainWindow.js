@@ -78,9 +78,15 @@ export const ValotMainWindow = GObject.registerClass({
         // Create sidebar (Adw.NavigationPage)
         this._buildSidebar();
 
+        // Create toast overlay for notifications
+        this.toastOverlay = new Adw.ToastOverlay();
+
         // Create main content (Adw.NavigationView)
         this.navigationView = new Adw.NavigationView();
-        this.splitView.set_content(this.navigationView);
+        this.toastOverlay.set_child(this.navigationView);
+
+        // Set toast overlay as split view content
+        this.splitView.set_content(this.toastOverlay);
 
         // Set split view as window content
         this.set_content(this.splitView);
@@ -298,5 +304,35 @@ export const ValotMainWindow = GObject.registerClass({
             icon_name: 'dialog-information-symbolic',
         });
         return statusPage;
+    }
+
+    /**
+     * Show a simple toast notification
+     */
+    showToast(message) {
+        const toast = new Adw.Toast({
+            title: message,
+            timeout: 3,
+        });
+        this.toastOverlay.add_toast(toast);
+    }
+
+    /**
+     * Show a toast with an action button (e.g. Undo)
+     */
+    showToastWithAction(message, actionLabel, onAction) {
+        const toast = new Adw.Toast({
+            title: message,
+            button_label: actionLabel,
+            timeout: 5, // Longer timeout for actions
+        });
+
+        toast.connect('button-clicked', () => {
+            if (onAction) {
+                onAction();
+            }
+        });
+
+        this.toastOverlay.add_toast(toast);
     }
 });

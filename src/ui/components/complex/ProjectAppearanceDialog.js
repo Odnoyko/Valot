@@ -98,57 +98,28 @@ export class ProjectAppearanceDialog {
         });
 
         const iconLabel = new Gtk.Label({
-            label: _('Project Icon:'),
+            label: _('Project Symbol:'),
             halign: Gtk.Align.START,
             css_classes: ['heading'],
         });
 
+        // Symbol preview button
         this.iconPreview = new Gtk.Button({
             width_request: 48,
             height_request: 48,
             css_classes: ['flat', 'icon-preview'],
             halign: Gtk.Align.CENTER,
-            tooltip_text: _('Click to change icon'),
+            tooltip_text: _('Click to choose symbol'),
         });
 
         this._updateIconPreview();
 
-        // Icon/Emoji toggle
-        const iconTypeGroup = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 0,
-            css_classes: ['toggle-project-icon-box'],
-            halign: Gtk.Align.CENTER,
-        });
-
-        this.iconsButton = new Gtk.ToggleButton({
-            label: '🎨',
-            active: !this.project.icon || !this.project.icon.startsWith('emoji:'),
-        });
-        this.emojiButton = new Gtk.ToggleButton({
-            label: '😀',
-            active: this.project.icon && this.project.icon.startsWith('emoji:'),
-        });
-
-        this.iconsButton.connect('toggled', () => {
-            if (this.iconsButton.get_active()) this.emojiButton.set_active(false);
-        });
-
-        this.emojiButton.connect('toggled', () => {
-            if (this.emojiButton.get_active()) this.iconsButton.set_active(false);
-        });
-
         this.iconPreview.connect('clicked', () => {
-            const isEmoji = this.emojiButton.get_active();
-            this._showIconPicker(isEmoji);
+            this._showSymbolPicker();
         });
-
-        iconTypeGroup.append(this.iconsButton);
-        iconTypeGroup.append(this.emojiButton);
 
         iconColumn.append(iconLabel);
         iconColumn.append(this.iconPreview);
-        iconColumn.append(iconTypeGroup);
 
         return iconColumn;
     }
@@ -208,13 +179,11 @@ export class ProjectAppearanceDialog {
         });
     }
 
-    _showIconPicker(isEmoji) {
+    _showSymbolPicker() {
         const dialog = new Adw.AlertDialog({
-            heading: isEmoji ? _('Select Emoji') : _('Symbol auswählen'),
-            body: isEmoji ? _('Choose from our comprehensive emoji collection') : _('Wählen Sie ein passendes Symbol für das Projekt'),
+            heading: _('Choose Symbol'),
+            body: _('Select an icon or emoji for the project'),
         });
-
-        let iconColor = 'default';
 
         const mainContainer = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
@@ -225,64 +194,100 @@ export class ProjectAppearanceDialog {
             margin_end: 16,
         });
 
-        // Icon color tabs (only for icons)
-        if (!isEmoji) {
-            const colorSelectorLabel = new Gtk.Label({
-                label: _('Icon Color:'),
-                halign: Gtk.Align.START,
-                css_classes: ['heading'],
-            });
+        // Tab bar for Icons / Emojis
+        const tabBar = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 0,
+            css_classes: ['linked'],
+            halign: Gtk.Align.CENTER,
+            margin_bottom: 12,
+        });
 
-            const colorButtonsBox = new Gtk.Box({
-                orientation: Gtk.Orientation.HORIZONTAL,
-                spacing: 6,
-                halign: Gtk.Align.CENTER,
-                css_classes: ['linked'],
-                margin_bottom: 12,
-            });
+        const iconsTabBtn = new Gtk.ToggleButton({
+            label: _('Icons'),
+            active: !this.project.icon || !this.project.icon.startsWith('emoji:'),
+        });
+        const emojisTabBtn = new Gtk.ToggleButton({
+            label: _('Emojis'),
+            active: this.project.icon && this.project.icon.startsWith('emoji:'),
+        });
 
-            const defaultColorBtn = new Gtk.ToggleButton({
-                label: _('Default'),
-                active: true,
-            });
-            const whiteColorBtn = new Gtk.ToggleButton({
-                label: _('White'),
-            });
-            const blackColorBtn = new Gtk.ToggleButton({
-                label: _('Black'),
-            });
+        // Tab switching logic
+        let currentTab = iconsTabBtn.get_active() ? 'icons' : 'emojis';
 
-            defaultColorBtn.connect('toggled', () => {
-                if (defaultColorBtn.get_active()) {
-                    iconColor = 'auto';
-                    whiteColorBtn.set_active(false);
-                    blackColorBtn.set_active(false);
-                }
-            });
+        const updateGrid = () => {
+            // Clear current grid
+            let child = iconGrid.get_first_child();
+            while (child) {
+                const next = child.get_next_sibling();
+                iconGrid.remove(child);
+                child = next;
+            }
 
-            whiteColorBtn.connect('toggled', () => {
-                if (whiteColorBtn.get_active()) {
-                    iconColor = 'light';
-                    defaultColorBtn.set_active(false);
-                    blackColorBtn.set_active(false);
-                }
-            });
+            if (currentTab === 'emojis') {
+                const emojis = getAllEmojis();
+                emojis.forEach((emoji, index) => {
+                    const emojiButton = new Gtk.Button({
+                        label: emoji,
+                        width_request: 48,
+                        height_request: 48,
+                        css_classes: ['flat'],
+                    });
 
-            blackColorBtn.connect('toggled', () => {
-                if (blackColorBtn.get_active()) {
-                    iconColor = 'dark';
-                    defaultColorBtn.set_active(false);
-                    whiteColorBtn.set_active(false);
-                }
-            });
+                    emojiButton.connect('clicked', () => {
+                        this.project.icon = `emoji:${emoji}`;
+                        this.project.icon_color_mode = 'auto';
+                        this._updateIconPreview();
+                        dialog.close();
+                    });
 
-            colorButtonsBox.append(defaultColorBtn);
-            colorButtonsBox.append(whiteColorBtn);
-            colorButtonsBox.append(blackColorBtn);
+                    iconGrid.attach(emojiButton, index % 8, Math.floor(index / 8), 1, 1);
+                });
+            } else {
+                const icons = getAllIcons();
+                icons.forEach((iconName, index) => {
+                    const iconButton = new Gtk.Button({
+                        width_request: 48,
+                        height_request: 48,
+                        css_classes: ['flat'],
+                    });
 
-            mainContainer.append(colorSelectorLabel);
-            mainContainer.append(colorButtonsBox);
-        }
+                    const icon = new Gtk.Image({
+                        icon_name: iconName,
+                        pixel_size: 24,
+                    });
+                    iconButton.set_child(icon);
+
+                    iconButton.connect('clicked', () => {
+                        this.project.icon = iconName;
+                        this.project.icon_color_mode = 'auto'; // Always auto
+                        this._updateIconPreview();
+                        dialog.close();
+                    });
+
+                    iconGrid.attach(iconButton, index % 8, Math.floor(index / 8), 1, 1);
+                });
+            }
+        };
+
+        iconsTabBtn.connect('toggled', () => {
+            if (iconsTabBtn.get_active()) {
+                emojisTabBtn.set_active(false);
+                currentTab = 'icons';
+                updateGrid();
+            }
+        });
+
+        emojisTabBtn.connect('toggled', () => {
+            if (emojisTabBtn.get_active()) {
+                iconsTabBtn.set_active(false);
+                currentTab = 'emojis';
+                updateGrid();
+            }
+        });
+
+        tabBar.append(iconsTabBtn);
+        tabBar.append(emojisTabBtn);
 
         const scrolled = new Gtk.ScrolledWindow({
             hscrollbar_policy: Gtk.PolicyType.NEVER,
@@ -302,53 +307,13 @@ export class ProjectAppearanceDialog {
             column_homogeneous: true,
         });
 
-        if (isEmoji) {
-            const emojis = getAllEmojis();
-            emojis.forEach((emoji, index) => {
-                const emojiButton = new Gtk.Button({
-                    label: emoji,
-                    width_request: 48,
-                    height_request: 48,
-                    css_classes: ['flat'],
-                });
-
-                emojiButton.connect('clicked', () => {
-                    this.project.icon = `emoji:${emoji}`;
-                    this.project.icon_color_mode = 'auto';
-                    this._updateIconPreview();
-                    dialog.close();
-                });
-
-                iconGrid.attach(emojiButton, index % 8, Math.floor(index / 8), 1, 1);
-            });
-        } else {
-            const icons = getAllIcons();
-            icons.forEach((iconName, index) => {
-                const iconButton = new Gtk.Button({
-                    width_request: 48,
-                    height_request: 48,
-                    css_classes: ['flat'],
-                });
-
-                const icon = new Gtk.Image({
-                    icon_name: iconName,
-                    pixel_size: 24,
-                });
-                iconButton.set_child(icon);
-
-                iconButton.connect('clicked', () => {
-                    this.project.icon = iconName;
-                    this.project.icon_color_mode = iconColor;
-                    this._updateIconPreview();
-                    dialog.close();
-                });
-
-                iconGrid.attach(iconButton, index % 8, Math.floor(index / 8), 1, 1);
-            });
-        }
-
         scrolled.set_child(iconGrid);
+
+        mainContainer.append(tabBar);
         mainContainer.append(scrolled);
+
+        // Initial grid populate
+        updateGrid();
 
         dialog.set_extra_child(mainContainer);
         dialog.add_response('cancel', _('Cancel'));

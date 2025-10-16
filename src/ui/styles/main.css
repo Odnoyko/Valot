@@ -95,6 +95,15 @@ entry.itemNameEntry {
   font-weight: 500;
 }
 
+/* Price/rate button in client list */
+.price-value-button {
+  padding: 4px 8px;
+}
+
+.price-value-display {
+  font-weight: 700;
+}
+
 .currency-display {
   font-variant-numeric: tabular-nums;
   font-weight: 600;

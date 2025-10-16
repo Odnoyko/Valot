@@ -12,10 +12,12 @@ export const CoreEvents = {
     PROJECT_CREATED: 'project:created',
     PROJECT_UPDATED: 'project:updated',
     PROJECT_DELETED: 'project:deleted',
+    PROJECTS_DELETED: 'projects:deleted',
     // Client events
     CLIENT_CREATED: 'client:created',
     CLIENT_UPDATED: 'client:updated',
     CLIENT_DELETED: 'client:deleted',
+    CLIENTS_DELETED: 'clients:deleted',
     // Task events
     TASK_CREATED: 'task:created',
     TASK_UPDATED: 'task:updated',

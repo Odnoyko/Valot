@@ -117,9 +117,37 @@ export class ProjectService extends BaseService {
      * Delete a project
      */
     async delete(id) {
+        // Prevent deletion of default project
+        if (id === 1) {
+            throw new Error('Cannot delete default project');
+        }
+
         const sql = `DELETE FROM Project WHERE id = ?`;
         await this.execute(sql, [id]);
         this.events.emit(CoreEvents.PROJECT_DELETED, { id });
+    }
+
+    /**
+     * Delete multiple projects
+     */
+    async deleteMultiple(ids) {
+        if (!ids || ids.length === 0) {
+            return;
+        }
+
+        // Filter out default project (ID = 1)
+        const idsToDelete = ids.filter(id => id !== 1);
+
+        if (idsToDelete.length === 0) {
+            console.log('⚠️ No projects to delete (default project cannot be deleted)');
+            return;
+        }
+
+        const placeholders = idsToDelete.map(() => '?').join(', ');
+        const sql = `DELETE FROM Project WHERE id IN (${placeholders})`;
+        await this.execute(sql, idsToDelete);
+
+        this.events.emit(CoreEvents.PROJECTS_DELETED, { ids: idsToDelete });
     }
     /**
      * Update project total time

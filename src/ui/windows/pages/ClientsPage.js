@@ -18,6 +18,36 @@ export class ClientsPage {
         // Client-specific state
         this.clients = [];
         this.filteredClients = [];
+        this.selectedClients = new Set();
+        this.currentClientsPage = 0;
+        this.clientsPerPage = 10;
+
+        // Subscribe to Core events for automatic updates
+        this._subscribeToCore();
+    }
+
+    /**
+     * Subscribe to Core events to auto-update client list
+     */
+    _subscribeToCore() {
+        if (!this.coreBridge) return;
+
+        // Reload when clients are created/updated/deleted
+        this.coreBridge.onUIEvent('client-created', () => {
+            this.loadClients();
+        });
+
+        this.coreBridge.onUIEvent('client-updated', () => {
+            this.loadClients();
+        });
+
+        this.coreBridge.onUIEvent('client-deleted', () => {
+            this.loadClients();
+        });
+
+        this.coreBridge.onUIEvent('clients-deleted', () => {
+            this.loadClients();
+        });
     }
 
     /**
@@ -34,6 +64,9 @@ export class ClientsPage {
         // Create content
         const content = this._createContent();
         page.set_content(content);
+
+        // Load clients on initialization
+        this.loadClients();
 
         return page;
     }
@@ -324,6 +357,10 @@ export class ClientsPage {
         const scrolledWindow = this._createClientsList();
         contentBox.append(scrolledWindow);
 
+        // Pagination/context bar
+        const contextBar = this._createContextBar();
+        contentBox.append(contextBar);
+
         return contentBox;
     }
 
@@ -398,6 +435,80 @@ export class ClientsPage {
     }
 
     /**
+     * Create context bar (pagination or selection mode)
+     */
+    _createContextBar() {
+        this.contextBar = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            halign: Gtk.Align.CENTER,
+            margin_top: 12,
+            visible: false, // Hidden by default
+        });
+
+        // Pagination mode widgets
+        this.paginationBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            halign: Gtk.Align.CENTER,
+        });
+
+        this.prevPageBtn = new Gtk.Button({
+            label: _('Back'),
+            css_classes: ['flat'],
+        });
+        this.prevPageBtn.connect('clicked', () => this._previousPage());
+        this.paginationBox.append(this.prevPageBtn);
+
+        this.pageInfoLabel = new Gtk.Label({
+            label: 'Page 0 of 0',
+            css_classes: ['dim-label'],
+        });
+        this.paginationBox.append(this.pageInfoLabel);
+
+        this.nextPageBtn = new Gtk.Button({
+            label: _('Next'),
+            css_classes: ['flat'],
+        });
+        this.nextPageBtn.connect('clicked', () => this._nextPage());
+        this.paginationBox.append(this.nextPageBtn);
+
+        // Selection mode widgets
+        this.selectionBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            halign: Gtk.Align.CENTER,
+            visible: false,
+        });
+
+        const cancelBtn = new Gtk.Button({
+            label: _('Cancel'),
+            css_classes: ['flat'],
+        });
+        cancelBtn.connect('clicked', () => this._clearSelection());
+        this.selectionBox.append(cancelBtn);
+
+        this.selectionLabel = new Gtk.Label({
+            label: '0 selected',
+            css_classes: ['dim-label'],
+        });
+        this.selectionBox.append(this.selectionLabel);
+
+        const deleteBtn = new Gtk.Button({
+            label: _('Delete'),
+            css_classes: ['destructive-action'],
+        });
+        deleteBtn.connect('clicked', () => this._deleteSelectedClients());
+        this.selectionBox.append(deleteBtn);
+
+        // Add both to context bar
+        this.contextBar.append(this.paginationBox);
+        this.contextBar.append(this.selectionBox);
+
+        return this.contextBar;
+    }
+
+    /**
      * Load clients from Core
      */
     async loadClients() {
@@ -434,7 +545,7 @@ export class ClientsPage {
     }
 
     /**
-     * Update clients display
+     * Update clients display with pagination
      */
     _updateClientsDisplay() {
         // Clear existing clients
@@ -453,14 +564,31 @@ export class ClientsPage {
                 sensitive: false,
             });
             this.clientList.append(emptyRow);
+            this._updatePaginationInfo();
             return;
         }
 
-        // Add clients to list
-        this.filteredClients.forEach(client => {
+        // Calculate pagination
+        const totalPages = Math.ceil(this.filteredClients.length / this.clientsPerPage);
+
+        // Adjust current page if needed
+        if (this.currentClientsPage >= totalPages && totalPages > 0) {
+            this.currentClientsPage = totalPages - 1;
+        }
+
+        const start = this.currentClientsPage * this.clientsPerPage;
+        const end = Math.min(start + this.clientsPerPage, this.filteredClients.length);
+        const clientsToShow = this.filteredClients.slice(start, end);
+
+        // Add paginated clients to list
+        clientsToShow.forEach(client => {
             const row = this._createClientRow(client);
             this.clientList.append(row);
         });
+
+        // Update pagination info
+        this._updatePaginationInfo();
+        this._updateSelectionUI();
     }
 
     /**
@@ -489,6 +617,8 @@ export class ClientsPage {
             halign: Gtk.Align.START,
             valign: Gtk.Align.CENTER,
             css_classes: ['client-name-label'],
+            ellipsize: 3, // End ellipsize
+            selectable: false, // Prevent text selection
         });
 
         // Add double-click gesture for name editing
@@ -498,35 +628,91 @@ export class ClientsPage {
         nameGesture.connect('pressed', (gesture, n_press, x, y) => {
             if (n_press === 2) { // Double-click
                 this._showEditNameDialog(client);
+                gesture.set_state(Gtk.EventSequenceState.CLAIMED);
             }
         });
         nameLabel.add_controller(nameGesture);
 
         mainBox.append(nameLabel);
 
-        // Rate display (click to edit)
+        // Combined price/currency button (click to edit)
         const currencySymbol = this._getCurrencySymbol(client.currency || 'USD');
-        const rateLabel = new Gtk.Label({
-            label: `${currencySymbol}${(client.rate || 0).toFixed(2)}/hr`,
-            css_classes: ['rate-display', 'monospace', 'dim-label', 'clickable'],
-            valign: Gtk.Align.CENTER,
+        const priceValueButton = new Gtk.Button({
+            css_classes: ['flat', 'price-value-button'],
             halign: Gtk.Align.END,
-            width_request: 100,
+            valign: Gtk.Align.CENTER,
+            width_request: 120,
+            tooltip_text: _('Click to change rate and currency'),
         });
 
-        // Add single-click gesture for rate editing
-        const rateGesture = new Gtk.GestureClick({
-            button: 1,
+        const priceValueLabel = new Gtk.Label({
+            label: `${currencySymbol}${(client.rate || 0).toFixed(2)}`,
+            css_classes: ['price-value-display', 'monospace'],
+            halign: Gtk.Align.CENTER,
+            valign: Gtk.Align.CENTER,
         });
-        rateGesture.connect('released', (gesture, n_press, x, y) => {
+
+        priceValueButton.set_child(priceValueLabel);
+
+        // Connect to edit client rate and currency
+        priceValueButton.connect('clicked', () => {
             this._showEditRateDialog(client);
         });
-        rateLabel.add_controller(rateGesture);
 
-        mainBox.append(rateLabel);
+        mainBox.append(priceValueButton);
 
         row.set_child(mainBox);
+
+        // Add right-click selection handler
+        this._addClientSelectionHandlers(row, client);
+
+        // Apply selection styling if selected
+        if (this.selectedClients.has(client.id)) {
+            row.add_css_class('selected-client');
+        }
+
         return row;
+    }
+
+    /**
+     * Add right-click selection handlers
+     */
+    _addClientSelectionHandlers(row, client) {
+        const rightClick = new Gtk.GestureClick({
+            button: 3, // Right mouse button
+        });
+
+        rightClick.connect('pressed', (gesture, n_press, x, y) => {
+            this._toggleClientSelection(client.id, row);
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED);
+        });
+
+        row.add_controller(rightClick);
+    }
+
+    /**
+     * Toggle client selection
+     */
+    _toggleClientSelection(clientId, row) {
+        // Prevent selection of default client (ID = 1)
+        if (clientId === 1) {
+            console.log('⚠️ Cannot select default client');
+            // Show toast notification
+            if (this.parentWindow && this.parentWindow.showToast) {
+                this.parentWindow.showToast(_('Default Client cannot be selected'));
+            }
+            return;
+        }
+
+        if (this.selectedClients.has(clientId)) {
+            this.selectedClients.delete(clientId);
+            row.remove_css_class('selected-client');
+        } else {
+            this.selectedClients.add(clientId);
+            row.add_css_class('selected-client');
+        }
+
+        this._updateSelectionUI();
     }
 
     /**
@@ -594,8 +780,8 @@ export class ClientsPage {
 
     _showCreateClientDialog(client, onSave, onCancel) {
         const dialog = new Adw.AlertDialog({
-            heading: _('Kunde erstellen'),
-            body: _('Neuen Kunden mit Name und Währung hinzufügen'),
+            heading: _('Create Client'),
+            body: _('Add a new client with name and currency'),
         });
 
         // Form layout
@@ -611,7 +797,7 @@ export class ClientsPage {
 
         // Name entry
         const nameEntry = new Gtk.Entry({
-            placeholder_text: _('Kundenname'),
+            placeholder_text: _('Client name'),
             text: client.name || '',
             hexpand: true,
         });
@@ -707,8 +893,8 @@ export class ClientsPage {
 
     _showEditNameDialog(client) {
         const dialog = new Adw.AlertDialog({
-            heading: _('Kundenname bearbeiten'),
-            body: _('Geben Sie einen neuen Namen für diesen Kunden ein'),
+            heading: _('Edit Client Name'),
+            body: _('Enter a new name for this client'),
         });
 
         const nameEntry = new Gtk.Entry({
@@ -734,8 +920,25 @@ export class ClientsPage {
                 }
 
                 try {
+                    // Save old name for undo
+                    const oldName = client.name;
+
+                    // Update client
                     await this.coreBridge.updateClient(client.id, { name: newName });
                     await this.loadClients();
+
+                    // Show toast with Undo
+                    if (this.parentWindow && this.parentWindow.showToastWithAction) {
+                        this.parentWindow.showToastWithAction(
+                            _('Client name updated'),
+                            _('Undo'),
+                            async () => {
+                                // Restore old name
+                                await this.coreBridge.updateClient(client.id, { name: oldName });
+                                await this.loadClients();
+                            }
+                        );
+                    }
                 } catch (error) {
                     console.error('Error updating client name:', error);
                 }
@@ -748,8 +951,8 @@ export class ClientsPage {
 
     _showEditRateDialog(client) {
         const dialog = new Adw.AlertDialog({
-            heading: _('Satz bearbeiten - {name}').replace('{name}', client.name),
-            body: _('Stundensatz und Währung für diesen Kunden ändern'),
+            heading: _('Edit Rate - {name}').replace('{name}', client.name),
+            body: _('Change hourly rate and currency for this client'),
         });
 
         const form = new Gtk.Box({
@@ -827,11 +1030,33 @@ export class ClientsPage {
         dialog.connect('response', async (dialog, response) => {
             if (response === 'save') {
                 try {
+                    // Save old values for undo
+                    const oldRate = client.rate;
+                    const oldCurrency = client.currency;
+                    const newRate = parseFloat(rateEntry.get_text()) || 0;
+
+                    // Update client
                     await this.coreBridge.updateClient(client.id, {
-                        rate: parseFloat(rateEntry.get_text()) || 0,
+                        rate: newRate,
                         currency: selectedCurrency,
                     });
                     await this.loadClients();
+
+                    // Show toast with Undo
+                    if (this.parentWindow && this.parentWindow.showToastWithAction) {
+                        this.parentWindow.showToastWithAction(
+                            _('Client rate updated'),
+                            _('Undo'),
+                            async () => {
+                                // Restore old values
+                                await this.coreBridge.updateClient(client.id, {
+                                    rate: oldRate,
+                                    currency: oldCurrency,
+                                });
+                                await this.loadClients();
+                            }
+                        );
+                    }
                 } catch (error) {
                     console.error('Error updating client rate:', error);
                 }
@@ -978,6 +1203,136 @@ export class ClientsPage {
 
     _getCurrencySymbol(code) {
         return getCurrencySymbol(code) || '$';
+    }
+
+    /**
+     * Previous page
+     */
+    _previousPage() {
+        if (this.currentClientsPage > 0) {
+            this.currentClientsPage--;
+            this._updateClientsDisplay();
+        }
+    }
+
+    /**
+     * Next page
+     */
+    _nextPage() {
+        const totalPages = Math.ceil(this.filteredClients.length / this.clientsPerPage);
+        if (this.currentClientsPage < totalPages - 1) {
+            this.currentClientsPage++;
+            this._updateClientsDisplay();
+        }
+    }
+
+    /**
+     * Update pagination info
+     */
+    _updatePaginationInfo() {
+        const totalPages = Math.max(1, Math.ceil(this.filteredClients.length / this.clientsPerPage));
+        const currentPage = Math.min(this.currentClientsPage + 1, totalPages);
+
+        this.pageInfoLabel.set_label(`Page ${currentPage} of ${totalPages}`);
+        this.prevPageBtn.set_sensitive(this.currentClientsPage > 0);
+        this.nextPageBtn.set_sensitive(this.currentClientsPage < totalPages - 1);
+    }
+
+    /**
+     * Update selection UI
+     */
+    _updateSelectionUI() {
+        const selectedCount = this.selectedClients.size;
+        const totalPages = Math.ceil(this.filteredClients.length / this.clientsPerPage);
+
+        if (selectedCount > 0) {
+            // Show selection mode
+            this.contextBar.set_visible(true);
+            this.paginationBox.set_visible(false);
+            this.selectionBox.set_visible(true);
+            this.selectionLabel.set_label(`${selectedCount} selected`);
+        } else {
+            // Show pagination mode only if more than 1 page
+            if (totalPages > 1) {
+                this.contextBar.set_visible(true);
+                this.paginationBox.set_visible(true);
+                this.selectionBox.set_visible(false);
+            } else {
+                // Hide context bar when 1 page and no selection
+                this.contextBar.set_visible(false);
+            }
+        }
+    }
+
+    /**
+     * Clear selection
+     */
+    _clearSelection() {
+        this.selectedClients.clear();
+        this._updateClientsDisplay();
+    }
+
+    /**
+     * Delete selected clients
+     */
+    async _deleteSelectedClients() {
+        if (this.selectedClients.size === 0) return;
+
+        // Filter out default client (should never be selected, but double-check)
+        const idsToDelete = Array.from(this.selectedClients).filter(id => id !== 1);
+
+        if (idsToDelete.length === 0) {
+            console.log('⚠️ No clients to delete (default client cannot be deleted)');
+            return;
+        }
+
+        // Show confirmation dialog
+        const dialog = new Adw.AlertDialog({
+            heading: _('Delete Clients'),
+            body: `Are you sure you want to delete ${idsToDelete.length} selected client(s)?`,
+        });
+
+        dialog.add_response('cancel', _('Cancel'));
+        dialog.add_response('delete', _('Delete'));
+        dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
+
+        dialog.connect('response', async (dialog, response) => {
+            if (response === 'delete') {
+                try {
+                    // Save client data for undo
+                    const deletedClients = this.clients.filter(c => idsToDelete.includes(c.id));
+
+                    // Delete via Core
+                    await this.coreBridge.deleteMultipleClients(idsToDelete);
+
+                    // Clear selection
+                    this.selectedClients.clear();
+
+                    // Reload clients
+                    await this.loadClients();
+
+                    // Show toast with Undo
+                    const message = idsToDelete.length === 1
+                        ? _('Client deleted')
+                        : _(`${idsToDelete.length} clients deleted`);
+
+                    if (this.parentWindow && this.parentWindow.showToastWithAction) {
+                        this.parentWindow.showToastWithAction(message, _('Undo'), async () => {
+                            // Restore deleted clients
+                            for (const client of deletedClients) {
+                                await this.coreBridge.createClient(client.name, client.rate, client.currency);
+                            }
+                            await this.loadClients();
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error deleting clients:', error);
+                }
+            }
+            dialog.close();
+        });
+
+        dialog.present(this.parentWindow);
     }
 
     /**

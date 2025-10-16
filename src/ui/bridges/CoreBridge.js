@@ -42,6 +42,10 @@ export class CoreBridge {
             this._notifyUI('project-deleted', data);
         });
 
+        this.core.events.on('projects:deleted', (data) => {
+            this._notifyUI('projects-deleted', data);
+        });
+
         // Client events
         this.core.events.on('client:created', (data) => {
             this._notifyUI('client-created', data);
@@ -53,6 +57,10 @@ export class CoreBridge {
 
         this.core.events.on('client:deleted', (data) => {
             this._notifyUI('client-deleted', data);
+        });
+
+        this.core.events.on('clients:deleted', (data) => {
+            this._notifyUI('clients-deleted', data);
         });
 
         // Task events
@@ -128,6 +136,10 @@ export class CoreBridge {
         return await this.core.services.projects.delete(id);
     }
 
+    async deleteMultipleProjects(ids) {
+        return await this.core.services.projects.deleteMultiple(ids);
+    }
+
     async searchProjects(query) {
         return await this.core.services.projects.search(query);
     }
@@ -159,6 +171,10 @@ export class CoreBridge {
 
     async deleteClient(id) {
         return await this.core.services.clients.delete(id);
+    }
+
+    async deleteMultipleClients(ids) {
+        return await this.core.services.clients.deleteMultiple(ids);
     }
 
     async searchClients(query) {

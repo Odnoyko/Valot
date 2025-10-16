@@ -97,9 +97,37 @@ export class ClientService extends BaseService {
      * Delete a client
      */
     async delete(id) {
+        // Prevent deletion of default client
+        if (id === 1) {
+            throw new Error('Cannot delete default client');
+        }
+
         const sql = `DELETE FROM Client WHERE id = ?`;
         await this.execute(sql, [id]);
         this.events.emit(CoreEvents.CLIENT_DELETED, { id });
+    }
+
+    /**
+     * Delete multiple clients
+     */
+    async deleteMultiple(ids) {
+        if (!ids || ids.length === 0) {
+            return;
+        }
+
+        // Filter out default client (ID = 1)
+        const idsToDelete = ids.filter(id => id !== 1);
+
+        if (idsToDelete.length === 0) {
+            console.log('⚠️ No clients to delete (default client cannot be deleted)');
+            return;
+        }
+
+        const placeholders = idsToDelete.map(() => '?').join(', ');
+        const sql = `DELETE FROM Client WHERE id IN (${placeholders})`;
+        await this.execute(sql, idsToDelete);
+
+        this.events.emit(CoreEvents.CLIENTS_DELETED, { ids: idsToDelete });
     }
     /**
      * Search clients by name
