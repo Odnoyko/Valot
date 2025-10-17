@@ -82,16 +82,30 @@ export class ClientsPage {
         const headerBar = new Adw.HeaderBar();
 
         // Show sidebar button (start)
-        const showSidebarBtn = new Gtk.Button({
+        this.showSidebarBtn = new Gtk.Button({
             icon_name: 'sidebar-show-symbolic',
             tooltip_text: _('Show Sidebar'),
         });
-        showSidebarBtn.connect('clicked', () => {
+        this.showSidebarBtn.connect('clicked', () => {
             if (this.parentWindow && this.parentWindow.splitView) {
                 this.parentWindow.splitView.set_show_sidebar(true);
             }
         });
-        headerBar.pack_start(showSidebarBtn);
+        headerBar.pack_start(this.showSidebarBtn);
+
+        // Update button visibility based on sidebar state
+        if (this.parentWindow && this.parentWindow.splitView) {
+            const updateSidebarButtonVisibility = () => {
+                const sidebarVisible = this.parentWindow.splitView.get_show_sidebar();
+                this.showSidebarBtn.set_visible(!sidebarVisible);
+            };
+
+            // Initial state
+            updateSidebarButtonVisibility();
+
+            // Listen for sidebar visibility changes
+            this.parentWindow.splitView.connect('notify::show-sidebar', updateSidebarButtonVisibility);
+        }
 
         // Tracking widget (title area)
         const trackingWidget = this._createTrackingWidget();
@@ -1276,6 +1290,25 @@ export class ClientsPage {
      */
     _clearSelection() {
         this.selectedClients.clear();
+        this._updateClientsDisplay();
+    }
+
+    /**
+     * Select all clients on current page (except default client ID=1)
+     */
+    _selectAllOnPage() {
+        const start = this.currentClientsPage * this.clientsPerPage;
+        const end = Math.min(start + this.clientsPerPage, this.filteredClients.length);
+        const clientsOnPage = this.filteredClients.slice(start, end);
+
+        // Select all clients except default (ID=1)
+        clientsOnPage.forEach(client => {
+            if (client.id !== 1) {
+                this.selectedClients.add(client.id);
+            }
+        });
+
+        // Update display
         this._updateClientsDisplay();
     }
 

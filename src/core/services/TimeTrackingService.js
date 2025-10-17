@@ -16,10 +16,11 @@ export class TimeTrackingService extends BaseService {
             await this.stop();
         }
         // Always create NEW task instance for each tracking session (even if combination exists)
+        // Use default project/client (ID=1) if not specified instead of NULL
         const taskInstance = await this.core.services.taskInstances.create({
             task_id: taskId,
-            project_id: projectId,
-            client_id: clientId
+            project_id: projectId || 1,
+            client_id: clientId || 1
         });
         // Get task name for state
         const task = await this.core.services.tasks.getById(taskId);

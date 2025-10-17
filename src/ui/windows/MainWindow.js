@@ -363,6 +363,43 @@ export const ValotMainWindow = GObject.registerClass({
         // Add action to application and set Delete key accelerator
         this.application.add_action(deleteAction);
         this.application.set_accels_for_action('app.delete-selected', ['Delete']);
+
+        // Create application-level action for Select All (Shift+A)
+        const selectAllAction = new Gio.SimpleAction({
+            name: 'select-all-page',
+            parameter_type: null
+        });
+
+        selectAllAction.connect('activate', () => {
+            // Get current visible page
+            const visiblePage = this.navigationView.get_visible_page();
+            if (!visiblePage) return;
+
+            const pageTag = visiblePage.get_tag();
+
+            // Select all items on current page based on page type
+            switch (pageTag) {
+                case 'tasks':
+                    if (this.pages.tasks && this.pages.tasks._selectAllOnPage) {
+                        this.pages.tasks._selectAllOnPage();
+                    }
+                    break;
+                case 'projects':
+                    if (this.pages.projects && this.pages.projects._selectAllOnPage) {
+                        this.pages.projects._selectAllOnPage();
+                    }
+                    break;
+                case 'clients':
+                    if (this.pages.clients && this.pages.clients._selectAllOnPage) {
+                        this.pages.clients._selectAllOnPage();
+                    }
+                    break;
+            }
+        });
+
+        // Add action and set Shift+A accelerator
+        this.application.add_action(selectAllAction);
+        this.application.set_accels_for_action('app.select-all-page', ['<Alt>a']);
     }
 
     /**

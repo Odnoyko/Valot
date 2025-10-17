@@ -73,6 +73,11 @@ export class TasksPage {
             this._updateTrackingTimeDisplay();
         });
 
+        // Subscribe to project updates to refresh colors/icons
+        this.coreBridge.onUIEvent('project-updated', (data) => {
+            this._onProjectUpdated(data);
+        });
+
         // Dropdowns subscribe to Core events themselves, no need to update them here
     }
 
@@ -266,16 +271,30 @@ export class TasksPage {
         const headerBar = new Adw.HeaderBar();
 
         // Show sidebar button (start)
-        const showSidebarBtn = new Gtk.Button({
+        this.showSidebarBtn = new Gtk.Button({
             icon_name: 'sidebar-show-symbolic',
             tooltip_text: _('Show Sidebar'),
         });
-        showSidebarBtn.connect('clicked', () => {
+        this.showSidebarBtn.connect('clicked', () => {
             if (this.parentWindow && this.parentWindow.splitView) {
                 this.parentWindow.splitView.set_show_sidebar(true);
             }
         });
-        headerBar.pack_start(showSidebarBtn);
+        headerBar.pack_start(this.showSidebarBtn);
+
+        // Update button visibility based on sidebar state
+        if (this.parentWindow && this.parentWindow.splitView) {
+            const updateSidebarButtonVisibility = () => {
+                const sidebarVisible = this.parentWindow.splitView.get_show_sidebar();
+                this.showSidebarBtn.set_visible(!sidebarVisible);
+            };
+
+            // Initial state
+            updateSidebarButtonVisibility();
+
+            // Listen for sidebar visibility changes
+            this.parentWindow.splitView.connect('notify::show-sidebar', updateSidebarButtonVisibility);
+        }
 
         // Tracking widget (title area)
         const trackingWidget = this._createTrackingWidget();
@@ -1251,6 +1270,33 @@ export class TasksPage {
     }
 
     /**
+     * Select all tasks on current page
+     */
+    _selectAllOnPage() {
+        // Get all groups on current page
+        const allTaskGroups = this._groupSimilarTasks(this.filteredTasks);
+        const start = this.currentTasksPage * this.tasksPerPage;
+        const end = Math.min(start + this.tasksPerPage, allTaskGroups.length);
+        const groupsOnPage = allTaskGroups.slice(start, end);
+
+        // Select all tasks and stacks on current page
+        groupsOnPage.forEach(group => {
+            // Add all tasks from this group
+            group.tasks.forEach(task => {
+                this.selectedTasks.add(task.id);
+            });
+
+            // If group has multiple tasks, mark stack as selected
+            if (group.tasks.length > 1) {
+                this.selectedStacks.add(group.groupKey);
+            }
+        });
+
+        // Update display
+        this._updateTasksDisplay();
+    }
+
+    /**
      * Update selection UI (show/hide selection bar)
      */
     _updateSelectionUI() {
@@ -1404,6 +1450,36 @@ export class TasksPage {
         });
 
         dialog.present(this.parentWindow);
+    }
+
+    /**
+     * Handle project update event - update colors in displayed tasks
+     */
+    _onProjectUpdated(data) {
+        if (!data || !data.id) return;
+
+        const projectId = data.id;
+        const newColor = data.color;
+
+        if (!newColor) return;
+
+        // Update all templates that use this project
+        this.taskTemplates.forEach((template, key) => {
+            const keyStr = String(key);
+            if (keyStr.startsWith('stack:')) {
+                // Stack template
+                const stack = template.group;
+                if (stack && stack.latestTask && stack.latestTask.project_id === projectId) {
+                    template.updateProjectColor(newColor);
+                }
+            } else {
+                // Single task template
+                const task = template.task;
+                if (task && task.project_id === projectId) {
+                    template.updateProjectColor(newColor);
+                }
+            }
+        });
     }
 
     /**

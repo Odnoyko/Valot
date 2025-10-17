@@ -91,16 +91,30 @@ export class ProjectsPage {
         const headerBar = new Adw.HeaderBar();
 
         // Show sidebar button (start)
-        const showSidebarBtn = new Gtk.Button({
+        this.showSidebarBtn = new Gtk.Button({
             icon_name: 'sidebar-show-symbolic',
             tooltip_text: _('Show Sidebar'),
         });
-        showSidebarBtn.connect('clicked', () => {
+        this.showSidebarBtn.connect('clicked', () => {
             if (this.parentWindow && this.parentWindow.splitView) {
                 this.parentWindow.splitView.set_show_sidebar(true);
             }
         });
-        headerBar.pack_start(showSidebarBtn);
+        headerBar.pack_start(this.showSidebarBtn);
+
+        // Update button visibility based on sidebar state
+        if (this.parentWindow && this.parentWindow.splitView) {
+            const updateSidebarButtonVisibility = () => {
+                const sidebarVisible = this.parentWindow.splitView.get_show_sidebar();
+                this.showSidebarBtn.set_visible(!sidebarVisible);
+            };
+
+            // Initial state
+            updateSidebarButtonVisibility();
+
+            // Listen for sidebar visibility changes
+            this.parentWindow.splitView.connect('notify::show-sidebar', updateSidebarButtonVisibility);
+        }
 
         // Tracking widget (title area)
         const trackingWidget = this._createTrackingWidget();
@@ -819,6 +833,25 @@ export class ProjectsPage {
      */
     _clearSelection() {
         this.selectedProjects.clear();
+        this._updateProjectsDisplay();
+    }
+
+    /**
+     * Select all projects on current page (except default project ID=1)
+     */
+    _selectAllOnPage() {
+        const start = this.currentProjectsPage * this.projectsPerPage;
+        const end = Math.min(start + this.projectsPerPage, this.filteredProjects.length);
+        const projectsOnPage = this.filteredProjects.slice(start, end);
+
+        // Select all projects except default (ID=1)
+        projectsOnPage.forEach(project => {
+            if (project.id !== 1) {
+                this.selectedProjects.add(project.id);
+            }
+        });
+
+        // Update display
         this._updateProjectsDisplay();
     }
 

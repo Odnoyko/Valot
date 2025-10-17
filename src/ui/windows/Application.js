@@ -18,7 +18,7 @@ import { CoreBridge } from 'resource:///com/odnoyko/valot/ui/bridges/CoreBridge.
 
 // Import UI components
 import { ValotMainWindow } from 'resource:///com/odnoyko/valot/ui/windows/MainWindow.js';
-import { ValotCompactTracker } from 'resource:///com/odnoyko/valot/ui/windows/CompactTracker.js';
+import { CompactTrackerWindow } from 'resource:///com/odnoyko/valot/ui/windows/CompactTrackerWindow.js';
 import { Config } from 'resource:///com/odnoyko/valot/config.js';
 
 import { PreferencesDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/PreferencesDialog.js';
@@ -104,6 +104,11 @@ export const ValotApplication = GObject.registerClass(
             // Windows
             this.compactMode = false;
             this.compactWindow = null;
+
+            // Add command line option
+            this.add_main_option('compact', 'c'.charCodeAt(0),
+                0, 0,
+                'Launch in compact tracker mode', null);
         }
 
         vfunc_startup() {
@@ -284,7 +289,7 @@ export const ValotApplication = GObject.registerClass(
             }
 
             // Create compact tracker
-            this.compactWindow = new ValotCompactTracker(this, this.coreBridge, null);
+            this.compactWindow = new CompactTrackerWindow(this, this.coreBridge);
 
             // Always on top settings
             try {

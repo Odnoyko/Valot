@@ -46,7 +46,7 @@ export class TaskRowTemplate {
         const currency = this.task.client_currency || 'EUR';
         const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
 
-        // Get project color (task has project_color from TaskInstance view)
+        // Get project and client names (always show real name from DB, even for default)
         const projectName = this.task.project_name || 'No Project';
         const clientName = this.task.client_name || 'No Client';
         const dotColor = this.task.project_color || '#9a9996';
@@ -219,5 +219,33 @@ export class TaskRowTemplate {
 
     getTrackButton() {
         return this.trackButton;
+    }
+
+    /**
+     * Update project color for this task row
+     */
+    updateProjectColor(newColor) {
+        if (!this.widget || !newColor) return;
+
+        // Update task data
+        this.task.project_color = newColor;
+
+        // Recreate subtitle with new color
+        const projectName = this.task.project_name || 'No Project';
+        const clientName = this.task.client_name || 'No Client';
+        const dateText = this._formatDate(this.task.last_used_at);
+
+        const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : { isTracking: false };
+        const isCurrentlyTracking = trackingState.isTracking &&
+            trackingState.currentTaskId === this.task.task_id &&
+            trackingState.currentProjectId === this.task.project_id &&
+            trackingState.currentClientId === this.task.client_id;
+
+        const subtitle = isCurrentlyTracking
+            ? `<span foreground="${newColor}">●</span> ${projectName} • ${clientName} • <b>Currently Tracking</b> • ${dateText}`
+            : `<span foreground="${newColor}">●</span> ${projectName} • ${clientName} • ${dateText}`;
+
+        // Update subtitle in widget
+        this.widget.set_subtitle(subtitle);
     }
 }

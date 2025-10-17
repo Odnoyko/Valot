@@ -309,4 +309,48 @@ export class TaskStackTemplate {
     getTrackButton() {
         return this.trackButton;
     }
+
+    /**
+     * Update project color for this stack
+     */
+    updateProjectColor(newColor) {
+        if (!this.widget || !newColor) return;
+
+        // Update group data
+        this.group.tasks.forEach(task => {
+            task.project_color = newColor;
+        });
+        this.group.latestTask.project_color = newColor;
+
+        // Recreate subtitle with new color
+        const groupProjectName = this.group.latestTask.project_name || 'No Project';
+        const groupClientName = this.group.latestTask.client_name || 'No Client';
+
+        const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : { isTracking: false };
+        const isCurrentlyTracking = trackingState.isTracking &&
+            this.group.tasks.some(t =>
+                t.task_id === trackingState.currentTaskId &&
+                t.project_id === trackingState.currentProjectId &&
+                t.client_id === trackingState.currentClientId
+            );
+
+        const groupSubtitle = isCurrentlyTracking
+            ? `<span foreground="${newColor}">●</span> ${groupProjectName} • ${groupClientName} • <b>Currently Tracking</b>`
+            : `<span foreground="${newColor}">●</span> ${groupProjectName} • ${groupClientName}`;
+
+        // Update subtitle in widget
+        this.widget.set_subtitle(groupSubtitle);
+
+        // Update all child task rows subtitles
+        this.group.tasks.forEach((task, index) => {
+            const taskRow = this.widget.get_row_at_index(index);
+            if (taskRow) {
+                const taskProjectName = task.project_name || 'No Project';
+                const taskClientName = task.client_name || 'No Client';
+                const dateText = this._formatDate(task.last_used_at);
+                const taskSubtitle = `<span foreground="${newColor}">●</span> ${taskProjectName} • ${taskClientName} • ${dateText}`;
+                taskRow.set_subtitle(taskSubtitle);
+            }
+        });
+    }
 }

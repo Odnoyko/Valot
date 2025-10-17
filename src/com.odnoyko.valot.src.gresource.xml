@@ -8,6 +8,7 @@
     <file>ui/windows/Application.js</file>
     <file>ui/windows/MainWindow.js</file>
     <file>ui/windows/CompactTracker.js</file>
+    <file>ui/windows/CompactTrackerWindow.js</file>
 
     <!-- UI Bridges -->
     <file>ui/bridges/CoreBridge.js</file>
