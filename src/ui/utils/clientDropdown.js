@@ -6,12 +6,42 @@ import { PLACEHOLDER } from 'resource:///com/odnoyko/valot/ui/utils/commonString
  * Custom client dropdown with search functionality
  */
 export class ClientDropdown {
-    constructor(clients = [], currentClientId = 1, onClientSelected = null) {
-        this.clients = clients;
+    constructor(coreBridge, currentClientId = 1, onClientSelected = null) {
+        this.coreBridge = coreBridge;
+        this.clients = [];
         this.currentClientId = currentClientId;
         this.onClientSelected = onClientSelected;
         this.isUpdatingSelection = false;
+
+        console.log('🏗️ ClientDropdown created');
+
         this.dropdown = this._createSearchableDropdown();
+
+        // Load clients from Core
+        this._loadClients();
+
+        // Subscribe to Core events for updates
+        this._subscribeToCore();
+    }
+
+    async _loadClients() {
+        try {
+            this.clients = await this.coreBridge.getAllClients();
+            console.log('📦 ClientDropdown loaded', this.clients.length, 'clients');
+            this._updateTooltip(this.dropdownButton);
+            this._populateClientList();
+        } catch (error) {
+            console.error('Error loading clients:', error);
+            this.clients = [];
+        }
+    }
+
+    _subscribeToCore() {
+        if (!this.coreBridge) return;
+
+        this.coreBridge.onUIEvent('client-created', () => this._loadClients());
+        this.coreBridge.onUIEvent('client-updated', () => this._loadClients());
+        this.coreBridge.onUIEvent('client-deleted', () => this._loadClients());
     }
 
     _createSearchableDropdown() {

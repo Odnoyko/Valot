@@ -84,6 +84,8 @@ export const PLACEHOLDER = {
     ENTER_NAME: translate('Enter name...'),
     ENTER_DESCRIPTION: translate('Enter description...'),
     SEARCH: translate('Search...'),
+    SEARCH_PROJECTS: translate('Search projects...'),
+    SEARCH_CLIENTS: translate('Search clients...'),
     SELECT_CLIENT: translate('Select client...'),
     SELECT_PROJECT: translate('Select project...'),
     SELECT_COLOR: translate('Select color...'),

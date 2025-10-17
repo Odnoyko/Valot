@@ -150,6 +150,7 @@ entry.itemNameEntry {
 .itemsContainer row:selected {
   border: 1px solid @accent_bg_color;
 }
+
 .itemNameEntry {
   min-height: 40px;
   font-size: 18px;

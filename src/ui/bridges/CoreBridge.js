@@ -236,6 +236,20 @@ export class CoreBridge {
         return await this.core.services.taskInstances.getView(id);
     }
 
+    async createTaskInstance(data) {
+        return await this.core.services.taskInstances.create(data);
+    }
+
+    async deleteTaskInstance(id) {
+        return await this.core.services.taskInstances.delete(id);
+    }
+
+    async deleteMultipleTaskInstances(ids) {
+        for (const id of ids) {
+            await this.core.services.taskInstances.delete(id);
+        }
+    }
+
     async findOrCreateTask(name) {
         return await this.core.services.tasks.findOrCreate(name);
     }

@@ -53,6 +53,7 @@
     <file>ui/utils/widgetFactory.js</file>
     <file>ui/utils/selectorFactory.js</file>
     <file>ui/utils/clientDropdown.js</file>
+    <file>ui/utils/projectDropdown.js</file>
     <file>ui/utils/CoreImports.js</file>
     <file>ui/utils/commonStrings.js</file>
     <file>ui/utils/GestureController.js</file>

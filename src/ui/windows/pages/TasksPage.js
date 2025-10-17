@@ -4,6 +4,8 @@ import Gdk from 'gi://Gdk';
 import GLib from 'gi://GLib';
 import { TaskRowTemplate } from '../../components/complex/TaskRowTemplate.js';
 import { TaskStackTemplate } from '../../components/complex/TaskStackTemplate.js';
+import { ProjectDropdown } from 'resource:///com/odnoyko/valot/ui/utils/projectDropdown.js';
+import { ClientDropdown } from 'resource:///com/odnoyko/valot/ui/utils/clientDropdown.js';
 
 /**
  * Tasks management page
@@ -18,6 +20,20 @@ export class TasksPage {
         // Task-specific state
         this.tasks = [];
         this.filteredTasks = [];
+        this.currentTasksPage = 0;
+        this.tasksPerPage = 10;
+
+        // Selection state for stacks and tasks
+        this.selectedTasks = new Set();  // Task IDs
+        this.selectedStacks = new Set(); // Stack groupKeys
+
+        // Row tracking for selection
+        this.taskRowMap = new Map(); // taskId -> row widget
+        this.stackRowMap = new Map(); // groupKey -> row widget
+
+        // Current tracking context (project/client selection)
+        this.currentProjectId = 1;
+        this.currentClientId = 1;
 
         // Subscribe to Core events for automatic updates
         this._subscribeToCore();
@@ -47,6 +63,8 @@ export class TasksPage {
         this.coreBridge.onUIEvent('task-updated', () => {
             this.loadTasks();
         });
+
+        // Dropdowns subscribe to Core events themselves, no need to update them here
     }
 
     /**
@@ -64,10 +82,46 @@ export class TasksPage {
         const content = this._createContent();
         page.set_content(content);
 
+        // Add keyboard shortcut: Enter to start/stop tracking
+        this._setupKeyboardShortcuts(page);
+
         // Load tasks on initialization
         this.loadTasks();
 
         return page;
+    }
+
+    /**
+     * Setup keyboard shortcuts for the page
+     */
+    _setupKeyboardShortcuts(page) {
+        const keyController = new Gtk.EventControllerKey();
+
+        keyController.connect('key-pressed', (controller, keyval, keycode, state) => {
+            // Enter key to toggle tracking
+            if (keyval === Gdk.KEY_Return || keyval === Gdk.KEY_KP_Enter) {
+                // Only if not typing in search or other inputs
+                const focus = page.get_focus();
+
+                // Allow Enter in task name entry (it has its own handler)
+                if (focus === this.taskNameEntry) {
+                    return false; // Let task name entry handle it
+                }
+
+                // Allow Enter in search entry
+                if (focus && focus.constructor.name === 'GtkSearchEntry') {
+                    return false;
+                }
+
+                // Otherwise, toggle tracking
+                this._toggleTracking();
+                return true; // Event handled
+            }
+
+            return false; // Let other handlers process the event
+        });
+
+        page.add_controller(keyController);
     }
 
     _createHeaderBar() {
@@ -119,27 +173,13 @@ export class TasksPage {
         this.taskNameEntry.connect('activate', () => this._onTaskNameChanged());
         box.append(this.taskNameEntry);
 
-        // Project context button
-        this.projectBtn = new Gtk.Button({
-            icon_name: 'folder-symbolic',
-            css_classes: ['flat'],
-            tooltip_text: _('Project'),
-            width_request: 36,
-            height_request: 36,
-        });
-        this.projectBtn.connect('clicked', () => this._selectProject());
-        box.append(this.projectBtn);
+        // Project dropdown
+        this._setupProjectDropdown();
+        box.append(this.projectDropdown.getWidget());
 
-        // Client context button
-        this.clientBtn = new Gtk.Button({
-            icon_name: 'contact-new-symbolic',
-            css_classes: ['flat'],
-            tooltip_text: _('Client'),
-            width_request: 36,
-            height_request: 36,
-        });
-        this.clientBtn.connect('clicked', () => this._selectClient());
-        box.append(this.clientBtn);
+        // Client dropdown
+        this._setupClientDropdown();
+        box.append(this.clientDropdown.getWidget());
 
         // Actual time label
         this.actualTimeLabel = new Gtk.Label({
@@ -203,31 +243,50 @@ export class TasksPage {
         if (state.isTracking) {
             // Tracking active - allow editing!
             this.taskNameEntry.set_text(state.currentTaskName || '');
-            // Keep editable during tracking
             this.taskNameEntry.set_sensitive(true);
-            this.projectBtn.set_sensitive(true);
-            this.clientBtn.set_sensitive(true);
 
+            // Update dropdowns with current tracking context
+            if (state.currentProjectId && this.projectDropdown) {
+                this.currentProjectId = state.currentProjectId;
+                this.projectDropdown.setCurrentProject(state.currentProjectId);
+            }
+            if (state.currentClientId && this.clientDropdown) {
+                this.currentClientId = state.currentClientId;
+                this.clientDropdown.setSelectedClient(state.currentClientId);
+            }
+
+            // Change icon to stop, but keep green color
             this.trackButton.set_icon_name('media-playback-stop-symbolic');
             this.trackButton.set_tooltip_text(_('Stop tracking'));
-            this.trackButton.remove_css_class('suggested-action');
-            this.trackButton.add_css_class('destructive-action');
+            // Keep suggested-action (green)
+            if (!this.trackButton.has_css_class('suggested-action')) {
+                this.trackButton.add_css_class('suggested-action');
+            }
 
             this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
 
             // Start UI update timer
             this._startTrackingUITimer();
         } else {
-            // Tracking idle
-            this.taskNameEntry.set_text('');
+            // Tracking idle - KEEP task name in input (don't clear it)
             this.taskNameEntry.set_sensitive(true);
-            this.projectBtn.set_sensitive(true);
-            this.clientBtn.set_sensitive(true);
 
+            // Reset to default project/client
+            this.currentProjectId = 1;
+            this.currentClientId = 1;
+            if (this.projectDropdown) {
+                this.projectDropdown.setCurrentProject(1);
+            }
+            if (this.clientDropdown) {
+                this.clientDropdown.setSelectedClient(1);
+            }
+
+            // Change icon to play, keep green
             this.trackButton.set_icon_name('media-playback-start-symbolic');
             this.trackButton.set_tooltip_text(_('Start tracking'));
-            this.trackButton.remove_css_class('destructive-action');
-            this.trackButton.add_css_class('suggested-action');
+            if (!this.trackButton.has_css_class('suggested-action')) {
+                this.trackButton.add_css_class('suggested-action');
+            }
 
             this.actualTimeLabel.set_label('00:00:00');
 
@@ -296,8 +355,12 @@ export class TasksPage {
                     console.log(`Using task: ${task.name}`);
                 }
 
-                // Start tracking with task ID
-                await this.coreBridge.startTracking(task.id, null, null);
+                // Start tracking with task ID and selected project/client
+                await this.coreBridge.startTracking(
+                    task.id,
+                    this.currentProjectId === 1 ? null : this.currentProjectId,
+                    this.currentClientId === 1 ? null : this.currentClientId
+                );
             } catch (error) {
                 console.error('Error starting tracking:', error);
             }
@@ -339,28 +402,36 @@ export class TasksPage {
     async _onTaskNameChanged() {
         if (!this.coreBridge) return;
 
-        const state = this.coreBridge.getTrackingState();
-        if (!state.isTracking) return; // Only update during tracking
-
-        const newName = this.taskNameEntry.get_text().trim();
-        if (!newName || newName === state.currentTaskName) return;
-
-        try {
-            await this.coreBridge.updateCurrentTaskName(newName);
-            console.log(`✏️ Task name updated: ${newName}`);
-        } catch (error) {
-            console.error('Error updating task name:', error);
-        }
+        // Enter always toggles tracking (start/stop/start/stop...)
+        this._toggleTracking();
     }
 
-    _selectProject() {
-        // TODO: Open project selector
-        console.log('TODO: Select project');
+    /**
+     * Setup project dropdown (loads data from Core itself)
+     */
+    _setupProjectDropdown() {
+        this.projectDropdown = new ProjectDropdown(
+            this.coreBridge,
+            this.currentProjectId,
+            (selectedProject) => {
+                this.currentProjectId = selectedProject.id;
+                console.log('Selected project:', selectedProject.name);
+            }
+        );
     }
 
-    _selectClient() {
-        // TODO: Open client selector
-        console.log('TODO: Select client');
+    /**
+     * Setup client dropdown (loads data from Core itself)
+     */
+    _setupClientDropdown() {
+        this.clientDropdown = new ClientDropdown(
+            this.coreBridge,
+            this.currentClientId,
+            (selectedClient) => {
+                this.currentClientId = selectedClient.id;
+                console.log('Selected client:', selectedClient.name);
+            }
+        );
     }
 
     _createContent() {
@@ -381,6 +452,10 @@ export class TasksPage {
         const scrolledWindow = this._createTasksList();
         contentBox.append(scrolledWindow);
 
+        // Context bar (pagination or selection mode)
+        const contextBar = this._createContextBar();
+        contentBox.append(contextBar);
+
         return contentBox;
     }
 
@@ -397,6 +472,10 @@ export class TasksPage {
             model: Gtk.StringList.new([_('All'), _('Today'), _('This Week'), _('This Month')]),
             selected: 0,
         });
+        this.taskFilter.connect('notify::selected', () => {
+            this.currentTasksPage = 0;
+            this._filterTasks(this.taskSearch.get_text());
+        });
         box.append(this.taskFilter);
 
         // Search entry
@@ -407,6 +486,7 @@ export class TasksPage {
 
         this.taskSearch.connect('search-changed', () => {
             const query = this.taskSearch.get_text();
+            this.currentTasksPage = 0;
             this._filterTasks(query);
         });
 
@@ -423,12 +503,88 @@ export class TasksPage {
 
         this.taskList = new Gtk.ListBox({
             css_classes: ['content-box'],
-            selection_mode: Gtk.SelectionMode.SINGLE,
+            selection_mode: Gtk.SelectionMode.NONE,
         });
 
         scrolledWindow.set_child(this.taskList);
 
         return scrolledWindow;
+    }
+
+    /**
+     * Create context bar (pagination or selection mode)
+     */
+    _createContextBar() {
+        this.contextBar = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            halign: Gtk.Align.CENTER,
+            margin_top: 12,
+            visible: false, // Hidden by default
+        });
+
+        // Pagination mode widgets
+        this.paginationBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            halign: Gtk.Align.CENTER,
+        });
+
+        this.prevTasksButton = new Gtk.Button({
+            label: _('Back'),
+            css_classes: ['flat'],
+        });
+        this.prevTasksButton.connect('clicked', () => this._previousPage());
+
+        this.tasksPageInfo = new Gtk.Label({
+            label: _('Page 1 of 1'),
+            css_classes: ['dim-label'],
+        });
+
+        this.nextTasksButton = new Gtk.Button({
+            label: _('Next'),
+            css_classes: ['flat'],
+        });
+        this.nextTasksButton.connect('clicked', () => this._nextPage());
+
+        this.paginationBox.append(this.prevTasksButton);
+        this.paginationBox.append(this.tasksPageInfo);
+        this.paginationBox.append(this.nextTasksButton);
+
+        // Selection mode widgets
+        this.selectionBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            halign: Gtk.Align.CENTER,
+            visible: false,
+        });
+
+        const cancelBtn = new Gtk.Button({
+            label: _('Cancel'),
+            css_classes: ['flat'],
+        });
+        cancelBtn.connect('clicked', () => this._clearSelection());
+
+        this.selectionLabel = new Gtk.Label({
+            label: '0 selected',
+            css_classes: ['dim-label'],
+        });
+
+        const deleteBtn = new Gtk.Button({
+            label: _('Delete'),
+            css_classes: ['destructive-action'],
+        });
+        deleteBtn.connect('clicked', () => this._deleteSelectedTasks());
+
+        this.selectionBox.append(cancelBtn);
+        this.selectionBox.append(this.selectionLabel);
+        this.selectionBox.append(deleteBtn);
+
+        // Add both to context bar
+        this.contextBar.append(this.paginationBox);
+        this.contextBar.append(this.selectionBox);
+
+        return this.contextBar;
     }
 
     /**
@@ -482,17 +638,39 @@ export class TasksPage {
             child = next;
         }
 
+        // Clear row maps (but keep selections)
+        this.taskRowMap.clear();
+        this.stackRowMap.clear();
+
         if (!this.filteredTasks || this.filteredTasks.length === 0) {
-            // Show empty state
+            this.currentTasksPage = 0;
             this._showEmptyState();
+            this._updatePaginationInfo();
+            this._updateSelectionUI();
             return;
         }
 
-        // Group similar tasks by name+project+client (old design)
-        const taskGroups = this._groupSimilarTasks(this.filteredTasks);
+        // Group all tasks first
+        const allTaskGroups = this._groupSimilarTasks(this.filteredTasks);
 
-        // Render task groups
-        this._renderTaskGroups(taskGroups);
+        // Calculate pagination based on GROUPS
+        const totalPages = Math.ceil(allTaskGroups.length / this.tasksPerPage);
+
+        // Adjust current page if needed
+        if (this.currentTasksPage >= totalPages && totalPages > 0) {
+            this.currentTasksPage = totalPages - 1;
+        }
+
+        const start = this.currentTasksPage * this.tasksPerPage;
+        const end = Math.min(start + this.tasksPerPage, allTaskGroups.length);
+        const groupsToShow = allTaskGroups.slice(start, end);
+
+        // Render paginated groups
+        this._renderTaskGroups(groupsToShow);
+
+        // Update pagination/selection UI
+        this._updatePaginationInfo();
+        this._updateSelectionUI();
     }
 
     /**
@@ -550,10 +728,37 @@ export class TasksPage {
                 const task = group.tasks[0];
                 const template = new TaskRowTemplate(task, this);
                 row = template.getWidget();
+
+                // Add to task row map for selection tracking
+                this.taskRowMap.set(task.id, row);
+
+                // Add right-click selection handler
+                this._addTaskSelectionHandlers(row, task);
+
+                // Apply selection styling if selected
+                if (this.selectedTasks.has(task.id)) {
+                    row.add_css_class('selected-task');
+                }
             } else {
                 // Multiple tasks - use TaskStackTemplate (stack/expander)
                 const template = new TaskStackTemplate(group, this);
                 row = template.getWidget();
+
+                // Add to stack row map for selection tracking
+                this.stackRowMap.set(group.groupKey, row);
+
+                // Add right-click selection handler
+                this._addStackSelectionHandlers(row, group);
+
+                // Apply selection styling if selected
+                if (this.selectedStacks.has(group.groupKey)) {
+                    row.add_css_class('selected-task');
+                }
+
+                // Handle collapse/expand events
+                row.connect('notify::expanded', () => {
+                    this._onStackExpandedChanged(row, group);
+                });
             }
 
             if (row) {
@@ -659,9 +864,302 @@ export class TasksPage {
     }
 
     /**
+     * Handle stack expand/collapse
+     */
+    _onStackExpandedChanged(row, group) {
+        const isExpanded = row.get_expanded();
+
+        if (!isExpanded) {
+            // Collapsing - if not all tasks are selected, deselect all tasks in this stack
+            if (!this.selectedStacks.has(group.groupKey)) {
+                group.tasks.forEach(task => {
+                    this.selectedTasks.delete(task.id);
+                });
+                this._updateSelectionUI();
+            }
+        }
+        // When expanding, TaskStackTemplate already applies selection styling to individual tasks
+    }
+
+    /**
+     * Add right-click selection handlers for single task
+     */
+    _addTaskSelectionHandlers(row, task) {
+        const rightClick = new Gtk.GestureClick({
+            button: 3, // Right mouse button
+        });
+
+        rightClick.connect('pressed', (gesture, n_press, x, y) => {
+            this._toggleTaskSelection(task.id, row);
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED);
+        });
+
+        row.add_controller(rightClick);
+    }
+
+    /**
+     * Add right-click selection handlers for task stack
+     */
+    _addStackSelectionHandlers(row, group) {
+        const rightClick = new Gtk.GestureClick({
+            button: 3, // Right mouse button
+        });
+
+        rightClick.connect('pressed', (gesture, n_press, x, y) => {
+            this._toggleStackSelection(group.groupKey, row);
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED);
+        });
+
+        row.add_controller(rightClick);
+    }
+
+    /**
+     * Toggle single task selection
+     */
+    _toggleTaskSelection(taskId, row) {
+        if (this.selectedTasks.has(taskId)) {
+            this.selectedTasks.delete(taskId);
+            row.remove_css_class('selected-task');
+
+            // Check if this task belongs to a selected stack and deselect the stack
+            const taskGroups = this._groupSimilarTasks(this.filteredTasks);
+            for (const group of taskGroups) {
+                if (group.tasks.some(t => t.id === taskId) && this.selectedStacks.has(group.groupKey)) {
+                    this.selectedStacks.delete(group.groupKey);
+                    // Also remove visual selection from stack row if visible
+                    const stackRow = this.stackRowMap.get(group.groupKey);
+                    if (stackRow) {
+                        stackRow.remove_css_class('selected-task');
+                    }
+                    break;
+                }
+            }
+        } else {
+            this.selectedTasks.add(taskId);
+            row.add_css_class('selected-task');
+
+            // Check if all tasks in the stack are now selected
+            const taskGroups = this._groupSimilarTasks(this.filteredTasks);
+            for (const group of taskGroups) {
+                if (group.tasks.some(t => t.id === taskId)) {
+                    const allSelected = group.tasks.every(t => this.selectedTasks.has(t.id));
+                    if (allSelected && group.tasks.length > 1) {
+                        this.selectedStacks.add(group.groupKey);
+                        const stackRow = this.stackRowMap.get(group.groupKey);
+                        if (stackRow) {
+                            stackRow.add_css_class('selected-task');
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        this._updateSelectionUI();
+    }
+
+    /**
+     * Toggle stack selection - selects/deselects ALL tasks in stack
+     */
+    _toggleStackSelection(groupKey, row) {
+        const taskGroups = this._groupSimilarTasks(this.filteredTasks);
+        const group = taskGroups.find(g => g.groupKey === groupKey);
+
+        if (!group) return;
+
+        if (this.selectedStacks.has(groupKey)) {
+            // DESELECT stack and all its tasks
+            this.selectedStacks.delete(groupKey);
+            row.remove_css_class('selected-task');
+
+            // Remove all tasks from this stack
+            group.tasks.forEach(task => {
+                this.selectedTasks.delete(task.id);
+                // Also update visual state of task rows if they're visible
+                const taskRow = this.taskRowMap.get(task.id);
+                if (taskRow) {
+                    taskRow.remove_css_class('selected-task');
+                }
+            });
+        } else {
+            // SELECT stack and all its tasks
+            this.selectedStacks.add(groupKey);
+            row.add_css_class('selected-task');
+
+            // Add all tasks from this stack
+            group.tasks.forEach(task => {
+                this.selectedTasks.add(task.id);
+                // Also update visual state of task rows if they're visible
+                const taskRow = this.taskRowMap.get(task.id);
+                if (taskRow) {
+                    taskRow.add_css_class('selected-task');
+                }
+            });
+        }
+
+        this._updateSelectionUI();
+    }
+
+    /**
+     * Clear all selections
+     */
+    _clearSelection() {
+        this.selectedTasks.clear();
+        this.selectedStacks.clear();
+        this._updateTasksDisplay();
+    }
+
+    /**
+     * Update selection UI (show/hide selection bar)
+     */
+    _updateSelectionUI() {
+        // Count only selectedTasks (selectedStacks is just a marker)
+        const selectedCount = this.selectedTasks.size;
+        const totalPages = Math.ceil(
+            this._groupSimilarTasks(this.filteredTasks).length / this.tasksPerPage
+        );
+
+        if (selectedCount > 0) {
+            // Show selection mode
+            this.contextBar.set_visible(true);
+            this.paginationBox.set_visible(false);
+            this.selectionBox.set_visible(true);
+            this.selectionLabel.set_label(`${selectedCount} selected`);
+        } else {
+            // Show pagination mode only if more than 1 page
+            if (totalPages > 1) {
+                this.contextBar.set_visible(true);
+                this.paginationBox.set_visible(true);
+                this.selectionBox.set_visible(false);
+            } else {
+                // Hide context bar when 1 page and no selection
+                this.contextBar.set_visible(false);
+            }
+        }
+    }
+
+    /**
+     * Update pagination info
+     */
+    _updatePaginationInfo() {
+        const totalGroups = this._groupSimilarTasks(this.filteredTasks).length;
+        const totalPages = Math.max(1, Math.ceil(totalGroups / this.tasksPerPage));
+        const currentPage = Math.min(this.currentTasksPage + 1, totalPages);
+
+        this.tasksPageInfo.set_label(`Page ${currentPage} of ${totalPages}`);
+        this.prevTasksButton.set_sensitive(this.currentTasksPage > 0);
+        this.nextTasksButton.set_sensitive(this.currentTasksPage < totalPages - 1);
+    }
+
+    /**
+     * Previous page
+     */
+    _previousPage() {
+        if (this.currentTasksPage > 0) {
+            this.currentTasksPage--;
+            this._updateTasksDisplay();
+        }
+    }
+
+    /**
+     * Next page
+     */
+    _nextPage() {
+        const totalGroups = this._groupSimilarTasks(this.filteredTasks).length;
+        const totalPages = Math.ceil(totalGroups / this.tasksPerPage);
+        if (this.currentTasksPage < totalPages - 1) {
+            this.currentTasksPage++;
+            this._updateTasksDisplay();
+        }
+    }
+
+    /**
+     * Delete selected tasks
+     */
+    async _deleteSelectedTasks() {
+        if (this.selectedTasks.size === 0) return;
+
+        // Collect all tasks to delete (only from selectedTasks)
+        const tasksToDelete = [];
+
+        this.selectedTasks.forEach(taskId => {
+            const task = this.filteredTasks.find(t => t.id === taskId);
+            if (task) tasksToDelete.push(task);
+        });
+
+        if (tasksToDelete.length === 0) return;
+
+        // Show confirmation dialog
+        const dialog = new Adw.AlertDialog({
+            heading: _('Delete Tasks'),
+            body: `Are you sure you want to delete ${tasksToDelete.length} task(s)?`,
+        });
+
+        dialog.add_response('cancel', _('Cancel'));
+        dialog.add_response('delete', _('Delete'));
+        dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE);
+
+        dialog.connect('response', async (dialog, response) => {
+            if (response === 'delete') {
+                try {
+                    // Save task instance data for undo (without TimeEntries for now)
+                    const deletedTaskInstances = tasksToDelete.map(t => ({
+                        id: t.id,
+                        task_id: t.task_id,
+                        project_id: t.project_id,
+                        client_id: t.client_id,
+                        task_name: t.task_name,
+                    }));
+                    const idsToDelete = deletedTaskInstances.map(t => t.id);
+
+                    // Delete TaskInstances via Core (will CASCADE delete TimeEntries)
+                    await this.coreBridge.deleteMultipleTaskInstances(idsToDelete);
+
+                    // Clear selection
+                    this.selectedTasks.clear();
+                    this.selectedStacks.clear();
+
+                    // Reload tasks
+                    await this.loadTasks();
+
+                    // Show toast with Undo
+                    const message = idsToDelete.length === 1
+                        ? _('Task deleted')
+                        : _(`${idsToDelete.length} tasks deleted`);
+
+                    if (this.parentWindow && this.parentWindow.showToastWithAction) {
+                        this.parentWindow.showToastWithAction(message, _('Undo'), async () => {
+                            try {
+                                // Restore deleted task instances
+                                for (const taskInstance of deletedTaskInstances) {
+                                    // Restore TaskInstance (TimeEntries are lost, but task instance is back)
+                                    await this.coreBridge.createTaskInstance({
+                                        task_id: taskInstance.task_id,
+                                        project_id: taskInstance.project_id,
+                                        client_id: taskInstance.client_id,
+                                    });
+                                }
+                                await this.loadTasks();
+                            } catch (error) {
+                                console.error('Error restoring task instances:', error);
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error deleting tasks:', error);
+                }
+            }
+            dialog.close();
+        });
+
+        dialog.present(this.parentWindow);
+    }
+
+    /**
      * Refresh page data
      */
     async refresh() {
         await this.loadTasks();
+        // Dropdowns reload themselves automatically via Core events
     }
 }

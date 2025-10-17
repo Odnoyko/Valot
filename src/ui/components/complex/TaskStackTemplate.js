@@ -142,6 +142,21 @@ export class TaskStackTemplate {
             });
             taskRow.add_controller(gesture);
 
+            // Add right-click selection for individual tasks in stack
+            if (this.parentWindow._addTaskSelectionHandlers) {
+                this.parentWindow._addTaskSelectionHandlers(taskRow, task);
+            }
+
+            // Register task row in taskRowMap for selection tracking
+            if (this.parentWindow.taskRowMap) {
+                this.parentWindow.taskRowMap.set(task.id, taskRow);
+            }
+
+            // Apply selection styling if task is selected
+            if (this.parentWindow.selectedTasks && this.parentWindow.selectedTasks.has(task.id)) {
+                taskRow.add_css_class('selected-task');
+            }
+
             groupRow.add_row(taskRow);
         });
     }
