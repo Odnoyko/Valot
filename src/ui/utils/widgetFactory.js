@@ -1,6 +1,7 @@
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
 import { TOOLTIP, BUTTON } from 'resource:///com/odnoyko/valot/ui/utils/commonStrings.js';
+import { getCurrencySymbol as getCurrencySymbolFromData } from 'resource:///com/odnoyko/valot/data/currencies.js';
 // Note: PAGINATION is not in commonStrings, using inline strings for now
 
 /**
@@ -519,28 +520,29 @@ export class WidgetFactory {
         }
 
         // Track button
+        let trackButton = null;
         if (showTrackButton) {
-            const trackBtn = new Gtk.Button({
+            trackButton = new Gtk.Button({
                 icon_name: 'media-playback-start-symbolic',
                 css_classes: ['flat'],
                 tooltip_text: _('Start tracking')
             });
 
             if (onTrackClick) {
-                trackBtn.connect('clicked', onTrackClick);
+                trackButton.connect('clicked', onTrackClick);
             }
 
             // Apply gray color to the icon
-            const icon = trackBtn.get_first_child();
+            const icon = trackButton.get_first_child();
             if (icon) {
                 icon.add_css_class('dim-label');
             }
 
-            buttonBox.append(trackBtn);
+            buttonBox.append(trackButton);
         }
 
         suffixBox.append(buttonBox);
-        return { suffixBox, buttonBox, timeLabel, moneyLabel };
+        return { suffixBox, buttonBox, timeLabel, moneyLabel, trackButton };
     }
 
     /**
@@ -572,22 +574,10 @@ export class WidgetFactory {
     }
 
     /**
-     * Creates a currency symbol mapping
+     * Get currency symbol using global currencies data
      */
     static getCurrencySymbol(currency) {
-        const symbols = {
-            'USD': '$',
-            'EUR': '€',
-            'GBP': '£',
-            'JPY': '¥',
-            'CAD': 'C$',
-            'AUD': 'A$',
-            'CHF': 'CHF',
-            'CNY': '¥',
-            'SEK': 'kr',
-            'NZD': 'NZ$'
-        };
-        return symbols[currency] || currency;
+        return getCurrencySymbolFromData(currency);
     }
 
     /**

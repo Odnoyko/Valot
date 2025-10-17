@@ -135,4 +135,16 @@ export class TaskService extends BaseService {
         const id = await this.create({ name: taskName });
         return await this.getById(id);
     }
+    /**
+     * Clean up orphaned tasks (tasks with no instances)
+     */
+    async cleanupOrphanedTasks() {
+        const sql = `
+            DELETE FROM Task
+            WHERE id NOT IN (
+                SELECT DISTINCT task_id FROM TaskInstance
+            )
+        `;
+        await this.execute(sql);
+    }
 }

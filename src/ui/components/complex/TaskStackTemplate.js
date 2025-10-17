@@ -32,11 +32,25 @@ export class TaskStackTemplate {
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     }
 
+    _formatDate(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}.${month}.${year}`;
+    }
+
     _createStackWidget() {
         // Check if any task in this stack is currently being tracked
+        // Must match unique combination of task + project + client
         const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : { isTracking: false };
         const isCurrentlyTracking = trackingState.isTracking &&
-            this.group.tasks.some(t => t.task_id === trackingState.currentTaskId);
+            this.group.tasks.some(t =>
+                t.task_id === trackingState.currentTaskId &&
+                t.project_id === trackingState.currentProjectId &&
+                t.client_id === trackingState.currentClientId
+            );
 
         // Get project color from latest task
         const groupProjectName = this.group.latestTask.project_name || 'No Project';
@@ -74,73 +88,197 @@ export class TaskStackTemplate {
         let timeText = '';
         let moneyText = '';
 
+        // Store references for real-time updates
+        this.timeLabel = null;
+        this.moneyLabel = null;
+
         // Check tracking state from Core
+        // Must match unique combination of task + project + client
         const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : { isTracking: false };
         const isCurrentlyTracking = trackingState.isTracking &&
-            this.group.tasks.some(t => t.task_id === trackingState.currentTaskId);
+            this.group.tasks.some(t =>
+                t.task_id === trackingState.currentTaskId &&
+                t.project_id === trackingState.currentProjectId &&
+                t.client_id === trackingState.currentClientId
+            );
 
-        // Prepare time text (SAME UI logic)
-        if (isCurrentlyTracking) {
-            timeText = `● Tracking`;
-        } else if (this.group.totalDuration > 0) {
+        // Prepare time text (show total time even when tracking)
+        if (this.group.totalDuration > 0) {
             timeText = this._formatDuration(this.group.totalDuration);
         }
 
-        // Prepare money text (SAME UI)
+        // Prepare money text (WidgetFactory shows money BEFORE time automatically)
         if (this.group.totalCost > 0) {
             const currency = this.group.latestTask.client_currency || 'EUR';
             const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
             moneyText = `${currencySymbol}${this.group.totalCost.toFixed(2)}`;
         }
 
+        // Use accent color for time when tracking
+        const timeCssClasses = isCurrentlyTracking ? ['caption'] : ['caption', 'dim-label'];
+
         // Create suffix box (SAME UI)
-        const { suffixBox } = WidgetFactory.createTaskSuffixBox({
+        const { suffixBox, timeLabel, moneyLabel, trackButton } = WidgetFactory.createTaskSuffixBox({
             timeText: timeText,
             moneyText: moneyText,
+            css_classes: timeCssClasses,
             showEditButton: false,
             showTrackButton: true,
-            showCostTracking: this.parentWindow.showCostTracking !== false,
+            showCostTracking: true, // Always show cost tracking
             onTrackClick: async () => {
-                // Use Core to start tracking latest task in stack
+                // Handle stack tracking - check if currently tracking any task in stack
                 if (this.coreBridge && this.group.latestTask) {
                     try {
-                        await this.coreBridge.startTracking(
-                            this.group.latestTask.task_id,
-                            this.group.latestTask.project_id,
-                            this.group.latestTask.client_id
-                        );
+                        const trackingState = this.coreBridge.getTrackingState();
+                        // Check unique combination of task + project + client
+                        const isTrackingThisStack = trackingState.isTracking &&
+                            this.group.tasks.some(t =>
+                                t.task_id === trackingState.currentTaskId &&
+                                t.project_id === trackingState.currentProjectId &&
+                                t.client_id === trackingState.currentClientId
+                            );
+
+                        if (isTrackingThisStack) {
+                            // Stop tracking if any task in this stack is being tracked
+                            await this.coreBridge.stopTracking();
+
+                            // Immediately update button icon
+                            if (this.trackButton) {
+                                this.trackButton.set_icon_name('media-playback-start-symbolic');
+                                this.trackButton.set_tooltip_text(_('Start tracking'));
+                            }
+                        } else {
+                            // Start tracking the latest task in stack
+                            await this.coreBridge.startTracking(
+                                this.group.latestTask.task_id,
+                                this.group.latestTask.project_id,
+                                this.group.latestTask.client_id
+                            );
+
+                            // Immediately update button icon
+                            if (this.trackButton) {
+                                this.trackButton.set_icon_name('media-playback-stop-symbolic');
+                                this.trackButton.set_tooltip_text(_('Stop tracking'));
+                            }
+                        }
                     } catch (error) {
-                        console.error('Error starting tracking:', error);
+                        console.error('Error toggling tracking:', error);
                     }
                 }
             }
         });
 
+        // Store label and button references for real-time updates
+        this.timeLabel = timeLabel;
+        this.moneyLabel = moneyLabel;
+        this.trackButton = trackButton;
+
+        // Set track button icon based on tracking state
+        if (trackButton) {
+            if (isCurrentlyTracking) {
+                trackButton.set_icon_name('media-playback-stop-symbolic');
+                trackButton.set_tooltip_text(_('Stop tracking'));
+            } else {
+                trackButton.set_icon_name('media-playback-start-symbolic');
+                trackButton.set_tooltip_text(_('Start tracking'));
+            }
+        }
+
+        // Add accent color to money label when tracking
+        if (isCurrentlyTracking && moneyLabel) {
+            moneyLabel.remove_css_class('dim-label');
+        }
+
         return suffixBox;
     }
 
     _addTaskRows(groupRow) {
-        // Add individual task rows to the stack (SAME UI)
+        // Add individual task rows to the stack
         this.group.tasks.forEach(task => {
-            const cost = (task.total_time / 3600) * (task.client_rate || 0);
-            const timeText = task.total_time > 0 ? this._formatDuration(task.total_time) : '';
-            const currency = task.client_currency || 'EUR';
-            const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
-            const costText = cost > 0 ? ` • ${currencySymbol}${cost.toFixed(2)}` : '';
+            // Check if THIS SPECIFIC task instance is currently being tracked
+            // Must match task instance ID, not just task_id
+            const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : { isTracking: false };
+            const isCurrentlyTracking = trackingState.isTracking &&
+                trackingState.currentTaskInstanceId === task.id;
+
+            // Format date for subtitle
+            const dateText = this._formatDate(task.last_used_at);
 
             const taskRow = new Adw.ActionRow({
                 title: this._escapeMarkup(task.task_name),
-                subtitle: `${timeText}${costText}`
+                subtitle: isCurrentlyTracking
+                    ? `<b>Currently Tracking</b> • ${dateText}`
+                    : dateText,
+                use_markup: true
             });
 
-            // Add click to edit
-            const gesture = new Gtk.GestureClick();
-            gesture.connect('released', () => {
+            // Apply tracking state styling
+            if (isCurrentlyTracking) {
+                taskRow.add_css_class('tracking-active');
+            }
+
+            // Apply selection styling if task is selected
+            if (this.parentWindow.selectedTasks && this.parentWindow.selectedTasks.has(task.id)) {
+                taskRow.add_css_class('selected-task');
+            }
+
+            // Create suffix box with time and edit button
+            const taskSuffixBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 12,
+                halign: Gtk.Align.END
+            });
+
+            // Add time display (cost • duration) for individual tasks
+            if (!isCurrentlyTracking && task.total_time > 0) {
+                const cost = (task.total_time / 3600) * (task.client_rate || 0);
+                const currency = task.client_currency || 'EUR';
+                const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
+
+                let labelText = this._formatDuration(task.total_time);
+
+                // If has cost, show: $0.01 • 00:00:01
+                if (cost > 0) {
+                    labelText = `${currencySymbol}${cost.toFixed(2)} • ${this._formatDuration(task.total_time)}`;
+                }
+
+                const taskTimeLabel = new Gtk.Label({
+                    label: labelText,
+                    css_classes: ['caption', 'dim-label'],
+                    halign: Gtk.Align.END
+                });
+
+                taskSuffixBox.append(taskTimeLabel);
+            } else if (isCurrentlyTracking) {
+                // Show active indicator for currently tracking task within stack
+                const activeLabel = new Gtk.Label({
+                    label: `● Tracked`,
+                    css_classes: ['caption'],
+                    halign: Gtk.Align.END
+                });
+                taskSuffixBox.append(activeLabel);
+            }
+
+            // Create button container for individual task (only edit button)
+            const taskButtonBox = new Gtk.Box({
+                spacing: 6
+            });
+
+            // Edit button only for tasks inside stacks
+            const editBtn = new Gtk.Button({
+                icon_name: 'document-edit-symbolic',
+                css_classes: ['flat'],
+                tooltip_text: 'Edit Task'
+            });
+            editBtn.connect('clicked', () => {
                 if (this.parentWindow._editTaskInstance) {
                     this.parentWindow._editTaskInstance(task.id);
                 }
             });
-            taskRow.add_controller(gesture);
+            taskButtonBox.append(editBtn);
+
+            taskSuffixBox.append(taskButtonBox);
+            taskRow.add_suffix(taskSuffixBox);
 
             // Add right-click selection for individual tasks in stack
             if (this.parentWindow._addTaskSelectionHandlers) {
@@ -152,16 +290,23 @@ export class TaskStackTemplate {
                 this.parentWindow.taskRowMap.set(task.id, taskRow);
             }
 
-            // Apply selection styling if task is selected
-            if (this.parentWindow.selectedTasks && this.parentWindow.selectedTasks.has(task.id)) {
-                taskRow.add_css_class('selected-task');
-            }
-
             groupRow.add_row(taskRow);
         });
     }
 
     getWidget() {
         return this.widget;
+    }
+
+    getTimeLabel() {
+        return this.timeLabel;
+    }
+
+    getMoneyLabel() {
+        return this.moneyLabel;
+    }
+
+    getTrackButton() {
+        return this.trackButton;
     }
 }

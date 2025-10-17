@@ -15,7 +15,7 @@ export class TimeTrackingService extends BaseService {
         if (currentState.isTracking) {
             await this.stop();
         }
-        // Always create new task instance for each tracking session (like old system)
+        // Always create NEW task instance for each tracking session (even if combination exists)
         const taskInstance = await this.core.services.taskInstances.create({
             task_id: taskId,
             project_id: projectId,
@@ -34,7 +34,9 @@ export class TimeTrackingService extends BaseService {
             isTracking: true,
             currentTaskId: taskId,
             currentTaskName: task.name,
+            currentTaskInstanceId: taskInstance.id,
             currentProjectId: projectId,
+            currentClientId: clientId,
             startTime: startTime,
             elapsedSeconds: 0,
         });
@@ -86,7 +88,9 @@ export class TimeTrackingService extends BaseService {
             isTracking: false,
             currentTaskId: null,
             currentTaskName: null,
+            currentTaskInstanceId: null,
             currentProjectId: null,
+            currentClientId: null,
             startTime: null,
             elapsedSeconds: 0,
         });
@@ -94,42 +98,67 @@ export class TimeTrackingService extends BaseService {
     }
     /**
      * Update current tracking task name
+     * Switches TaskInstance to a different Task instead of modifying the existing Task
      */
     async updateCurrentTaskName(newName) {
         const currentState = this.state.getTrackingState();
-        if (!currentState.isTracking || !currentState.currentTaskId) {
+        if (!currentState.isTracking || !currentState.currentTaskInstanceId) {
             throw new Error('Not currently tracking');
         }
 
-        // Update task in database
-        await this.core.services.tasks.update(currentState.currentTaskId, { name: newName });
+        console.log(`🔧 Core: Updating task name from "${currentState.currentTaskName}" to "${newName}"`);
+
+        // Find or create task with new name
+        const newTask = await this.core.services.tasks.findOrCreate(newName);
+        console.log(`✅ Core: Using task "${newName}" (id: ${newTask.id})`)
+
+        // Update TaskInstance to point to the new task
+        await this.core.services.taskInstances.update(currentState.currentTaskInstanceId, {
+            task_id: newTask.id
+        });
+        console.log(`✅ Core: TaskInstance ${currentState.currentTaskInstanceId} switched to task ${newTask.id}`);
 
         // Update state
         this.state.updateTrackingState({
+            currentTaskId: newTask.id,
             currentTaskName: newName,
         });
+        console.log(`✅ Core: Tracking state updated with new task`);
 
         this.events.emit(CoreEvents.TRACKING_UPDATED, {
-            taskId: currentState.currentTaskId,
+            taskId: newTask.id,
             taskName: newName,
         });
+        console.log(`📡 Core: TRACKING_UPDATED event emitted`);
     }
 
     /**
      * Update current tracking project/client
-     * This will create a new TaskInstance and TimeEntry
+     * Updates the CURRENT instance instead of creating a new one
      */
     async updateCurrentProjectClient(projectId = null, clientId = null) {
         const currentState = this.state.getTrackingState();
-        if (!currentState.isTracking || !currentState.currentTaskId) {
+        if (!currentState.isTracking || !currentState.currentTaskInstanceId) {
             throw new Error('Not currently tracking');
         }
 
-        // Stop current tracking
-        await this.stop();
+        // Update the current TaskInstance with new project/client
+        await this.core.services.taskInstances.update(currentState.currentTaskInstanceId, {
+            project_id: projectId,
+            client_id: clientId
+        });
 
-        // Start new tracking with same task but different project/client
-        await this.start(currentState.currentTaskId, projectId, clientId);
+        // Update state
+        this.state.updateTrackingState({
+            currentProjectId: projectId,
+            currentClientId: clientId,
+        });
+
+        this.events.emit(CoreEvents.TRACKING_UPDATED, {
+            taskInstanceId: currentState.currentTaskInstanceId,
+            projectId: projectId,
+            clientId: clientId,
+        });
     }
 
     /**
@@ -165,6 +194,26 @@ export class TimeTrackingService extends BaseService {
      */
     getCurrentTracking() {
         return this.state.getTrackingState();
+    }
+
+    /**
+     * Get total completed time for current task instance
+     * (excludes the active/current time entry)
+     */
+    async getCurrentTaskOldTime() {
+        const currentState = this.state.getTrackingState();
+        if (!currentState.isTracking || !currentState.currentTaskInstanceId) {
+            return 0;
+        }
+
+        const sql = `
+            SELECT COALESCE(SUM(duration), 0) as total
+            FROM TimeEntry
+            WHERE task_instance_id = ${currentState.currentTaskInstanceId}
+                AND end_time IS NOT NULL
+        `;
+        const results = await this.query(sql);
+        return results.length > 0 ? results[0].total : 0;
     }
     /**
      * Create a time entry

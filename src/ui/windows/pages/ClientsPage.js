@@ -68,6 +68,13 @@ export class ClientsPage {
         // Load clients on initialization
         this.loadClients();
 
+        // Prevent search input from auto-focusing on startup
+        if (this.clientList) {
+            // Set focus to the client list instead of search
+            this.clientList.set_can_focus(true);
+            this.clientList.grab_focus();
+        }
+
         return page;
     }
 

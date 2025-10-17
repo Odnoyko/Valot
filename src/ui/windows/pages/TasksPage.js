@@ -6,6 +6,7 @@ import { TaskRowTemplate } from '../../components/complex/TaskRowTemplate.js';
 import { TaskStackTemplate } from '../../components/complex/TaskStackTemplate.js';
 import { ProjectDropdown } from 'resource:///com/odnoyko/valot/ui/utils/projectDropdown.js';
 import { ClientDropdown } from 'resource:///com/odnoyko/valot/ui/utils/clientDropdown.js';
+import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/data/currencies.js';
 
 /**
  * Tasks management page
@@ -21,7 +22,7 @@ export class TasksPage {
         this.tasks = [];
         this.filteredTasks = [];
         this.currentTasksPage = 0;
-        this.tasksPerPage = 10;
+        this.tasksPerPage = 25;
 
         // Selection state for stacks and tasks
         this.selectedTasks = new Set();  // Task IDs
@@ -30,6 +31,9 @@ export class TasksPage {
         // Row tracking for selection
         this.taskRowMap = new Map(); // taskId -> row widget
         this.stackRowMap = new Map(); // groupKey -> row widget
+
+        // Template tracking for real-time updates
+        this.taskTemplates = new Map(); // taskInstanceId -> template instance
 
         // Current tracking context (project/client selection)
         this.currentProjectId = 1;
@@ -64,7 +68,131 @@ export class TasksPage {
             this.loadTasks();
         });
 
+        // Real-time tracking updates
+        this.coreBridge.onUIEvent('tracking-updated', (data) => {
+            this._updateTrackingTimeDisplay();
+        });
+
         // Dropdowns subscribe to Core events themselves, no need to update them here
+    }
+
+    /**
+     * Update time display for currently tracking task in real-time
+     */
+    async _updateTrackingTimeDisplay() {
+        if (!this.coreBridge) return;
+
+        const trackingState = this.coreBridge.getTrackingState();
+        if (!trackingState.isTracking || !trackingState.currentTaskInstanceId) return;
+
+        // Find the task instance that is being tracked
+        const trackingTask = this.tasks.find(t =>
+            t.task_id === trackingState.currentTaskId &&
+            t.project_id === trackingState.currentProjectId &&
+            t.client_id === trackingState.currentClientId
+        );
+
+        if (!trackingTask) return;
+
+        try {
+            // Get old completed time for this task instance
+            const oldTime = await this.coreBridge.getCurrentTaskOldTime();
+            const currentElapsed = trackingState.elapsedSeconds || 0;
+            const totalTime = oldTime + currentElapsed;
+
+            // Find the stack this task belongs to
+            const taskGroups = this._groupSimilarTasks(this.filteredTasks);
+            const taskGroup = taskGroups.find(group =>
+                group.tasks.some(t => t.id === trackingTask.id)
+            );
+
+            if (taskGroup) {
+                // Check if it's a stack (multiple tasks) or standalone task (single task)
+                if (taskGroup.tasks.length === 1) {
+                    // Standalone task - update TaskRowTemplate
+                    const taskTemplate = this.taskTemplates.get(trackingTask.id);
+                    if (taskTemplate) {
+                        const timeLabel = taskTemplate.getTimeLabel();
+                        const moneyLabel = taskTemplate.getMoneyLabel();
+                        const trackButton = taskTemplate.getTrackButton();
+
+                        if (timeLabel) {
+                            const hours = Math.floor(totalTime / 3600);
+                            const minutes = Math.floor((totalTime % 3600) / 60);
+                            const secs = totalTime % 60;
+                            const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+                            timeLabel.set_label(timeStr);
+                            timeLabel.remove_css_class('dim-label');
+                            if (!timeLabel.has_css_class('caption')) {
+                                timeLabel.add_css_class('caption');
+                            }
+
+                            // Update money
+                            if (moneyLabel && trackingTask.client_rate > 0) {
+                                const totalCost = (totalTime / 3600) * trackingTask.client_rate;
+                                const currencySymbol = getCurrencySymbol(trackingTask.client_currency || 'EUR');
+                                moneyLabel.set_label(`${currencySymbol}${totalCost.toFixed(2)}`);
+                                moneyLabel.set_visible(true);
+                                moneyLabel.remove_css_class('dim-label');
+                                if (!moneyLabel.has_css_class('caption')) {
+                                    moneyLabel.add_css_class('caption');
+                                }
+                            }
+
+                            // Update track button icon to stop
+                            if (trackButton) {
+                                trackButton.set_icon_name('media-playback-stop-symbolic');
+                                trackButton.set_tooltip_text(_('Stop tracking'));
+                            }
+                        }
+                    }
+                } else {
+                    // Stack - update TaskStackTemplate
+                    const stackTemplate = this.taskTemplates.get(`stack:${taskGroup.groupKey}`);
+                    if (stackTemplate) {
+                        const stackTimeLabel = stackTemplate.getTimeLabel();
+                        const stackMoneyLabel = stackTemplate.getMoneyLabel();
+                        const stackTrackButton = stackTemplate.getTrackButton();
+
+                        if (stackTimeLabel) {
+                            // Stack total time = all completed tasks + current tracking
+                            const stackTotalTime = taskGroup.totalDuration + currentElapsed;
+                            const hours = Math.floor(stackTotalTime / 3600);
+                            const minutes = Math.floor((stackTotalTime % 3600) / 60);
+                            const secs = stackTotalTime % 60;
+                            const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+                            stackTimeLabel.set_label(timeStr);
+                            stackTimeLabel.remove_css_class('dim-label');
+                            if (!stackTimeLabel.has_css_class('caption')) {
+                                stackTimeLabel.add_css_class('caption');
+                            }
+
+                            // Update stack money
+                            if (stackMoneyLabel && trackingTask.client_rate > 0) {
+                                const stackTotalCost = taskGroup.totalCost + ((currentElapsed / 3600) * trackingTask.client_rate);
+                                const currencySymbol = getCurrencySymbol(trackingTask.client_currency || 'EUR');
+                                stackMoneyLabel.set_label(`${currencySymbol}${stackTotalCost.toFixed(2)}`);
+                                stackMoneyLabel.set_visible(true);
+                                stackMoneyLabel.remove_css_class('dim-label');
+                                if (!stackMoneyLabel.has_css_class('caption')) {
+                                    stackMoneyLabel.add_css_class('caption');
+                                }
+                            }
+
+                            // Update track button icon to stop
+                            if (stackTrackButton) {
+                                stackTrackButton.set_icon_name('media-playback-stop-symbolic');
+                                stackTrackButton.set_tooltip_text(_('Stop tracking'));
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error updating tracking time display:', error);
+        }
     }
 
     /**
@@ -88,6 +216,13 @@ export class TasksPage {
         // Load tasks on initialization
         this.loadTasks();
 
+        // Prevent search input from auto-focusing on startup
+        if (this.taskList) {
+            // Set focus to the task list instead of search
+            this.taskList.set_can_focus(true);
+            this.taskList.grab_focus();
+        }
+
         return page;
     }
 
@@ -101,7 +236,7 @@ export class TasksPage {
             // Enter key to toggle tracking
             if (keyval === Gdk.KEY_Return || keyval === Gdk.KEY_KP_Enter) {
                 // Only if not typing in search or other inputs
-                const focus = page.get_focus();
+                const focus = this.parentWindow ? this.parentWindow.get_focus() : null;
 
                 // Allow Enter in task name entry (it has its own handler)
                 if (focus === this.taskNameEntry) {
@@ -117,6 +252,9 @@ export class TasksPage {
                 this._toggleTracking();
                 return true; // Event handled
             }
+
+            // Delete key is now handled at application level (MainWindow)
+            // No need to handle it here
 
             return false; // Let other handlers process the event
         });
@@ -169,8 +307,37 @@ export class TasksPage {
             hexpand: true,
             hexpand_set: true,
         });
-        // Allow editing task name during tracking (update on Enter)
-        this.taskNameEntry.connect('activate', () => this._onTaskNameChanged());
+
+        // Debounce timer for automatic name updates
+        this.taskNameDebounceTimer = null;
+        this._blockTaskNameUpdate = false;
+
+        // Auto-update task name while typing (if tracking)
+        this.taskNameEntry.connect('changed', () => {
+            // Don't trigger update during programmatic changes
+            if (this._blockTaskNameUpdate) return;
+
+            const state = this.coreBridge?.getTrackingState();
+            if (!state || !state.isTracking) return;
+
+            // Clear previous timer
+            if (this.taskNameDebounceTimer) {
+                GLib.Source.remove(this.taskNameDebounceTimer);
+            }
+
+            // Set new timer - update after 250ms of no typing
+            this.taskNameDebounceTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, () => {
+                this.taskNameDebounceTimer = null;
+                this._updateTaskNameFromInput();
+                return false;
+            });
+        });
+
+        // Enter key - start/stop tracking
+        this.taskNameEntry.connect('activate', () => {
+            this._toggleTracking();
+        });
+
         box.append(this.taskNameEntry);
 
         // Project dropdown
@@ -242,8 +409,19 @@ export class TasksPage {
 
         if (state.isTracking) {
             // Tracking active - allow editing!
-            this.taskNameEntry.set_text(state.currentTaskName || '');
+            const cursorPosition = this.taskNameEntry.get_position();
+            const oldText = this.taskNameEntry.get_text();
+            const newText = state.currentTaskName || '';
+
+            this.taskNameEntry.set_text(newText);
             this.taskNameEntry.set_sensitive(true);
+
+            // Restore cursor position if text didn't change, otherwise move to end
+            if (oldText === newText && cursorPosition >= 0) {
+                this.taskNameEntry.set_position(cursorPosition);
+            } else {
+                this.taskNameEntry.set_position(-1); // -1 = end of text
+            }
 
             // Update dropdowns with current tracking context
             if (state.currentProjectId && this.projectDropdown) {
@@ -318,10 +496,8 @@ export class TasksPage {
         const state = this.coreBridge.getTrackingState();
         this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
 
-        // Update task name if changed (from other pages)
-        if (state.currentTaskName && this.taskNameEntry.get_text() !== state.currentTaskName) {
-            this.taskNameEntry.set_text(state.currentTaskName);
-        }
+        // Don't auto-update task name from state - user might be editing it
+        // Name updates only on Enter key (activate event)
     }
 
     /**
@@ -399,11 +575,35 @@ export class TasksPage {
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     }
 
-    async _onTaskNameChanged() {
+    /**
+     * Update task name from input (called automatically after typing stops)
+     */
+    async _updateTaskNameFromInput() {
         if (!this.coreBridge) return;
 
-        // Enter always toggles tracking (start/stop/start/stop...)
-        this._toggleTracking();
+        const state = this.coreBridge.getTrackingState();
+        if (!state.isTracking) return;
+
+        const newName = this.taskNameEntry.get_text().trim();
+        console.log(`📝 Auto-updating task name: "${state.currentTaskName}" -> "${newName}"`);
+
+        if (newName && newName !== state.currentTaskName) {
+            try {
+                // Temporarily block the changed event to prevent loop
+                this._blockTaskNameUpdate = true;
+
+                await this.coreBridge.updateCurrentTaskName(newName);
+                console.log(`✅ Task name updated successfully`);
+
+                // Reload tasks to show updated name
+                await this.loadTasks();
+
+                this._blockTaskNameUpdate = false;
+            } catch (error) {
+                console.error('❌ Error updating task name:', error);
+                this._blockTaskNameUpdate = false;
+            }
+        }
     }
 
     /**
@@ -413,9 +613,19 @@ export class TasksPage {
         this.projectDropdown = new ProjectDropdown(
             this.coreBridge,
             this.currentProjectId,
-            (selectedProject) => {
+            async (selectedProject) => {
                 this.currentProjectId = selectedProject.id;
-                console.log('Selected project:', selectedProject.name);
+
+                // If tracking, update Core with new project/client
+                const state = this.coreBridge.getTrackingState();
+                if (state.isTracking) {
+                    await this.coreBridge.updateCurrentProjectClient(
+                        this.currentProjectId === 1 ? null : this.currentProjectId,
+                        this.currentClientId === 1 ? null : this.currentClientId
+                    );
+                    // Reload tasks to show updated project
+                    await this.loadTasks();
+                }
             }
         );
     }
@@ -427,9 +637,19 @@ export class TasksPage {
         this.clientDropdown = new ClientDropdown(
             this.coreBridge,
             this.currentClientId,
-            (selectedClient) => {
+            async (selectedClient) => {
                 this.currentClientId = selectedClient.id;
-                console.log('Selected client:', selectedClient.name);
+
+                // If tracking, update Core with new project/client
+                const state = this.coreBridge.getTrackingState();
+                if (state.isTracking) {
+                    await this.coreBridge.updateCurrentProjectClient(
+                        this.currentProjectId === 1 ? null : this.currentProjectId,
+                        this.currentClientId === 1 ? null : this.currentClientId
+                    );
+                    // Reload tasks to show updated client
+                    await this.loadTasks();
+                }
             }
         );
     }
@@ -467,17 +687,6 @@ export class TasksPage {
             css_classes: ['search-button-box'],
         });
 
-        // Filter dropdown
-        this.taskFilter = new Gtk.DropDown({
-            model: Gtk.StringList.new([_('All'), _('Today'), _('This Week'), _('This Month')]),
-            selected: 0,
-        });
-        this.taskFilter.connect('notify::selected', () => {
-            this.currentTasksPage = 0;
-            this._filterTasks(this.taskSearch.get_text());
-        });
-        box.append(this.taskFilter);
-
         // Search entry
         this.taskSearch = new Gtk.SearchEntry({
             placeholder_text: _('Search tasks...'),
@@ -491,6 +700,17 @@ export class TasksPage {
         });
 
         box.append(this.taskSearch);
+
+        // Filter dropdown
+        this.taskFilter = new Gtk.DropDown({
+            model: Gtk.StringList.new([_('All'), _('Today'), _('This Week'), _('This Month')]),
+            selected: 0,
+        });
+        this.taskFilter.connect('notify::selected', () => {
+            this.currentTasksPage = 0;
+            this._filterTasks(this.taskSearch.get_text());
+        });
+        box.append(this.taskFilter);
 
         return box;
     }
@@ -603,6 +823,18 @@ export class TasksPage {
             });
 
             this.tasks = taskInstances || [];
+
+            // Debug: check if client_rate is loaded
+            if (this.tasks.length > 0) {
+                console.log(`📊 Sample task data:`, {
+                    task_name: this.tasks[0].task_name,
+                    client_name: this.tasks[0].client_name,
+                    client_rate: this.tasks[0].client_rate,
+                    client_currency: this.tasks[0].client_currency,
+                    total_time: this.tasks[0].total_time
+                });
+            }
+
             this.filteredTasks = [...this.tasks];
             this._updateTasksDisplay();
         } catch (error) {
@@ -641,6 +873,9 @@ export class TasksPage {
         // Clear row maps (but keep selections)
         this.taskRowMap.clear();
         this.stackRowMap.clear();
+
+        // Clear template map
+        this.taskTemplates.clear();
 
         if (!this.filteredTasks || this.filteredTasks.length === 0) {
             this.currentTasksPage = 0;
@@ -729,6 +964,9 @@ export class TasksPage {
                 const template = new TaskRowTemplate(task, this);
                 row = template.getWidget();
 
+                // Store template for real-time updates
+                this.taskTemplates.set(task.id, template);
+
                 // Add to task row map for selection tracking
                 this.taskRowMap.set(task.id, row);
 
@@ -743,6 +981,9 @@ export class TasksPage {
                 // Multiple tasks - use TaskStackTemplate (stack/expander)
                 const template = new TaskStackTemplate(group, this);
                 row = template.getWidget();
+
+                // Store template for real-time updates by groupKey (for stacks)
+                this.taskTemplates.set(`stack:${group.groupKey}`, template);
 
                 // Add to stack row map for selection tracking
                 this.stackRowMap.set(group.groupKey, row);
@@ -1109,11 +1350,16 @@ export class TasksPage {
                         project_id: t.project_id,
                         client_id: t.client_id,
                         task_name: t.task_name,
+                        last_used_at: t.last_used_at,
+                        total_time: t.total_time,
                     }));
                     const idsToDelete = deletedTaskInstances.map(t => t.id);
 
                     // Delete TaskInstances via Core (will CASCADE delete TimeEntries)
                     await this.coreBridge.deleteMultipleTaskInstances(idsToDelete);
+
+                    // Clean up orphaned tasks (tasks with no instances)
+                    await this.coreBridge.cleanupOrphanedTasks();
 
                     // Clear selection
                     this.selectedTasks.clear();
@@ -1132,11 +1378,16 @@ export class TasksPage {
                             try {
                                 // Restore deleted task instances
                                 for (const taskInstance of deletedTaskInstances) {
-                                    // Restore TaskInstance (TimeEntries are lost, but task instance is back)
-                                    await this.coreBridge.createTaskInstance({
-                                        task_id: taskInstance.task_id,
+                                    // First, recreate the Task template if it was deleted
+                                    const task = await this.coreBridge.findOrCreateTask(taskInstance.task_name);
+
+                                    // Then restore TaskInstance with preserved timestamps
+                                    await this.coreBridge.restoreTaskInstance({
+                                        task_id: task.id,
                                         project_id: taskInstance.project_id,
                                         client_id: taskInstance.client_id,
+                                        last_used_at: taskInstance.last_used_at,
+                                        total_time: taskInstance.total_time,
                                     });
                                 }
                                 await this.loadTasks();

@@ -52,9 +52,12 @@ export class TaskRowTemplate {
         const dotColor = this.task.project_color || '#9a9996';
 
         // Check if currently tracking (use Core)
+        // Must match unique combination of task + project + client
         const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : { isTracking: false };
         const isCurrentlyTracking = trackingState.isTracking &&
-            trackingState.currentTaskId === this.task.task_id;
+            trackingState.currentTaskId === this.task.task_id &&
+            trackingState.currentProjectId === this.task.project_id &&
+            trackingState.currentClientId === this.task.client_id;
 
         // Create subtitle with colored dot (SAME UI as before)
         const dateText = this._formatDate(this.task.last_used_at);
@@ -96,57 +99,125 @@ export class TaskRowTemplate {
         let moneyText = '';
 
         // Check tracking state from Core
+        // Must match unique combination of task + project + client
         const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : { isTracking: false };
         const isCurrentlyTracking = trackingState.isTracking &&
-            trackingState.currentTaskId === this.task.task_id;
+            trackingState.currentTaskId === this.task.task_id &&
+            trackingState.currentProjectId === this.task.project_id &&
+            trackingState.currentClientId === this.task.client_id;
 
-        // Prepare time text (SAME UI logic as before)
+        // Prepare time text
         if (isCurrentlyTracking) {
-            // Show live time with dot indicator for active tracking
-            timeText = '● Tracking';
+            // Show total time (will be updated in real-time by _updateTrackingTimeDisplay)
+            timeText = this._formatDuration(this.task.total_time);
         } else if (this.task.total_time > 0) {
             timeText = this._formatDuration(this.task.total_time);
         }
 
-        // Prepare separate money text (SAME UI)
+        // Prepare separate money text
         if (cost > 0) {
             const currency = this.task.client_currency || 'EUR';
             const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
             moneyText = `${currencySymbol}${cost.toFixed(2)}`;
         }
 
+        // Store references for real-time updates
+        this.timeLabel = null;
+        this.moneyLabel = null;
+
+        // Use accent color for time when tracking
+        const timeCssClasses = isCurrentlyTracking ? ['caption'] : ['caption', 'dim-label'];
+
         // Create suffix box using WidgetFactory (SAME UI)
-        const { suffixBox, timeLabel, moneyLabel } = WidgetFactory.createTaskSuffixBox({
+        const { suffixBox, timeLabel, moneyLabel, trackButton } = WidgetFactory.createTaskSuffixBox({
             timeText: timeText,
             moneyText: moneyText,
+            css_classes: timeCssClasses,
             showEditButton: true,
             showTrackButton: true,
-            showCostTracking: this.parentWindow.showCostTracking !== false,
+            showCostTracking: true, // Always show cost tracking
             onEditClick: () => {
                 if (this.parentWindow._editTaskInstance) {
                     this.parentWindow._editTaskInstance(this.task.id);
                 }
             },
             onTrackClick: async () => {
-                // Use Core to start tracking this task instance
+                // Handle task tracking - check if currently tracking
                 if (this.coreBridge) {
                     try {
-                        await this.coreBridge.startTracking(
-                            this.task.task_id,
-                            this.task.project_id,
-                            this.task.client_id
-                        );
+                        const trackingState = this.coreBridge.getTrackingState();
+
+                        // Check unique combination of task + project + client
+                        if (trackingState.isTracking &&
+                            trackingState.currentTaskId === this.task.task_id &&
+                            trackingState.currentProjectId === this.task.project_id &&
+                            trackingState.currentClientId === this.task.client_id) {
+                            // Stop tracking if this exact task instance is currently being tracked
+                            await this.coreBridge.stopTracking();
+
+                            // Immediately update button icon
+                            if (this.trackButton) {
+                                this.trackButton.set_icon_name('media-playback-start-symbolic');
+                                this.trackButton.set_tooltip_text(_('Start tracking'));
+                            }
+                        } else {
+                            // Start tracking this task instance
+                            await this.coreBridge.startTracking(
+                                this.task.task_id,
+                                this.task.project_id,
+                                this.task.client_id
+                            );
+
+                            // Immediately update button icon
+                            if (this.trackButton) {
+                                this.trackButton.set_icon_name('media-playback-stop-symbolic');
+                                this.trackButton.set_tooltip_text(_('Stop tracking'));
+                            }
+                        }
                     } catch (error) {
-                        console.error('Error starting tracking:', error);
+                        console.error('Error toggling tracking:', error);
                     }
                 }
             }
         });
+
+        // Store label and button references for real-time updates
+        this.timeLabel = timeLabel;
+        this.moneyLabel = moneyLabel;
+        this.trackButton = trackButton;
+
+        // Set track button icon based on tracking state
+        if (trackButton) {
+            if (isCurrentlyTracking) {
+                trackButton.set_icon_name('media-playback-stop-symbolic');
+                trackButton.set_tooltip_text(_('Stop tracking'));
+            } else {
+                trackButton.set_icon_name('media-playback-start-symbolic');
+                trackButton.set_tooltip_text(_('Start tracking'));
+            }
+        }
+
+        // Add accent color to money label when tracking
+        if (isCurrentlyTracking && moneyLabel) {
+            moneyLabel.remove_css_class('dim-label');
+        }
 
         return suffixBox;
     }
 
     getWidget() {
         return this.widget;
+    }
+
+    getTimeLabel() {
+        return this.timeLabel;
+    }
+
+    getMoneyLabel() {
+        return this.moneyLabel;
+    }
+
+    getTrackButton() {
+        return this.trackButton;
     }
 }

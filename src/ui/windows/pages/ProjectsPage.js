@@ -77,6 +77,13 @@ export class ProjectsPage {
         // Load projects on initialization
         this.loadProjects();
 
+        // Prevent search input from auto-focusing on startup
+        if (this.projectList) {
+            // Set focus to the project list instead of search
+            this.projectList.set_can_focus(true);
+            this.projectList.grab_focus();
+        }
+
         return page;
     }
 

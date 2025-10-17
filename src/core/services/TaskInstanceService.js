@@ -49,7 +49,10 @@ export class TaskInstanceService extends BaseService {
                 ti.*,
                 t.name as task_name,
                 p.name as project_name,
+                p.color as project_color,
                 c.name as client_name,
+                c.rate as client_rate,
+                c.currency as client_currency,
                 COUNT(te.id) as entry_count
             FROM TaskInstance ti
             JOIN Task t ON t.id = ti.task_id
@@ -86,7 +89,10 @@ export class TaskInstanceService extends BaseService {
                 ti.*,
                 t.name as task_name,
                 p.name as project_name,
+                p.color as project_color,
                 c.name as client_name,
+                c.rate as client_rate,
+                c.currency as client_currency,
                 COUNT(te.id) as entry_count
             FROM TaskInstance ti
             JOIN Task t ON t.id = ti.task_id
@@ -107,6 +113,25 @@ export class TaskInstanceService extends BaseService {
         const sql = `
             INSERT INTO TaskInstance (task_id, project_id, client_id, last_used_at)
             VALUES (${data.task_id}, ${data.project_id || 'NULL'}, ${data.client_id || 'NULL'}, datetime('now'))
+        `;
+        const result = await this.execute(sql);
+        return await this.getById(result);
+    }
+    /**
+     * Restore task instance with preserved timestamps (for undo)
+     */
+    async restore(data) {
+        const sql = `
+            INSERT INTO TaskInstance (task_id, project_id, client_id, total_time, last_used_at, created_at, updated_at)
+            VALUES (
+                ${data.task_id},
+                ${data.project_id || 'NULL'},
+                ${data.client_id || 'NULL'},
+                ${data.total_time || 0},
+                '${data.last_used_at}',
+                datetime('now'),
+                datetime('now')
+            )
         `;
         const result = await this.execute(sql);
         return await this.getById(result);
@@ -210,7 +235,10 @@ export class TaskInstanceService extends BaseService {
             ...this.mapToModel(row),
             task_name: row.task_name,
             project_name: row.project_name || null,
+            project_color: row.project_color || null,
             client_name: row.client_name || null,
+            client_rate: row.client_rate || 0,
+            client_currency: row.client_currency || 'EUR',
             entry_count: row.entry_count || 0,
         };
     }

@@ -240,6 +240,10 @@ export class CoreBridge {
         return await this.core.services.taskInstances.create(data);
     }
 
+    async restoreTaskInstance(data) {
+        return await this.core.services.taskInstances.restore(data);
+    }
+
     async deleteTaskInstance(id) {
         return await this.core.services.taskInstances.delete(id);
     }
@@ -260,6 +264,10 @@ export class CoreBridge {
 
     async getNextTaskAutoIndex() {
         return await this.core.services.tasks.getNextAutoIndex();
+    }
+
+    async cleanupOrphanedTasks() {
+        return await this.core.services.tasks.cleanupOrphanedTasks();
     }
 
     // ==================== Time Tracking API ====================
@@ -334,5 +342,9 @@ export class CoreBridge {
 
     getCurrentTaskId() {
         return this.core.state.getCurrentTaskId();
+    }
+
+    async getCurrentTaskOldTime() {
+        return await this.core.services.tracking.getCurrentTaskOldTime();
     }
 }

@@ -6,6 +6,7 @@
 import GObject from 'gi://GObject';
 import Adw from 'gi://Adw?version=1';
 import Gtk from 'gi://Gtk?version=4.0';
+import Gdk from 'gi://Gdk';
 import Gio from 'gi://Gio';
 import { Config } from 'resource:///com/odnoyko/valot/config.js';
 import { PreferencesDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/PreferencesDialog.js';
@@ -55,6 +56,9 @@ export const ValotMainWindow = GObject.registerClass({
 
         // Load pages
         this._loadPages();
+
+        // Setup global keyboard shortcuts using application-level accelerators
+        this._setupGlobalKeyboardShortcuts();
     }
 
     /**
@@ -276,6 +280,22 @@ export const ValotMainWindow = GObject.registerClass({
                     coreBridge: this.coreBridge,
                 });
 
+                // Store page instance for keyboard shortcuts
+                switch (pageInfo.id) {
+                    case 'tasks':
+                        this.tasksPageInstance = pageInstance;
+                        break;
+                    case 'projects':
+                        this.projectsPageInstance = pageInstance;
+                        break;
+                    case 'clients':
+                        this.clientsPageInstance = pageInstance;
+                        break;
+                    case 'reports':
+                        this.reportsPageInstance = pageInstance;
+                        break;
+                }
+
                 // Get page widget (pages provide complete ToolbarView with header)
                 let pageWidget = pageInstance.getWidget ? pageInstance.getWidget() : null;
                 if (!pageWidget) {
@@ -292,6 +312,57 @@ export const ValotMainWindow = GObject.registerClass({
                 console.error(`❌ Error loading page ${pageInfo.id}:`, error);
             }
         });
+
+        // Store page instances for keyboard shortcuts
+        this.pages = {
+            tasks: this.tasksPageInstance,
+            projects: this.projectsPageInstance,
+            clients: this.clientsPageInstance,
+            reports: this.reportsPageInstance,
+        };
+    }
+
+    /**
+     * Setup global keyboard shortcuts using application-level accelerators
+     * This works like main branch - Delete key works regardless of input focus
+     */
+    _setupGlobalKeyboardShortcuts() {
+        // Create application-level action for Delete key
+        const deleteAction = new Gio.SimpleAction({
+            name: 'delete-selected',
+            parameter_type: null
+        });
+
+        deleteAction.connect('activate', () => {
+            // Get current visible page
+            const visiblePage = this.navigationView.get_visible_page();
+            if (!visiblePage) return;
+
+            const pageTag = visiblePage.get_tag();
+
+            // Delete selected items based on current page
+            switch (pageTag) {
+                case 'tasks':
+                    if (this.pages.tasks && this.pages.tasks.selectedTasks && this.pages.tasks.selectedTasks.size > 0) {
+                        this.pages.tasks._deleteSelectedTasks();
+                    }
+                    break;
+                case 'projects':
+                    if (this.pages.projects && this.pages.projects.selectedProjects && this.pages.projects.selectedProjects.size > 0) {
+                        this.pages.projects._deleteSelectedProjects();
+                    }
+                    break;
+                case 'clients':
+                    if (this.pages.clients && this.pages.clients.selectedClients && this.pages.clients.selectedClients.size > 0) {
+                        this.pages.clients._deleteSelectedClients();
+                    }
+                    break;
+            }
+        });
+
+        // Add action to application and set Delete key accelerator
+        this.application.add_action(deleteAction);
+        this.application.set_accels_for_action('app.delete-selected', ['Delete']);
     }
 
     /**
@@ -312,7 +383,7 @@ export const ValotMainWindow = GObject.registerClass({
     showToast(message) {
         const toast = new Adw.Toast({
             title: message,
-            timeout: 3,
+            timeout: 1.5,
         });
         this.toastOverlay.add_toast(toast);
     }
@@ -324,7 +395,7 @@ export const ValotMainWindow = GObject.registerClass({
         const toast = new Adw.Toast({
             title: message,
             button_label: actionLabel,
-            timeout: 5, // Longer timeout for actions
+            timeout: 1.5,
         });
 
         toast.connect('button-clicked', () => {
