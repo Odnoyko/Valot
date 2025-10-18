@@ -476,7 +476,7 @@ export class ClientsPage {
         this.contextBar = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 12,
-            halign: Gtk.Align.CENTER,
+            halign: Gtk.Align.FILL,
             margin_top: 12,
             visible: false, // Hidden by default
         });
@@ -485,7 +485,7 @@ export class ClientsPage {
         this.paginationBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 12,
-            halign: Gtk.Align.CENTER,
+            halign: Gtk.Align.FILL,
         });
 
         this.prevPageBtn = new Gtk.Button({
@@ -498,6 +498,7 @@ export class ClientsPage {
         this.pageInfoLabel = new Gtk.Label({
             label: 'Page 0 of 0',
             css_classes: ['dim-label'],
+            hexpand: true,
         });
         this.paginationBox.append(this.pageInfoLabel);
 
@@ -512,7 +513,7 @@ export class ClientsPage {
         this.selectionBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 12,
-            halign: Gtk.Align.CENTER,
+            halign: Gtk.Align.FILL,
             visible: false,
         });
 
@@ -526,6 +527,7 @@ export class ClientsPage {
         this.selectionLabel = new Gtk.Label({
             label: '0 selected',
             css_classes: ['dim-label'],
+            hexpand: true,
         });
         this.selectionBox.append(this.selectionLabel);
 
@@ -1243,6 +1245,7 @@ export class ClientsPage {
      */
     _previousPage() {
         if (this.currentClientsPage > 0) {
+            this._clearSelection(); // Clear selection BEFORE changing pages
             this.currentClientsPage--;
             this._updateClientsDisplay();
         }
@@ -1254,6 +1257,7 @@ export class ClientsPage {
     _nextPage() {
         const totalPages = Math.ceil(this.filteredClients.length / this.clientsPerPage);
         if (this.currentClientsPage < totalPages - 1) {
+            this._clearSelection(); // Clear selection BEFORE changing pages
             this.currentClientsPage++;
             this._updateClientsDisplay();
         }

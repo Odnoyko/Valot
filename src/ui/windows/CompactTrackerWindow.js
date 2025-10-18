@@ -16,7 +16,6 @@ export const CompactTrackerWindow = GObject.registerClass({
             application,
             title: _('Compact Tracker'),
             default_width: 500,
-            default_height: 50,
             resizable: false,
         });
 
@@ -26,6 +25,8 @@ export const CompactTrackerWindow = GObject.registerClass({
         // Build UI
         this._buildUI();
 
+        // Set minimal size after UI is built
+        this.set_size_request(500, -1);
     }
 
     setShiftMode(shiftMode) {

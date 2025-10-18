@@ -104,7 +104,7 @@ export class TaskStackTemplate {
 
         // Prepare time text (show total time even when tracking)
         if (this.group.totalDuration > 0) {
-            timeText = this._formatDuration(this.group.totalDuration);
+            timeText = (isCurrentlyTracking ? '● ' : '') + this._formatDuration(this.group.totalDuration);
         }
 
         // Prepare money text (WidgetFactory shows money BEFORE time automatically)
@@ -193,6 +193,9 @@ export class TaskStackTemplate {
     }
 
     _addTaskRows(groupRow) {
+        // Store child rows for later updates
+        this.childRows = [];
+
         // Add individual task rows to the stack
         this.group.tasks.forEach(task => {
             // Check if THIS SPECIFIC task instance is currently being tracked
@@ -280,6 +283,9 @@ export class TaskStackTemplate {
                 this.parentWindow.taskRowMap.set(task.id, taskRow);
             }
 
+            // Store reference to child row
+            this.childRows.push(taskRow);
+
             groupRow.add_row(taskRow);
         });
     }
@@ -332,15 +338,17 @@ export class TaskStackTemplate {
         this.widget.set_subtitle(groupSubtitle);
 
         // Update all child task rows subtitles
-        this.group.tasks.forEach((task, index) => {
-            const taskRow = this.widget.get_row_at_index(index);
-            if (taskRow) {
-                const taskProjectName = task.project_name || 'No Project';
-                const taskClientName = task.client_name || 'No Client';
-                const dateText = this._formatDate(task.last_used_at);
-                const taskSubtitle = `<span foreground="${newColor}">●</span> ${taskProjectName} • ${taskClientName} • ${dateText}`;
-                taskRow.set_subtitle(taskSubtitle);
-            }
-        });
+        if (this.childRows && this.childRows.length > 0) {
+            this.group.tasks.forEach((task, index) => {
+                const taskRow = this.childRows[index];
+                if (taskRow) {
+                    const taskProjectName = task.project_name || 'No Project';
+                    const taskClientName = task.client_name || 'No Client';
+                    const dateText = this._formatDate(task.last_used_at);
+                    const taskSubtitle = `<span foreground="${newColor}">●</span> ${taskProjectName} • ${taskClientName} • ${dateText}`;
+                    taskRow.set_subtitle(taskSubtitle);
+                }
+            });
+        }
     }
 }

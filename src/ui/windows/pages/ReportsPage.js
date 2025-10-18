@@ -29,6 +29,54 @@ export class ReportsPage {
         this.allTasks = [];
         this.allProjects = [];
         this.allClients = [];
+
+        // Subscribe to UI events for real-time updates
+        this._subscribeToEvents();
+    }
+
+    /**
+     * Subscribe to Core events for real-time updates
+     */
+    _subscribeToEvents() {
+        if (!this.coreBridge) return;
+
+        // Reload when tracking starts/stops (creates new time entries)
+        this.coreBridge.onUIEvent('tracking-started', () => {
+            setTimeout(() => this.updateChartsOnly(), 300);
+        });
+
+        this.coreBridge.onUIEvent('tracking-stopped', () => {
+            this.updateChartsOnly();
+        });
+
+        // Reload when tasks are created/updated/deleted
+        this.coreBridge.onUIEvent('task-created', () => {
+            this.updateChartsOnly();
+        });
+
+        this.coreBridge.onUIEvent('task-updated', () => {
+            this.updateChartsOnly();
+        });
+
+        this.coreBridge.onUIEvent('tasks-deleted', () => {
+            this.updateChartsOnly();
+        });
+
+        // Reload when projects/clients are updated
+        this.coreBridge.onUIEvent('project-updated', () => {
+            this.updateChartsOnly();
+        });
+
+        this.coreBridge.onUIEvent('client-updated', () => {
+            this.updateChartsOnly();
+        });
+
+        // Update on tracking changes (task name, project, client changes)
+        this.coreBridge.onUIEvent('tracking-updated', (data) => {
+            if (data.taskName || data.taskId || data.projectId !== undefined || data.clientId !== undefined) {
+                this.updateChartsOnly();
+            }
+        });
     }
 
     /**
@@ -296,8 +344,7 @@ export class ReportsPage {
             orientation: Gtk.Orientation.VERTICAL,
             spacing: 12,
             halign: Gtk.Align.FILL,
-            valign: Gtk.Align.FILL,
-            height_request: 300,
+            valign: Gtk.Align.START,
         });
 
         // Empty placeholder - will be populated when data loads
@@ -316,9 +363,7 @@ export class ReportsPage {
      * Create summary statistics section (4 cards)
      */
     _createSummaryStatistics() {
-        const group = new Adw.PreferencesGroup({
-            title: _('Summary Statistics'),
-        });
+        const group = new Adw.PreferencesGroup();
 
         const statsBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
@@ -1683,11 +1728,17 @@ export class ReportsPage {
         recentTasks.forEach(task => {
             const row = new Adw.ActionRow({
                 title: task.task_name || _('Unnamed Task'),
+                use_markup: true,
             });
 
-            // Subtitle: project + client + date
+            // Subtitle: colored dot + project + client + date
+            const projectColor = task.project_color || '#9a9996';
             const subtitleParts = [];
-            if (task.project_name) subtitleParts.push(task.project_name);
+
+            // Add colored dot before project name
+            if (task.project_name) {
+                subtitleParts.push(`<span foreground="${projectColor}">●</span> ${task.project_name}`);
+            }
             if (task.client_name) subtitleParts.push(task.client_name);
             if (task.last_used_at) {
                 const date = this._formatDate(task.last_used_at);

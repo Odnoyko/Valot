@@ -64,6 +64,56 @@ export const ValotMainWindow = GObject.registerClass({
 
         // Initial sidebar stats load
         this._updateSidebarStats();
+
+        // Handle window close - check if tracking is active
+        this.connect('close-request', () => this._onCloseRequest());
+    }
+
+    /**
+     * Handle window close request - check if tracking is active
+     */
+    _onCloseRequest() {
+        if (!this.coreBridge) return false;
+
+        const trackingState = this.coreBridge.getTrackingState();
+
+        // If not tracking, allow close
+        if (!trackingState.isTracking) {
+            return false;
+        }
+
+        // If tracking, show warning dialog
+        const dialog = new Adw.AlertDialog({
+            heading: _('Tracking in Progress'),
+            body: _('Time tracking is currently active. Closing the app will stop the timer and save your tracked time.\n\nAre you sure you want to close?'),
+        });
+
+        dialog.add_response('cancel', _('Cancel'));
+        dialog.add_response('stop', _('Stop & Close'));
+        dialog.set_response_appearance('stop', Adw.ResponseAppearance.DESTRUCTIVE);
+        dialog.set_default_response('cancel');
+        dialog.set_close_response('cancel');
+
+        dialog.connect('response', async (dialog, response) => {
+            if (response === 'stop') {
+                // Stop tracking before closing
+                try {
+                    await this.coreBridge.stopTracking();
+                } catch (error) {
+                    console.error('Error stopping tracking:', error);
+                }
+                // Close application
+                if (this.application) {
+                    this.application.quit();
+                }
+            }
+            // If cancel, dialog just closes and window stays open
+        });
+
+        dialog.present(this);
+
+        // Prevent window from closing until user confirms
+        return true;
     }
 
     /**
@@ -380,17 +430,11 @@ export const ValotMainWindow = GObject.registerClass({
         });
 
         pomodoroAction.connect('activate', () => {
-            console.log('🍅 Pomodoro shortcut (P) pressed');
-
             // Trigger Pomodoro mode on the current page's tracking widget
             const visiblePage = this.navigationView.get_visible_page();
-            if (!visiblePage) {
-                console.log('❌ No visible page found');
-                return;
-            }
+            if (!visiblePage) return;
 
             const pageTag = visiblePage.get_tag();
-            console.log(`📄 Current page: ${pageTag}`);
 
             // Access tracking widget from the current page
             let trackingWidget = null;
@@ -410,11 +454,8 @@ export const ValotMainWindow = GObject.registerClass({
             }
 
             if (trackingWidget && trackingWidget._toggleTracking) {
-                console.log('✅ Tracking widget found, activating Pomodoro');
                 // Start Pomodoro mode (true = pomodoro)
                 trackingWidget._toggleTracking(true);
-            } else {
-                console.log('❌ Tracking widget not found or _toggleTracking not available');
             }
         });
 

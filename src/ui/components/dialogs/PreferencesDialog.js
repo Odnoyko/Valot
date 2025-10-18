@@ -888,8 +888,6 @@ export const PreferencesDialog = GObject.registerClass({
                 null // cancellable
             );
 
-            console.log(`💾 Saved Pomodoro config: ${newDurationMinutes} minutes (${newDurationMinutes * 60}s) to ${configPath}`);
-
             // TODO: Restore when pomodoroManager is migrated
             // Reload PomodoroManager config
             // pomodoroManager.reloadConfig();

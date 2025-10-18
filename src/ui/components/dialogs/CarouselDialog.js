@@ -183,31 +183,31 @@ export const CarouselDialog = GObject.registerClass({
                 imagePath: '/com/odnoyko/valot/data/slides/slide1.svg',
                 title: _('Welcome to Valot'),
                 description: _('Track your time efficiently and boost your productivity'),
-                hint: _('Right-click to select items')
+                hint: _('Right-click to select multiple items • Use filters to find tasks quickly')
             },
             {
                 imagePath: '/com/odnoyko/valot/data/slides/slide2.svg',
                 title: _('Organize Projects'),
                 description: _('Create and manage projects with custom colors and icons'),
-                hint: _('Double-click project names to edit • Click icons to change icon and color')
+                hint: _('Double-click project names to edit • Click icons to change color')
             },
             {
                 imagePath: '/com/odnoyko/valot/data/slides/slide3.svg',
                 title: _('Manage Clients'),
                 description: _('Add clients with billing rates and contact information'),
-                hint: _('Set custom currencies in settings')
+                hint: _('Set custom currencies in settings • Edit multiple tasks at once')
             },
             {
                 imagePath: '/com/odnoyko/valot/data/slides/slide4.svg',
                 title: _('Compact Tracker'),
                 description: _('Launch with terminal command or setup system hotkey'),
-                command: 'com.odnoyko.valot --compact'
+                command: 'flatpak run com.odnoyko.valot --compact'
             },
             {
                 imagePath: '/com/odnoyko/valot/data/slides/slide5.svg',
                 title: _('Pomodoro Timer'),
-                description: _('Activate 20 minutes by default and you can customize it inside settings'),
-                hint: _('Shift+click track button to track items in pomodoro mode')
+                description: _('Long press track button or press P key to activate Pomodoro mode'),
+                hint: _('Configure duration in settings • Auto-stops after timer ends')
             }
         ];
 

@@ -120,13 +120,10 @@ export class AdvancedTrackingWidget {
 
         // Listen to 'begin' to start animation
         longPressGesture.connect('begin', () => {
-            console.log('🎨 Long press animation started');
             this.trackButton.add_css_class('long-press-active');
         });
 
         longPressGesture.connect('pressed', (gesture, x, y) => {
-            console.log('🍅 Long press detected - activating Pomodoro mode');
-
             // Prevent normal click from firing
             this.pomodoroActivated = true;
 
@@ -144,7 +141,6 @@ export class AdvancedTrackingWidget {
             // Reset flag after a longer delay to ensure stability
             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
                 this.pomodoroActivated = false;
-                console.log('🔓 Long press flag reset');
                 return false;
             });
         });
@@ -156,7 +152,6 @@ export class AdvancedTrackingWidget {
         });
 
         longPressGesture.connect('cancel', () => {
-            console.log('🚫 Long press cancelled');
             this.trackButton.remove_css_class('long-press-active');
         });
 
@@ -268,7 +263,6 @@ export class AdvancedTrackingWidget {
 
             // Pomodoro mode UI
             if (state.pomodoroMode) {
-                console.log('🍅 [AdvancedWidget] Applying Pomodoro UI mode');
                 this.trackButton.set_tooltip_text(_('Stop Pomodoro'));
                 this.trackButton.remove_css_class('suggested-action');
                 this.trackButton.remove_css_class('destructive-action');
@@ -345,14 +339,32 @@ export class AdvancedTrackingWidget {
             this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
         }
 
-        // Project/Client dropdowns update themselves via their own event handlers
-        // Task name updates via debounced input handler
+        // Update task name if changed (e.g., from edit dialog)
+        if (state.isTracking && data.taskName) {
+            const currentText = this.taskNameEntry.get_text();
+            if (currentText !== data.taskName) {
+                this._blockTaskNameUpdate = true;
+                this.taskNameEntry.set_text(data.taskName);
+                this.taskNameEntry.set_position(-1); // Move cursor to end
+                this._blockTaskNameUpdate = false;
+            }
+        }
+
+        // Update project dropdown if changed
+        if (data.projectId !== undefined && this.projectDropdown) {
+            this.currentProjectId = data.projectId;
+            this.projectDropdown.setCurrentProject(data.projectId);
+        }
+
+        // Update client dropdown if changed
+        if (data.clientId !== undefined && this.clientDropdown) {
+            this.currentClientId = data.clientId;
+            this.clientDropdown.setSelectedClient(data.clientId);
+        }
     }
 
     async _toggleTracking(pomodoroMode = false) {
         if (!this.coreBridge) return;
-
-        console.log(`🎯 [AdvancedWidget] Toggle tracking called with pomodoroMode: ${pomodoroMode}`);
 
         try {
             const state = this.coreBridge.getTrackingState();
@@ -360,14 +372,11 @@ export class AdvancedTrackingWidget {
             if (state.isTracking) {
                 // If Pomodoro requested while already tracking, ignore
                 if (pomodoroMode) {
-                    console.log('⚠️ Already tracking - ignoring Pomodoro request');
                     return;
                 }
-                console.log('⏸️ Stopping current tracking');
                 // Stop tracking
                 await this.coreBridge.stopTracking();
             } else {
-                console.log(`▶️ Starting tracking${pomodoroMode ? ' in Pomodoro mode' : ''}`);
                 this.pendingPomodoroMode = pomodoroMode;
 
                 // Start tracking
@@ -393,8 +402,6 @@ export class AdvancedTrackingWidget {
 
                 // Start tracking with current project/client selection
                 const pomodoroDuration = this.pendingPomodoroMode ? this.pomodoroDuration : 0;
-
-                console.log(`🚀 Starting tracking: taskId=${task.id}, pomodoroMode=${this.pendingPomodoroMode}, duration=${pomodoroDuration}s`);
 
                 await this.coreBridge.startTracking(
                     task.id,
@@ -529,7 +536,6 @@ export class AdvancedTrackingWidget {
 
                 // Convert minutes to seconds
                 this.pomodoroDuration = (config.defaultMinutes || 20) * 60;
-                console.log(`⚙️ Loaded Pomodoro duration: ${this.pomodoroDuration}s (${config.defaultMinutes || 20} minutes)`);
             }
 
             // Setup file monitor to watch for changes
@@ -554,7 +560,6 @@ export class AdvancedTrackingWidget {
             this.pomodoroConfigMonitor.connect('changed', (monitor, file, otherFile, eventType) => {
                 if (eventType === Gio.FileMonitorEvent.CHANGES_DONE_HINT ||
                     eventType === Gio.FileMonitorEvent.CREATED) {
-                    console.log('🔄 Pomodoro config changed, reloading...');
                     this._loadPomodoroConfig();
                 }
             });

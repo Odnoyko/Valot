@@ -112,7 +112,7 @@ export class TaskRowTemplate {
         // Prepare time text
         if (isCurrentlyTracking) {
             // Show total time (will be updated in real-time by _updateTrackingTimeDisplay)
-            timeText = this._formatDuration(this.task.total_time);
+            timeText = '● ' + this._formatDuration(this.task.total_time);
         } else if (this.task.total_time > 0) {
             timeText = this._formatDuration(this.task.total_time);
         }

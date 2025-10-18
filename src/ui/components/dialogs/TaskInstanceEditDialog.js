@@ -500,6 +500,13 @@ export class TaskInstanceEditDialog {
                 return;
             }
 
+            // Check if this task is currently being tracked
+            const trackingState = this.coreBridge.getTrackingState();
+            const isEditingTrackedTask = trackingState.isTracking &&
+                this.taskInstance.task_id === trackingState.currentTaskId &&
+                this.taskInstance.project_id === trackingState.currentProjectId &&
+                this.taskInstance.client_id === trackingState.currentClientId;
+
             // Update task name if changed
             if (newName !== this.taskInstance.task_name) {
                 const task = await this.coreBridge.findOrCreateTask(newName);
@@ -515,6 +522,24 @@ export class TaskInstanceEditDialog {
                 client_id: this.selectedClientId,
                 last_used_at: this._formatTimestamp(this.endDate),
             });
+
+            // If editing currently tracked task, update tracking state in Core
+            if (isEditingTrackedTask) {
+                // Update task name in tracking state
+                if (newName !== this.taskInstance.task_name) {
+                    await this.coreBridge.updateCurrentTaskName(newName);
+                }
+
+                // Update project/client in tracking state
+                await this.coreBridge.updateCurrentProjectClient(this.selectedProjectId, this.selectedClientId);
+
+                // Emit event to update AdvancedTrackingWidget UI
+                this.coreBridge.emitUIEvent('tracking-updated', {
+                    taskName: newName,
+                    projectId: this.selectedProjectId,
+                    clientId: this.selectedClientId,
+                });
+            }
 
             // Update time entry timestamps if we have one
             if (this.latestEntry) {
@@ -549,6 +574,11 @@ export class TaskInstanceEditDialog {
             if (this.parent && this.parent.parentWindow && this.parent.parentWindow.reportsPageInstance) {
                 await this.parent.parentWindow.reportsPageInstance.updateChartsOnly();
             }
+
+            // Emit global event for any other listeners (e.g., ReportsPage if opened from elsewhere)
+            this.coreBridge.emitUIEvent('task-updated', {
+                taskInstanceId: this.taskInstance.id
+            });
 
         } catch (error) {
             console.error('❌ Error saving task changes:', error);

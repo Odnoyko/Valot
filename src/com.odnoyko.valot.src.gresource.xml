@@ -51,6 +51,7 @@
     <file>ui/components/dialogs/PreferencesDialog.js</file>
     <file>ui/components/dialogs/PDFExportPreferencesDialog.js</file>
     <file>ui/components/dialogs/TaskInstanceEditDialog.js</file>
+    <file>ui/components/dialogs/MultipleTasksEditDialog.js</file>
     <file>ui/components/dialogs/QuickTaskSelector.js</file>
 
     <!-- UI Utilities -->

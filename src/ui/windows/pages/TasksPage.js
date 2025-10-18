@@ -8,6 +8,7 @@ import { ProjectDropdown } from 'resource:///com/odnoyko/valot/ui/utils/projectD
 import { ClientDropdown } from 'resource:///com/odnoyko/valot/ui/utils/clientDropdown.js';
 import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/data/currencies.js';
 import { AdvancedTrackingWidget } from 'resource:///com/odnoyko/valot/ui/components/complex/AdvancedTrackingWidget.js';
+import { MultipleTasksEditDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/MultipleTasksEditDialog.js';
 
 /**
  * Tasks management page
@@ -136,7 +137,7 @@ export class TasksPage {
                             const secs = totalTime % 60;
                             const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 
-                            timeLabel.set_label(timeStr);
+                            timeLabel.set_label('● ' + timeStr);
                             timeLabel.remove_css_class('dim-label');
                             if (!timeLabel.has_css_class('caption')) {
                                 timeLabel.add_css_class('caption');
@@ -177,7 +178,7 @@ export class TasksPage {
                             const secs = stackTotalTime % 60;
                             const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 
-                            stackTimeLabel.set_label(timeStr);
+                            stackTimeLabel.set_label('● ' + timeStr);
                             stackTimeLabel.remove_css_class('dim-label');
                             if (!stackTimeLabel.has_css_class('caption')) {
                                 stackTimeLabel.add_css_class('caption');
@@ -549,44 +550,10 @@ export class TasksPage {
     /**
      * User clicked track button
      */
-    async _toggleTracking() {
-        if (!this.coreBridge) return;
-
-        const state = this.coreBridge.getTrackingState();
-
-        if (state.isTracking) {
-            // Stop tracking
-            try {
-                await this.coreBridge.stopTracking();
-            } catch (error) {
-                console.error('Error stopping tracking:', error);
-            }
-        } else {
-            // Start tracking - create or find task (ALL LOGIC IN CORE!)
-            try {
-                const taskName = this.taskNameEntry.get_text().trim();
-                let task;
-
-                const projectId = this.currentProjectId === 1 ? null : this.currentProjectId;
-                const clientId = this.currentClientId === 1 ? null : this.currentClientId;
-
-                if (taskName === '' || taskName.length === 0) {
-                    // Empty input - create auto-indexed task via Core
-                    task = await this.coreBridge.createAutoIndexedTask(projectId, clientId);
-                } else {
-                    // Has text - find or create task via Core
-                    task = await this.coreBridge.findOrCreateTask(taskName);
-                }
-
-                // Start tracking with task ID and selected project/client
-                await this.coreBridge.startTracking(
-                    task.id,
-                    projectId,
-                    clientId
-                );
-            } catch (error) {
-                console.error('Error starting tracking:', error);
-            }
+    async _toggleTracking(pomodoroMode = false) {
+        // Delegate to AdvancedTrackingWidget
+        if (this.trackingWidget && this.trackingWidget._toggleTracking) {
+            this.trackingWidget._toggleTracking(pomodoroMode);
         }
     }
 
@@ -783,7 +750,7 @@ export class TasksPage {
         this.contextBar = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 12,
-            halign: Gtk.Align.CENTER,
+            halign: Gtk.Align.FILL,
             margin_top: 12,
             visible: false, // Hidden by default
         });
@@ -792,7 +759,7 @@ export class TasksPage {
         this.paginationBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 12,
-            halign: Gtk.Align.CENTER,
+            halign: Gtk.Align.FILL,
         });
 
         this.prevTasksButton = new Gtk.Button({
@@ -804,6 +771,7 @@ export class TasksPage {
         this.tasksPageInfo = new Gtk.Label({
             label: _('Page 1 of 1'),
             css_classes: ['dim-label'],
+            hexpand: true,
         });
 
         this.nextTasksButton = new Gtk.Button({
@@ -820,7 +788,7 @@ export class TasksPage {
         this.selectionBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 12,
-            halign: Gtk.Align.CENTER,
+            halign: Gtk.Align.FILL,
             visible: false,
         });
 
@@ -833,7 +801,15 @@ export class TasksPage {
         this.selectionLabel = new Gtk.Label({
             label: '0 selected',
             css_classes: ['dim-label'],
+            hexpand: true,
         });
+
+        const editBtn = new Gtk.Button({
+            icon_name: 'document-edit-symbolic',
+            tooltip_text: _('Edit Selected'),
+            css_classes: ['flat'],
+        });
+        editBtn.connect('clicked', () => this._editSelectedTasks());
 
         const deleteBtn = new Gtk.Button({
             label: _('Delete'),
@@ -843,6 +819,7 @@ export class TasksPage {
 
         this.selectionBox.append(cancelBtn);
         this.selectionBox.append(this.selectionLabel);
+        this.selectionBox.append(editBtn);
         this.selectionBox.append(deleteBtn);
 
         // Add both to context bar
@@ -961,8 +938,27 @@ export class TasksPage {
                     // Check if task has last_used_at timestamp
                     if (!task.last_used_at) return false;
 
-                    // Parse last_used_at (ISO string to timestamp)
-                    const taskDate = GLib.DateTime.new_from_iso8601(task.last_used_at, null);
+                    // Parse last_used_at (format: YYYY-MM-DD HH:MM:SS or ISO string)
+                    let taskDate;
+
+                    // Try ISO8601 first
+                    if (task.last_used_at.includes('T')) {
+                        taskDate = GLib.DateTime.new_from_iso8601(task.last_used_at, null);
+                    } else {
+                        // Parse local format: YYYY-MM-DD HH:MM:SS
+                        const parts = task.last_used_at.split(' ');
+                        if (parts.length === 2) {
+                            const [datePart, timePart] = parts;
+                            const [year, month, day] = datePart.split('-').map(Number);
+                            const [hours, minutes, seconds] = timePart.split(':').map(Number);
+
+                            taskDate = GLib.DateTime.new_local(
+                                year, month, day,
+                                hours || 0, minutes || 0, seconds || 0
+                            );
+                        }
+                    }
+
                     if (!taskDate) return false;
 
                     const taskTimestamp = taskDate.to_unix();
@@ -1466,6 +1462,7 @@ export class TasksPage {
      */
     _previousPage() {
         if (this.currentTasksPage > 0) {
+            this._clearSelection(); // Clear selection BEFORE changing pages
             this.currentTasksPage--;
             this._updateTasksDisplay();
         }
@@ -1478,6 +1475,7 @@ export class TasksPage {
         const totalGroups = this._groupSimilarTasks(this.filteredTasks).length;
         const totalPages = Math.ceil(totalGroups / this.tasksPerPage);
         if (this.currentTasksPage < totalPages - 1) {
+            this._clearSelection(); // Clear selection BEFORE changing pages
             this.currentTasksPage++;
             this._updateTasksDisplay();
         }
@@ -1512,6 +1510,21 @@ export class TasksPage {
         dialog.connect('response', async (dialog, response) => {
             if (response === 'delete') {
                 try {
+                    // Check if any of the tasks being deleted is currently tracked
+                    const trackingState = this.coreBridge.getTrackingState();
+                    if (trackingState.isTracking) {
+                        const isTrackingDeleted = tasksToDelete.some(t =>
+                            t.task_id === trackingState.currentTaskId &&
+                            t.project_id === trackingState.currentProjectId &&
+                            t.client_id === trackingState.currentClientId
+                        );
+
+                        // Stop tracking if deleting currently tracked task
+                        if (isTrackingDeleted) {
+                            await this.coreBridge.stopTracking();
+                        }
+                    }
+
                     // Save task instance data for undo (without TimeEntries for now)
                     const deletedTaskInstances = tasksToDelete.map(t => ({
                         id: t.id,
@@ -1576,6 +1589,45 @@ export class TasksPage {
         });
 
         dialog.present(this.parentWindow);
+    }
+
+    /**
+     * Edit selected tasks
+     */
+    async _editSelectedTasks() {
+        if (this.selectedTasks.size === 0 && this.selectedStacks.size === 0) return;
+
+        // Collect all selected task instances
+        const tasksToEdit = [];
+
+        // Add individual tasks
+        this.selectedTasks.forEach(taskId => {
+            const task = this.filteredTasks.find(t => t.id === taskId);
+            if (task) tasksToEdit.push(task);
+        });
+
+        // Add tasks from selected stacks
+        this.selectedStacks.forEach(stackKey => {
+            const taskGroups = this._groupSimilarTasks(this.filteredTasks);
+            const stack = taskGroups.find(group => {
+                const key = `${group.latestTask.task_id}-${group.latestTask.project_id}-${group.latestTask.client_id}`;
+                return key === stackKey;
+            });
+
+            if (stack && stack.tasks) {
+                // Add all tasks from the stack
+                tasksToEdit.push(...stack.tasks);
+            }
+        });
+
+        if (tasksToEdit.length === 0) return;
+
+        // Open MultipleTasksEditDialog
+        const dialog = new MultipleTasksEditDialog(tasksToEdit, this, this.coreBridge);
+        dialog.present(this.parentWindow);
+
+        // Clear selection after opening dialog
+        this._clearSelection();
     }
 
     /**

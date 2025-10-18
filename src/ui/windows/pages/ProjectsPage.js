@@ -477,7 +477,7 @@ export class ProjectsPage {
         this.contextBar = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 12,
-            halign: Gtk.Align.CENTER,
+            halign: Gtk.Align.FILL,
             margin_top: 12,
             visible: false, // Hidden by default
         });
@@ -486,7 +486,7 @@ export class ProjectsPage {
         this.paginationBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 12,
-            halign: Gtk.Align.CENTER,
+            halign: Gtk.Align.FILL,
         });
 
         this.prevProjectsButton = new Gtk.Button({
@@ -498,6 +498,7 @@ export class ProjectsPage {
         this.projectsPageInfo = new Gtk.Label({
             label: _('Page 1 of 1'),
             css_classes: ['dim-label'],
+            hexpand: true,
         });
 
         this.nextProjectsButton = new Gtk.Button({
@@ -514,7 +515,7 @@ export class ProjectsPage {
         this.selectionBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 12,
-            halign: Gtk.Align.CENTER,
+            halign: Gtk.Align.FILL,
             visible: false,
         });
 
@@ -527,6 +528,7 @@ export class ProjectsPage {
         this.selectionLabel = new Gtk.Label({
             label: '0 selected',
             css_classes: ['dim-label'],
+            hexpand: true,
         });
 
         const deleteBtn = new Gtk.Button({
@@ -826,6 +828,7 @@ export class ProjectsPage {
 
     _previousPage() {
         if (this.currentProjectsPage > 0) {
+            this._clearSelection(); // Clear selection BEFORE changing pages
             this.currentProjectsPage--;
             this._updateProjectsDisplay();
         }
@@ -834,6 +837,7 @@ export class ProjectsPage {
     _nextPage() {
         const totalPages = Math.ceil(this.filteredProjects.length / this.projectsPerPage);
         if (this.currentProjectsPage < totalPages - 1) {
+            this._clearSelection(); // Clear selection BEFORE changing pages
             this.currentProjectsPage++;
             this._updateProjectsDisplay();
         }

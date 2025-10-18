@@ -56,7 +56,6 @@ export class TimeTrackingService extends BaseService {
             pomodoroRemaining: pomodoroDuration,
         };
 
-        console.log('🔧 Core: Setting tracking state:', trackingState);
         this.state.updateTrackingState(trackingState);
         // Start timer
         this.startTimer();
