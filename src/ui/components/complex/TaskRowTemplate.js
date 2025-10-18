@@ -37,7 +37,10 @@ export class TaskRowTemplate {
     _formatDate(dateStr) {
         if (!dateStr) return '';
         const date = new Date(dateStr);
-        return date.toLocaleDateString();
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}.${month}.${year}`;
     }
 
     _createTaskWidget() {
@@ -133,14 +136,9 @@ export class TaskRowTemplate {
             timeText: timeText,
             moneyText: moneyText,
             css_classes: timeCssClasses,
-            showEditButton: true,
+            showEditButton: false, // Removed - click on row to edit
             showTrackButton: true,
             showCostTracking: true, // Always show cost tracking
-            onEditClick: () => {
-                if (this.parentWindow._editTaskInstance) {
-                    this.parentWindow._editTaskInstance(this.task.id);
-                }
-            },
             onTrackClick: async () => {
                 // Handle task tracking - check if currently tracking
                 if (this.coreBridge) {

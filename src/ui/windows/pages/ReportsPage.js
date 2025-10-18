@@ -2,6 +2,7 @@ import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw?version=1';
 import Gdk from 'gi://Gdk';
 import GLib from 'gi://GLib';
+import { AdvancedTrackingWidget } from 'resource:///com/odnoyko/valot/ui/components/complex/AdvancedTrackingWidget.js';
 
 /**
  * Reports management page
@@ -51,15 +52,36 @@ export class ReportsPage {
         headerBar.pack_start(showSidebarBtn);
 
         // Tracking widget (title area)
-        const trackingWidget = this._createTrackingWidget();
-        headerBar.set_title_widget(trackingWidget);
+        this.trackingWidget = new AdvancedTrackingWidget(this.coreBridge, this.parentWindow);
+        headerBar.set_title_widget(this.trackingWidget.getWidget());
 
         // Compact tracker button (end)
         const compactTrackerBtn = new Gtk.Button({
             icon_name: 'view-restore-symbolic',
             css_classes: ['flat', 'circular'],
-            tooltip_text: _('Open Compact Tracker'),
+            tooltip_text: _('Open Compact Tracker (Shift: keep main window)'),
         });
+
+        compactTrackerBtn.connect('clicked', () => {
+
+            const display = Gdk.Display.get_default();
+            const seat = display?.get_default_seat();
+            const keyboard = seat?.get_keyboard();
+
+            let shiftPressed = false;
+            if (keyboard) {
+                const state = keyboard.get_modifier_state();
+                shiftPressed = !!(state & Gdk.ModifierType.SHIFT_MASK);
+            }
+
+
+            if (this.parentWindow?.application) {
+                this.parentWindow.application._launchCompactTracker(shiftPressed);
+            } else {
+                console.error('❌ No application reference!');
+            }
+        });
+
         headerBar.pack_end(compactTrackerBtn);
 
         return headerBar;
@@ -132,7 +154,6 @@ export class ReportsPage {
      */
     _connectTrackingToCore() {
         if (!this.coreBridge) {
-            console.warn('⚠️ CoreBridge not available - tracking disabled');
             return;
         }
 
@@ -152,7 +173,6 @@ export class ReportsPage {
         // Load initial state
         this._updateTrackingUIFromCore();
 
-        console.log('✅ ReportsPage tracking widget connected to Core');
     }
 
     /**
@@ -202,7 +222,6 @@ export class ReportsPage {
      * Core event: tracking started
      */
     _onTrackingStarted(data) {
-        console.log('📡 ReportsPage: Tracking started');
         this._updateTrackingUIFromCore();
     }
 
@@ -210,7 +229,6 @@ export class ReportsPage {
      * Core event: tracking stopped
      */
     _onTrackingStopped(data) {
-        console.log('📡 ReportsPage: Tracking stopped');
         this._updateTrackingUIFromCore();
     }
 
@@ -246,11 +264,9 @@ export class ReportsPage {
                 if (taskName === '' || taskName.length === 0) {
                     // Empty input - create auto-indexed task via Core
                     task = await this.coreBridge.createAutoIndexedTask();
-                    console.log(`Created auto-indexed task: ${task.name}`);
                 } else {
                     // Has text - find or create task via Core
                     task = await this.coreBridge.findOrCreateTask(taskName);
-                    console.log(`Using task: ${task.name}`);
                 }
 
                 // Start tracking with task ID
@@ -295,12 +311,10 @@ export class ReportsPage {
 
     _selectProject() {
         // TODO: Open project selector
-        console.log('TODO: Select project');
     }
 
     _selectClient() {
         // TODO: Open client selector
-        console.log('TODO: Select client');
     }
 
     _createContent() {
@@ -435,7 +449,6 @@ export class ReportsPage {
      */
     exportPDFReport() {
         // TODO: Implement via Core
-        console.log('Export PDF report');
     }
 
     /**
@@ -443,7 +456,6 @@ export class ReportsPage {
      */
     exportHTMLReport() {
         // TODO: Implement via Core
-        console.log('Export HTML report');
     }
 
     /**

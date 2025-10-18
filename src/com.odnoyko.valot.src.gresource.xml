@@ -24,6 +24,7 @@
     <!-- UI Components - Complex -->
     <file>ui/components/complex/TrackingWidget.js</file>
     <file>ui/components/complex/HeaderTrackingWidget.js</file>
+    <file>ui/components/complex/AdvancedTrackingWidget.js</file>
     <file>ui/components/complex/ProjectCard.js</file>
     <file>ui/components/complex/FormDialog.js</file>
     <file>ui/components/complex/ProjectDialog.js</file>
@@ -49,6 +50,8 @@
     <file>ui/components/dialogs/CarouselDialog.js</file>
     <file>ui/components/dialogs/PreferencesDialog.js</file>
     <file>ui/components/dialogs/PDFExportPreferencesDialog.js</file>
+    <file>ui/components/dialogs/TaskInstanceEditDialog.js</file>
+    <file>ui/components/dialogs/QuickTaskSelector.js</file>
 
     <!-- UI Utilities -->
     <file>ui/utils/widgetFactory.js</file>
@@ -79,6 +82,7 @@
     <file>core/services/ClientService.js</file>
     <file>core/services/ProjectService.js</file>
     <file>core/services/ReportService.js</file>
+    <file>core/services/StatsService.js</file>
     <file>core/services/TaskInstanceService.js</file>
     <file>core/services/TaskService.js</file>
     <file>core/services/TimeTrackingService.js</file>

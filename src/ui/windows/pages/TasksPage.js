@@ -7,6 +7,7 @@ import { TaskStackTemplate } from '../../components/complex/TaskStackTemplate.js
 import { ProjectDropdown } from 'resource:///com/odnoyko/valot/ui/utils/projectDropdown.js';
 import { ClientDropdown } from 'resource:///com/odnoyko/valot/ui/utils/clientDropdown.js';
 import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/data/currencies.js';
+import { AdvancedTrackingWidget } from 'resource:///com/odnoyko/valot/ui/components/complex/AdvancedTrackingWidget.js';
 
 /**
  * Tasks management page
@@ -34,6 +35,9 @@ export class TasksPage {
 
         // Template tracking for real-time updates
         this.taskTemplates = new Map(); // taskInstanceId -> template instance
+
+        // Track expanded stacks to preserve state after reload
+        this.expandedStacks = new Set(); // groupKey -> expanded state
 
         // Current tracking context (project/client selection)
         this.currentProjectId = 1;
@@ -71,6 +75,11 @@ export class TasksPage {
         // Real-time tracking updates
         this.coreBridge.onUIEvent('tracking-updated', (data) => {
             this._updateTrackingTimeDisplay();
+
+            // If task name, project, or client changed, reload tasks to show updates
+            if (data.taskName || data.taskId || data.projectId !== undefined || data.clientId !== undefined) {
+                this.loadTasks();
+            }
         });
 
         // Subscribe to project updates to refresh colors/icons
@@ -297,15 +306,37 @@ export class TasksPage {
         }
 
         // Tracking widget (title area)
-        const trackingWidget = this._createTrackingWidget();
-        headerBar.set_title_widget(trackingWidget);
+        this.trackingWidget = new AdvancedTrackingWidget(this.coreBridge, this.parentWindow);
+        headerBar.set_title_widget(this.trackingWidget.getWidget());
 
         // Compact tracker button (end)
         const compactTrackerBtn = new Gtk.Button({
             icon_name: 'view-restore-symbolic',
             css_classes: ['flat', 'circular'],
-            tooltip_text: _('Open Compact Tracker'),
+            tooltip_text: _('Open Compact Tracker (Shift: keep main window)'),
         });
+
+        compactTrackerBtn.connect('clicked', () => {
+
+            // Get current keyboard state for Shift detection
+            const display = Gdk.Display.get_default();
+            const seat = display?.get_default_seat();
+            const keyboard = seat?.get_keyboard();
+
+            let shiftPressed = false;
+            if (keyboard) {
+                const state = keyboard.get_modifier_state();
+                shiftPressed = !!(state & Gdk.ModifierType.SHIFT_MASK);
+            }
+
+
+            if (this.parentWindow?.application) {
+                this.parentWindow.application._launchCompactTracker(shiftPressed);
+            } else {
+                console.error('❌ No application reference!');
+            }
+        });
+
         headerBar.pack_end(compactTrackerBtn);
 
         return headerBar;
@@ -395,7 +426,6 @@ export class TasksPage {
      */
     _connectTrackingToCore() {
         if (!this.coreBridge) {
-            console.warn('⚠️ CoreBridge not available - tracking disabled');
             return;
         }
 
@@ -415,7 +445,6 @@ export class TasksPage {
         // Load initial state
         this._updateTrackingUIFromCore();
 
-        console.log('✅ TasksPage tracking widget connected to Core');
     }
 
     /**
@@ -496,7 +525,6 @@ export class TasksPage {
      * Core event: tracking started
      */
     _onTrackingStarted(data) {
-        console.log('📡 TasksPage: Tracking started');
         this._updateTrackingUIFromCore();
     }
 
@@ -504,7 +532,6 @@ export class TasksPage {
      * Core event: tracking stopped
      */
     _onTrackingStopped(data) {
-        console.log('📡 TasksPage: Tracking stopped');
         this._updateTrackingUIFromCore();
     }
 
@@ -540,21 +567,22 @@ export class TasksPage {
                 const taskName = this.taskNameEntry.get_text().trim();
                 let task;
 
+                const projectId = this.currentProjectId === 1 ? null : this.currentProjectId;
+                const clientId = this.currentClientId === 1 ? null : this.currentClientId;
+
                 if (taskName === '' || taskName.length === 0) {
                     // Empty input - create auto-indexed task via Core
-                    task = await this.coreBridge.createAutoIndexedTask();
-                    console.log(`Created auto-indexed task: ${task.name}`);
+                    task = await this.coreBridge.createAutoIndexedTask(projectId, clientId);
                 } else {
                     // Has text - find or create task via Core
                     task = await this.coreBridge.findOrCreateTask(taskName);
-                    console.log(`Using task: ${task.name}`);
                 }
 
                 // Start tracking with task ID and selected project/client
                 await this.coreBridge.startTracking(
                     task.id,
-                    this.currentProjectId === 1 ? null : this.currentProjectId,
-                    this.currentClientId === 1 ? null : this.currentClientId
+                    projectId,
+                    clientId
                 );
             } catch (error) {
                 console.error('Error starting tracking:', error);
@@ -604,7 +632,6 @@ export class TasksPage {
         if (!state.isTracking) return;
 
         const newName = this.taskNameEntry.get_text().trim();
-        console.log(`📝 Auto-updating task name: "${state.currentTaskName}" -> "${newName}"`);
 
         if (newName && newName !== state.currentTaskName) {
             try {
@@ -612,7 +639,6 @@ export class TasksPage {
                 this._blockTaskNameUpdate = true;
 
                 await this.coreBridge.updateCurrentTaskName(newName);
-                console.log(`✅ Task name updated successfully`);
 
                 // Reload tasks to show updated name
                 await this.loadTasks();
@@ -843,17 +869,6 @@ export class TasksPage {
 
             this.tasks = taskInstances || [];
 
-            // Debug: check if client_rate is loaded
-            if (this.tasks.length > 0) {
-                console.log(`📊 Sample task data:`, {
-                    task_name: this.tasks[0].task_name,
-                    client_name: this.tasks[0].client_name,
-                    client_rate: this.tasks[0].client_rate,
-                    client_currency: this.tasks[0].client_currency,
-                    total_time: this.tasks[0].total_time
-                });
-            }
-
             this.filteredTasks = [...this.tasks];
             this._updateTasksDisplay();
         } catch (error) {
@@ -862,18 +877,110 @@ export class TasksPage {
     }
 
     /**
-     * Filter tasks based on search query
+     * Filter tasks based on search query and date filter
      */
     _filterTasks(query = '') {
-        if (!query.trim()) {
-            this.filteredTasks = [...this.tasks];
-        } else {
+        let filtered = [...this.tasks];
+
+        // Apply date filter (0=All, 1=Today, 2=This Week, 3=This Month)
+        const selectedFilter = this.taskFilter?.get_selected() ?? 0;
+
+        if (selectedFilter > 0) {
+            const now = GLib.DateTime.new_now_local();
+            let startDate, endDate;
+
+            switch (selectedFilter) {
+                case 1: // Today
+                    startDate = GLib.DateTime.new_local(
+                        now.get_year(),
+                        now.get_month(),
+                        now.get_day_of_month(),
+                        0, 0, 0
+                    );
+                    endDate = GLib.DateTime.new_local(
+                        now.get_year(),
+                        now.get_month(),
+                        now.get_day_of_month(),
+                        23, 59, 59
+                    );
+                    break;
+
+                case 2: // This Week (Monday to Sunday)
+                    const dayOfWeek = now.get_day_of_week(); // 1=Monday, 7=Sunday
+                    const daysToMonday = dayOfWeek - 1;
+                    const monday = now.add_days(-daysToMonday);
+
+                    startDate = GLib.DateTime.new_local(
+                        monday.get_year(),
+                        monday.get_month(),
+                        monday.get_day_of_month(),
+                        0, 0, 0
+                    );
+
+                    const sunday = monday.add_days(6);
+                    endDate = GLib.DateTime.new_local(
+                        sunday.get_year(),
+                        sunday.get_month(),
+                        sunday.get_day_of_month(),
+                        23, 59, 59
+                    );
+                    break;
+
+                case 3: // This Month (1st to last day)
+                    startDate = GLib.DateTime.new_local(
+                        now.get_year(),
+                        now.get_month(),
+                        1,
+                        0, 0, 0
+                    );
+
+                    // Get last day of month
+                    const nextMonth = now.add_months(1);
+                    const firstDayNextMonth = GLib.DateTime.new_local(
+                        nextMonth.get_year(),
+                        nextMonth.get_month(),
+                        1,
+                        0, 0, 0
+                    );
+                    const lastDayThisMonth = firstDayNextMonth.add_days(-1);
+
+                    endDate = GLib.DateTime.new_local(
+                        lastDayThisMonth.get_year(),
+                        lastDayThisMonth.get_month(),
+                        lastDayThisMonth.get_day_of_month(),
+                        23, 59, 59
+                    );
+                    break;
+            }
+
+            if (startDate && endDate) {
+                const startTimestamp = startDate.to_unix();
+                const endTimestamp = endDate.to_unix();
+
+                filtered = filtered.filter(task => {
+                    // Check if task has last_used_at timestamp
+                    if (!task.last_used_at) return false;
+
+                    // Parse last_used_at (ISO string to timestamp)
+                    const taskDate = GLib.DateTime.new_from_iso8601(task.last_used_at, null);
+                    if (!taskDate) return false;
+
+                    const taskTimestamp = taskDate.to_unix();
+                    return taskTimestamp >= startTimestamp && taskTimestamp <= endTimestamp;
+                });
+            }
+        }
+
+        // Apply search query filter
+        if (query.trim()) {
             const lowerQuery = query.toLowerCase();
-            this.filteredTasks = this.tasks.filter(task =>
+            filtered = filtered.filter(task =>
                 task.name.toLowerCase().includes(lowerQuery) ||
                 (task.project_name && task.project_name.toLowerCase().includes(lowerQuery))
             );
         }
+
+        this.filteredTasks = filtered;
         this._updateTasksDisplay();
     }
 
@@ -925,6 +1032,9 @@ export class TasksPage {
         // Update pagination/selection UI
         this._updatePaginationInfo();
         this._updateSelectionUI();
+
+        // Update tracking time display for currently tracking task
+        this._updateTrackingTimeDisplay();
     }
 
     /**
@@ -1013,6 +1123,11 @@ export class TasksPage {
                 // Apply selection styling if selected
                 if (this.selectedStacks.has(group.groupKey)) {
                     row.add_css_class('selected-task');
+                }
+
+                // Restore expanded state if was previously expanded
+                if (this.expandedStacks.has(group.groupKey)) {
+                    row.set_expanded(true);
                 }
 
                 // Handle collapse/expand events
@@ -1120,7 +1235,10 @@ export class TasksPage {
     _formatDate(dateStr) {
         if (!dateStr) return '';
         const date = new Date(dateStr);
-        return date.toLocaleDateString();
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}.${month}.${year}`;
     }
 
     /**
@@ -1129,7 +1247,12 @@ export class TasksPage {
     _onStackExpandedChanged(row, group) {
         const isExpanded = row.get_expanded();
 
-        if (!isExpanded) {
+        // Save expanded state
+        if (isExpanded) {
+            this.expandedStacks.add(group.groupKey);
+        } else {
+            this.expandedStacks.delete(group.groupKey);
+
             // Collapsing - if not all tasks are selected, deselect all tasks in this stack
             if (!this.selectedStacks.has(group.groupKey)) {
                 group.tasks.forEach(task => {
@@ -1480,6 +1603,30 @@ export class TasksPage {
                 }
             }
         });
+    }
+
+    /**
+     * Edit task instance
+     */
+    async _editTaskInstance(instanceId) {
+        try {
+            // Dynamically import dialog
+            const { TaskInstanceEditDialog } = await import('resource:///com/odnoyko/valot/ui/components/dialogs/TaskInstanceEditDialog.js');
+
+            // Get full task instance data
+            const taskInstance = this.filteredTasks.find(t => t.id === instanceId);
+            if (!taskInstance) {
+                console.error('Task instance not found:', instanceId);
+                return;
+            }
+
+            // Show edit dialog - pass TasksPage as parent so it can call loadTasks()
+            const dialog = new TaskInstanceEditDialog(taskInstance, this, this.coreBridge);
+            await dialog.present(this.parentWindow);
+
+        } catch (error) {
+            console.error('Error opening edit dialog:', error);
+        }
     }
 
     /**

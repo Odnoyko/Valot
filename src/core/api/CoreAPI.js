@@ -7,6 +7,7 @@ import { TaskService } from '../services/TaskService.js';
 import { TaskInstanceService } from '../services/TaskInstanceService.js';
 import { TimeTrackingService } from '../services/TimeTrackingService.js';
 import { ReportService } from '../services/ReportService.js';
+import { StatsService } from '../services/StatsService.js';
 /**
  * Core API
  * Main interface for interacting with the application core
@@ -40,6 +41,7 @@ export class CoreAPI {
             taskInstances: new TaskInstanceService(this),
             tracking: new TimeTrackingService(this),
             reports: new ReportService(this),
+            stats: new StatsService(this),
         };
         this.events.emit(CoreEvents.DATABASE_CONNECTED);
         this.events.emit(CoreEvents.CORE_INITIALIZED);

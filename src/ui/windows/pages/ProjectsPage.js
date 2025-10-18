@@ -4,6 +4,7 @@ import Gdk from 'gi://Gdk';
 import GLib from 'gi://GLib';
 import { ProjectDialog } from 'resource:///com/odnoyko/valot/ui/components/complex/ProjectDialog.js';
 import { ProjectAppearanceDialog } from 'resource:///com/odnoyko/valot/ui/components/complex/ProjectAppearanceDialog.js';
+import { AdvancedTrackingWidget } from 'resource:///com/odnoyko/valot/ui/components/complex/AdvancedTrackingWidget.js';
 
 /**
  * Projects management page
@@ -22,6 +23,12 @@ export class ProjectsPage {
         this.currentProjectsPage = 0;
         this.projectsPerPage = 10;
 
+        // Map to store time labels for real-time updates
+        this.projectTimeLabels = new Map(); // projectId -> timeLabel widget
+
+        // Track last tracking project to reset its time when switching
+        this.lastTrackingProjectId = null;
+
         // Subscribe to Core events for automatic updates
         this._subscribeToCore();
     }
@@ -38,6 +45,24 @@ export class ProjectsPage {
         });
 
         this.coreBridge.onUIEvent('tracking-stopped', () => {
+            this.loadProjects();
+        });
+
+        // Real-time tracking updates
+        this.coreBridge.onUIEvent('tracking-updated', () => {
+            this._updateTrackingProjectTime();
+        });
+
+        // Reload when tasks are updated/deleted (affects project time)
+        this.coreBridge.onUIEvent('task-updated', () => {
+            this.loadProjects();
+        });
+
+        this.coreBridge.onUIEvent('task-deleted', () => {
+            this.loadProjects();
+        });
+
+        this.coreBridge.onUIEvent('tasks-deleted', () => {
             this.loadProjects();
         });
 
@@ -117,15 +142,36 @@ export class ProjectsPage {
         }
 
         // Tracking widget (title area)
-        const trackingWidget = this._createTrackingWidget();
-        headerBar.set_title_widget(trackingWidget);
+        this.trackingWidget = new AdvancedTrackingWidget(this.coreBridge, this.parentWindow);
+        headerBar.set_title_widget(this.trackingWidget.getWidget());
 
         // Compact tracker button (end)
         const compactTrackerBtn = new Gtk.Button({
             icon_name: 'view-restore-symbolic',
             css_classes: ['flat', 'circular'],
-            tooltip_text: _('Open Compact Tracker'),
+            tooltip_text: _('Open Compact Tracker (Shift: keep main window)'),
         });
+
+        compactTrackerBtn.connect('clicked', () => {
+
+            const display = Gdk.Display.get_default();
+            const seat = display?.get_default_seat();
+            const keyboard = seat?.get_keyboard();
+
+            let shiftPressed = false;
+            if (keyboard) {
+                const state = keyboard.get_modifier_state();
+                shiftPressed = !!(state & Gdk.ModifierType.SHIFT_MASK);
+            }
+
+
+            if (this.parentWindow?.application) {
+                this.parentWindow.application._launchCompactTracker(shiftPressed);
+            } else {
+                console.error('❌ No application reference!');
+            }
+        });
+
         headerBar.pack_end(compactTrackerBtn);
 
         return headerBar;
@@ -329,11 +375,9 @@ export class ProjectsPage {
     }
 
     _selectProject() {
-        console.log('TODO: Select project');
     }
 
     _selectClient() {
-        console.log('TODO: Select client');
     }
 
     _createContent() {
@@ -512,8 +556,8 @@ export class ProjectsPage {
         }
 
         try {
-            // Get projects from Core
-            const projects = await this.coreBridge.getAllProjects();
+            // Get projects with calculated total_time from Core
+            const projects = await this.coreBridge.getAllProjectsWithTime();
             this.projects = projects || [];
             this.filteredProjects = [...this.projects];
             this._updateProjectsDisplay();
@@ -550,6 +594,9 @@ export class ProjectsPage {
             this.projectList.remove(child);
             child = next;
         }
+
+        // Clear time labels map
+        this.projectTimeLabels.clear();
 
         if (!this.filteredProjects || this.filteredProjects.length === 0) {
             this._showEmptyState();
@@ -680,6 +727,9 @@ export class ProjectsPage {
             width_request: 100,
         });
 
+        // Store time label reference for real-time updates
+        this.projectTimeLabels.set(project.id, timeLabel);
+
         mainBox.append(settingsButton);
         mainBox.append(nameLabel);
         mainBox.append(timeLabel);
@@ -719,7 +769,6 @@ export class ProjectsPage {
     _toggleProjectSelection(projectId, row) {
         // Prevent selection of default project (ID = 1)
         if (projectId === 1) {
-            console.log('⚠️ Cannot select default project');
             // Show toast notification
             if (this.parentWindow && this.parentWindow.showToast) {
                 this.parentWindow.showToast(_('Default Project cannot be selected'));
@@ -865,7 +914,6 @@ export class ProjectsPage {
         const idsToDelete = Array.from(this.selectedProjects).filter(id => id !== 1);
 
         if (idsToDelete.length === 0) {
-            console.log('⚠️ No projects to delete (default project cannot be deleted)');
             return;
         }
 
@@ -1071,6 +1119,65 @@ export class ProjectsPage {
         });
 
         dialog.present(this.parentWindow);
+    }
+
+    /**
+     * Update currently tracking project time in real-time
+     */
+    async _updateTrackingProjectTime() {
+        if (!this.coreBridge) return;
+
+        const trackingState = this.coreBridge.getTrackingState();
+        if (!trackingState.isTracking || !trackingState.currentProjectId) {
+            // Reset last tracking project when stopped
+            this.lastTrackingProjectId = null;
+            return;
+        }
+
+        const currentProjectId = trackingState.currentProjectId;
+
+        try {
+            // Get all task instances
+            const taskInstances = await this.coreBridge.getAllTaskInstances();
+
+            // If project changed, reset old project time to saved value
+            if (this.lastTrackingProjectId && this.lastTrackingProjectId !== currentProjectId) {
+                const oldTimeLabel = this.projectTimeLabels.get(this.lastTrackingProjectId);
+                if (oldTimeLabel) {
+                    // Calculate saved time for old project (without tracking time)
+                    const oldProjectTasks = taskInstances.filter(t => t.project_id === this.lastTrackingProjectId);
+                    let oldTotalSeconds = 0;
+                    oldProjectTasks.forEach(task => {
+                        oldTotalSeconds += task.total_time || 0;
+                    });
+                    // Reset to saved value
+                    oldTimeLabel.set_label(this._formatDurationHMS(oldTotalSeconds));
+                }
+            }
+
+            // Update current project time with tracking time
+            const timeLabel = this.projectTimeLabels.get(currentProjectId);
+            if (timeLabel) {
+                // Calculate total saved time for current project
+                const projectTasks = taskInstances.filter(t => t.project_id === currentProjectId);
+                let totalSeconds = 0;
+                projectTasks.forEach(task => {
+                    totalSeconds += task.total_time || 0;
+                });
+
+                // Add current tracking time
+                const currentElapsed = trackingState.elapsedSeconds || 0;
+                totalSeconds += currentElapsed;
+
+                // Update label
+                timeLabel.set_label(this._formatDurationHMS(totalSeconds));
+            }
+
+            // Update last tracking project
+            this.lastTrackingProjectId = currentProjectId;
+        } catch (error) {
+            console.error('Error updating tracking project time:', error);
+        }
     }
 
     /**

@@ -29,7 +29,6 @@ export class GestureController {
      */
     setupSidebarGesture(splitView) {
         if (!this.isGesturesEnabled()) {
-            console.log('Gestures disabled in settings');
             return;
         }
 
@@ -46,32 +45,26 @@ export class GestureController {
 
             swipeTracker.connect('begin-swipe', () => {
                 initialSidebarState = splitView.get_show_sidebar();
-                console.log('Swipe begin - sidebar currently:', initialSidebarState ? 'open' : 'closed');
             });
 
             swipeTracker.connect('update-swipe', (tracker, progress) => {
                 // Progress goes from 0 to 1
                 // We can use this to show intermediate states if needed
-                console.log(`Swipe progress: ${progress}`);
             });
 
             swipeTracker.connect('end-swipe', (tracker, velocity, to) => {
-                console.log(`Swipe end - velocity: ${velocity}, to: ${to}`);
 
                 // Toggle based on swipe direction
                 // If swiping right (positive velocity) and sidebar is closed, open it
                 // If swiping left (negative velocity) and sidebar is open, close it
                 if (velocity > 0.5 && !initialSidebarState) {
-                    console.log('→ Opening sidebar');
                     splitView.set_show_sidebar(true);
                 } else if (velocity < -0.5 && initialSidebarState) {
-                    console.log('← Closing sidebar');
                     splitView.set_show_sidebar(false);
                 }
             });
 
             this.gestures.push(swipeTracker);
-            console.log('✅ Sidebar swipe gesture enabled (Adwaita SwipeTracker)');
         } catch (error) {
             console.error('Failed to setup swipe tracker:', error);
         }
@@ -82,7 +75,6 @@ export class GestureController {
      */
     setupAllGestures() {
         if (!this.isGesturesEnabled()) {
-            console.log('⚠️ Gestures are disabled in settings');
             return;
         }
 

@@ -3,6 +3,8 @@ import { CoreEvents } from '../events/CoreEvents.js';
 import { TimeUtils } from '../utils/TimeUtils.js';
 export class TimeTrackingService extends BaseService {
     trackingTimer = null;
+    lastUsedProjectId = null;
+    lastUsedClientId = null;
     constructor(core) {
         super(core);
     }
@@ -22,6 +24,10 @@ export class TimeTrackingService extends BaseService {
             project_id: projectId || 1,
             client_id: clientId || 1
         });
+        // Save last used project/client for UI persistence
+        this.lastUsedProjectId = projectId;
+        this.lastUsedClientId = clientId;
+
         // Get task name for state
         const task = await this.core.services.tasks.getById(taskId);
         // Create time entry for this instance
@@ -107,30 +113,25 @@ export class TimeTrackingService extends BaseService {
             throw new Error('Not currently tracking');
         }
 
-        console.log(`🔧 Core: Updating task name from "${currentState.currentTaskName}" to "${newName}"`);
 
         // Find or create task with new name
         const newTask = await this.core.services.tasks.findOrCreate(newName);
-        console.log(`✅ Core: Using task "${newName}" (id: ${newTask.id})`)
 
         // Update TaskInstance to point to the new task
         await this.core.services.taskInstances.update(currentState.currentTaskInstanceId, {
             task_id: newTask.id
         });
-        console.log(`✅ Core: TaskInstance ${currentState.currentTaskInstanceId} switched to task ${newTask.id}`);
 
         // Update state
         this.state.updateTrackingState({
             currentTaskId: newTask.id,
             currentTaskName: newName,
         });
-        console.log(`✅ Core: Tracking state updated with new task`);
 
         this.events.emit(CoreEvents.TRACKING_UPDATED, {
             taskId: newTask.id,
             taskName: newName,
         });
-        console.log(`📡 Core: TRACKING_UPDATED event emitted`);
     }
 
     /**
@@ -234,6 +235,10 @@ export class TimeTrackingService extends BaseService {
     async updateTimeEntry(id, input) {
         const updates = [];
         const params = [];
+        if (input.start_time !== undefined) {
+            updates.push('start_time = ?');
+            params.push(input.start_time);
+        }
         if (input.end_time !== undefined) {
             updates.push('end_time = ?');
             params.push(input.end_time);
@@ -315,5 +320,19 @@ export class TimeTrackingService extends BaseService {
             await this.core.services.taskInstances.updateTotalTime(instanceId);
             this.events.emit(CoreEvents.TIME_ENTRY_DELETED, { id: entryId });
         }
+    }
+
+    /**
+     * Get last used project ID
+     */
+    getLastUsedProjectId() {
+        return this.lastUsedProjectId;
+    }
+
+    /**
+     * Get last used client ID
+     */
+    getLastUsedClientId() {
+        return this.lastUsedClientId;
     }
 }

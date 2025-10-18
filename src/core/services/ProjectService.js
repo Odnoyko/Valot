@@ -139,7 +139,6 @@ export class ProjectService extends BaseService {
         const idsToDelete = ids.filter(id => id !== 1);
 
         if (idsToDelete.length === 0) {
-            console.log('⚠️ No projects to delete (default project cannot be deleted)');
             return;
         }
 

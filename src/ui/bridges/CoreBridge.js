@@ -258,12 +258,12 @@ export class CoreBridge {
         return await this.core.services.tasks.findOrCreate(name);
     }
 
-    async createAutoIndexedTask() {
-        return await this.core.services.tasks.createAutoIndexed();
+    async createAutoIndexedTask(projectId = null, clientId = null) {
+        return await this.core.services.tasks.createAutoIndexed(projectId, clientId);
     }
 
-    async getNextTaskAutoIndex() {
-        return await this.core.services.tasks.getNextAutoIndex();
+    async getNextTaskAutoIndex(projectId = null, clientId = null) {
+        return await this.core.services.tasks.getNextAutoIndex(projectId, clientId);
     }
 
     async cleanupOrphanedTasks() {
@@ -318,6 +318,18 @@ export class CoreBridge {
         return await this.core.services.tracking.deleteTimeEntry(entryId);
     }
 
+    async updateTimeEntry(entryId, data) {
+        return await this.core.services.tracking.updateTimeEntry(entryId, data);
+    }
+
+    async updateTaskInstance(instanceId, data) {
+        return await this.core.services.taskInstances.update(instanceId, data);
+    }
+
+    async updateTaskInstanceTotalTime(instanceId) {
+        return await this.core.services.taskInstances.updateTotalTime(instanceId);
+    }
+
     // ==================== State API ====================
 
     getState() {
@@ -326,6 +338,14 @@ export class CoreBridge {
 
     getTrackingState() {
         return this.core.state.getTrackingState();
+    }
+
+    getLastUsedProjectId() {
+        return this.core.services.tracking.getLastUsedProjectId();
+    }
+
+    getLastUsedClientId() {
+        return this.core.services.tracking.getLastUsedClientId();
     }
 
     getUIState() {
@@ -346,5 +366,44 @@ export class CoreBridge {
 
     async getCurrentTaskOldTime() {
         return await this.core.services.tracking.getCurrentTaskOldTime();
+    }
+
+    // ========================================
+    // Statistics Methods
+    // ========================================
+
+    /**
+     * Get This Week statistics (Monday to Sunday)
+     */
+    async getThisWeekStats() {
+        return await this.core.services.stats.getThisWeekStats();
+    }
+
+    /**
+     * Get top projects with time tracking
+     */
+    async getProjectsWithTime(limit = 5) {
+        return await this.core.services.stats.getProjectsWithTime(limit);
+    }
+
+    /**
+     * Get Today statistics
+     */
+    async getTodayStats() {
+        return await this.core.services.stats.getTodayStats();
+    }
+
+    /**
+     * Get This Month statistics
+     */
+    async getThisMonthStats() {
+        return await this.core.services.stats.getThisMonthStats();
+    }
+
+    /**
+     * Get all projects with calculated total_time
+     */
+    async getAllProjectsWithTime() {
+        return await this.core.services.stats.getAllProjectsWithTime();
     }
 }

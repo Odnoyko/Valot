@@ -1,0 +1,391 @@
+/**
+ * Advanced Tracking Widget
+ * Full-featured tracking widget with live editing, project/client selection
+ * Used in page headers across the app
+ *
+ * Features:
+ * - Task name entry with live editing during tracking
+ * - Project dropdown
+ * - Client dropdown
+ * - Time display
+ * - Track button (start/stop)
+ * - Auto-save while typing (debounced)
+ * - Enter key to start/stop tracking
+ */
+
+import Gtk from 'gi://Gtk?version=4.0';
+import GLib from 'gi://GLib';
+import { ProjectDropdown } from 'resource:///com/odnoyko/valot/ui/utils/projectDropdown.js';
+import { ClientDropdown } from 'resource:///com/odnoyko/valot/ui/utils/clientDropdown.js';
+
+export class AdvancedTrackingWidget {
+    constructor(coreBridge, parentWindow) {
+        this.coreBridge = coreBridge;
+        this.parentWindow = parentWindow;
+
+        // Current selections
+        this.currentProjectId = 1;
+        this.currentClientId = 1;
+
+        // UI update timer
+        this.trackingUITimer = null;
+        this.taskNameDebounceTimer = null;
+        this._blockTaskNameUpdate = false;
+
+        // Build widget
+        this.widget = this._createWidget();
+        this._connectToCore();
+        this._updateUIFromCore();
+    }
+
+    _createWidget() {
+        const box = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 8,
+            hexpand: true,
+            hexpand_set: true,
+        });
+
+        // Task name entry
+        this.taskNameEntry = new Gtk.Entry({
+            placeholder_text: _('Task name'),
+            hexpand: true,
+            hexpand_set: true,
+        });
+
+        // Auto-update task name while typing (if tracking)
+        this.taskNameEntry.connect('changed', () => {
+            // Don't trigger update during programmatic changes
+            if (this._blockTaskNameUpdate) return;
+
+            const state = this.coreBridge?.getTrackingState();
+            if (!state || !state.isTracking) return;
+
+            // Clear previous timer
+            if (this.taskNameDebounceTimer) {
+                GLib.Source.remove(this.taskNameDebounceTimer);
+            }
+
+            // Set new timer - update after 250ms of no typing
+            this.taskNameDebounceTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, () => {
+                this.taskNameDebounceTimer = null;
+                this._updateTaskNameFromInput();
+                return false;
+            });
+        });
+
+        // Enter key - start/stop tracking
+        this.taskNameEntry.connect('activate', () => {
+            this._toggleTracking();
+        });
+
+        box.append(this.taskNameEntry);
+
+        // Project dropdown
+        this._setupProjectDropdown();
+        box.append(this.projectDropdown.getWidget());
+
+        // Client dropdown
+        this._setupClientDropdown();
+        box.append(this.clientDropdown.getWidget());
+
+        // Time label
+        this.actualTimeLabel = new Gtk.Label({
+            label: '00:00:00',
+            css_classes: ['title-4'],
+            margin_start: 8,
+        });
+        box.append(this.actualTimeLabel);
+
+        // Track button
+        this.trackButton = new Gtk.Button({
+            icon_name: 'media-playback-start-symbolic',
+            css_classes: ['suggested-action', 'circular'],
+            tooltip_text: _('Start tracking'),
+        });
+        this.trackButton.connect('clicked', () => this._toggleTracking());
+        box.append(this.trackButton);
+
+        return box;
+    }
+
+    _setupProjectDropdown() {
+        this.projectDropdown = new ProjectDropdown(
+            this.coreBridge,
+            this.currentProjectId,
+            async (selectedProject) => {
+                this.currentProjectId = selectedProject.id;
+
+                // If tracking, update project in real-time
+                const state = this.coreBridge?.getTrackingState();
+                if (state && state.isTracking) {
+                    await this._updateTrackingContext();
+                }
+            }
+        );
+    }
+
+    _setupClientDropdown() {
+        this.clientDropdown = new ClientDropdown(
+            this.coreBridge,
+            this.currentClientId,
+            async (selectedClient) => {
+                this.currentClientId = selectedClient.id;
+
+                // If tracking, update client in real-time
+                const state = this.coreBridge?.getTrackingState();
+                if (state && state.isTracking) {
+                    await this._updateTrackingContext();
+                }
+            }
+        );
+    }
+
+    _connectToCore() {
+        if (!this.coreBridge) {
+            return;
+        }
+
+        // Subscribe to Core events
+        this.coreBridge.onUIEvent('tracking-started', (data) => {
+            this._onTrackingStarted(data);
+        });
+
+        this.coreBridge.onUIEvent('tracking-stopped', (data) => {
+            this._onTrackingStopped(data);
+        });
+
+        this.coreBridge.onUIEvent('tracking-updated', (data) => {
+            this._onTrackingUpdated(data);
+        });
+
+    }
+
+    _updateUIFromCore() {
+        if (!this.coreBridge) return;
+
+        const state = this.coreBridge.getTrackingState();
+
+        if (state.isTracking) {
+            // Tracking active - allow editing!
+            const cursorPosition = this.taskNameEntry.get_position();
+            const oldText = this.taskNameEntry.get_text();
+            const newText = state.currentTaskName || '';
+
+            // Block change handler during programmatic update
+            this._blockTaskNameUpdate = true;
+            this.taskNameEntry.set_text(newText);
+            this.taskNameEntry.set_sensitive(true);
+            this._blockTaskNameUpdate = false;
+
+            // Restore cursor position if text didn't change, otherwise move to end
+            if (oldText === newText && cursorPosition >= 0) {
+                this.taskNameEntry.set_position(cursorPosition);
+            } else {
+                this.taskNameEntry.set_position(-1); // -1 = end of text
+            }
+
+            // Update dropdowns with current tracking context
+            if (state.currentProjectId && this.projectDropdown) {
+                this.currentProjectId = state.currentProjectId;
+                this.projectDropdown.setCurrentProject(state.currentProjectId);
+            }
+            if (state.currentClientId && this.clientDropdown) {
+                this.currentClientId = state.currentClientId;
+                this.clientDropdown.setSelectedClient(state.currentClientId);
+            }
+
+            // Change icon to stop, but keep green color
+            this.trackButton.set_icon_name('media-playback-stop-symbolic');
+            this.trackButton.set_tooltip_text(_('Stop tracking'));
+            if (!this.trackButton.has_css_class('suggested-action')) {
+                this.trackButton.add_css_class('suggested-action');
+            }
+
+            this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+
+            // Start UI update timer
+            this._startUITimer();
+        } else {
+            // Tracking idle - KEEP task name in input (don't clear it)
+            this.taskNameEntry.set_sensitive(true);
+
+            // Restore last used project/client (or default if never tracked)
+            const lastProjectId = this.coreBridge.getLastUsedProjectId() || 1;
+            const lastClientId = this.coreBridge.getLastUsedClientId() || 1;
+
+            this.currentProjectId = lastProjectId;
+            this.currentClientId = lastClientId;
+            if (this.projectDropdown) {
+                this.projectDropdown.setCurrentProject(lastProjectId);
+            }
+            if (this.clientDropdown) {
+                this.clientDropdown.setSelectedClient(lastClientId);
+            }
+
+            // Change icon to play, keep green
+            this.trackButton.set_icon_name('media-playback-start-symbolic');
+            this.trackButton.set_tooltip_text(_('Start tracking'));
+            if (!this.trackButton.has_css_class('suggested-action')) {
+                this.trackButton.add_css_class('suggested-action');
+            }
+
+            this.actualTimeLabel.set_label('00:00:00');
+
+            // Stop UI update timer
+            this._stopUITimer();
+        }
+    }
+
+    _onTrackingStarted(data) {
+        // Force full UI refresh to synchronize with current state
+        this._updateUIFromCore();
+    }
+
+    _onTrackingStopped(data) {
+        // Force full UI refresh to synchronize with current state
+        this._updateUIFromCore();
+    }
+
+    _onTrackingUpdated(data) {
+        const state = this.coreBridge.getTrackingState();
+
+        // Update time only - do NOT update task name here to avoid cursor jumping
+        this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+
+        // Project/Client dropdowns update themselves via their own event handlers
+        // Task name updates via debounced input handler
+    }
+
+    async _toggleTracking() {
+        if (!this.coreBridge) return;
+
+        try {
+            const state = this.coreBridge.getTrackingState();
+
+            if (state.isTracking) {
+                // Stop tracking
+                await this.coreBridge.stopTracking();
+            } else {
+                // Start tracking
+                let taskName = this.taskNameEntry.get_text().trim();
+                let task;
+
+                // Auto-generate task if empty - use Core logic
+                if (!taskName) {
+                    task = await this.coreBridge.createAutoIndexedTask(
+                        this.currentProjectId,
+                        this.currentClientId
+                    );
+
+                    // Update entry with generated name
+                    this._blockTaskNameUpdate = true;
+                    this.taskNameEntry.set_text(task.name);
+                    this._blockTaskNameUpdate = false;
+
+                } else {
+                    // Find or create task by name
+                    task = await this.coreBridge.findOrCreateTask(taskName);
+                }
+
+                // Start tracking with current project/client selection
+                await this.coreBridge.startTracking(
+                    task.id,
+                    this.currentProjectId,
+                    this.currentClientId
+                );
+
+            }
+        } catch (error) {
+            console.error('Error toggling tracking:', error);
+        }
+    }
+
+    async _updateTaskNameFromInput() {
+        if (!this.coreBridge) return;
+
+        const state = this.coreBridge.getTrackingState();
+        if (!state.isTracking) return;
+
+        const newName = this.taskNameEntry.get_text().trim();
+        if (!newName || newName === state.currentTaskName) return;
+
+        try {
+
+            // Update the current tracking session with new name
+            await this.coreBridge.updateCurrentTaskName(newName);
+
+        } catch (error) {
+            console.error('Error updating task name:', error);
+        }
+    }
+
+    async _updateTrackingContext() {
+        if (!this.coreBridge) return;
+
+        const state = this.coreBridge.getTrackingState();
+        if (!state.isTracking) return;
+
+        try {
+
+            // Update project/client for current tracking session
+            await this.coreBridge.updateCurrentProjectClient(
+                this.currentProjectId,
+                this.currentClientId
+            );
+
+
+        } catch (error) {
+            console.error('Error updating tracking context:', error);
+        }
+    }
+
+    _startUITimer() {
+        if (this.trackingUITimer) return;
+
+        this.trackingUITimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+            const state = this.coreBridge?.getTrackingState();
+            if (state && state.isTracking) {
+                this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+                return true; // Continue
+            } else {
+                this.trackingUITimer = null;
+                return false; // Stop
+            }
+        });
+    }
+
+    _stopUITimer() {
+        if (this.trackingUITimer) {
+            GLib.Source.remove(this.trackingUITimer);
+            this.trackingUITimer = null;
+        }
+    }
+
+    _formatDuration(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    getWidget() {
+        return this.widget;
+    }
+
+    /**
+     * Force refresh UI from Core state
+     * Call this when page becomes visible to synchronize
+     */
+    refresh() {
+        this._updateUIFromCore();
+    }
+
+    cleanup() {
+        this._stopUITimer();
+        if (this.taskNameDebounceTimer) {
+            GLib.Source.remove(this.taskNameDebounceTimer);
+            this.taskNameDebounceTimer = null;
+        }
+    }
+}

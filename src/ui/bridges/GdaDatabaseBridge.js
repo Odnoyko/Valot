@@ -44,7 +44,6 @@ export class GdaDatabaseBridge {
             // Initialize schema
             await this._initSchema();
 
-            console.log('✅ Database connected successfully');
         } catch (error) {
             console.error('❌ Database connection error:', error.message);
             throw error;
@@ -126,7 +125,6 @@ export class GdaDatabaseBridge {
                 )`;
             await this.execute(createTimeEntryTable);
 
-            console.log('✅ Database schema initialized');
         } catch (error) {
             console.error('❌ Schema initialization error:', error);
             throw error;
@@ -272,7 +270,6 @@ export class GdaDatabaseBridge {
                 this.connection.close();
                 this.connection = null;
                 this.isConnected_ = false;
-                console.log('✅ Database connection closed');
             } catch (error) {
                 console.error('❌ Close error:', error);
             }

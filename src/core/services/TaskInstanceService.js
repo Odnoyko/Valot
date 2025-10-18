@@ -144,9 +144,9 @@ export class TaskInstanceService extends BaseService {
         if (data.task_id !== undefined)
             updates.push(`task_id = ${data.task_id}`);
         if (data.project_id !== undefined)
-            updates.push(`project_id = ${data.project_id || 'NULL'}`);
+            updates.push(`project_id = ${data.project_id}`);
         if (data.client_id !== undefined)
-            updates.push(`client_id = ${data.client_id || 'NULL'}`);
+            updates.push(`client_id = ${data.client_id}`);
         if (data.total_time !== undefined)
             updates.push(`total_time = ${data.total_time}`);
         if (data.is_favorite !== undefined)

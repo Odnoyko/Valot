@@ -105,19 +105,32 @@ export class TaskService extends BaseService {
     }
     /**
      * Get next free auto-index for "Task - X" naming
+     * Scoped to specific Project+Client combination
      * If "Task - 2" is deleted, next task will be "Task - 2"
      * Otherwise finds next sequential number
      */
-    async getNextAutoIndex() {
-        const tasks = await this.getAll();
-        // Find all existing "Task - X" indices
+    async getNextAutoIndex(projectId = null, clientId = null) {
+        // Get all task instances with this project+client combination
+        const sql = `
+            SELECT t.name
+            FROM Task t
+            JOIN TaskInstance ti ON ti.task_id = t.id
+            WHERE ti.project_id ${projectId === null ? 'IS NULL' : `= ${projectId}`}
+              AND ti.client_id ${clientId === null ? 'IS NULL' : `= ${clientId}`}
+              AND t.name LIKE 'Task - %'
+        `;
+        const results = await this.query(sql);
+
+        // Find all existing "Task - X" indices for this combination
         const usedIndices = new Set();
-        tasks.forEach(task => {
-            const match = task.name.match(/^Task - (\d+)$/);
+        results.forEach(row => {
+            const match = row.name.match(/^Task - (\d+)$/);
             if (match) {
                 usedIndices.add(parseInt(match[1]));
             }
         });
+
+
         // Find first free index starting from 1
         let nextIndex = 1;
         while (usedIndices.has(nextIndex)) {
@@ -127,10 +140,10 @@ export class TaskService extends BaseService {
     }
     /**
      * Create auto-indexed task: "Task - 1", "Task - 2", etc.
-     * Automatically finds first free index
+     * Automatically finds first free index scoped to Project+Client combination
      */
-    async createAutoIndexed() {
-        const nextIndex = await this.getNextAutoIndex();
+    async createAutoIndexed(projectId = null, clientId = null) {
+        const nextIndex = await this.getNextAutoIndex(projectId, clientId);
         const taskName = `Task - ${nextIndex}`;
         const id = await this.create({ name: taskName });
         return await this.getById(id);

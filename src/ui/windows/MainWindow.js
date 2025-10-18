@@ -35,7 +35,6 @@ export const ValotMainWindow = GObject.registerClass({
         try {
             this.settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
         } catch (error) {
-            console.warn('GSettings schema not available, using defaults:', error.message);
             this.settings = null;
         }
 
@@ -59,6 +58,12 @@ export const ValotMainWindow = GObject.registerClass({
 
         // Setup global keyboard shortcuts using application-level accelerators
         this._setupGlobalKeyboardShortcuts();
+
+        // Subscribe to Core events for sidebar updates
+        this._subscribeToCore();
+
+        // Initial sidebar stats load
+        this._updateSidebarStats();
     }
 
     /**
@@ -88,6 +93,11 @@ export const ValotMainWindow = GObject.registerClass({
         // Create main content (Adw.NavigationView)
         this.navigationView = new Adw.NavigationView();
         this.toastOverlay.set_child(this.navigationView);
+
+        // Listen for page navigation to refresh tracking widgets
+        this.navigationView.connect('notify::visible-page', () => {
+            this._onPageChanged();
+        });
 
         // Set toast overlay as split view content
         this.splitView.set_content(this.toastOverlay);
@@ -307,7 +317,6 @@ export const ValotMainWindow = GObject.registerClass({
                 // Add to navigation view
                 this.navigationView.add(navPage);
 
-                console.log(`✅ Page loaded: ${pageInfo.id}`);
             } catch (error) {
                 console.error(`❌ Error loading page ${pageInfo.id}:`, error);
             }
@@ -415,6 +424,39 @@ export const ValotMainWindow = GObject.registerClass({
     }
 
     /**
+     * Called when user navigates to a different page
+     * Refreshes tracking widgets to sync with current state
+     */
+    _onPageChanged() {
+        const visiblePage = this.navigationView.get_visible_page();
+        if (!visiblePage) return;
+
+        const pageTag = visiblePage.get_tag();
+
+        // Refresh tracking widget on the current page
+        let pageInstance = null;
+        switch (pageTag) {
+            case 'tasks':
+                pageInstance = this.tasksPageInstance;
+                break;
+            case 'projects':
+                pageInstance = this.projectsPageInstance;
+                break;
+            case 'clients':
+                pageInstance = this.clientsPageInstance;
+                break;
+            case 'reports':
+                pageInstance = this.reportsPageInstance;
+                break;
+        }
+
+        // Refresh tracking widget if page has one
+        if (pageInstance && pageInstance.trackingWidget && pageInstance.trackingWidget.refresh) {
+            pageInstance.trackingWidget.refresh();
+        }
+    }
+
+    /**
      * Show a simple toast notification
      */
     showToast(message) {
@@ -442,5 +484,87 @@ export const ValotMainWindow = GObject.registerClass({
         });
 
         this.toastOverlay.add_toast(toast);
+    }
+
+    /**
+     * Subscribe to Core events for sidebar real-time updates
+     */
+    _subscribeToCore() {
+        if (!this.coreBridge) return;
+
+        // Update sidebar on tracking start/stop
+        this.coreBridge.onUIEvent('tracking-started', () => {
+            this._updateSidebarStats();
+        });
+
+        this.coreBridge.onUIEvent('tracking-stopped', () => {
+            this._updateSidebarStats();
+        });
+
+        // Real-time updates every second while tracking
+        this.coreBridge.onUIEvent('tracking-updated', () => {
+            this._updateSidebarStatsRealtime();
+        });
+
+        // Update sidebar when tasks are updated/deleted (affects This Week stats)
+        this.coreBridge.onUIEvent('task-updated', () => {
+            this._updateSidebarStats();
+        });
+
+        this.coreBridge.onUIEvent('task-deleted', () => {
+            this._updateSidebarStats();
+        });
+
+        this.coreBridge.onUIEvent('tasks-deleted', () => {
+            this._updateSidebarStats();
+        });
+
+    }
+
+    /**
+     * Update sidebar statistics (full reload)
+     */
+    async _updateSidebarStats() {
+        if (!this.coreBridge) return;
+
+        try {
+            // Get This Week stats from Core
+            const weekStats = await this.coreBridge.getThisWeekStats();
+
+            const hours = Math.floor(weekStats.totalTime / 3600);
+            const minutes = Math.floor((weekStats.totalTime % 3600) / 60);
+            const secs = weekStats.totalTime % 60;
+            const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+            this.weeklyTimeRow.set_subtitle(`${timeStr} • ${weekStats.taskCount} tasks`);
+        } catch (error) {
+            console.error('Error updating sidebar stats:', error);
+        }
+    }
+
+    /**
+     * Update sidebar stats in real-time (without full reload)
+     */
+    async _updateSidebarStatsRealtime() {
+        if (!this.coreBridge) return;
+
+        const trackingState = this.coreBridge.getTrackingState();
+        if (!trackingState.isTracking) return;
+
+        try {
+            // Get This Week stats from Core
+            const weekStats = await this.coreBridge.getThisWeekStats();
+            const currentElapsed = trackingState.elapsedSeconds || 0;
+            const totalTime = weekStats.totalTime + currentElapsed;
+
+            const hours = Math.floor(totalTime / 3600);
+            const minutes = Math.floor((totalTime % 3600) / 60);
+            const secs = totalTime % 60;
+            const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+            this.weeklyTimeRow.set_subtitle(`${timeStr} • ${weekStats.taskCount} tasks`);
+        } catch (error) {
+            console.error('Error updating sidebar stats realtime:', error);
+        }
     }
 });

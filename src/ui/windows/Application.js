@@ -22,8 +22,7 @@ import { CompactTrackerWindow } from 'resource:///com/odnoyko/valot/ui/windows/C
 import { Config } from 'resource:///com/odnoyko/valot/config.js';
 
 import { PreferencesDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/PreferencesDialog.js';
-// TODO: Restore CarouselDialog when migrated
-// import { CarouselDialog } from 'resource:///com/odnoyko/valot/ui/dialogs/CarouselDialog.js';
+import { CarouselDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/CarouselDialog.js';
 
 // Init i18n
 pkg.initGettext();
@@ -104,6 +103,7 @@ export const ValotApplication = GObject.registerClass(
             // Windows
             this.compactMode = false;
             this.compactWindow = null;
+            this.mainWindow = null;
 
             // Add command line option
             this.add_main_option('compact', 'c'.charCodeAt(0),
@@ -132,7 +132,6 @@ export const ValotApplication = GObject.registerClass(
             const about_action = new Gio.SimpleAction({name: 'about'});
             about_action.connect('activate', () => {
                 // TODO: Show preferences dialog
-                console.log('Preferences dialog - TODO');
             });
             this.add_action(about_action);
         }
@@ -156,13 +155,11 @@ export const ValotApplication = GObject.registerClass(
          */
         async _initializeCore() {
             try {
-                console.log('🚀 Initializing Core API...');
 
                 // Create database bridge
                 this.databaseBridge = new GdaDatabaseBridge();
                 await this.databaseBridge.initialize();
 
-                console.log('✅ Database initialized');
 
                 // TODO: Initialize Core API with TypeScript compiled code
                 // Initialize Core API
@@ -172,7 +169,6 @@ export const ValotApplication = GObject.registerClass(
                 // Create Core Bridge
                 this.coreBridge = new CoreBridge(this.coreAPI);
 
-                console.log('✅ Core API initialized');
 
                 return true;
             } catch (error) {
@@ -268,28 +264,54 @@ export const ValotApplication = GObject.registerClass(
             // Close existing windows
             this._closeAllWindows();
 
-            const mainWindow = new ValotMainWindow(this, this.coreBridge);
-            this.add_window(mainWindow);
-            mainWindow.present();
+            this.mainWindow = new ValotMainWindow(this, this.coreBridge);
+            this.add_window(this.mainWindow);
+            this.mainWindow.present();
 
-            // TODO: Show welcome carousel if needed
-            // CarouselDialog.showIfNeeded(mainWindow);
+            // Show welcome carousel on first launch
+            CarouselDialog.showIfNeeded(this.mainWindow);
 
-            console.log('✅ Main window launched');
         }
 
         /**
          * Launch compact tracker
+         * @param {boolean} shiftMode - If true, keep MainWindow visible
          */
-        _launchCompactTracker() {
-            // Close existing compact tracker
+        _launchCompactTracker(shiftMode = false) {
+            // Check if compact window exists and is valid
+            try {
+                if (this.compactWindow && !this.compactWindow.is_destroyed?.()) {
+                    // Window exists (visible or hidden) - show it
+                    this.compactWindow.setShiftMode(shiftMode);
+                    this.compactWindow.set_visible(true);
+                    this.compactWindow.present();
+
+                    // Update MainWindow visibility based on shiftMode
+                    if (!shiftMode && this.mainWindow) {
+                        this.mainWindow.set_visible(false);
+                    } else if (shiftMode && this.mainWindow) {
+                        this.mainWindow.set_visible(true);
+                        this.mainWindow.present();
+                    }
+
+                    return;
+                }
+            } catch (e) {
+            }
+
+            // Close/cleanup existing compact tracker if invalid
             if (this.compactWindow) {
-                this.compactWindow.close();
+                try {
+                    this.compactWindow.close();
+                } catch (e) {
+                    // Already destroyed
+                }
                 this.compactWindow = null;
             }
 
             // Create compact tracker
             this.compactWindow = new CompactTrackerWindow(this, this.coreBridge);
+            this.compactWindow.setShiftMode(shiftMode);
 
             // Always on top settings
             try {
@@ -300,18 +322,27 @@ export const ValotApplication = GObject.registerClass(
                     this.compactWindow.stick();
                 }
             } catch (error) {
-                console.warn('Could not set window properties:', error);
             }
 
-            // Handle close - minimize instead
+            // Handle close - just hide
             this.compactWindow.connect('close-request', () => {
                 this.compactWindow.set_visible(false);
-                return true;
+                return true; // Prevent destruction
             });
 
+            // Clean up reference if window is destroyed
+            this.compactWindow.connect('destroy', () => {
+                this.compactWindow = null;
+            });
+
+            this.add_window(this.compactWindow);
             this.compactWindow.present();
 
-            console.log('✅ Compact tracker launched');
+            // Hide MainWindow if not in shift mode
+            if (!shiftMode && this.mainWindow) {
+                this.mainWindow.set_visible(false);
+            }
+
         }
 
         /**
@@ -320,15 +351,15 @@ export const ValotApplication = GObject.registerClass(
         openMainApplication() {
             this.compactMode = false;
 
-            let { active_window } = this;
-            if (!active_window || active_window === this.compactWindow) {
-                active_window = new ValotMainWindow(this, this.coreBridge);
-                this.add_window(active_window);
+            // Create or restore MainWindow
+            if (!this.mainWindow) {
+                this.mainWindow = new ValotMainWindow(this, this.coreBridge);
+                this.add_window(this.mainWindow);
             }
 
-            active_window.set_visible(true);
-            active_window.present();
-            active_window.unminimize();
+            this.mainWindow.set_visible(true);
+            this.mainWindow.present();
+            this.mainWindow.unminimize();
         }
 
         /**
@@ -352,7 +383,6 @@ export const ValotApplication = GObject.registerClass(
          * Shutdown
          */
         vfunc_shutdown() {
-            console.log('🛑 Shutting down...');
 
             // Chain up to parent first (synchronously required)
             super.vfunc_shutdown();

@@ -13,7 +13,6 @@ export class ClientDropdown {
         this.onClientSelected = onClientSelected;
         this.isUpdatingSelection = false;
 
-        console.log('🏗️ ClientDropdown created');
 
         this.dropdown = this._createSearchableDropdown();
 
@@ -27,7 +26,6 @@ export class ClientDropdown {
     async _loadClients() {
         try {
             this.clients = await this.coreBridge.getAllClients();
-            console.log('📦 ClientDropdown loaded', this.clients.length, 'clients');
             this._updateTooltip(this.dropdownButton);
             this._populateClientList();
         } catch (error) {

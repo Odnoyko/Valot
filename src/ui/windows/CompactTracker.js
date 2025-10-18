@@ -133,12 +133,39 @@ export const ValotCompactTracker = GObject.registerClass({
                 // Stop tracking
                 await this.coreBridge.stopTracking();
             } else {
-                // TODO: Show task selection dialog
-                // For now, just show error
-                this._showError(_('Please select a task from the main window'));
+                // Show task selection dialog
+                await this._selectTask();
             }
         } catch (error) {
             console.error('Error toggling tracking:', error);
+            this._showError(error.message);
+        }
+    }
+
+    async _selectTask() {
+        if (!this.coreBridge) return;
+
+        const state = this.coreBridge.getTrackingState();
+        if (state.isTracking) return; // Already tracking
+
+        try {
+            // Dynamically import dialog
+            const { QuickTaskSelector } = await import('resource:///com/odnoyko/valot/ui/components/dialogs/QuickTaskSelector.js');
+
+            // Show task selector
+            const selector = new QuickTaskSelector(
+                this.coreBridge,
+                async (taskName, projectId, clientId) => {
+                    // Find or create task
+                    const task = await this.coreBridge.findOrCreateTask(taskName);
+                    // Start tracking
+                    await this.coreBridge.startTracking(task.id, projectId, clientId);
+                }
+            );
+
+            selector.present(this);
+        } catch (error) {
+            console.error('Error opening task selector:', error);
             this._showError(error.message);
         }
     }

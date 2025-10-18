@@ -13,7 +13,6 @@ export class ProjectDropdown {
         this.onProjectSelected = onProjectSelected;
         this.isUpdatingSelection = false;
 
-        console.log('🏗️ ProjectDropdown created');
 
         this.dropdown = this._createSearchableDropdown();
 
@@ -27,7 +26,6 @@ export class ProjectDropdown {
     async _loadProjects() {
         try {
             this.projects = await this.coreBridge.getAllProjects();
-            console.log('📦 ProjectDropdown loaded', this.projects.length, 'projects');
             this._updateButtonAppearance();
             this._populateProjectList();
         } catch (error) {
@@ -214,7 +212,6 @@ export class ProjectDropdown {
     _populateProjectList() {
         this.isUpdatingSelection = true;
 
-        console.log('📋 Populating project list with', this.projects.length, 'projects');
 
         // Clear existing rows
         let child = this.projectList.get_first_child();
@@ -226,7 +223,6 @@ export class ProjectDropdown {
 
         // Add projects to list
         this.projects.forEach(project => {
-            console.log('  Adding project:', project.name, 'ID:', project.id);
             const row = this._createProjectRow(project);
             this.projectList.append(row);
         });

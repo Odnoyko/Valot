@@ -129,7 +129,6 @@ export class TrackingWidget {
             this._onTrackingUpdated(data);
         });
 
-        console.log('✅ TrackingWidget connected to Core');
     }
 
     /**
@@ -198,7 +197,6 @@ export class TrackingWidget {
      * Core event: tracking started (from ANY widget/window)
      */
     _onTrackingStarted(data) {
-        console.log('📡 TrackingWidget: Tracking started event received');
         this._updateUIFromCore();
     }
 
@@ -206,7 +204,6 @@ export class TrackingWidget {
      * Core event: tracking stopped (from ANY widget/window)
      */
     _onTrackingStopped(data) {
-        console.log('📡 TrackingWidget: Tracking stopped event received');
         this._updateUIFromCore();
     }
 
@@ -233,7 +230,6 @@ export class TrackingWidget {
             if (state.isTracking) {
                 // Stop tracking
                 await this.config.coreBridge.stopTracking();
-                console.log('⏹️ Tracking stopped via TrackingWidget');
             } else {
                 // Start tracking - need task ID
                 this._selectTask();
@@ -250,7 +246,6 @@ export class TrackingWidget {
     async _startTracking(taskId, projectId = null, clientId = null) {
         try {
             await this.config.coreBridge.startTracking(taskId, projectId, clientId);
-            console.log(`▶️ Started tracking task ${taskId} via TrackingWidget`);
         } catch (error) {
             console.error('Error starting tracking:', error);
             this._showError(error.message);
@@ -290,36 +285,40 @@ export class TrackingWidget {
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     }
 
-    _selectTask() {
-        // TODO: Open task selector dialog
-        console.log('TODO: Open task selector dialog');
+    async _selectTask() {
+        if (!this.config.coreBridge) return;
 
-        // TEMPORARY: For testing, start tracking first available task
-        if (this.config.coreBridge) {
-            const state = this.config.coreBridge.getTrackingState();
-            if (!state.isTracking) {
-                // Get first task from database for testing
-                this.config.coreBridge.getAllTasks().then(tasks => {
-                    if (tasks.length > 0) {
-                        this._startTracking(tasks[0].id, null, null);
-                    } else {
-                        this._showError(_('No tasks available. Create a task first.'));
-                    }
-                }).catch(err => {
-                    console.error('Error getting tasks:', err);
-                });
-            }
+        const state = this.config.coreBridge.getTrackingState();
+        if (state.isTracking) return; // Already tracking
+
+        try {
+            // Dynamically import dialog
+            const { QuickTaskSelector } = await import('resource:///com/odnoyko/valot/ui/components/dialogs/QuickTaskSelector.js');
+
+            // Show task selector
+            const selector = new QuickTaskSelector(
+                this.config.coreBridge,
+                async (taskName, projectId, clientId) => {
+                    // Find or create task
+                    const task = await this.config.coreBridge.findOrCreateTask(taskName);
+                    // Start tracking
+                    await this._startTracking(task.id, projectId, clientId);
+                }
+            );
+
+            selector.present(this.config.parentWindow);
+        } catch (error) {
+            console.error('Error opening task selector:', error);
+            this._showError(error.message);
         }
     }
 
     _selectProject() {
         // TODO: Open project selector dialog
-        console.log('TODO: Open project selector dialog');
     }
 
     _selectClient() {
         // TODO: Open client selector dialog
-        console.log('TODO: Open client selector dialog');
     }
 
     _showError(message) {

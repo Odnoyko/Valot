@@ -10,8 +10,7 @@ import { AccentColorManager } from 'resource:///com/odnoyko/valot/ui/windows/App
 // import { pomodoroManager } from 'resource:///com/odnoyko/valot/js/func/global/pomodoroManager.js';
 import { CurrencyDialog } from 'resource:///com/odnoyko/valot/ui/components/complex/CurrencyDialog.js';
 import { getAllCurrencies, getCurrencySymbol } from 'resource:///com/odnoyko/valot/data/currencies.js';
-// TODO: Restore when migrated
-// import { CarouselDialog } from 'resource:///com/odnoyko/valot/js/interface/components/CarouselDialog.js';
+import { CarouselDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/CarouselDialog.js';
 
 export const PreferencesDialog = GObject.registerClass({
     GTypeName: 'PreferencesDialog',
@@ -468,9 +467,7 @@ export const PreferencesDialog = GObject.registerClass({
         });
 
         showWelcomeButton.connect('clicked', () => {
-            // TODO: Restore when CarouselDialog is migrated
-            console.log('Welcome tour - TODO');
-            // CarouselDialog.show(this);
+            CarouselDialog.show(this);
         });
 
         welcomeRow.add_suffix(showWelcomeButton);

@@ -259,26 +259,16 @@ export class TaskStackTemplate {
                 taskSuffixBox.append(activeLabel);
             }
 
-            // Create button container for individual task (only edit button)
-            const taskButtonBox = new Gtk.Box({
-                spacing: 6
-            });
+            taskRow.add_suffix(taskSuffixBox);
 
-            // Edit button only for tasks inside stacks
-            const editBtn = new Gtk.Button({
-                icon_name: 'document-edit-symbolic',
-                css_classes: ['flat'],
-                tooltip_text: 'Edit Task'
-            });
-            editBtn.connect('clicked', () => {
+            // Add click gesture to edit task
+            const gesture = new Gtk.GestureClick();
+            gesture.connect('released', () => {
                 if (this.parentWindow._editTaskInstance) {
                     this.parentWindow._editTaskInstance(task.id);
                 }
             });
-            taskButtonBox.append(editBtn);
-
-            taskSuffixBox.append(taskButtonBox);
-            taskRow.add_suffix(taskSuffixBox);
+            taskRow.add_controller(gesture);
 
             // Add right-click selection for individual tasks in stack
             if (this.parentWindow._addTaskSelectionHandlers) {

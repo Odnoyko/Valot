@@ -119,7 +119,6 @@ export class ClientService extends BaseService {
         const idsToDelete = ids.filter(id => id !== 1);
 
         if (idsToDelete.length === 0) {
-            console.log('⚠️ No clients to delete (default client cannot be deleted)');
             return;
         }
 

@@ -7,6 +7,7 @@
  */
 
 import Gtk from 'gi://Gtk?version=4.0';
+import Gdk from 'gi://Gdk?version=4.0';
 import GLib from 'gi://GLib';
 
 export class HeaderTrackingWidget {
@@ -71,9 +72,19 @@ export class HeaderTrackingWidget {
         // Compact tracker button
         const compactBtn = new Gtk.Button({
             icon_name: 'view-reveal-symbolic',
-            tooltip_text: _('Open compact tracker'),
+            tooltip_text: _('Open compact tracker (Shift: keep main window)'),
         });
-        compactBtn.connect('clicked', () => this._openCompactTracker());
+
+        // Use button-press-event to detect Shift key
+        const gesture = new Gtk.GestureClick();
+        gesture.connect('pressed', (gesture, n_press, x, y) => {
+            const event = gesture.get_current_event();
+            const modifiers = event.get_modifier_state();
+            const shiftPressed = !!(modifiers & Gdk.ModifierType.SHIFT_MASK);
+            this._openCompactTracker(shiftPressed);
+        });
+        compactBtn.add_controller(gesture);
+
         this.widget.append(compactBtn);
     }
 
@@ -97,7 +108,6 @@ export class HeaderTrackingWidget {
             this._onTrackingUpdated(data);
         });
 
-        console.log('✅ HeaderTrackingWidget connected to Core');
     }
 
     /**
@@ -152,7 +162,6 @@ export class HeaderTrackingWidget {
      * Core event: tracking started (from ANY widget/window)
      */
     _onTrackingStarted(data) {
-        console.log('📡 Tracking started event received:', data);
         this._updateUIFromCore();
     }
 
@@ -160,7 +169,6 @@ export class HeaderTrackingWidget {
      * Core event: tracking stopped (from ANY widget/window)
      */
     _onTrackingStopped(data) {
-        console.log('📡 Tracking stopped event received:', data);
         this._updateUIFromCore();
     }
 
@@ -185,7 +193,6 @@ export class HeaderTrackingWidget {
             if (state.isTracking) {
                 // Stop tracking
                 await this.coreBridge.stopTracking();
-                console.log('⏹️ Tracking stopped via UI');
             } else {
                 // Start tracking - need task ID
                 // For now, show task selector
@@ -203,7 +210,6 @@ export class HeaderTrackingWidget {
     async _startTracking(taskId, projectId = null, clientId = null) {
         try {
             await this.coreBridge.startTracking(taskId, projectId, clientId);
-            console.log(`▶️ Started tracking task ${taskId}`);
         } catch (error) {
             console.error('Error starting tracking:', error);
             this._showError(error.message);
@@ -244,44 +250,50 @@ export class HeaderTrackingWidget {
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     }
 
-    _selectTask() {
-        // TODO: Open task selector dialog
-        // When task selected, call: this._startTracking(taskId, projectId, clientId)
-        console.log('TODO: Open task selector dialog');
+    async _selectTask() {
+        if (!this.coreBridge) return;
 
-        // TEMPORARY: For testing, start tracking task 1
-        if (this.coreBridge) {
-            const state = this.coreBridge.getTrackingState();
-            if (!state.isTracking) {
-                // Get first task from database for testing
-                this.coreBridge.getAllTasks().then(tasks => {
-                    if (tasks.length > 0) {
-                        this._startTracking(tasks[0].id, null, null);
-                    } else {
-                        this._showError('No tasks available. Create a task first.');
-                    }
-                }).catch(err => {
-                    console.error('Error getting tasks:', err);
-                });
-            }
+        const state = this.coreBridge.getTrackingState();
+        if (state.isTracking) return; // Already tracking
+
+        try {
+            // Dynamically import dialog
+            const { QuickTaskSelector } = await import('resource:///com/odnoyko/valot/ui/components/dialogs/QuickTaskSelector.js');
+
+            // Show task selector
+            const selector = new QuickTaskSelector(
+                this.coreBridge,
+                async (taskName, projectId, clientId) => {
+                    // Find or create task
+                    const task = await this.coreBridge.findOrCreateTask(taskName);
+                    // Start tracking
+                    await this._startTracking(task.id, projectId, clientId);
+                }
+            );
+
+            selector.present(this.parentWindow);
+        } catch (error) {
+            console.error('Error opening task selector:', error);
+            this._showError(error.message);
         }
     }
 
     _selectProject() {
         // TODO: Open project selector dialog
-        console.log('TODO: Open project selector dialog');
     }
 
     _selectClient() {
         // TODO: Open client selector dialog
-        console.log('TODO: Open client selector dialog');
     }
 
-    _openCompactTracker() {
-        // TODO: Open compact tracker window
-        if (this.parentWindow) {
-            console.log('TODO: Open compact tracker window');
+    _openCompactTracker(shiftMode = false) {
+        if (!this.parentWindow || !this.parentWindow.application) {
+            console.error('Cannot open compact tracker: no application reference');
+            return;
         }
+
+        // Launch compact tracker via Application
+        this.parentWindow.application._launchCompactTracker(shiftMode);
     }
 
     _showError(message) {
