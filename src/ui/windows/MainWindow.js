@@ -499,6 +499,11 @@ export const ValotMainWindow = GObject.registerClass({
 
         this.coreBridge.onUIEvent('tracking-stopped', () => {
             this._updateSidebarStats();
+
+            // Update reports page chart if it's loaded
+            if (this.reportsPageInstance && this.reportsPageInstance.updateChartsOnly) {
+                this.reportsPageInstance.updateChartsOnly();
+            }
         });
 
         // Real-time updates every second while tracking
@@ -517,8 +522,48 @@ export const ValotMainWindow = GObject.registerClass({
 
         this.coreBridge.onUIEvent('tasks-deleted', () => {
             this._updateSidebarStats();
+            this._refreshAllPages();
         });
 
+        this.coreBridge.onUIEvent('projects-deleted', () => {
+            this._updateSidebarStats();
+            this._refreshAllPages();
+        });
+
+        this.coreBridge.onUIEvent('clients-deleted', () => {
+            this._updateSidebarStats();
+            this._refreshAllPages();
+        });
+
+    }
+
+    /**
+     * Refresh all pages after data changes (deletes, etc.)
+     */
+    async _refreshAllPages() {
+        try {
+            // Refresh TasksPage
+            if (this.tasksPageInstance && this.tasksPageInstance.loadTasks) {
+                await this.tasksPageInstance.loadTasks();
+            }
+
+            // Refresh ProjectsPage
+            if (this.projectsPageInstance && this.projectsPageInstance.loadProjects) {
+                await this.projectsPageInstance.loadProjects();
+            }
+
+            // Refresh ClientsPage
+            if (this.clientsPageInstance && this.clientsPageInstance.loadClients) {
+                await this.clientsPageInstance.loadClients();
+            }
+
+            // Refresh ReportsPage
+            if (this.reportsPageInstance && this.reportsPageInstance.loadReports) {
+                await this.reportsPageInstance.loadReports();
+            }
+        } catch (error) {
+            console.error('Error refreshing pages:', error);
+        }
     }
 
     /**

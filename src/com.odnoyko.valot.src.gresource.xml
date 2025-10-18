@@ -61,6 +61,16 @@
     <file>ui/utils/CoreImports.js</file>
     <file>ui/utils/commonStrings.js</file>
     <file>ui/utils/GestureController.js</file>
+    <file>ui/utils/timeUtils.js</file>
+
+    <!-- UI Export Utilities -->
+    <file>ui/utils/export/reportExporter.js</file>
+    <file>ui/utils/export/reportPDF.js</file>
+    <file>ui/utils/export/reportHTML.js</file>
+    <file>ui/utils/export/pdfExporter.js</file>
+    <file>ui/utils/export/templatePDFGenerator.js</file>
+    <file>ui/utils/export/templateEngine.js</file>
+    <file>ui/utils/export/templates/professional-report.html</file>
 
     <!-- Global Data -->
     <file>data/currencies.js</file>

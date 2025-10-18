@@ -936,6 +936,9 @@ export class ProjectsPage {
                     // Delete via Core
                     await this.coreBridge.deleteMultipleProjects(idsToDelete);
 
+                    // Emit event to refresh all pages
+                    this.coreBridge.emitUIEvent('projects-deleted');
+
                     // Clear selection
                     this.selectedProjects.clear();
 

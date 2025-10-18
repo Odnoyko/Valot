@@ -88,6 +88,13 @@ export class CoreBridge {
     }
 
     /**
+     * Emit UI event (public method for pages to trigger events)
+     */
+    emitUIEvent(event, data) {
+        this._notifyUI(event, data);
+    }
+
+    /**
      * Notify UI about core events
      */
     _notifyUI(event, data) {

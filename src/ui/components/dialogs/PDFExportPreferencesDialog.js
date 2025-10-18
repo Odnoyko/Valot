@@ -24,18 +24,21 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
             timeRange: 'week', // week, month, year, custom
             customStartDate: null,
             customEndDate: null,
-            
+
             // Content settings
             includeAnalytics: true,
             includeCharts: true,
             includeTasks: true,
             includeProjects: true,
             includeBilling: false,
-            
+
             // Project/Client filters
             filterByProject: null,
             filterByClient: null,
-            
+
+            // Billing currencies (empty array = all currencies)
+            selectedCurrencies: [],
+
             // Template settings
             template: 'professional-report'
         };
@@ -108,6 +111,9 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
         this._createTimeSettingsPage();
         this._createContentSettingsPage();
         this._createProjectClientSettingsPage();
+
+        // Update currency group visibility based on initial billing state
+        this._updateCurrencyGroupVisibility();
     }
 
     _createTimeSettingsPage() {
@@ -249,6 +255,7 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
         });
         billingRow.connect('notify::active', () => {
             this.exportConfig.includeBilling = billingRow.get_active();
+            this._updateCurrencyGroupVisibility();
         });
 
         sectionsGroup.add(analyticsRow);
@@ -257,8 +264,131 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
         sectionsGroup.add(projectsRow);
         sectionsGroup.add(billingRow);
 
+        // Currency Selection Group (visible only when billing enabled and 2+ currencies)
+        this.currencyGroup = this._createCurrencySelectionGroup();
+
         contentPage.add(sectionsGroup);
+        contentPage.add(this.currencyGroup);
         this.viewStack.add_titled(contentPage, 'content', _('Content'));
+    }
+
+    _createCurrencySelectionGroup() {
+        const group = new Adw.PreferencesGroup({
+            title: _('Billing Currencies'),
+            description: _('Select which currencies to include in billing report'),
+            visible: false
+        });
+
+        // Get unique currencies from clients
+        const availableCurrencies = this._getAvailableCurrencies();
+
+        // Only show if 2+ currencies
+        if (availableCurrencies.length < 2) {
+            return group;
+        }
+
+        // Create flowbox for currency buttons
+        const flowBox = new Gtk.FlowBox({
+            selection_mode: Gtk.SelectionMode.NONE,
+            homogeneous: true,
+            column_spacing: 8,
+            row_spacing: 8,
+            margin_top: 12,
+            margin_bottom: 12,
+            margin_start: 12,
+            margin_end: 12
+        });
+
+        this.currencyButtons = new Map();
+
+        // "All" button
+        const allButton = new Gtk.ToggleButton({
+            label: _('All Currencies'),
+            active: true
+        });
+        allButton.connect('toggled', () => {
+            if (allButton.get_active()) {
+                // Select all currencies
+                this.exportConfig.selectedCurrencies = [];
+                this.currencyButtons.forEach((btn, currency) => {
+                    btn.set_active(true);
+                });
+            }
+        });
+        flowBox.append(allButton);
+        this.allCurrenciesButton = allButton;
+
+        // Individual currency buttons
+        availableCurrencies.forEach(currency => {
+            const button = new Gtk.ToggleButton({
+                label: currency,
+                active: true
+            });
+            button.connect('toggled', () => {
+                this._onCurrencyToggled(currency, button.get_active());
+            });
+            flowBox.append(button);
+            this.currencyButtons.set(currency, button);
+        });
+
+        // Wrap flowbox in ActionRow
+        const row = new Adw.ActionRow();
+        row.set_child(flowBox);
+        group.add(row);
+
+        return group;
+    }
+
+    _getAvailableCurrencies() {
+        // Get unique currencies from all clients
+        const currencies = new Set();
+
+        // Try to get clients from reportExporter first, then parentWindow
+        const clients = this.reportExporter?.clients || this.parentWindow?.allClients || [];
+
+        clients.forEach(client => {
+            if (client.currency) {
+                currencies.add(client.currency);
+            }
+        });
+
+        return Array.from(currencies).sort();
+    }
+
+    _onCurrencyToggled(currency, active) {
+        if (active) {
+            // Add currency if not already selected
+            if (!this.exportConfig.selectedCurrencies.includes(currency)) {
+                this.exportConfig.selectedCurrencies.push(currency);
+            }
+            // Check if all are selected
+            const allSelected = Array.from(this.currencyButtons.keys()).every(cur =>
+                this.currencyButtons.get(cur).get_active()
+            );
+            if (allSelected && this.allCurrenciesButton) {
+                this.allCurrenciesButton.set_active(true);
+                this.exportConfig.selectedCurrencies = []; // Empty = all
+            }
+        } else {
+            // When deselecting, if array was empty (all selected), populate with all currencies first
+            if (this.exportConfig.selectedCurrencies.length === 0) {
+                this.exportConfig.selectedCurrencies = Array.from(this.currencyButtons.keys());
+            }
+            // Now remove the deselected currency
+            this.exportConfig.selectedCurrencies = this.exportConfig.selectedCurrencies.filter(c => c !== currency);
+            // Deactivate "All" button
+            if (this.allCurrenciesButton) {
+                this.allCurrenciesButton.set_active(false);
+            }
+        }
+    }
+
+    _updateCurrencyGroupVisibility() {
+        if (this.currencyGroup) {
+            const availableCurrencies = this._getAvailableCurrencies();
+            const shouldShow = this.exportConfig.includeBilling && availableCurrencies.length >= 2;
+            this.currencyGroup.set_visible(shouldShow);
+        }
     }
 
     _createProjectClientSettingsPage() {
@@ -390,32 +520,24 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
                 showCharts: this.exportConfig.includeCharts,
                 showTasks: this.exportConfig.includeTasks,
                 showProjects: this.exportConfig.includeProjects,
-                showBilling: this.exportConfig.includeBilling
+                showBilling: this.exportConfig.includeBilling,
+                selectedCurrencies: this.exportConfig.selectedCurrencies // empty = all
             };
             this.reportExporter.configureSections(sections);
             this.reportExporter.configureBilling(this.exportConfig.includeBilling);
 
-            // Update data
-            if (this.parentWindow) {
-                const tasks = this.parentWindow.allTasks || [];
-                const projects = this.parentWindow.allProjects || [];
-                const clients = this.parentWindow.allClients || [];
+            // Data is already set in reportExporter by ReportsPage
+            // Just ensure exporters have the latest data
+            if (this.reportExporter.pdfExporter) {
+                this.reportExporter.pdfExporter.tasks = this.reportExporter.tasks;
+                this.reportExporter.pdfExporter.projects = this.reportExporter.projects;
+                this.reportExporter.pdfExporter.clients = this.reportExporter.clients;
+            }
 
-                this.reportExporter.tasks = tasks;
-                this.reportExporter.projects = projects;
-                this.reportExporter.clients = clients;
-
-                if (this.reportExporter.pdfExporter) {
-                    this.reportExporter.pdfExporter.tasks = tasks;
-                    this.reportExporter.pdfExporter.projects = projects;
-                    this.reportExporter.pdfExporter.clients = clients;
-                }
-
-                if (this.reportExporter.htmlExporter) {
-                    this.reportExporter.htmlExporter.tasks = tasks;
-                    this.reportExporter.htmlExporter.projects = projects;
-                    this.reportExporter.htmlExporter.clients = clients;
-                }
+            if (this.reportExporter.htmlExporter) {
+                this.reportExporter.htmlExporter.tasks = this.reportExporter.tasks;
+                this.reportExporter.htmlExporter.projects = this.reportExporter.projects;
+                this.reportExporter.htmlExporter.clients = this.reportExporter.clients;
             }
 
             // Start the export

@@ -1196,7 +1196,7 @@ export class TasksPage {
         infoBox.append(nameLabel);
 
         const detailsLabel = new Gtk.Label({
-            label: `${task.project_name || 'No project'} • ${this._formatDate(task.start)}`,
+            label: `${task.project_name || 'No project'} • ${this._formatDate(task.last_used_at)}`,
             halign: Gtk.Align.START,
             valign: Gtk.Align.CENTER,
             css_classes: ['caption', 'dim-label'],
@@ -1529,6 +1529,9 @@ export class TasksPage {
 
                     // Clean up orphaned tasks (tasks with no instances)
                     await this.coreBridge.cleanupOrphanedTasks();
+
+                    // Emit event to refresh all pages
+                    this.coreBridge.emitUIEvent('tasks-deleted');
 
                     // Clear selection
                     this.selectedTasks.clear();

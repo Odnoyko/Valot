@@ -102,6 +102,10 @@ export class ClientService extends BaseService {
             throw new Error('Cannot delete default client');
         }
 
+        // Reassign all TaskInstances using this client to default client (id=1)
+        const reassignSql = `UPDATE TaskInstance SET client_id = 1 WHERE client_id = ?`;
+        await this.execute(reassignSql, [id]);
+
         const sql = `DELETE FROM Client WHERE id = ?`;
         await this.execute(sql, [id]);
         this.events.emit(CoreEvents.CLIENT_DELETED, { id });
@@ -122,7 +126,11 @@ export class ClientService extends BaseService {
             return;
         }
 
+        // Reassign all TaskInstances using these clients to default client (id=1)
         const placeholders = idsToDelete.map(() => '?').join(', ');
+        const reassignSql = `UPDATE TaskInstance SET client_id = 1 WHERE client_id IN (${placeholders})`;
+        await this.execute(reassignSql, idsToDelete);
+
         const sql = `DELETE FROM Client WHERE id IN (${placeholders})`;
         await this.execute(sql, idsToDelete);
 

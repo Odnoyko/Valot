@@ -1356,6 +1356,9 @@ export class ClientsPage {
                     // Delete via Core
                     await this.coreBridge.deleteMultipleClients(idsToDelete);
 
+                    // Emit event to refresh all pages
+                    this.coreBridge.emitUIEvent('clients-deleted');
+
                     // Clear selection
                     this.selectedClients.clear();
 

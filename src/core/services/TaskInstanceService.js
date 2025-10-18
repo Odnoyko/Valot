@@ -149,6 +149,8 @@ export class TaskInstanceService extends BaseService {
             updates.push(`client_id = ${data.client_id}`);
         if (data.total_time !== undefined)
             updates.push(`total_time = ${data.total_time}`);
+        if (data.last_used_at !== undefined)
+            updates.push(`last_used_at = '${data.last_used_at}'`);
         if (data.is_favorite !== undefined)
             updates.push(`is_favorite = ${data.is_favorite ? 1 : 0}`);
         updates.push(`updated_at = datetime('now')`);

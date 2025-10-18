@@ -41,6 +41,9 @@ export class TaskInstanceEditDialog {
             this.endDate = new Date();
         }
 
+        // Store original duration in seconds
+        this.originalDuration = Math.floor((this.endDate - this.startDate) / 1000);
+
         this._createDialog();
     }
 
@@ -135,12 +138,22 @@ export class TaskInstanceEditDialog {
         // Start time
         const startBox = this._createDateTimeBox('Start Time:', this.startDate, (newDate) => {
             this.startDate = newDate;
+            // Just update, don't move end date
+            this._updateDateTimeButtonLabels();
             this._updateDuration();
         });
 
         // End time
         const endBox = this._createDateTimeBox('End Time:', this.endDate, (newDate) => {
             this.endDate = newDate;
+
+            // Check if end date/time is before start date/time (negative duration)
+            if (this.endDate.getTime() < this.startDate.getTime()) {
+                // Move start date back to maintain original duration
+                this.startDate = new Date(this.endDate.getTime() - this.originalDuration * 1000);
+                this._updateDateTimeButtonLabels();
+            }
+
             this._updateDuration();
         });
 
@@ -216,6 +229,15 @@ export class TaskInstanceEditDialog {
             tooltip_text: _('Change date'),
         });
 
+        // Store button references for updating later
+        if (labelText === 'Start Time:') {
+            this.startTimeButton = timeButton;
+            this.startDateButton = dateButton;
+        } else if (labelText === 'End Time:') {
+            this.endTimeButton = timeButton;
+            this.endDateButton = dateButton;
+        }
+
         // Time button click - show time picker
         timeButton.connect('clicked', () => {
             this._showTimePicker(initialDate, (hours, minutes) => {
@@ -230,9 +252,11 @@ export class TaskInstanceEditDialog {
         // Date button click - show date picker
         dateButton.connect('clicked', () => {
             this._showDatePicker(initialDate, (selectedDate) => {
+                // GTK get_month() returns 1-12, but JavaScript needs 0-11
                 initialDate.setFullYear(selectedDate.get_year());
-                initialDate.setMonth(selectedDate.get_month());
+                initialDate.setMonth(selectedDate.get_month() - 1);
                 initialDate.setDate(selectedDate.get_day_of_month());
+
                 onChange(initialDate);
                 dateButton.set_label(initialDate.toLocaleDateString('de-DE'));
                 this._updateDuration();
@@ -282,7 +306,7 @@ export class TaskInstanceEditDialog {
             margin_end: 12,
         });
 
-        // Calendar
+        // GTK Calendar uses months 0-11 when setting, but returns 1-12 when getting
         const calendar = new Gtk.Calendar({
             day: currentDate.getDate(),
             month: currentDate.getMonth(),
@@ -445,6 +469,28 @@ export class TaskInstanceEditDialog {
         this.durationLabel.set_label(this._formatDuration(duration));
     }
 
+    _updateDateTimeButtonLabels() {
+        // Update start time/date buttons
+        if (this.startTimeButton) {
+            this.startTimeButton.set_label(
+                this.startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+            );
+        }
+        if (this.startDateButton) {
+            this.startDateButton.set_label(this.startDate.toLocaleDateString('de-DE'));
+        }
+
+        // Update end time/date buttons
+        if (this.endTimeButton) {
+            this.endTimeButton.set_label(
+                this.endDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+            );
+        }
+        if (this.endDateButton) {
+            this.endDateButton.set_label(this.endDate.toLocaleDateString('de-DE'));
+        }
+    }
+
     async _saveChanges() {
         try {
 
@@ -463,14 +509,12 @@ export class TaskInstanceEditDialog {
                 });
             }
 
-            // Update project and client (use ID=1 for default, not null)
+            // Update project, client, and last_used_at (use ID=1 for default, not null)
             await this.coreBridge.updateTaskInstance(this.taskInstance.id, {
                 project_id: this.selectedProjectId,
                 client_id: this.selectedClientId,
+                last_used_at: this._formatTimestamp(this.endDate),
             });
-
-            // Update last_used_at to current time so task appears as recently modified
-            await this.coreBridge.updateTaskInstanceLastUsed(this.taskInstance.id);
 
             // Update time entry timestamps if we have one
             if (this.latestEntry) {
@@ -486,11 +530,24 @@ export class TaskInstanceEditDialog {
                 await this.coreBridge.updateTaskInstanceTotalTime(this.taskInstance.id);
             }
 
-
             // Reload tasks in parent page
             if (this.parent && this.parent.loadTasks) {
                 await this.parent.loadTasks();
-            } else {
+            }
+
+            // Update sidebar weekly time in MainWindow
+            if (this.parent && this.parent.parentWindow && this.parent.parentWindow._updateSidebarStats) {
+                await this.parent.parentWindow._updateSidebarStats();
+            }
+
+            // Update projects page if it's loaded
+            if (this.parent && this.parent.parentWindow && this.parent.parentWindow.projectsPageInstance) {
+                await this.parent.parentWindow.projectsPageInstance.loadProjects();
+            }
+
+            // Update reports page chart if it's loaded
+            if (this.parent && this.parent.parentWindow && this.parent.parentWindow.reportsPageInstance) {
+                await this.parent.parentWindow.reportsPageInstance.updateChartsOnly();
             }
 
         } catch (error) {

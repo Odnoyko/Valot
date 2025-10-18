@@ -122,6 +122,10 @@ export class ProjectService extends BaseService {
             throw new Error('Cannot delete default project');
         }
 
+        // Reassign all TaskInstances using this project to default project (id=1)
+        const reassignSql = `UPDATE TaskInstance SET project_id = 1 WHERE project_id = ?`;
+        await this.execute(reassignSql, [id]);
+
         const sql = `DELETE FROM Project WHERE id = ?`;
         await this.execute(sql, [id]);
         this.events.emit(CoreEvents.PROJECT_DELETED, { id });
