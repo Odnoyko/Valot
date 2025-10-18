@@ -284,9 +284,11 @@ export class CoreBridge {
      * @param {number} taskId - Task ID
      * @param {number|null} projectId - Project ID (optional)
      * @param {number|null} clientId - Client ID (optional)
+     * @param {boolean} pomodoroMode - Enable Pomodoro countdown mode (optional)
+     * @param {number} pomodoroDuration - Pomodoro duration in seconds (optional)
      */
-    async startTracking(taskId, projectId = null, clientId = null) {
-        return await this.core.services.tracking.start(taskId, projectId, clientId);
+    async startTracking(taskId, projectId = null, clientId = null, pomodoroMode = false, pomodoroDuration = 0) {
+        return await this.core.services.tracking.start(taskId, projectId, clientId, pomodoroMode, pomodoroDuration);
     }
 
     async stopTracking() {

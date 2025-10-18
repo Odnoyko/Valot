@@ -4,6 +4,43 @@
 @define-color subtitle_light_color #959595;
 @define-color subtitle_dark_color #7B7B7B;
 
+/* Pomodoro timer active state - red button */
+.pomodoro-active {
+  background-color: @error_bg_color;
+  color: @error_fg_color;
+}
+
+.pomodoro-active:hover {
+  background-color: @error_color;
+}
+
+/* Long press animation - expanding circle */
+@keyframes long-press-pulse {
+  0% {
+    transform: scale(0);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.long-press-active::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle, alpha(@accent_bg_color, 0.3) 0%, alpha(@accent_bg_color, 0) 70%);
+  transform: translate(-50%, -50%) scale(0);
+  animation: long-press-pulse 1.5s ease-out;
+  pointer-events: none;
+  z-index: -1;
+}
+
 /* Carousel overlay text styles */
 .overlay-title {
   background: rgba(0, 0, 0, 0.7);

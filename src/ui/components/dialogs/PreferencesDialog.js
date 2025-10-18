@@ -871,15 +871,15 @@ export const PreferencesDialog = GObject.registerClass({
 
             const configDir = GLib.get_user_config_dir() + '/valot';
             const configPath = configDir + '/pomodoro-config.json';
-            
+
             const dir = Gio.File.new_for_path(configDir);
             if (!dir.query_exists(null)) {
                 dir.make_directory_with_parents(null);
             }
-            
+
             const file = Gio.File.new_for_path(configPath);
             const configText = JSON.stringify(config, null, 2);
-            
+
             file.replace_contents(
                 configText,
                 null, // etag
@@ -888,11 +888,13 @@ export const PreferencesDialog = GObject.registerClass({
                 null // cancellable
             );
 
+            console.log(`💾 Saved Pomodoro config: ${newDurationMinutes} minutes (${newDurationMinutes * 60}s) to ${configPath}`);
+
             // TODO: Restore when pomodoroManager is migrated
             // Reload PomodoroManager config
             // pomodoroManager.reloadConfig();
         } catch (error) {
-            // Silently continue
+            console.error('Error saving Pomodoro config:', error);
         }
     }
     

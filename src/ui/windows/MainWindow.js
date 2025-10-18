@@ -373,6 +373,55 @@ export const ValotMainWindow = GObject.registerClass({
         this.application.add_action(deleteAction);
         this.application.set_accels_for_action('app.delete-selected', ['Delete']);
 
+        // Create application-level action for Pomodoro mode (P key)
+        const pomodoroAction = new Gio.SimpleAction({
+            name: 'start-pomodoro',
+            parameter_type: null
+        });
+
+        pomodoroAction.connect('activate', () => {
+            console.log('🍅 Pomodoro shortcut (P) pressed');
+
+            // Trigger Pomodoro mode on the current page's tracking widget
+            const visiblePage = this.navigationView.get_visible_page();
+            if (!visiblePage) {
+                console.log('❌ No visible page found');
+                return;
+            }
+
+            const pageTag = visiblePage.get_tag();
+            console.log(`📄 Current page: ${pageTag}`);
+
+            // Access tracking widget from the current page
+            let trackingWidget = null;
+            switch (pageTag) {
+                case 'tasks':
+                    trackingWidget = this.pages.tasks?.trackingWidget;
+                    break;
+                case 'projects':
+                    trackingWidget = this.pages.projects?.trackingWidget;
+                    break;
+                case 'clients':
+                    trackingWidget = this.pages.clients?.trackingWidget;
+                    break;
+                case 'reports':
+                    trackingWidget = this.pages.reports?.trackingWidget;
+                    break;
+            }
+
+            if (trackingWidget && trackingWidget._toggleTracking) {
+                console.log('✅ Tracking widget found, activating Pomodoro');
+                // Start Pomodoro mode (true = pomodoro)
+                trackingWidget._toggleTracking(true);
+            } else {
+                console.log('❌ Tracking widget not found or _toggleTracking not available');
+            }
+        });
+
+        // Add Pomodoro action to application and set P key accelerator
+        this.application.add_action(pomodoroAction);
+        this.application.set_accels_for_action('app.start-pomodoro', ['P']);
+
         // Create application-level action for Select All (Shift+A)
         const selectAllAction = new Gio.SimpleAction({
             name: 'select-all-page',

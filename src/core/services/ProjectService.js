@@ -146,7 +146,11 @@ export class ProjectService extends BaseService {
             return;
         }
 
+        // Reassign all TaskInstances using these projects to default project (id=1)
         const placeholders = idsToDelete.map(() => '?').join(', ');
+        const reassignSql = `UPDATE TaskInstance SET project_id = 1 WHERE project_id IN (${placeholders})`;
+        await this.execute(reassignSql, idsToDelete);
+
         const sql = `DELETE FROM Project WHERE id IN (${placeholders})`;
         await this.execute(sql, idsToDelete);
 

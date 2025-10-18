@@ -10,8 +10,13 @@ export class TimeTrackingService extends BaseService {
     }
     /**
      * Start tracking a task instance
+     * @param {number} taskId - Task ID
+     * @param {number} projectId - Project ID (optional)
+     * @param {number} clientId - Client ID (optional)
+     * @param {boolean} pomodoroMode - Enable Pomodoro countdown mode (optional)
+     * @param {number} pomodoroDuration - Pomodoro duration in seconds (optional)
      */
-    async start(taskId, projectId = null, clientId = null) {
+    async start(taskId, projectId = null, clientId = null, pomodoroMode = false, pomodoroDuration = 0) {
         // If already tracking, stop current task first (like old system)
         const currentState = this.state.getTrackingState();
         if (currentState.isTracking) {
@@ -37,7 +42,7 @@ export class TimeTrackingService extends BaseService {
             start_time: startTime,
         });
         // Update state
-        this.state.updateTrackingState({
+        const trackingState = {
             isTracking: true,
             currentTaskId: taskId,
             currentTaskName: task.name,
@@ -46,7 +51,13 @@ export class TimeTrackingService extends BaseService {
             currentClientId: clientId,
             startTime: startTime,
             elapsedSeconds: 0,
-        });
+            pomodoroMode: pomodoroMode,
+            pomodoroDuration: pomodoroDuration,
+            pomodoroRemaining: pomodoroDuration,
+        };
+
+        console.log('🔧 Core: Setting tracking state:', trackingState);
+        this.state.updateTrackingState(trackingState);
         // Start timer
         this.startTimer();
         this.events.emit(CoreEvents.TRACKING_STARTED, {
@@ -100,6 +111,9 @@ export class TimeTrackingService extends BaseService {
             currentClientId: null,
             startTime: null,
             elapsedSeconds: 0,
+            pomodoroMode: false,
+            pomodoroDuration: 0,
+            pomodoroRemaining: 0,
         });
         this.events.emit(CoreEvents.TRACKING_STOPPED, trackingData);
     }
@@ -272,12 +286,38 @@ export class TimeTrackingService extends BaseService {
         this.trackingTimer = setInterval(() => {
             const currentState = this.state.getTrackingState();
             if (currentState.isTracking) {
-                this.state.updateTrackingState({
-                    elapsedSeconds: currentState.elapsedSeconds + 1,
-                });
+                const newElapsed = currentState.elapsedSeconds + 1;
+
+                // Update elapsed time
+                const updates = {
+                    elapsedSeconds: newElapsed,
+                };
+
+                // Pomodoro countdown logic
+                if (currentState.pomodoroMode) {
+                    // Auto-stop when elapsed time reaches duration
+                    if (newElapsed >= currentState.pomodoroDuration) {
+                        // Update state with final elapsed time BEFORE stopping
+                        this.state.updateTrackingState(updates);
+
+                        this.stop().catch(error => {
+                            console.error('Error auto-stopping Pomodoro:', error);
+                        });
+                        return;
+                    }
+
+                    // Calculate remaining time for countdown
+                    // When elapsed = 1, remaining = 300 - 1 = 299 (show 4:59)
+                    // When elapsed = 299, remaining = 300 - 299 = 1 (show 0:01)
+                    const remaining = currentState.pomodoroDuration - newElapsed;
+                    updates.pomodoroRemaining = Math.max(0, remaining);
+                }
+
+                this.state.updateTrackingState(updates);
                 this.events.emit(CoreEvents.TRACKING_UPDATED, {
                     taskId: currentState.currentTaskId,
-                    elapsedSeconds: currentState.elapsedSeconds + 1,
+                    elapsedSeconds: newElapsed,
+                    pomodoroRemaining: updates.pomodoroRemaining,
                 });
             }
         }, 1000);

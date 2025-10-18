@@ -3,6 +3,7 @@ import { FormDialog } from './FormDialog.js';
 import { ValidationUtils, ColorUtils } from 'resource:///com/odnoyko/valot/ui/utils/CoreImports.js';
 import { Button } from '../primitive/Button.js';
 import { TOOLTIP } from 'resource:///com/odnoyko/valot/ui/utils/commonStrings.js';
+import { ProjectAppearanceDialog } from './ProjectAppearanceDialog.js';
 
 /**
  * Get icon color based on background brightness and mode
@@ -41,9 +42,9 @@ export class ProjectDialog extends FormDialog {
 
         const isEdit = mode === 'edit' && project;
         const showAsCreate = !isEdit || forceCreateAppearance;
-        
+
         const dialogConfig = {
-            title: showAsCreate ? 'Create New Project' : 'Edit Project',
+            title: showAsCreate ? 'Create New Project' : 'Create Project',
             subtitle: showAsCreate ? 'Create a new project' : 'Update project name and appearance',
             submitLabel: showAsCreate ? 'Create Project' : 'Save Changes',
             fields: [],  // No form fields - we'll create custom content later
@@ -185,26 +186,29 @@ export class ProjectDialog extends FormDialog {
     }
 
     _openProjectAppearanceDialog() {
-        // Get the project manager from parent window to open the same appearance dialog
-        const parentWindow = this.config.parentWindow;
-        if (parentWindow && parentWindow.projectManager) {
-            const tempProject = {
-                id: this.project ? this.project.id : null,
-                name: this.nameEntry.get_text() || 'New Project',
-                color: this.currentColor,
-                icon: this.currentIcon,
-                icon_color_mode: this.currentIconColorMode
-            };
+        // Create temporary project object for appearance dialog
+        const tempProject = {
+            id: this.project ? this.project.id : null,
+            name: this.nameEntry.get_text() || 'New Project',
+            color: this.currentColor,
+            icon: this.currentIcon,
+            icon_color_mode: this.currentIconColorMode
+        };
 
-            // Use the same appearance dialog as in the project list
-            parentWindow.projectManager._showProjectAppearanceDialog(tempProject, (updatedProject) => {
-                // Callback when appearance is changed
+        // Open ProjectAppearanceDialog directly
+        const appearanceDialog = new ProjectAppearanceDialog({
+            project: tempProject,
+            parentWindow: this.config.parentWindow || this.widget,
+            onSave: async (updatedProject) => {
+                // Update current project appearance values
                 this.currentColor = updatedProject.color;
                 this.currentIcon = updatedProject.icon;
                 this.currentIconColorMode = updatedProject.icon_color_mode;
                 this._updateProjectButton();
-            });
-        }
+            }
+        });
+
+        appearanceDialog.present();
     }
 
     _handleProjectSave(formData, dialog) {
@@ -306,7 +310,7 @@ export class ProjectDialog extends FormDialog {
         this.mode = 'edit';
         
         // Update dialog title
-        this.config.title = _('Edit Project');
+        this.config.title = _('Create Project');
         this.config.subtitle = _('Update project name and appearance');
         this.config.submitLabel = _('Save Changes');
         

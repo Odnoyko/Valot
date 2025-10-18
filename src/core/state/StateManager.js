@@ -16,8 +16,13 @@ export class StateManager {
                 currentTaskId: null,
                 currentTaskName: null,
                 currentProjectId: null,
+                currentClientId: null,
+                currentTaskInstanceId: null,
                 startTime: null,
                 elapsedSeconds: 0,
+                pomodoroMode: false,
+                pomodoroDuration: 0,
+                pomodoroRemaining: 0,
             },
             ui: {
                 currentPage: 'tasks',
