@@ -13,7 +13,6 @@ import Gdk from 'gi://Gdk?version=4.0';
 import { CoreAPI } from 'resource:///com/odnoyko/valot/core/api/CoreAPI.js';
 
 // Import bridges
-import { GdaDatabaseBridge } from 'resource:///com/odnoyko/valot/data/gdaDBBridge/GdaDatabaseBridge.js';
 import { CoreBridge } from 'resource:///com/odnoyko/valot/ui/bridges/CoreBridge.js';
 
 // Import UI components
@@ -23,6 +22,7 @@ import { Config } from 'resource:///com/odnoyko/valot/config.js';
 
 import { PreferencesDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/PreferencesDialog.js';
 import { CarouselDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/CarouselDialog.js';
+import { DatabaseMigrationDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/DatabaseMigrationDialog.js';
 
 // Init i18n
 pkg.initGettext();
@@ -90,7 +90,7 @@ export const ValotApplication = GObject.registerClass(
     class ValotApplication extends Adw.Application {
         constructor() {
             super({
-                application_id: 'com.odnoyko.valot.Devel', // TEMP HARDCODED - Config.APPLICATION_ID mismatch
+                application_id: Config.APPLICATION_ID,
                 flags: Gio.ApplicationFlags.FLAGS_NONE,
                 resource_base_path: '/com/odnoyko/valot'
             });
@@ -153,22 +153,62 @@ export const ValotApplication = GObject.registerClass(
         /**
          * Initialize Core API
          */
-        async _initializeCore() {
+        async _initializeCore(parentWindow = null) {
             try {
+                const GLib = (await import('gi://GLib')).default;
+                const Gio = (await import('gi://Gio')).default;
+                const { GdaDatabaseBridge } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/GdaDatabaseBridge.js');
 
-                // Create database bridge
+                // Paths
+                const oldSchemaDbPath = GLib.build_filenamev([GLib.get_user_data_dir(), 'valot', 'valot.db.db']);
+                const currentDbPath = GLib.build_filenamev([GLib.get_user_data_dir(), 'valot', 'valot.db']);
+                const backupDbPath = GLib.build_filenamev([GLib.get_user_data_dir(), 'valot', 'valot-backup.db']);
+
+                const oldSchemaDbFile = Gio.File.new_for_path(oldSchemaDbPath);
+                const currentDbFile = Gio.File.new_for_path(currentDbPath);
+                const backupDbFile = Gio.File.new_for_path(backupDbPath);
+
+                let migrationSource = null;
+
+                // Scenario 1: valot.db.db exists (old schema from 0.8.x)
+                if (oldSchemaDbFile.query_exists(null)) {
+                    console.log('🔍 Found valot.db.db - will migrate from old schema');
+                    migrationSource = oldSchemaDbPath;
+
+                    // If valot.db exists, rename it to valot-backup.db first
+                    if (currentDbFile.query_exists(null)) {
+                        currentDbFile.move(backupDbFile, Gio.FileCopyFlags.OVERWRITE, null, null);
+                        console.log('📦 Renamed existing valot.db to valot-backup.db');
+                    }
+                }
+                // Scenario 2: valot.db exists but no valot.db.db (old version of new schema)
+                else if (currentDbFile.query_exists(null)) {
+                    console.log('🔍 Found valot.db without valot.db.db - will migrate from new schema');
+                    // Rename valot.db to valot-backup.db
+                    currentDbFile.move(backupDbFile, Gio.FileCopyFlags.OVERWRITE, null, null);
+                    console.log('📦 Renamed valot.db to valot-backup.db for migration');
+                    migrationSource = backupDbPath;
+                } else {
+                    console.log('🔍 No migration needed - will create fresh database');
+                }
+
+                // If migration is needed, show dialog
+                if (migrationSource) {
+                    console.log(`🚀 Starting migration from: ${migrationSource}`);
+                    await this._runMigration(migrationSource, currentDbPath, null);
+                    console.log('✅ Migration completed');
+                }
+
+                // Initialize database (new or already migrated)
                 this.databaseBridge = new GdaDatabaseBridge();
                 await this.databaseBridge.initialize();
 
-
-                // TODO: Initialize Core API with TypeScript compiled code
                 // Initialize Core API
                 this.coreAPI = new CoreAPI();
                 await this.coreAPI.initialize(this.databaseBridge);
 
                 // Create Core Bridge
                 this.coreBridge = new CoreBridge(this.coreAPI);
-
 
                 return true;
             } catch (error) {
@@ -179,12 +219,88 @@ export const ValotApplication = GObject.registerClass(
                     body: `${_('Failed to initialize database')}: ${error.message}`
                 });
 
-                if (this.active_window) {
-                    dialog.present(this.active_window);
+                if (this.active_window || parentWindow) {
+                    dialog.present(this.active_window || parentWindow);
                 }
 
                 return false;
             }
+        }
+
+        /**
+         * Run database migration
+         */
+        async _runMigration(oldDbPath, newDbPath, parentWindow) {
+            return new Promise((resolve, reject) => {
+                const migrationDialog = new DatabaseMigrationDialog(parentWindow, oldDbPath);
+
+                migrationDialog.show(async (choice) => {
+                    try {
+                        const Gio = (await import('gi://Gio')).default;
+                        const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/DatabaseMigration.js');
+                        const { GdaDatabaseBridge } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/GdaDatabaseBridge.js');
+
+                        if (choice === 'backup') {
+                            // Create backup
+                            migrationDialog.updateProgress(1, 6, 'Creating backup...');
+                            const backupPath = DatabaseMigration.createBackup(oldDbPath);
+
+                            if (!backupPath) {
+                                migrationDialog.showError('Failed to create backup');
+                                reject(new Error('Backup failed'));
+                                return;
+                            }
+
+                            // Open old database
+                            migrationDialog.updateProgress(2, 6, 'Opening old database...');
+                            const oldDb = new GdaDatabaseBridge();
+                            oldDb.dbPath = oldDbPath;
+
+                            const GLib = (await import('gi://GLib')).default;
+                            const Gda = (await import('gi://Gda?version=6.0')).default;
+
+                            const oldConnString = `DB_DIR=${GLib.path_get_dirname(oldDbPath)};DB_NAME=${GLib.path_get_basename(oldDbPath)}`;
+                            oldDb.connection = Gda.Connection.open_from_string('SQLite', oldConnString, null, Gda.ConnectionOptions.NONE);
+                            oldDb.isConnected_ = true;
+
+                            // Create new database
+                            migrationDialog.updateProgress(3, 6, 'Creating new database...');
+                            const newDb = new GdaDatabaseBridge();
+                            await newDb.initialize();
+
+                            // Migrate data
+                            const migration = new DatabaseMigration(oldDb, newDb);
+                            await migration.migrate((step, total, message) => {
+                                migrationDialog.updateProgress(3 + step, 6, message);
+                            });
+
+                            // Close old database
+                            oldDb.connection.close();
+
+                            migrationDialog.showCompletion();
+                            resolve();
+
+                        } else if (choice === 'delete') {
+                            // Delete old database
+                            migrationDialog.updateProgress(1, 2, 'Deleting old database...');
+
+                            const oldDbFile = Gio.File.new_for_path(oldDbPath);
+                            if (oldDbFile.query_exists(null)) {
+                                oldDbFile.delete(null);
+                            }
+
+                            migrationDialog.updateProgress(2, 2, 'Creating new database...');
+                            migrationDialog.showCompletion();
+                            resolve();
+                        }
+
+                    } catch (error) {
+                        console.error('Migration error:', error);
+                        migrationDialog.showError(error.message);
+                        reject(error);
+                    }
+                });
+            });
         }
 
         /**

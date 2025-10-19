@@ -53,6 +53,7 @@
     <file>ui/components/dialogs/TaskInstanceEditDialog.js</file>
     <file>ui/components/dialogs/MultipleTasksEditDialog.js</file>
     <file>ui/components/dialogs/QuickTaskSelector.js</file>
+    <file>ui/components/dialogs/DatabaseMigrationDialog.js</file>
 
     <!-- UI Utilities -->
     <file>ui/utils/widgetFactory.js</file>
@@ -83,6 +84,7 @@
 
     <!-- Database Adapters -->
     <file>data/gdaDBBridge/GdaDatabaseBridge.js</file>
+    <file>data/gdaDBBridge/DatabaseMigration.js</file>
 
     <!-- Core API (JavaScript) -->
     <file>core/api/CoreAPI.js</file>

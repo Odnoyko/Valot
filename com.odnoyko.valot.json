@@ -1,5 +1,5 @@
 {
-    "id" : "com.odnoyko.valot.Devel",
+    "id" : "com.odnoyko.valot",
     "runtime" : "org.gnome.Platform",
     "runtime-version" : "49",
     "sdk" : "org.gnome.Sdk",
@@ -51,7 +51,7 @@
             "builddir" : true,
             "buildsystem" : "meson",
             "config-opts" : [
-                "-Dprofile=development"
+                "-Default"
             ],
             "sources" : [
                 {

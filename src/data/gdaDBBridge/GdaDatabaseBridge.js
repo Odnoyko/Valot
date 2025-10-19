@@ -55,6 +55,20 @@ export class GdaDatabaseBridge {
      */
     async _initSchema() {
         try {
+            // Create schema_version table
+            const createSchemaVersionTable = `
+                CREATE TABLE IF NOT EXISTS schema_version (
+                    version INTEGER PRIMARY KEY,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )`;
+            await this.execute(createSchemaVersionTable);
+
+            // Set current schema version (v2 for 0.9.0)
+            const currentVersion = await this.getSchemaVersion();
+            if (currentVersion === 0) {
+                await this.execute('INSERT INTO schema_version (version) VALUES (2)');
+            }
+
             // Create Project table
             const createProjectTable = `
                 CREATE TABLE IF NOT EXISTS Project (
@@ -374,5 +388,27 @@ export class GdaDatabaseBridge {
      */
     getConnection() {
         return this.connection;
+    }
+
+    /**
+     * Get current schema version
+     * @returns {Promise<number>} Schema version (0 if not found)
+     */
+    async getSchemaVersion() {
+        try {
+            const result = await this.query('SELECT version FROM schema_version ORDER BY version DESC LIMIT 1');
+            return result.length > 0 ? result[0].version : 0;
+        } catch (error) {
+            // Table doesn't exist or error - assume version 0
+            return 0;
+        }
+    }
+
+    /**
+     * Set schema version
+     * @param {number} version - Schema version number
+     */
+    async setSchemaVersion(version) {
+        await this.execute('INSERT OR REPLACE INTO schema_version (version) VALUES (?)', [version]);
     }
 }
