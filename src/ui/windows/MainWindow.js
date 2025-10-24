@@ -29,6 +29,9 @@ export const ValotMainWindow = GObject.registerClass({
             default_height: 700,
         });
 
+        // Set minimum window size
+        this.set_size_request(700, 500);
+
         this.coreBridge = coreBridge;
 
         // Try to load settings, but don't fail if schema not available

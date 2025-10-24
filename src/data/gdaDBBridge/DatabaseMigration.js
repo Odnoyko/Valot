@@ -10,6 +10,7 @@
 
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
+import Gda from 'gi://Gda?version=6.0';
 
 export class DatabaseMigration {
     /**
@@ -23,30 +24,58 @@ export class DatabaseMigration {
     }
 
     /**
-     * Detect if source database is old schema (0.8.x) or new schema
+     * Detect if source database is old schema (0.8.x) or new schema (0.9.x with version >= 2)
+     * Logic:
+     * - If _metadata table exists AND schema_version >= 2 → New schema (no migration needed)
+     * - If _metadata table doesn't exist → Old schema (0.8.x - needs migration)
+     * - If _metadata exists but schema_version < 2 → Old schema (needs migration)
      * @returns {Promise<boolean>} True if old schema, false if new schema
      */
     async detectSchema() {
         try {
-            // Check table structure using PRAGMA
-            const columns = await this.oldDb.query('PRAGMA table_info(Task)');
+            // Check if _metadata table exists
+            const tables = await this.oldDb.query(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='_metadata'"
+            );
 
-            // Old schema has project_id, client_id, time_spent columns in Task table
-            // New schema has only id, name, created_at, updated_at
-            const hasProjectId = columns.some(col => col.name === 'project_id');
-            const hasClientId = columns.some(col => col.name === 'client_id');
-            const hasTimeSpent = columns.some(col => col.name === 'time_spent');
-
-            if (hasProjectId || hasClientId || hasTimeSpent) {
-                console.log('📋 Detected old schema (0.8.x)');
+            if (tables.length === 0) {
+                // No _metadata table → Old schema (0.8.x)
+                console.log('📋 Detected old schema (0.8.x) - no _metadata table');
                 return true;
-            } else {
-                console.log('📋 Detected new schema (0.9.x)');
-                return false;
             }
+
+            // _metadata table exists - check schema_version
+            try {
+                const versionResult = await this.oldDb.query(
+                    "SELECT value FROM _metadata WHERE key = 'schema_version'"
+                );
+
+                if (versionResult.length === 0) {
+                    // No schema_version in _metadata → Old schema
+                    console.log('📋 Detected old schema - no schema_version in _metadata');
+                    return true;
+                }
+
+                const version = parseInt(versionResult[0].value);
+
+                if (version >= 2) {
+                    // New schema with version 2 or higher
+                    console.log(`📋 Detected new schema (v${version}) - no migration needed`);
+                    return false;
+                } else {
+                    // Old version
+                    console.log(`📋 Detected old schema (v${version}) - needs migration`);
+                    return true;
+                }
+            } catch (error) {
+                console.error('📋 Error reading schema_version:', error);
+                console.log('📋 Assuming old schema');
+                return true;
+            }
+
         } catch (error) {
             console.error('📋 Error detecting schema:', error);
-            console.log('📋 Assuming old schema (0.8.x)');
+            console.log('📋 Assuming old schema (0.8.x) for safety');
             return true; // Default to old schema for safety
         }
     }
@@ -77,12 +106,205 @@ export class DatabaseMigration {
     }
 
     /**
+     * Perform full migration - Backup & Migrate
+     * @param {string} backupDbPath - Path to backup database
+     * @param {string} newDbPath - Path to new database (valot.db)
+     * @param {string} oldSchemaDbPath - Path to valot.db.db (if exists)
+     * @param {boolean} forceOldSchema - Force treating as old schema (skip detection)
+     * @param {Function} onProgress - Progress callback (step, total, message)
+     * @returns {Promise<boolean>} Success status
+     */
+    static async performBackupAndMigrate(backupDbPath, newDbPath, oldSchemaDbPath, forceOldSchema = false, onProgress = null) {
+        try {
+            const { GdaDatabaseBridge } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/GdaDatabaseBridge.js');
+
+            if (onProgress) onProgress(1, 5, 'Preparing migration...');
+
+            // Rename valot.db.db to temporary name instead of deleting
+            const oldSchemaDbFile = Gio.File.new_for_path(oldSchemaDbPath);
+            const tempOldPath = `${oldSchemaDbPath}.migrating`;
+            const tempOldFile = Gio.File.new_for_path(tempOldPath);
+
+            if (oldSchemaDbFile.query_exists(null)) {
+                oldSchemaDbFile.move(tempOldFile, Gio.FileCopyFlags.OVERWRITE, null, null);
+                console.log('📦 Renamed valot.db.db to .migrating');
+            }
+
+            // Delete valot.db if exists
+            const currentDbFile = Gio.File.new_for_path(newDbPath);
+            if (currentDbFile.query_exists(null)) {
+                currentDbFile.delete(null);
+                console.log('🗑️ Deleted existing valot.db');
+            }
+
+            // Open backup database
+            if (onProgress) onProgress(2, 5, 'Opening backup database...');
+            const oldDb = new GdaDatabaseBridge();
+            oldDb.dbPath = backupDbPath;
+
+            const oldConnString = `DB_DIR=${GLib.path_get_dirname(backupDbPath)};DB_NAME=${GLib.path_get_basename(backupDbPath)}`;
+            oldDb.connection = Gda.Connection.open_from_string('SQLite', oldConnString, null, Gda.ConnectionOptions.NONE);
+            oldDb.isConnected_ = true;
+
+            // Create new database
+            if (onProgress) onProgress(3, 5, 'Creating new database...');
+            const newDb = new GdaDatabaseBridge();
+            await newDb.initialize();
+            console.log(`📂 New database created at: ${newDb.dbPath}`);
+
+            // Migrate data
+            if (onProgress) onProgress(4, 5, 'Migrating data...');
+            const migration = new DatabaseMigration(oldDb, newDb);
+
+            // If forceOldSchema is true, set it before migration
+            if (forceOldSchema) {
+                migration.isOldSchema = true;
+                console.log('🔧 Forcing old schema migration (0.8.x → 0.9.x)');
+            }
+
+            await migration.migrate();
+
+            // Close databases - IMPORTANT: close to flush to disk
+            if (onProgress) onProgress(5, 5, 'Finalizing...');
+
+            // Force commit before close
+            try {
+                if (newDb.connection && newDb.connection.is_opened()) {
+                    // Execute PRAGMA to ensure everything is written
+                    newDb.connection.execute_non_select_command('PRAGMA wal_checkpoint(FULL)');
+                    newDb.connection.execute_non_select_command('PRAGMA synchronous = FULL');
+                }
+            } catch (error) {
+                console.log('Note: Could not execute PRAGMA commands:', error.message);
+            }
+
+            await oldDb.close();
+            await newDb.close();
+
+            // Give SQLite more time to flush
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Verify new database was created
+            if (!currentDbFile.query_exists(null)) {
+                console.error('❌ New database file was not created!');
+                console.error('Expected path:', newDbPath);
+
+                // Check if there are any .db files in directory
+                const dir = Gio.File.new_for_path(GLib.path_get_dirname(newDbPath));
+                const enumerator = dir.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NONE, null);
+                let fileInfo;
+                console.log('Files in directory:');
+                while ((fileInfo = enumerator.next_file(null)) !== null) {
+                    const fileName = fileInfo.get_name();
+                    if (fileName.endsWith('.db') || fileName.includes('valot')) {
+                        console.log('  -', fileName);
+                    }
+                }
+
+                // Restore old database if migration failed
+                if (tempOldFile.query_exists(null)) {
+                    tempOldFile.move(oldSchemaDbFile, Gio.FileCopyFlags.OVERWRITE, null, null);
+                    console.log('🔄 Restored valot.db.db after failed migration');
+                }
+
+                return false;
+            }
+
+            // Delete temporary old database file
+            if (tempOldFile.query_exists(null)) {
+                tempOldFile.delete(null);
+                console.log('🗑️ Deleted temporary .migrating file');
+            }
+
+            console.log(`✅ Migration completed - backup saved at: ${backupDbPath}`);
+            console.log(`✅ New database created: ${newDbPath}`);
+            return true;
+
+        } catch (error) {
+            console.error('❌ Migration failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Perform Delete & Start Fresh
+     * @param {string} originalDbPath - Path to original database
+     * @param {string} backupDbPath - Path to temporary backup
+     * @param {string} newDbPath - Path to new database (valot.db)
+     * @param {string} oldSchemaDbPath - Path to valot.db.db (if exists)
+     * @param {Function} onProgress - Progress callback (step, total, message)
+     * @returns {Promise<boolean>} Success status
+     */
+    static async performDeleteAndStartFresh(originalDbPath, backupDbPath, newDbPath, oldSchemaDbPath, onProgress = null) {
+        try {
+            if (onProgress) onProgress(1, 4, 'Moving database to Documents...');
+
+            // Create Documents/Valot folder
+            const documentsPath = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOCUMENTS);
+            const valotBackupDir = GLib.build_filenamev([documentsPath, 'Valot']);
+            GLib.mkdir_with_parents(valotBackupDir, 0o755);
+
+            // Move original database to Documents/Valot
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            const originalDbName = GLib.path_get_basename(originalDbPath);
+            const backupFileName = `${originalDbName}-${timestamp}.db`;
+            const documentsBackupPath = GLib.build_filenamev([valotBackupDir, backupFileName]);
+
+            const originalDbFile = Gio.File.new_for_path(originalDbPath);
+            const documentsBackupFile = Gio.File.new_for_path(documentsBackupPath);
+
+            if (originalDbFile.query_exists(null)) {
+                originalDbFile.move(documentsBackupFile, Gio.FileCopyFlags.NONE, null, null);
+                console.log(`📦 Moved original database to: ${documentsBackupPath}`);
+            }
+
+            if (onProgress) onProgress(2, 4, 'Deleting old databases...');
+
+            // Delete valot.db if exists
+            const currentDbFile = Gio.File.new_for_path(newDbPath);
+            if (currentDbFile.query_exists(null)) {
+                currentDbFile.delete(null);
+                console.log('🗑️ Deleted existing valot.db');
+            }
+
+            // Delete valot.db.db if exists (and not already moved)
+            const oldSchemaDbFile = Gio.File.new_for_path(oldSchemaDbPath);
+            if (oldSchemaDbFile.query_exists(null)) {
+                oldSchemaDbFile.delete(null);
+                console.log('🗑️ Deleted existing valot.db.db');
+            }
+
+            // Delete temporary backup file
+            if (onProgress) onProgress(3, 4, 'Cleaning up...');
+            const backupDbFile = Gio.File.new_for_path(backupDbPath);
+            if (backupDbFile.query_exists(null)) {
+                backupDbFile.delete(null);
+                console.log('🗑️ Deleted temporary backup');
+            }
+
+            if (onProgress) onProgress(4, 4, 'Ready to create new database...');
+            console.log(`✅ Old database saved to: ${documentsBackupPath}`);
+            return true;
+
+        } catch (error) {
+            console.error('❌ Delete and start fresh failed:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Migrate all data from old schema to new schema
      * @param {Function} onProgress - Progress callback (step, total, message)
      */
     async migrate(onProgress = null) {
-        // Detect source schema
-        this.isOldSchema = await this.detectSchema();
+        // Detect source schema (only if not already set)
+        if (this.isOldSchema === false || this.isOldSchema === true) {
+            // Schema already detected, skip
+            console.log(`📋 Using pre-detected schema: ${this.isOldSchema ? 'Old (0.8.x)' : 'New (0.9.x)'}`);
+        } else {
+            // Detect schema
+            this.isOldSchema = await this.detectSchema();
+        }
 
         let steps;
 
@@ -243,16 +465,19 @@ export class DatabaseMigration {
 
             const taskId = newTask[0].id;
 
-            // Create TaskInstance
+            // Create TaskInstance with correct last_used_at from end_time or created_at
+            const lastUsedAt = oldTask.end_time || oldTask.created_at || 'datetime(\'now\')';
+
             const instanceId = await this.newDb.execute(
                 `INSERT INTO TaskInstance
                     (task_id, project_id, client_id, total_time, last_used_at, is_favorite)
-                 VALUES (?, ?, ?, ?, datetime('now'), 0)`,
+                 VALUES (?, ?, ?, ?, ?, 0)`,
                 [
                     taskId,
                     oldTask.project_id || 1,
                     oldTask.client_id || 1,
-                    oldTask.time_spent || 0
+                    oldTask.time_spent || 0,
+                    lastUsedAt
                 ]
             );
 

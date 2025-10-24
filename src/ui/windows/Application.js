@@ -168,34 +168,103 @@ export const ValotApplication = GObject.registerClass(
                 const currentDbFile = Gio.File.new_for_path(currentDbPath);
                 const backupDbFile = Gio.File.new_for_path(backupDbPath);
 
-                let migrationSource = null;
+                let migrationNeeded = false;
+                let backupSourcePath = null;
+                let backupCreatedPath = null;
+                let isOldSchema = false;
 
-                // Scenario 1: valot.db.db exists (old schema from 0.8.x)
+                // Scenario 1: valot.db.db exists (old schema from 0.8.x or 0.9.x)
                 if (oldSchemaDbFile.query_exists(null)) {
-                    console.log('🔍 Found valot.db.db - will migrate from old schema');
-                    migrationSource = oldSchemaDbPath;
+                    console.log('🔍 Found valot.db.db - checking schema...');
 
-                    // If valot.db exists, rename it to valot-backup.db first
-                    if (currentDbFile.query_exists(null)) {
-                        currentDbFile.move(backupDbFile, Gio.FileCopyFlags.OVERWRITE, null, null);
-                        console.log('📦 Renamed existing valot.db to valot-backup.db');
+                    // Check schema BEFORE creating backup
+                    const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/DatabaseMigration.js');
+                    const Gda = (await import('gi://Gda?version=6.0')).default;
+
+                    // Open database to check schema
+                    const tempDb = new GdaDatabaseBridge();
+                    const tempConnString = `DB_DIR=${GLib.path_get_dirname(oldSchemaDbPath)};DB_NAME=${GLib.path_get_basename(oldSchemaDbPath).replace('.db', '')}`;
+
+                    try {
+                        tempDb.connection = Gda.Connection.open_from_string('SQLite', tempConnString, null, Gda.ConnectionOptions.NONE);
+                        tempDb.isConnected_ = true;
+
+                        // Detect schema
+                        const migration = new DatabaseMigration(tempDb, null);
+                        isOldSchema = await migration.detectSchema();
+
+                        await tempDb.close();
+                        console.log(`📋 Schema detection: ${isOldSchema ? 'Old (0.8.x)' : 'New (0.9.x)'}`);
+
+                    } catch (error) {
+                        console.error('❌ Error detecting schema:', error);
+                        isOldSchema = true; // Assume old schema on error
+                    }
+
+                    // Only migrate if old schema
+                    if (isOldSchema) {
+                        console.log('🔍 Old schema detected - needs migration');
+                        migrationNeeded = true;
+                        backupSourcePath = oldSchemaDbPath;
+
+                        // Create backup BEFORE showing dialog
+                        backupCreatedPath = DatabaseMigration.createBackup(oldSchemaDbPath);
+                        console.log(`💾 Created backup: ${backupCreatedPath}`);
+                    } else {
+                        console.log('✅ Database already has new schema - renaming to valot.db');
+                        // Rename valot.db.db to valot.db (it's already migrated)
+                        oldSchemaDbFile.move(currentDbFile, Gio.FileCopyFlags.OVERWRITE, null, null);
+                        migrationNeeded = false;
                     }
                 }
-                // Scenario 2: valot.db exists but no valot.db.db (old version of new schema)
+                // Scenario 2: valot.db exists but no valot.db.db - check version
                 else if (currentDbFile.query_exists(null)) {
-                    console.log('🔍 Found valot.db without valot.db.db - will migrate from new schema');
-                    // Rename valot.db to valot-backup.db
-                    currentDbFile.move(backupDbFile, Gio.FileCopyFlags.OVERWRITE, null, null);
-                    console.log('📦 Renamed valot.db to valot-backup.db for migration');
-                    migrationSource = backupDbPath;
+                    console.log('🔍 Found valot.db - checking schema version...');
+
+                    // Open database to check version
+                    const tempDb = new GdaDatabaseBridge();
+                    const Gda = (await import('gi://Gda?version=6.0')).default;
+                    const tempConnString = `DB_DIR=${GLib.path_get_dirname(currentDbPath)};DB_NAME=${GLib.path_get_basename(currentDbPath)}`;
+
+                    try {
+                        tempDb.connection = Gda.Connection.open_from_string('SQLite', tempConnString, null, Gda.ConnectionOptions.NONE);
+                        tempDb.isConnected_ = true;
+
+                        const version = await tempDb.getSchemaVersion();
+                        await tempDb.close();
+
+                        if (version >= 2) {
+                            console.log('✅ Database is up to date (schema v' + version + ') - skip migration');
+                            migrationNeeded = false;
+                        } else {
+                            console.log('🔍 Found old schema version ' + version + ' - needs migration');
+                            migrationNeeded = true;
+                            backupSourcePath = currentDbPath;
+
+                            // Create backup BEFORE showing dialog
+                            const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/DatabaseMigration.js');
+                            backupCreatedPath = DatabaseMigration.createBackup(currentDbPath);
+                            console.log(`💾 Created backup: ${backupCreatedPath}`);
+                        }
+                    } catch (error) {
+                        console.error('❌ Error checking schema version:', error);
+                        console.log('🔍 Assuming old schema - needs migration');
+                        migrationNeeded = true;
+                        backupSourcePath = currentDbPath;
+
+                        // Create backup BEFORE showing dialog
+                        const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/DatabaseMigration.js');
+                        backupCreatedPath = DatabaseMigration.createBackup(currentDbPath);
+                        console.log(`💾 Created backup: ${backupCreatedPath}`);
+                    }
                 } else {
-                    console.log('🔍 No migration needed - will create fresh database');
+                    console.log('🔍 No existing database - will create fresh database');
                 }
 
                 // If migration is needed, show dialog
-                if (migrationSource) {
-                    console.log(`🚀 Starting migration from: ${migrationSource}`);
-                    await this._runMigration(migrationSource, currentDbPath, null);
+                if (migrationNeeded && backupCreatedPath) {
+                    console.log(`🚀 Starting migration from backup: ${backupCreatedPath}`);
+                    await this._runMigration(backupSourcePath, backupCreatedPath, currentDbPath, oldSchemaDbPath, isOldSchema, null);
                     console.log('✅ Migration completed');
                 }
 
@@ -229,69 +298,56 @@ export const ValotApplication = GObject.registerClass(
 
         /**
          * Run database migration
+         * @param {string} originalDbPath - Original database path (valot.db.db or valot.db)
+         * @param {string} backupDbPath - Backup database path (created before dialog)
+         * @param {string} newDbPath - New database path (valot.db)
+         * @param {string} oldSchemaDbPath - Path to valot.db.db (if exists)
+         * @param {boolean} isOldSchema - True if old schema detected
+         * @param {Gtk.Window} parentWindow - Parent window
          */
-        async _runMigration(oldDbPath, newDbPath, parentWindow) {
+        async _runMigration(originalDbPath, backupDbPath, newDbPath, oldSchemaDbPath, isOldSchema, parentWindow) {
             return new Promise((resolve, reject) => {
-                const migrationDialog = new DatabaseMigrationDialog(parentWindow, oldDbPath);
+                const migrationDialog = new DatabaseMigrationDialog(parentWindow, originalDbPath);
 
                 migrationDialog.show(async (choice) => {
                     try {
-                        const Gio = (await import('gi://Gio')).default;
                         const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/DatabaseMigration.js');
-                        const { GdaDatabaseBridge } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/GdaDatabaseBridge.js');
 
                         if (choice === 'backup') {
-                            // Create backup
-                            migrationDialog.updateProgress(1, 6, 'Creating backup...');
-                            const backupPath = DatabaseMigration.createBackup(oldDbPath);
+                            // Backup & Migrate - all logic in DatabaseMigration
+                            const success = await DatabaseMigration.performBackupAndMigrate(
+                                backupDbPath,
+                                newDbPath,
+                                oldSchemaDbPath,
+                                isOldSchema, // Pass detected schema
+                                (step, total, message) => migrationDialog.updateProgress(step, total, message)
+                            );
 
-                            if (!backupPath) {
-                                migrationDialog.showError('Failed to create backup');
-                                reject(new Error('Backup failed'));
-                                return;
+                            if (success) {
+                                migrationDialog.showCompletion();
+                                resolve();
+                            } else {
+                                migrationDialog.showError('Migration failed - database not created');
+                                reject(new Error('Migration failed'));
                             }
-
-                            // Open old database
-                            migrationDialog.updateProgress(2, 6, 'Opening old database...');
-                            const oldDb = new GdaDatabaseBridge();
-                            oldDb.dbPath = oldDbPath;
-
-                            const GLib = (await import('gi://GLib')).default;
-                            const Gda = (await import('gi://Gda?version=6.0')).default;
-
-                            const oldConnString = `DB_DIR=${GLib.path_get_dirname(oldDbPath)};DB_NAME=${GLib.path_get_basename(oldDbPath)}`;
-                            oldDb.connection = Gda.Connection.open_from_string('SQLite', oldConnString, null, Gda.ConnectionOptions.NONE);
-                            oldDb.isConnected_ = true;
-
-                            // Create new database
-                            migrationDialog.updateProgress(3, 6, 'Creating new database...');
-                            const newDb = new GdaDatabaseBridge();
-                            await newDb.initialize();
-
-                            // Migrate data
-                            const migration = new DatabaseMigration(oldDb, newDb);
-                            await migration.migrate((step, total, message) => {
-                                migrationDialog.updateProgress(3 + step, 6, message);
-                            });
-
-                            // Close old database
-                            oldDb.connection.close();
-
-                            migrationDialog.showCompletion();
-                            resolve();
 
                         } else if (choice === 'delete') {
-                            // Delete old database
-                            migrationDialog.updateProgress(1, 2, 'Deleting old database...');
+                            // Delete & Start Fresh - all logic in DatabaseMigration
+                            const success = await DatabaseMigration.performDeleteAndStartFresh(
+                                originalDbPath,
+                                backupDbPath,
+                                newDbPath,
+                                oldSchemaDbPath,
+                                (step, total, message) => migrationDialog.updateProgress(step, total, message)
+                            );
 
-                            const oldDbFile = Gio.File.new_for_path(oldDbPath);
-                            if (oldDbFile.query_exists(null)) {
-                                oldDbFile.delete(null);
+                            if (success) {
+                                migrationDialog.showCompletion();
+                                resolve();
+                            } else {
+                                migrationDialog.showError('Delete operation failed');
+                                reject(new Error('Delete failed'));
                             }
-
-                            migrationDialog.updateProgress(2, 2, 'Creating new database...');
-                            migrationDialog.showCompletion();
-                            resolve();
                         }
 
                     } catch (error) {

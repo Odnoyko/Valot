@@ -28,8 +28,11 @@ export class GdaDatabaseBridge {
         // Ensure directory exists
         GLib.mkdir_with_parents(GLib.path_get_dirname(dbPath), 0o755);
 
-        // SQLite connection string
-        const connectionString = `DB_DIR=${GLib.path_get_dirname(dbPath)};DB_NAME=${GLib.path_get_basename(dbPath)}`;
+        // SQLite connection string - use basename WITHOUT extension, GDA adds .db automatically
+        const dbName = GLib.path_get_basename(dbPath).replace('.db', '');
+        const connectionString = `DB_DIR=${GLib.path_get_dirname(dbPath)};DB_NAME=${dbName}`;
+
+        console.log(`🔗 Connecting to database: ${connectionString}`);
 
         try {
             this.connection = Gda.Connection.open_from_string(
@@ -55,18 +58,20 @@ export class GdaDatabaseBridge {
      */
     async _initSchema() {
         try {
-            // Create schema_version table
-            const createSchemaVersionTable = `
-                CREATE TABLE IF NOT EXISTS schema_version (
-                    version INTEGER PRIMARY KEY,
+            // Create _metadata table for storing app metadata
+            const createMetadataTable = `
+                CREATE TABLE IF NOT EXISTS _metadata (
+                    key TEXT PRIMARY KEY,
+                    value TEXT,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )`;
-            await this.execute(createSchemaVersionTable);
+            await this.execute(createMetadataTable);
 
             // Set current schema version (v2 for 0.9.0)
             const currentVersion = await this.getSchemaVersion();
             if (currentVersion === 0) {
-                await this.execute('INSERT INTO schema_version (version) VALUES (2)');
+                await this.execute("INSERT OR IGNORE INTO _metadata (key, value) VALUES ('schema_version', '2')");
+                await this.execute("INSERT OR IGNORE INTO _metadata (key, value) VALUES ('app_version', '0.9.0')");
             }
 
             // Create Project table
@@ -396,8 +401,8 @@ export class GdaDatabaseBridge {
      */
     async getSchemaVersion() {
         try {
-            const result = await this.query('SELECT version FROM schema_version ORDER BY version DESC LIMIT 1');
-            return result.length > 0 ? result[0].version : 0;
+            const result = await this.query("SELECT value FROM _metadata WHERE key = 'schema_version'");
+            return result.length > 0 ? parseInt(result[0].value) : 0;
         } catch (error) {
             // Table doesn't exist or error - assume version 0
             return 0;
@@ -409,6 +414,29 @@ export class GdaDatabaseBridge {
      * @param {number} version - Schema version number
      */
     async setSchemaVersion(version) {
-        await this.execute('INSERT OR REPLACE INTO schema_version (version) VALUES (?)', [version]);
+        await this.execute("INSERT OR REPLACE INTO _metadata (key, value) VALUES ('schema_version', ?)", [version.toString()]);
+    }
+
+    /**
+     * Get metadata value by key
+     * @param {string} key - Metadata key
+     * @returns {Promise<string|null>} Metadata value or null
+     */
+    async getMetadata(key) {
+        try {
+            const result = await this.query("SELECT value FROM _metadata WHERE key = ?", [key]);
+            return result.length > 0 ? result[0].value : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    /**
+     * Set metadata value
+     * @param {string} key - Metadata key
+     * @param {string} value - Metadata value
+     */
+    async setMetadata(key, value) {
+        await this.execute("INSERT OR REPLACE INTO _metadata (key, value) VALUES (?, ?)", [key, value]);
     }
 }
