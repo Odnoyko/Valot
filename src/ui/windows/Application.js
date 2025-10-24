@@ -91,7 +91,7 @@ export const ValotApplication = GObject.registerClass(
         constructor() {
             super({
                 application_id: Config.APPLICATION_ID,
-                flags: Gio.ApplicationFlags.FLAGS_NONE,
+                flags: Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
                 resource_base_path: '/com/odnoyko/valot'
             });
 
@@ -397,10 +397,20 @@ export const ValotApplication = GObject.registerClass(
          * Activate application
          */
         vfunc_activate() {
+            // If already activated and Core is initialized, just show the appropriate window
+            if (this.coreAPI && this.coreBridge) {
+                if (this.compactMode) {
+                    this._launchCompactTracker();
+                } else {
+                    this._launchMainWindow();
+                }
+                return;
+            }
+
             // Hold application to prevent premature shutdown during async init
             this.hold();
 
-            // Load CSS
+            // Load CSS (only on first activation)
             loadCss();
 
             // Apply theme

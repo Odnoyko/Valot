@@ -590,4 +590,10 @@ window.dark .subtitle {
   padding: 10px 20px;
 }
 
-
+.version-label {
+  background-color: alpha(@accent_bg_color, 0.2);
+  color: @accent_bg_color;
+  padding: 3px 6px;
+  border-radius: 100px;
+  font-size: 16px;
+}

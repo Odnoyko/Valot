@@ -7,6 +7,7 @@
 
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
+import Gio from 'gi://Gio';
 
 export class DatabaseMigrationDialog {
     constructor(parent, oldDbPath) {
@@ -28,19 +29,24 @@ export class DatabaseMigrationDialog {
     show(onChoice) {
         this.onChoiceMade = onChoice;
 
-        // Create window
+        // Create dialog (modal)
         this.dialog = new Adw.Window({
             transient_for: this.parent,
             modal: true,
-            default_width: 550,
-            default_height: 450,
+            default_width: 360,
+            default_height: 438,
             resizable: false,
         });
 
-        // Header bar
+        // Header bar with title and close button (flat style)
         const headerBar = new Adw.HeaderBar({
-            show_end_title_buttons: false,
+            show_end_title_buttons: true,
             show_start_title_buttons: false,
+            css_classes: ['flat'],
+            title_widget: new Gtk.Label({
+                label: 'Database Migration Tool',
+                css_classes: ['title'],
+            }),
         });
 
         // Stack for switching between choice and progress
@@ -77,75 +83,104 @@ export class DatabaseMigrationDialog {
      * Create choice view
      */
     _createChoiceView() {
-        const page = new Adw.StatusPage({
-            icon_name: 'dialog-warning-symbolic',
-            title: 'Database Migration Required',
-            description: `Valot 0.9.0 uses a new database structure.\n\nOld database:\n${this.oldDbPath}\n\nChoose how to proceed:`,
+        const mainBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 0,
+            margin_top: 32,
+            margin_bottom: 32,
+            margin_start: 40,
+            margin_end: 40,
         });
 
-        // Buttons container
-        const buttonsBox = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 16,
+        // Illustration area (fish bowls SVG)
+        const illustrationBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            halign: Gtk.Align.CENTER,
+            height_request: 140,
+        });
+
+        // Load SVG illustration (larger)
+        const illustration = new Gtk.Picture({
+            file: Gio.File.new_for_path('/home/Val/Projects/valot/data/Illustrations/Migration_tool.svg'),
+            content_fit: Gtk.ContentFit.CONTAIN,
+            width_request: 240,
+            height_request: 140,
+        });
+        illustrationBox.append(illustration);
+
+        // Version text
+        const versionBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 6,
             halign: Gtk.Align.CENTER,
             margin_top: 24,
-            margin_bottom: 24,
-            margin_start: 48,
-            margin_end: 48,
+        });
+
+        const versionText1 = new Gtk.Label({
+            label: 'Valot was updated to the',
+            css_classes: ['title-3'],
+        });
+
+        const versionBadge = new Gtk.Label({
+            label: ' v0.9.0 ',
+            css_classes: ['pill', 'success', 'version-label'],
+        });
+        versionBadge.set_markup('<b> v0.9.0 </b>');
+
+        versionBox.append(versionText1);
+        versionBox.append(versionBadge);
+
+        // Subtitle
+        const subtitle = new Gtk.Label({
+            label: 'Please choose your way to continue after update',
+            margin_top: 8,
+            halign: Gtk.Align.CENTER,
+            margin_bottom: 4,
+        });
+        subtitle.add_css_class('dim-label');
+
+        // Buttons container - fixed height to prevent resize
+        this.buttonsContainer = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 12,
+            margin_top: 24,
+            height_request: 92, // Fixed height for 2 buttons
+            valign: Gtk.Align.CENTER,
+        });
+
+        // Delete & Start Fresh button
+        const deleteButton = new Gtk.Button({
+            label: 'Delete & Fresh Start',
+            height_request: 40,
+            css_classes: ['pill'],
+        });
+        deleteButton.add_css_class('destructive-action');
+        deleteButton.connect('clicked', () => {
+            this._startMigration('delete');
         });
 
         // Backup & Migrate button
         const backupButton = new Gtk.Button({
             label: 'Backup & Migrate',
+            height_request: 40,
             css_classes: ['pill', 'suggested-action'],
         });
         backupButton.connect('clicked', () => {
             this._startMigration('backup');
         });
 
-        const backupLabel = new Gtk.Label({
-            label: 'Create backup and migrate your data to new structure',
-            wrap: true,
-            justify: Gtk.Justification.CENTER,
-        });
-        backupLabel.add_css_class('dim-label');
+        // Add buttons to container
+        this.buttonsContainer.append(deleteButton);
+        this.buttonsContainer.append(backupButton);
 
-        const backupBox = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 6,
-        });
-        backupBox.append(backupButton);
-        backupBox.append(backupLabel);
+        // Assemble
+        mainBox.append(illustrationBox);
+        mainBox.append(versionBox);
+        mainBox.append(subtitle);
+        mainBox.append(this.buttonsContainer);
 
-        // Delete & Start Fresh button
-        const deleteButton = new Gtk.Button({
-            label: 'Delete & Start Fresh',
-            css_classes: ['pill', 'destructive-action'],
-        });
-        deleteButton.connect('clicked', () => {
-            this._startMigration('delete');
-        });
-
-        const deleteLabel = new Gtk.Label({
-            label: 'Remove old database and start with empty new one',
-            wrap: true,
-            justify: Gtk.Justification.CENTER,
-        });
-        deleteLabel.add_css_class('dim-label');
-
-        const deleteBox = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 6,
-        });
-        deleteBox.append(deleteButton);
-        deleteBox.append(deleteLabel);
-
-        // Add to container
-        buttonsBox.append(backupBox);
-        buttonsBox.append(deleteBox);
-
-        page.set_child(buttonsBox);
-        return page;
+        return mainBox;
     }
 
     /**
@@ -196,20 +231,48 @@ export class DatabaseMigrationDialog {
      * Start migration process
      */
     _startMigration(choice) {
-        // Switch to progress view
-        this.contentStack.set_visible_child_name('progress');
+        // Replace buttons with progress bar without changing container size
+        this._replaceButtonsWithProgress();
 
-        // Trigger callback
+        // Wait 400ms before starting migration to show progress bar at 0%
         if (this.onChoiceMade) {
-            this.onChoiceMade(choice);
+            setTimeout(() => {
+                this.onChoiceMade(choice);
+            }, 400);
         }
+    }
+
+    /**
+     * Replace buttons with progress bar in-place
+     */
+    _replaceButtonsWithProgress() {
+        if (!this.buttonsContainer) return;
+
+        // Remove all children from buttons container
+        let child = this.buttonsContainer.get_first_child();
+        while (child) {
+            const next = child.get_next_sibling();
+            this.buttonsContainer.remove(child);
+            child = next;
+        }
+
+        // Create progress bar with same height as buttons area
+        this.progressBar = new Gtk.ProgressBar({
+            show_text: true,
+            text: '0%',
+            height_request: 40,
+            valign: Gtk.Align.CENTER,
+        });
+
+        // Add progress bar to container
+        this.buttonsContainer.append(this.progressBar);
     }
 
     /**
      * Update progress bar
      */
     updateProgress(step, total, message) {
-        if (!this.progressBar || !this.statusLabel) {
+        if (!this.progressBar) {
             return;
         }
 
@@ -218,17 +281,15 @@ export class DatabaseMigrationDialog {
 
         this.progressBar.set_fraction(fraction);
         this.progressBar.set_text(`${percentage}%`);
-        this.statusLabel.set_label(message);
     }
 
     /**
      * Show completion
      */
     showCompletion() {
-        if (this.progressBar && this.statusLabel) {
+        if (this.progressBar) {
             this.progressBar.set_fraction(1.0);
             this.progressBar.set_text('100%');
-            this.statusLabel.set_label('✅ Migration completed successfully!');
 
             // Auto-close after delay
             setTimeout(() => {
@@ -241,8 +302,9 @@ export class DatabaseMigrationDialog {
      * Show error
      */
     showError(message) {
-        if (this.statusLabel) {
-            this.statusLabel.set_label(`❌ Error: ${message}`);
+        if (this.progressBar) {
+            this.progressBar.set_text(`Error: ${message}`);
+            this.progressBar.add_css_class('error');
         }
 
         // Auto-close after delay
@@ -262,7 +324,7 @@ export class DatabaseMigrationDialog {
             this.progressView = null;
             this.contentStack = null;
             this.progressBar = null;
-            this.statusLabel = null;
+            this.buttonsContainer = null;
         }
     }
 }

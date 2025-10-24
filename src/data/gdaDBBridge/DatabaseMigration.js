@@ -87,8 +87,15 @@ export class DatabaseMigration {
      */
     static createBackup(oldDbPath) {
         try {
+            // Create Documents/valot folder
+            const documentsPath = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOCUMENTS);
+            const valotBackupDir = GLib.build_filenamev([documentsPath, 'valot']);
+            GLib.mkdir_with_parents(valotBackupDir, 0o755);
+
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-            const backupPath = `${oldDbPath}-backup-${timestamp}.db`;
+            const originalDbName = GLib.path_get_basename(oldDbPath);
+            const backupFileName = `${originalDbName}-backup-${timestamp}.db`;
+            const backupPath = GLib.build_filenamev([valotBackupDir, backupFileName]);
 
             console.log(`💾 Creating backup: ${backupPath}`);
 
@@ -118,7 +125,18 @@ export class DatabaseMigration {
         try {
             const { GdaDatabaseBridge } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/GdaDatabaseBridge.js');
 
-            if (onProgress) onProgress(1, 5, 'Preparing migration...');
+            const totalSteps = 20; // Total progress steps for smooth animation
+            let currentStep = 0;
+
+            const updateProgress = async (message) => {
+                if (onProgress) {
+                    currentStep++;
+                    onProgress(currentStep, totalSteps, message);
+                    await new Promise(resolve => setTimeout(resolve, 25));
+                }
+            };
+
+            await updateProgress('Preparing migration...');
 
             // Rename valot.db.db to temporary name instead of deleting
             const oldSchemaDbFile = Gio.File.new_for_path(oldSchemaDbPath);
@@ -130,6 +148,8 @@ export class DatabaseMigration {
                 console.log('📦 Renamed valot.db.db to .migrating');
             }
 
+            await updateProgress('Cleaning up old files...');
+
             // Delete valot.db if exists
             const currentDbFile = Gio.File.new_for_path(newDbPath);
             if (currentDbFile.query_exists(null)) {
@@ -138,7 +158,7 @@ export class DatabaseMigration {
             }
 
             // Open backup database
-            if (onProgress) onProgress(2, 5, 'Opening backup database...');
+            await updateProgress('Opening backup database...');
             const oldDb = new GdaDatabaseBridge();
             oldDb.dbPath = backupDbPath;
 
@@ -146,14 +166,16 @@ export class DatabaseMigration {
             oldDb.connection = Gda.Connection.open_from_string('SQLite', oldConnString, null, Gda.ConnectionOptions.NONE);
             oldDb.isConnected_ = true;
 
+            await updateProgress('Initializing new database...');
+
             // Create new database
-            if (onProgress) onProgress(3, 5, 'Creating new database...');
+            await updateProgress('Creating new database...');
             const newDb = new GdaDatabaseBridge();
             await newDb.initialize();
             console.log(`📂 New database created at: ${newDb.dbPath}`);
 
-            // Migrate data
-            if (onProgress) onProgress(4, 5, 'Migrating data...');
+            // Migrate data with sub-progress
+            await updateProgress('Starting data migration...');
             const migration = new DatabaseMigration(oldDb, newDb);
 
             // If forceOldSchema is true, set it before migration
@@ -162,10 +184,15 @@ export class DatabaseMigration {
                 console.log('🔧 Forcing old schema migration (0.8.x → 0.9.x)');
             }
 
-            await migration.migrate();
+            // Create sub-progress callback
+            const subProgressCallback = async (step, total, message) => {
+                await updateProgress(message);
+            };
+
+            await migration.migrate(subProgressCallback);
 
             // Close databases - IMPORTANT: close to flush to disk
-            if (onProgress) onProgress(5, 5, 'Finalizing...');
+            await updateProgress('Finalizing migration...');
 
             // Force commit before close
             try {
@@ -178,9 +205,11 @@ export class DatabaseMigration {
                 console.log('Note: Could not execute PRAGMA commands:', error.message);
             }
 
+            await updateProgress('Saving changes...');
             await oldDb.close();
             await newDb.close();
 
+            await updateProgress('Completing...');
             // Give SQLite more time to flush
             await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -239,9 +268,9 @@ export class DatabaseMigration {
         try {
             if (onProgress) onProgress(1, 4, 'Moving database to Documents...');
 
-            // Create Documents/Valot folder
+            // Create Documents/valot folder
             const documentsPath = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOCUMENTS);
-            const valotBackupDir = GLib.build_filenamev([documentsPath, 'Valot']);
+            const valotBackupDir = GLib.build_filenamev([documentsPath, 'valot']);
             GLib.mkdir_with_parents(valotBackupDir, 0o755);
 
             // Move original database to Documents/Valot
@@ -341,6 +370,9 @@ export class DatabaseMigration {
                 console.log(`🔄 ${step.name}...`);
                 await step.fn();
                 console.log(`✅ ${step.name} completed`);
+
+                // Add small delay to show progress visually (25ms per step)
+                await new Promise(resolve => setTimeout(resolve, 25));
             }
 
             // Set schema version to 2 (0.9.0)
