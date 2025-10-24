@@ -119,7 +119,7 @@ export class DatabaseMigrationDialog {
 
         const versionText1 = new Gtk.Label({
             label: 'Valot was updated to the',
-            css_classes: ['title-3'],
+            css_classes: ['version-marker'],
         });
 
         const versionBadge = new Gtk.Label({
@@ -133,10 +133,12 @@ export class DatabaseMigrationDialog {
 
         // Subtitle
         const subtitle = new Gtk.Label({
-            label: 'Please choose your way to continue after update',
+            label: 'Please choose your way to continue \nafter update',
             margin_top: 8,
             halign: Gtk.Align.CENTER,
+            justify: Gtk.Justification.CENTER,
             margin_bottom: 4,
+            css_classes: ['subtitle'],
         });
         subtitle.add_css_class('dim-label');
 

@@ -73,12 +73,6 @@ export class ReportsPage {
 
         // Update on tracking changes (task name, project, client changes)
         this.coreBridge.onUIEvent('tracking-updated', (data) => {
-            console.log('[ReportsPage] tracking-updated event received', data);
-
-            // Update statistics in real-time (Total Time, etc.)
-            this._updateStatisticsRealtime();
-
-            // Update charts if task/project/client changed
             if (data.taskName || data.taskId || data.projectId !== undefined || data.clientId !== undefined) {
                 this.updateChartsOnly();
             }
@@ -798,7 +792,12 @@ export class ReportsPage {
             relevantEntries.forEach(entry => {
                 if (!entry.end_time || !entry.duration) return;
 
-                const entryEndDate = this._parseEndTime(entry.end_time);
+                let dateString = entry.end_time;
+                if (!dateString.endsWith('Z') && !dateString.includes('+')) {
+                    dateString = dateString + 'Z';
+                }
+
+                const entryEndDate = GLib.DateTime.new_from_iso8601(dateString, null);
                 if (!entryEndDate) return;
 
                 const entryJsDate = new Date(entryEndDate.get_year(), entryEndDate.get_month() - 1, entryEndDate.get_day_of_month());
@@ -858,7 +857,12 @@ export class ReportsPage {
             relevantEntries.forEach(entry => {
                 if (!entry.end_time || !entry.duration) return;
 
-                const entryEndDate = this._parseEndTime(entry.end_time);
+                let dateString = entry.end_time;
+                if (!dateString.endsWith('Z') && !dateString.includes('+')) {
+                    dateString = dateString + 'Z';
+                }
+
+                const entryEndDate = GLib.DateTime.new_from_iso8601(dateString, null);
                 if (!entryEndDate) return;
 
                 const key = `${entryEndDate.get_year()}-${String(entryEndDate.get_month()).padStart(2, '0')}`;
@@ -955,7 +959,12 @@ export class ReportsPage {
         entries.forEach(entry => {
             if (!entry.end_time || !entry.duration) return;
 
-            const entryEndDate = this._parseEndTime(entry.end_time);
+            let dateString = entry.end_time;
+            if (!dateString.endsWith('Z') && !dateString.includes('+')) {
+                dateString = dateString + 'Z';
+            }
+
+            const entryEndDate = GLib.DateTime.new_from_iso8601(dateString, null);
             if (!entryEndDate) return;
 
             const key = `${entryEndDate.get_year()}-${String(entryEndDate.get_month()).padStart(2, '0')}-${String(entryEndDate.get_day_of_month()).padStart(2, '0')}`;
@@ -1024,7 +1033,12 @@ export class ReportsPage {
         entries.forEach(entry => {
             if (!entry.end_time || !entry.duration) return;
 
-            const entryEndDate = this._parseEndTime(entry.end_time);
+            let dateString = entry.end_time;
+            if (!dateString.endsWith('Z') && !dateString.includes('+')) {
+                dateString = dateString + 'Z';
+            }
+
+            const entryEndDate = GLib.DateTime.new_from_iso8601(dateString, null);
             if (!entryEndDate) return;
 
             const weekNum = this._getWeekNumber(entryEndDate);
@@ -1091,7 +1105,12 @@ export class ReportsPage {
         entries.forEach(entry => {
             if (!entry.end_time || !entry.duration) return;
 
-            const entryEndDate = this._parseEndTime(entry.end_time);
+            let dateString = entry.end_time;
+            if (!dateString.endsWith('Z') && !dateString.includes('+')) {
+                dateString = dateString + 'Z';
+            }
+
+            const entryEndDate = GLib.DateTime.new_from_iso8601(dateString, null);
             if (!entryEndDate) return;
 
             const key = `${entryEndDate.get_year()}-${String(entryEndDate.get_month()).padStart(2, '0')}`;
@@ -1654,23 +1673,20 @@ export class ReportsPage {
             return;
         }
 
-        // Store current date range for real-time updates
-        this._currentDateRange = { startDate, endDate };
-        this._currentTaskInstanceIds = null;
-
         // Only pass task IDs if we're filtering by project or client
         // Don't filter by task IDs when only filtering by date, because
         // we want ALL time entries in that date range, not just entries
         // from tasks that have last_used_at in that range
+        let taskInstanceIds = null;
         if (this.chartFilters.projectId || this.chartFilters.clientId) {
             // When filtering by project/client, we need to pass the filtered task IDs
-            this._currentTaskInstanceIds = tasks.map(t => t.id);
+            taskInstanceIds = tasks.map(t => t.id);
         }
 
         // Get statistics from Core (business logic)
         const stats = await this.coreBridge.getStatsForPeriod(
-            this._currentDateRange,
-            this._currentTaskInstanceIds
+            { startDate, endDate },
+            taskInstanceIds
         );
 
         // Update UI labels
@@ -1680,54 +1696,6 @@ export class ReportsPage {
 
         // Update currency carousel
         this._updateCurrencyCarousel(stats.earningsByCurrency);
-    }
-
-    /**
-     * Update statistics in real-time (without full reload)
-     * Called every second while tracking is active
-     */
-    async _updateStatisticsRealtime() {
-        console.log('[ReportsPage] _updateStatisticsRealtime called');
-
-        if (!this.coreBridge) {
-            console.log('[ReportsPage] No coreBridge');
-            return;
-        }
-
-        const trackingState = this.coreBridge.getTrackingState();
-        console.log('[ReportsPage] Tracking state:', trackingState);
-
-        if (!trackingState.isTracking) {
-            console.log('[ReportsPage] Not tracking');
-            return;
-        }
-
-        // Need date range from last full update
-        if (!this._currentDateRange) {
-            console.log('[ReportsPage] No current date range');
-            return;
-        }
-
-        try {
-            // Get statistics from Core
-            const stats = await this.coreBridge.getStatsForPeriod(
-                this._currentDateRange,
-                this._currentTaskInstanceIds
-            );
-
-            console.log('[ReportsPage] Stats from Core:', stats);
-
-            // Add current elapsed time to total
-            const currentElapsed = trackingState.elapsedSeconds || 0;
-            const totalTime = stats.totalTime + currentElapsed;
-
-            console.log('[ReportsPage] Updating Total Time:', totalTime, 'formatted:', this._formatDuration(totalTime));
-
-            // Update only Total Time label (other stats don't change in real-time)
-            this.totalTimeLabel.set_label(this._formatDuration(totalTime));
-        } catch (error) {
-            console.error('[ReportsPage] Error updating statistics realtime:', error);
-        }
     }
 
     /**

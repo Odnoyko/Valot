@@ -595,5 +595,13 @@ window.dark .subtitle {
   color: @accent_bg_color;
   padding: 3px 6px;
   border-radius: 100px;
-  font-size: 16px;
+  font-size: 18px;
+}
+.version-marker {
+  font-size: 18px;
+  font-weight: bold;
+}
+.subtitle {
+  font-size: 14px;
+  text-align: center;
 }

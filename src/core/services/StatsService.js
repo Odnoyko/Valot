@@ -16,6 +16,7 @@ export class StatsService extends BaseService {
     /**
      * Get This Week statistics (Monday to Sunday)
      * Returns total time and task count for current week
+     * Calculates based on time entries within the week, not task.total_time
      */
     async getThisWeekStats() {
         const GLib = imports.gi.GLib;
@@ -44,34 +45,64 @@ export class StatsService extends BaseService {
         const startTimestamp = startDate.to_unix();
         const endTimestamp = endDate.to_unix();
 
-        // Get all task instances with last_used_at in this week
-        const allTaskInstances = await this.core.services.taskInstances.getAll();
+        // DEBUG: Log week boundaries
+        console.log('[StatsService] getThisWeekStats() - Week boundaries:');
+        console.log('  Start:', startDate.format('%Y-%m-%d %H:%M:%S'), 'timestamp:', startTimestamp);
+        console.log('  End:', endDate.format('%Y-%m-%d %H:%M:%S'), 'timestamp:', endTimestamp);
+
+        // Get all time entries within this week (filter by END TIME from database)
+        const allTimeEntries = await this.core.services.tracking.getAllTimeEntries();
+        console.log('[StatsService] Total entries:', allTimeEntries.length);
 
         let totalTime = 0;
-        let taskCount = 0;
+        const taskInstanceSet = new Set();
+        let matchedCount = 0;
 
-        allTaskInstances.forEach(task => {
-            if (!task.last_used_at) return;
+        allTimeEntries.forEach(entry => {
+            if (!entry.end_time || !entry.duration) return;
 
-            // Parse last_used_at (try with Z suffix if not present)
-            let dateString = task.last_used_at;
-            if (!dateString.endsWith('Z') && !dateString.includes('+')) {
-                dateString = dateString + 'Z';
+            // Parse entry end_time from database
+            let entryEndDate;
+            const dateString = entry.end_time;
+
+            // Check if date is in ISO8601 format (with T) or local format (YYYY-MM-DD HH:MM:SS)
+            if (dateString.includes('T')) {
+                // ISO8601 format - parse as UTC
+                entryEndDate = GLib.DateTime.new_from_iso8601(dateString, null);
+            } else {
+                // Local format YYYY-MM-DD HH:MM:SS - parse as local time
+                const parts = dateString.split(' ');
+                if (parts.length === 2) {
+                    const [datePart, timePart] = parts;
+                    const [year, month, day] = datePart.split('-').map(Number);
+                    const [hours, minutes, seconds] = timePart.split(':').map(Number);
+
+                    entryEndDate = GLib.DateTime.new_local(
+                        year, month, day,
+                        hours || 0, minutes || 0, seconds || 0
+                    );
+                }
             }
 
-            const taskDate = GLib.DateTime.new_from_iso8601(dateString, null);
-            if (!taskDate) {
-                return;
-            }
+            if (!entryEndDate) return;
 
-            const taskTimestamp = taskDate.to_unix();
-            if (taskTimestamp >= startTimestamp && taskTimestamp <= endTimestamp) {
-                totalTime += task.total_time || 0;
-                taskCount++;
+            const entryEndTimestamp = entryEndDate.to_unix();
+
+            // Check if END TIME is within this week
+            if (entryEndTimestamp >= startTimestamp && entryEndTimestamp <= endTimestamp) {
+                console.log('  MATCHED entry:', entry.id, 'end_time:', entry.end_time, 'duration:', entry.duration);
+                totalTime += entry.duration || 0;
+                taskInstanceSet.add(entry.task_instance_id);
+                matchedCount++;
             }
         });
 
-        return { totalTime, taskCount };
+        console.log('[StatsService] Matched entries:', matchedCount, 'Total time:', totalTime, 'seconds =', (totalTime/3600).toFixed(2), 'hours');
+
+        return {
+            totalTime,
+            taskCount: taskInstanceSet.size
+        };
     }
 
     /**
@@ -235,5 +266,169 @@ export class StatsService extends BaseService {
         });
 
         return { totalTime, taskCount };
+    }
+
+    /**
+     * Get statistics for a specific date range based on time entries
+     * Returns totalTime, activeProjects, trackedTasks, and earnings by currency
+     *
+     * @param {Object} dateRange - { startDate: GLib.DateTime, endDate: GLib.DateTime }
+     * @param {Array} taskInstanceIds - Optional array of task instance IDs to filter
+     * @returns {Object} { totalTime, activeProjects, trackedTasks, earningsByCurrency }
+     */
+    async getStatsForPeriod(dateRange, taskInstanceIds = null) {
+        const GLib = imports.gi.GLib;
+
+        const startTimestamp = dateRange.startDate.to_unix();
+        const endTimestamp = dateRange.endDate.to_unix();
+
+        // Get all time entries
+        const allTimeEntries = await this.core.services.tracking.getAllTimeEntries();
+
+        // Filter time entries by date range (using END TIME from database)
+        const filteredEntries = allTimeEntries.filter(entry => {
+            if (!entry.end_time || !entry.duration) return false;
+
+            // Filter by task instance IDs if provided
+            if (taskInstanceIds && !taskInstanceIds.includes(entry.task_instance_id)) {
+                return false;
+            }
+
+            // Parse entry end_time from database
+            let entryEndDate;
+            const dateString = entry.end_time;
+
+            // Check if date is in ISO8601 format (with T) or local format (YYYY-MM-DD HH:MM:SS)
+            if (dateString.includes('T')) {
+                // ISO8601 format - parse as UTC
+                entryEndDate = GLib.DateTime.new_from_iso8601(dateString, null);
+            } else {
+                // Local format YYYY-MM-DD HH:MM:SS - parse as local time
+                const parts = dateString.split(' ');
+                if (parts.length === 2) {
+                    const [datePart, timePart] = parts;
+                    const [year, month, day] = datePart.split('-').map(Number);
+                    const [hours, minutes, seconds] = timePart.split(':').map(Number);
+
+                    entryEndDate = GLib.DateTime.new_local(
+                        year, month, day,
+                        hours || 0, minutes || 0, seconds || 0
+                    );
+                }
+            }
+
+            if (!entryEndDate) return false;
+
+            const entryEndTimestamp = entryEndDate.to_unix();
+
+            // Check if END TIME is within the period
+            return entryEndTimestamp >= startTimestamp && entryEndTimestamp <= endTimestamp;
+        });
+
+        // Calculate total time from filtered entries
+        let totalTime = 0;
+        filteredEntries.forEach(entry => {
+            totalTime += entry.duration || 0;
+        });
+
+        // Get unique task instances and projects
+        const taskInstanceSet = new Set();
+        const projectSet = new Set();
+        const earningsByCurrency = new Map();
+
+        // Get all task instances for lookup
+        const allTaskInstances = await this.core.services.taskInstances.getAll();
+        const taskInstanceMap = new Map();
+        allTaskInstances.forEach(ti => taskInstanceMap.set(ti.id, ti));
+
+        filteredEntries.forEach(entry => {
+            const taskInstance = taskInstanceMap.get(entry.task_instance_id);
+            if (!taskInstance) return;
+
+            taskInstanceSet.add(entry.task_instance_id);
+
+            if (taskInstance.project_id) {
+                projectSet.add(taskInstance.project_id);
+            }
+
+            // Calculate earnings if task has rate
+            if (taskInstance.client_rate && entry.duration) {
+                const hours = entry.duration / 3600;
+                const earnings = hours * taskInstance.client_rate;
+                const currency = taskInstance.client_currency || 'USD';
+
+                const currentEarnings = earningsByCurrency.get(currency) || 0;
+                earningsByCurrency.set(currency, currentEarnings + earnings);
+            }
+        });
+
+        return {
+            totalTime,
+            activeProjects: projectSet.size,
+            trackedTasks: taskInstanceSet.size,
+            earningsByCurrency
+        };
+    }
+
+    /**
+     * Get task instance IDs that have time entries with end_time in the specified period
+     * Used for filtering tasks in UI by period
+     *
+     * @param {Object} dateRange - { startDate: GLib.DateTime, endDate: GLib.DateTime }
+     * @returns {Array<number>} Array of task instance IDs
+     */
+    async getTaskInstanceIdsForPeriod(dateRange) {
+        const GLib = imports.gi.GLib;
+
+        const startTimestamp = dateRange.startDate.to_unix();
+        const endTimestamp = dateRange.endDate.to_unix();
+
+        console.log('[StatsService] getTaskInstanceIdsForPeriod() - Period:', dateRange.startDate.format('%Y-%m-%d %H:%M:%S'), 'to', dateRange.endDate.format('%Y-%m-%d %H:%M:%S'));
+
+        // Get all time entries
+        const allTimeEntries = await this.core.services.tracking.getAllTimeEntries();
+        console.log('[StatsService] Total entries:', allTimeEntries.length);
+
+        const taskInstanceIds = new Set();
+
+        allTimeEntries.forEach(entry => {
+            if (!entry.end_time || !entry.duration) return;
+
+            // Parse entry end_time from database
+            let entryEndDate;
+            const dateString = entry.end_time;
+
+            // Check if date is in ISO8601 format (with T) or local format (YYYY-MM-DD HH:MM:SS)
+            if (dateString.includes('T')) {
+                // ISO8601 format - parse as UTC
+                entryEndDate = GLib.DateTime.new_from_iso8601(dateString, null);
+            } else {
+                // Local format YYYY-MM-DD HH:MM:SS - parse as local time
+                const parts = dateString.split(' ');
+                if (parts.length === 2) {
+                    const [datePart, timePart] = parts;
+                    const [year, month, day] = datePart.split('-').map(Number);
+                    const [hours, minutes, seconds] = timePart.split(':').map(Number);
+
+                    entryEndDate = GLib.DateTime.new_local(
+                        year, month, day,
+                        hours || 0, minutes || 0, seconds || 0
+                    );
+                }
+            }
+
+            if (!entryEndDate) return;
+
+            const entryEndTimestamp = entryEndDate.to_unix();
+
+            // Check if END TIME is within the period
+            if (entryEndTimestamp >= startTimestamp && entryEndTimestamp <= endTimestamp) {
+                console.log('  MATCHED entry:', entry.id, 'task_instance_id:', entry.task_instance_id, 'end_time:', entry.end_time);
+                taskInstanceIds.add(entry.task_instance_id);
+            }
+        });
+
+        console.log('[StatsService] Found task instance IDs:', Array.from(taskInstanceIds));
+        return Array.from(taskInstanceIds);
     }
 }

@@ -345,6 +345,7 @@ export class DatabaseMigration {
                 { name: 'Migrating Tasks', fn: () => this._migrateTasks() },
                 { name: 'Creating Task Instances', fn: () => this._createTaskInstances() },
                 { name: 'Creating Time Entries', fn: () => this._createTimeEntries() },
+                { name: 'Synchronizing total times', fn: () => this._syncTotalTimes() },
             ];
         } else {
             // New schema (0.9.x) - direct copy
@@ -354,6 +355,7 @@ export class DatabaseMigration {
                 { name: 'Copying Tasks', fn: () => this._copyTasks() },
                 { name: 'Copying Task Instances', fn: () => this._copyTaskInstances() },
                 { name: 'Copying Time Entries', fn: () => this._copyTimeEntries() },
+                { name: 'Synchronizing total times', fn: () => this._syncTotalTimes() },
             ];
         }
 
@@ -542,24 +544,77 @@ export class DatabaseMigration {
         console.log(`  → Creating TimeEntries for ${this.taskInstanceMap.size} task instances`);
 
         let count = 0;
+        let recoveredCount = 0;
+
         for (const [oldTaskId, data] of this.taskInstanceMap) {
-            // Only create TimeEntry if we have valid start_time and end_time
-            if (data.start_time && data.end_time) {
+            let startTime = data.start_time;
+            let endTime = data.end_time;
+            let duration = data.duration || 0;
+
+            // If we have valid start_time and end_time, use them
+            if (startTime && endTime) {
                 await this.newDb.execute(
                     `INSERT INTO TimeEntry (task_instance_id, start_time, end_time, duration)
                      VALUES (?, ?, ?, ?)`,
                     [
                         data.instanceId,
-                        data.start_time,
-                        data.end_time,
-                        data.duration || 0
+                        startTime,
+                        endTime,
+                        duration
                     ]
                 );
                 count++;
             }
+            // If we don't have time data but have duration > 0, recover the data
+            else if (duration > 0) {
+                // Get TaskInstance to get last_used_at
+                const taskInstance = await this.newDb.query(
+                    'SELECT last_used_at FROM TaskInstance WHERE id = ?',
+                    [data.instanceId]
+                );
+
+                if (taskInstance && taskInstance.length > 0) {
+                    const lastUsedAt = taskInstance[0].last_used_at;
+
+                    // Use last_used_at as end_time
+                    endTime = lastUsedAt;
+
+                    // Calculate start_time = end_time - duration
+                    // Parse the datetime string to calculate start_time
+                    const endDate = new Date(lastUsedAt);
+                    const startDate = new Date(endDate.getTime() - duration * 1000);
+
+                    // Format as "YYYY-MM-DD HH:MM:SS" (local format)
+                    const formatDateTime = (date) => {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const hours = String(date.getHours()).padStart(2, '0');
+                        const minutes = String(date.getMinutes()).padStart(2, '0');
+                        const seconds = String(date.getSeconds()).padStart(2, '0');
+                        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                    };
+
+                    startTime = formatDateTime(startDate);
+
+                    await this.newDb.execute(
+                        `INSERT INTO TimeEntry (task_instance_id, start_time, end_time, duration)
+                         VALUES (?, ?, ?, ?)`,
+                        [
+                            data.instanceId,
+                            startTime,
+                            endTime,
+                            duration
+                        ]
+                    );
+
+                    recoveredCount++;
+                    count++;
+                }
+            }
         }
 
-        console.log(`  ✓ Created ${count} time entries`);
+        console.log(`  ✓ Created ${count} time entries (${recoveredCount} recovered from duration)`);
     }
 
     /**
@@ -682,5 +737,42 @@ export class DatabaseMigration {
         }
 
         console.log(`  ✓ Copied ${entries.length} time entries`);
+    }
+
+    /**
+     * Synchronize total_time for all TaskInstances based on actual TimeEntry data
+     * This ensures data integrity after migration by recalculating total_time from TimeEntry.duration
+     */
+    async _syncTotalTimes() {
+        console.log('  → Recalculating total_time for all task instances...');
+
+        // Get count of instances that will be updated
+        const instancesWithMismatch = await this.newDb.query(`
+            SELECT COUNT(*) as count
+            FROM TaskInstance ti
+            WHERE ti.total_time != (
+                SELECT COALESCE(SUM(duration), 0)
+                FROM TimeEntry
+                WHERE task_instance_id = ti.id
+            )
+        `);
+
+        const mismatchCount = instancesWithMismatch[0]?.count || 0;
+
+        if (mismatchCount > 0) {
+            console.log(`  → Found ${mismatchCount} task instances with incorrect total_time`);
+        }
+
+        // Update all TaskInstance total_time based on sum of TimeEntry durations
+        await this.newDb.execute(`
+            UPDATE TaskInstance
+            SET total_time = (
+                SELECT COALESCE(SUM(duration), 0)
+                FROM TimeEntry
+                WHERE task_instance_id = TaskInstance.id
+            )
+        `);
+
+        console.log(`  ✓ Total times synchronized with actual time entries`);
     }
 }

@@ -138,8 +138,17 @@ export class TaskInstanceEditDialog {
         // Start time
         const startBox = this._createDateTimeBox('Start Time:', this.startDate, (newDate) => {
             this.startDate = newDate;
-            // Just update, don't move end date
-            this._updateDateTimeButtonLabels();
+
+            // Check if start date/time is after end date/time (negative duration)
+            if (this.startDate.getTime() > this.endDate.getTime()) {
+                // Move end date forward to maintain original duration
+                console.log('Moving end date forward. Start:', this.startDate, 'Original duration:', this.originalDuration);
+                this.endDate = new Date(this.startDate.getTime() + this.originalDuration * 1000);
+                this.endDate.setSeconds(0); // Ensure seconds are reset
+                console.log('New end date:', this.endDate);
+                this._updateDateTimeButtonLabels();
+            }
+
             this._updateDuration();
         });
 
@@ -150,7 +159,10 @@ export class TaskInstanceEditDialog {
             // Check if end date/time is before start date/time (negative duration)
             if (this.endDate.getTime() < this.startDate.getTime()) {
                 // Move start date back to maintain original duration
+                console.log('Moving start date back. End:', this.endDate, 'Original duration:', this.originalDuration);
                 this.startDate = new Date(this.endDate.getTime() - this.originalDuration * 1000);
+                this.startDate.setSeconds(0); // Ensure seconds are reset
+                console.log('New start date:', this.startDate);
                 this._updateDateTimeButtonLabels();
             }
 
@@ -240,25 +252,30 @@ export class TaskInstanceEditDialog {
 
         // Time button click - show time picker
         timeButton.connect('clicked', () => {
-            this._showTimePicker(initialDate, (hours, minutes) => {
-                initialDate.setHours(hours);
-                initialDate.setMinutes(minutes);
-                onChange(initialDate);
-                timeButton.set_label(initialDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
+            // Get current time from the date object (it may have been updated)
+            const currentDate = labelText === 'Start Time:' ? this.startDate : this.endDate;
+            this._showTimePicker(currentDate, (hours, minutes) => {
+                currentDate.setHours(hours);
+                currentDate.setMinutes(minutes);
+                currentDate.setSeconds(0); // Reset seconds when changing time
+                onChange(currentDate);
+                timeButton.set_label(currentDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
                 this._updateDuration();
             });
         });
 
         // Date button click - show date picker
         dateButton.connect('clicked', () => {
-            this._showDatePicker(initialDate, (selectedDate) => {
+            // Get current date from the date object (it may have been updated)
+            const currentDate = labelText === 'Start Time:' ? this.startDate : this.endDate;
+            this._showDatePicker(currentDate, (selectedDate) => {
                 // GTK get_month() returns 1-12, but JavaScript needs 0-11
-                initialDate.setFullYear(selectedDate.get_year());
-                initialDate.setMonth(selectedDate.get_month() - 1);
-                initialDate.setDate(selectedDate.get_day_of_month());
+                currentDate.setFullYear(selectedDate.get_year());
+                currentDate.setMonth(selectedDate.get_month() - 1);
+                currentDate.setDate(selectedDate.get_day_of_month());
 
-                onChange(initialDate);
-                dateButton.set_label(initialDate.toLocaleDateString('de-DE'));
+                onChange(currentDate);
+                dateButton.set_label(currentDate.toLocaleDateString('de-DE'));
                 this._updateDuration();
             });
         });
@@ -372,9 +389,10 @@ export class TaskInstanceEditDialog {
             css_classes: ['circular'],
         });
 
-        const hourLabel = new Gtk.Label({
-            label: String(hours).padStart(2, '0'),
+        const hourLabel = new Gtk.Text({
+            text: String(hours).padStart(2, '0'),
             css_classes: ['title-1'],
+            max_width_chars: 2,
             width_chars: 2,
         });
 
@@ -385,12 +403,37 @@ export class TaskInstanceEditDialog {
 
         hourPlusButton.connect('clicked', () => {
             hours = (hours + 1) % 24;
-            hourLabel.set_label(String(hours).padStart(2, '0'));
+            hourLabel.set_text(String(hours).padStart(2, '0'));
         });
 
         hourMinusButton.connect('clicked', () => {
             hours = (hours - 1 + 24) % 24;
-            hourLabel.set_label(String(hours).padStart(2, '0'));
+            hourLabel.set_text(String(hours).padStart(2, '0'));
+        });
+
+        // Add scroll controller for hour label
+        const hourScrollController = new Gtk.EventControllerScroll({
+            flags: Gtk.EventControllerScrollFlags.VERTICAL,
+        });
+        hourScrollController.connect('scroll', (controller, dx, dy) => {
+            if (dy < 0) {
+                // Scroll up - increase hours
+                hours = (hours + 1) % 24;
+            } else if (dy > 0) {
+                // Scroll down - decrease hours
+                hours = (hours - 1 + 24) % 24;
+            }
+            hourLabel.set_text(String(hours).padStart(2, '0'));
+            return true;
+        });
+        hourBox.add_controller(hourScrollController);
+
+        // Update hours variable when user edits manually
+        hourLabel.connect('changed', () => {
+            const value = parseInt(hourLabel.get_text());
+            if (!isNaN(value) && value >= 0 && value < 24) {
+                hours = value;
+            }
         });
 
         hourBox.append(hourPlusButton);
@@ -416,9 +459,10 @@ export class TaskInstanceEditDialog {
             css_classes: ['circular'],
         });
 
-        const minuteLabel = new Gtk.Label({
-            label: String(minutes).padStart(2, '0'),
+        const minuteLabel = new Gtk.Text({
+            text: String(minutes).padStart(2, '0'),
             css_classes: ['title-1'],
+            max_width_chars: 2,
             width_chars: 2,
         });
 
@@ -429,12 +473,37 @@ export class TaskInstanceEditDialog {
 
         minutePlusButton.connect('clicked', () => {
             minutes = (minutes + 1) % 60;
-            minuteLabel.set_label(String(minutes).padStart(2, '0'));
+            minuteLabel.set_text(String(minutes).padStart(2, '0'));
         });
 
         minuteMinusButton.connect('clicked', () => {
             minutes = (minutes - 1 + 60) % 60;
-            minuteLabel.set_label(String(minutes).padStart(2, '0'));
+            minuteLabel.set_text(String(minutes).padStart(2, '0'));
+        });
+
+        // Add scroll controller for minute label
+        const minuteScrollController = new Gtk.EventControllerScroll({
+            flags: Gtk.EventControllerScrollFlags.VERTICAL,
+        });
+        minuteScrollController.connect('scroll', (controller, dx, dy) => {
+            if (dy < 0) {
+                // Scroll up - increase minutes
+                minutes = (minutes + 1) % 60;
+            } else if (dy > 0) {
+                // Scroll down - decrease minutes
+                minutes = (minutes - 1 + 60) % 60;
+            }
+            minuteLabel.set_text(String(minutes).padStart(2, '0'));
+            return true;
+        });
+        minuteBox.add_controller(minuteScrollController);
+
+        // Update minutes variable when user edits manually
+        minuteLabel.connect('changed', () => {
+            const value = parseInt(minuteLabel.get_text());
+            if (!isNaN(value) && value >= 0 && value < 60) {
+                minutes = value;
+            }
         });
 
         minuteBox.append(minutePlusButton);
@@ -454,7 +523,15 @@ export class TaskInstanceEditDialog {
 
         timeDialog.connect('response', (dialog, response) => {
             if (response === 'ok') {
-                onTimeSelected(hours, minutes);
+                // Get final values from text fields
+                const finalHours = parseInt(hourLabel.get_text()) || 0;
+                const finalMinutes = parseInt(minuteLabel.get_text()) || 0;
+
+                // Validate and clamp values
+                const validHours = Math.max(0, Math.min(23, finalHours));
+                const validMinutes = Math.max(0, Math.min(59, finalMinutes));
+
+                onTimeSelected(validHours, validMinutes);
             }
             dialog.close();
         });

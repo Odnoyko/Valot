@@ -856,7 +856,7 @@ export class TasksPage {
     /**
      * Filter tasks based on search query and date filter
      */
-    _filterTasks(query = '') {
+    async _filterTasks(query = '') {
         let filtered = [...this.tasks];
 
         // Apply date filter (0=All, 1=Today, 2=This Week, 3=This Month)
@@ -931,39 +931,19 @@ export class TasksPage {
             }
 
             if (startDate && endDate) {
-                const startTimestamp = startDate.to_unix();
-                const endTimestamp = endDate.to_unix();
+                // Get task instance IDs that have time entries with end_time in this period (from Core)
+                console.log('[TasksPage] Filtering by period:', startDate.format('%Y-%m-%d'), 'to', endDate.format('%Y-%m-%d'));
+                const taskInstanceIds = await this.coreBridge.getTaskInstanceIdsForPeriod({ startDate, endDate });
+                console.log('[TasksPage] Task IDs with entries in period:', taskInstanceIds);
+                const taskIdsSet = new Set(taskInstanceIds);
 
-                filtered = filtered.filter(task => {
-                    // Check if task has last_used_at timestamp
-                    if (!task.last_used_at) return false;
-
-                    // Parse last_used_at (format: YYYY-MM-DD HH:MM:SS or ISO string)
-                    let taskDate;
-
-                    // Try ISO8601 first
-                    if (task.last_used_at.includes('T')) {
-                        taskDate = GLib.DateTime.new_from_iso8601(task.last_used_at, null);
-                    } else {
-                        // Parse local format: YYYY-MM-DD HH:MM:SS
-                        const parts = task.last_used_at.split(' ');
-                        if (parts.length === 2) {
-                            const [datePart, timePart] = parts;
-                            const [year, month, day] = datePart.split('-').map(Number);
-                            const [hours, minutes, seconds] = timePart.split(':').map(Number);
-
-                            taskDate = GLib.DateTime.new_local(
-                                year, month, day,
-                                hours || 0, minutes || 0, seconds || 0
-                            );
-                        }
-                    }
-
-                    if (!taskDate) return false;
-
-                    const taskTimestamp = taskDate.to_unix();
-                    return taskTimestamp >= startTimestamp && taskTimestamp <= endTimestamp;
-                });
+                console.log('[TasksPage] Total tasks before filter:', filtered.length);
+                console.log('[TasksPage] Sample task structure:', filtered[0] ? Object.keys(filtered[0]) : 'no tasks');
+                // Filter tasks by IDs
+                filtered = filtered.filter(task => taskIdsSet.has(task.id));
+                console.log('[TasksPage] Tasks after filter:', filtered.length);
+                console.log('[TasksPage] Filtered task IDs:', filtered.map(t => t.id));
+                console.log('[TasksPage] Filtered task names:', filtered.map(t => t.task_name || t.name));
             }
         }
 

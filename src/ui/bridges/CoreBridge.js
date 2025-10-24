@@ -389,6 +389,23 @@ export class CoreBridge {
     }
 
     /**
+     * Get statistics for a specific date range based on time entries
+     * @param {Object} dateRange - { startDate: GLib.DateTime, endDate: GLib.DateTime }
+     * @param {Array} taskInstanceIds - Optional array of task instance IDs to filter
+     */
+    async getStatsForPeriod(dateRange, taskInstanceIds = null) {
+        return await this.core.services.stats.getStatsForPeriod(dateRange, taskInstanceIds);
+    }
+
+    /**
+     * Get task instance IDs that have time entries with end_time in the specified period
+     * @param {Object} dateRange - { startDate: GLib.DateTime, endDate: GLib.DateTime }
+     */
+    async getTaskInstanceIdsForPeriod(dateRange) {
+        return await this.core.services.stats.getTaskInstanceIdsForPeriod(dateRange);
+    }
+
+    /**
      * Get top projects with time tracking
      */
     async getProjectsWithTime(limit = 5) {
