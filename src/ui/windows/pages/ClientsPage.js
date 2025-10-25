@@ -496,7 +496,7 @@ export class ClientsPage {
         this.paginationBox.append(this.prevPageBtn);
 
         this.pageInfoLabel = new Gtk.Label({
-            label: 'Page 0 of 0',
+            label: _('Page %d of %d').format(0, 0),
             css_classes: ['dim-label'],
             hexpand: true,
         });
@@ -1270,7 +1270,7 @@ export class ClientsPage {
         const totalPages = Math.max(1, Math.ceil(this.filteredClients.length / this.clientsPerPage));
         const currentPage = Math.min(this.currentClientsPage + 1, totalPages);
 
-        this.pageInfoLabel.set_label(`Page ${currentPage} of ${totalPages}`);
+        this.pageInfoLabel.set_label(_('Page %d of %d').format(currentPage, totalPages));
         this.prevPageBtn.set_sensitive(this.currentClientsPage > 0);
         this.nextPageBtn.set_sensitive(this.currentClientsPage < totalPages - 1);
     }

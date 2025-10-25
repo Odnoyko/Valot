@@ -136,7 +136,7 @@ export class ValidationUtils {
                 const decimals = (val.toString().split('.')[1] || '').length;
                 return decimals <= 2;
             },
-            customError: 'Maximum 2 decimal places allowed',
+            customError: _('Maximum 2 decimal places allowed'),
         });
     }
     /**
@@ -146,7 +146,7 @@ export class ValidationUtils {
         return this.validateString(code, {
             required: true,
             pattern: /^[A-Z]{3}$/,
-            customError: 'Must be a 3-letter currency code (e.g., USD, EUR)',
+            customError: _('Must be a 3-letter currency code (e.g., USD, EUR)'),
         });
     }
     /**
@@ -300,7 +300,7 @@ export class ValidationUtils {
             minLength: 3,
             maxLength: 30,
             pattern: /^[a-zA-Z0-9_-]+$/,
-            customError: 'Username can only contain letters, numbers, underscore, and dash',
+            customError: _('Username can only contain letters, numbers, underscore, and dash'),
         });
     }
 }

@@ -775,7 +775,7 @@ export class TasksPage {
 
         // Description
         const descLabel = new Gtk.Label({
-            label: _('Start tracking time to create your first task'),
+            label: _('Start tracking time to create your tasks'),
             css_classes: ['dim-label'],
             margin_bottom: 0,
             margin_top: 0,
@@ -1529,7 +1529,7 @@ export class TasksPage {
         const totalPages = Math.max(1, Math.ceil(totalGroups / this.tasksPerPage));
         const currentPage = Math.min(this.currentTasksPage + 1, totalPages);
 
-        this.tasksPageInfo.set_label(`Page ${currentPage} of ${totalPages}`);
+        this.tasksPageInfo.set_label(_('Page %d of %d').format(currentPage, totalPages));
         this.prevTasksButton.set_sensitive(this.currentTasksPage > 0);
         this.nextTasksButton.set_sensitive(this.currentTasksPage < totalPages - 1);
     }

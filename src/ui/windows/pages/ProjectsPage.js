@@ -820,7 +820,7 @@ export class ProjectsPage {
         const totalPages = Math.max(1, Math.ceil(this.filteredProjects.length / this.projectsPerPage));
         const currentPage = this.currentProjectsPage + 1;
 
-        this.projectsPageInfo.set_label(`Page ${currentPage} of ${totalPages}`);
+        this.projectsPageInfo.set_label(_('Page %d of %d').format(currentPage, totalPages));
 
         this.prevProjectsButton.set_sensitive(this.currentProjectsPage > 0);
         this.nextProjectsButton.set_sensitive(this.currentProjectsPage < totalPages - 1);
@@ -850,7 +850,7 @@ export class ProjectsPage {
         const totalPages = Math.max(1, Math.ceil(this.filteredProjects.length / this.projectsPerPage));
         const currentPage = Math.min(this.currentProjectsPage + 1, totalPages);
 
-        this.projectsPageInfo.set_label(`Page ${currentPage} of ${totalPages}`);
+        this.projectsPageInfo.set_label(_('Page %d of %d').format(currentPage, totalPages));
         this.prevProjectsButton.set_sensitive(this.currentProjectsPage > 0);
         this.nextProjectsButton.set_sensitive(this.currentProjectsPage < totalPages - 1);
     }
@@ -1036,7 +1036,7 @@ export class ProjectsPage {
                         return true;
                     } catch (error) {
                         console.error('Error updating project:', error);
-                        dialogInstance.showFieldError('name', 'Failed to update project');
+                        dialogInstance.showFieldError('name', _('Failed to update project'));
                         return false;
                     }
                 }

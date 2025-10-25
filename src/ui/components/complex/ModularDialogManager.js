@@ -137,7 +137,7 @@ export class ModularDialogManager {
                 type: 'entry',
                 name: 'name',
                 label: _('Task Name'),
-                placeholder: 'Enter task name...',
+                placeholder: _('Enter task name...'),
                 required: true,
                 validator: InputValidator.validateTaskName,
                 value: isEdit ? task.name : ''
@@ -146,7 +146,7 @@ export class ModularDialogManager {
                 type: 'textarea',
                 name: 'description',
                 label: _('Description'),
-                placeholder: 'Optional task description...',
+                placeholder: _('Optional task description...'),
                 validator: InputValidator.validateTaskDescription,
                 value: isEdit ? (task.description || '') : '',
                 height: 80
@@ -392,9 +392,9 @@ export class ModularDialogManager {
      */
     confirmDelete(itemType, itemName, onConfirm = null) {
         return this.showConfirmDialog({
-            title: `Delete ${itemType}`,
-            message: `Are you sure you want to delete "${itemName}"? This action cannot be undone.`,
-            confirmLabel: 'Delete',
+            title: _('Delete %s').format(itemType),
+            message: _('Are you sure you want to delete "%s"? This action cannot be undone.').format(itemName),
+            confirmLabel: _('Delete'),
             destructive: true,
             onConfirm
         });

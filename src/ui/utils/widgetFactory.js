@@ -137,7 +137,7 @@ export class WidgetFactory {
         }
 
         const addButton = new Gtk.Button({
-            tooltip_text: `Add ${addButtonLabel}`,
+            tooltip_text: _('Add %s').format(addButtonLabel),
             css_classes: ['flat']
         });
 
@@ -335,7 +335,7 @@ export class WidgetFactory {
                 nextButton.set_visible(true);
 
                 // Update pagination info
-                pageInfo.set_label(`Page ${currentPage} of ${totalPages}`);
+                pageInfo.set_label(_('Page %d of %d').format(currentPage, totalPages));
                 prevButton.set_sensitive(currentPage > 1);
                 nextButton.set_sensitive(currentPage < totalPages);
             },

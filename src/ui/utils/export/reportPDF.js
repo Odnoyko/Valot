@@ -129,16 +129,16 @@ export class ReportPDF {
             
             // Categorize errors for better user feedback
             if (error.message.includes('WebKit')) {
-                errorMessage = 'PDF Generation Failed';
-                errorDetail = 'WebKit rendering engine failed. This usually happens in sandboxed environments like Flatpak.\n\nTry using the HTML export option instead.';
+                errorMessage = _('PDF Generation Failed');
+                errorDetail = _('WebKit rendering engine failed. This usually happens in sandboxed environments like Flatpak.\n\nTry using the HTML export option instead.');
                 //('🌐 WebKit-related error detected');
             } else if (error.message.includes('print')) {
-                errorMessage = 'Print System Unavailable';  
-                errorDetail = 'Cannot access system printer/PDF export functionality.\n\nThis feature may not be available in your environment.';
+                errorMessage = _('Print System Unavailable');
+                errorDetail = _('Cannot access system printer/PDF export functionality.\n\nThis feature may not be available in your environment.');
                 //('🖨️ Print system error detected');
             } else if (error.message.includes('timeout')) {
-                errorMessage = 'Export Timeout';
-                errorDetail = 'PDF generation took too long and was cancelled.\n\nTry reducing the amount of data in your report or try again.';
+                errorMessage = _('Export Timeout');
+                errorDetail = _('PDF generation took too long and was cancelled.\n\nTry reducing the amount of data in your report or try again.');
                 //('⏰ Timeout error detected');
             } else if (error.message.includes('cancelled')) {
                 //('👤 User cancellation detected - not showing error dialog');
@@ -146,7 +146,7 @@ export class ReportPDF {
                 return;
             } else {
                 //('❓ Unknown error type detected');
-                errorDetail = `Technical details: ${error.message}`;
+                errorDetail = _('Technical details: %s').format(error.message);
             }
             
             //('🚨 Showing error dialog to user...');
@@ -170,7 +170,7 @@ export class ReportPDF {
                 //(`Directory doesn't exist, creating: ${reportsDir}`);
                 const result = GLib.mkdir_with_parents(reportsDir, 0o755);
                 if (result !== 0) {
-                    throw new Error(`Failed to create directory: ${reportsDir} (code: ${result})`);
+                    throw new Error(_('Failed to create directory: %s (code: %d)').format(reportsDir, result));
                 }
             } else {
             }

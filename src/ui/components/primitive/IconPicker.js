@@ -50,7 +50,7 @@ export class IconPicker {
 
     _createSearchBar() {
         this.searchEntry = new Entry({
-            placeholderText: 'Search icons...',
+            placeholderText: _('Search icons...'),
             onChanged: (text) => this._filterIcons(text)
         });
 

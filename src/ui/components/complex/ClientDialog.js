@@ -296,7 +296,7 @@ export class ClientDialog extends FormDialog {
                 
             } catch (error) {
                 // Error saving client
-                this.showFieldError('name', 'Failed to save client. Please try again.');
+                this.showFieldError('name', _('Failed to save client. Please try again.'));
                 return false;
             }
         }
@@ -332,7 +332,7 @@ export class ClientDialog extends FormDialog {
         if (formData.phone && formData.phone.trim()) {
             const phone = formData.phone.trim();
             if (phone.length > 50) {
-                this.showFieldError('phone', 'Phone number too long');
+                this.showFieldError('phone', _('Phone number too long'));
                 return false;
             }
         }
@@ -396,7 +396,7 @@ export class ClientDialog extends FormDialog {
      * Show client duplicate error
      */
     showDuplicateError() {
-        this.showFieldError('name', 'A client with this name already exists');
+        this.showFieldError('name', _('A client with this name already exists'));
     }
 
     /**

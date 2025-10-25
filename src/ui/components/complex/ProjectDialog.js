@@ -258,7 +258,7 @@ export class ProjectDialog extends FormDialog {
                 return true; // Close dialog
                 
             } catch (error) {
-                this.showFieldError('name', 'Failed to save project. Please try again.');
+                this.showFieldError('name', _('Failed to save project. Please try again.'));
                 return false;
             }
         }

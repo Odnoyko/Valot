@@ -80,8 +80,8 @@ export class TemplatePDFGenerator {
         } catch (error) {
             //('Template PDF export error:', error);
             const errorDialog = new Gtk.AlertDialog({
-                message: 'Export Failed',
-                detail: `Could not export PDF: ${error.message}`
+                message: _('Export Failed'),
+                detail: _('Could not export PDF: %s').format(error.message)
             });
             errorDialog.show(parentWindow);
         }
@@ -94,7 +94,7 @@ export class TemplatePDFGenerator {
             if (!GLib.file_test(reportsDir, GLib.FileTest.IS_DIR)) {
                 const result = GLib.mkdir_with_parents(reportsDir, 0o755);
                 if (result !== 0) {
-                    throw new Error(`Failed to create directory: ${reportsDir} (code: ${result})`);
+                    throw new Error(_('Failed to create directory: %s (code: %d)').format(reportsDir, result));
                 }
             } else {
             }

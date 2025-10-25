@@ -382,13 +382,13 @@ export const CarouselDialog = GObject.registerClass({
         });
 
         const title = new Gtk.Label({
-            label: `<span size="xx-large" weight="bold">Slide ${number}</span>`,
+            label: `<span size="xx-large" weight="bold">${_('Slide')} ${number}</span>`,
             use_markup: true,
             halign: Gtk.Align.CENTER,
         });
 
         const desc = new Gtk.Label({
-            label: `This is slide ${number} content. The carousel is working!`,
+            label: _('This is slide %d content. The carousel is working!').format(number),
             halign: Gtk.Align.CENTER,
             wrap: true,
             css_classes: ['dim-label'],

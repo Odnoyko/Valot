@@ -45,7 +45,7 @@ export class DatabaseMigrationDialog {
             show_start_title_buttons: false,
             css_classes: ['flat'],
             title_widget: new Gtk.Label({
-                label: 'Database Migration Tool',
+                label: _('Database Migration Tool'),
                 css_classes: ['title'],
             }),
         });
@@ -118,7 +118,7 @@ export class DatabaseMigrationDialog {
         });
 
         const versionText1 = new Gtk.Label({
-            label: 'Valot was updated to the',
+            label: _('Valot was updated to the'),
             css_classes: ['version-marker'],
         });
 
@@ -133,7 +133,7 @@ export class DatabaseMigrationDialog {
 
         // Subtitle
         const subtitle = new Gtk.Label({
-            label: 'Please choose your way to continue \nafter update',
+            label: _('Please choose your way to continue \nafter update'),
             margin_top: 8,
             halign: Gtk.Align.CENTER,
             justify: Gtk.Justification.CENTER,
@@ -153,7 +153,7 @@ export class DatabaseMigrationDialog {
 
         // Delete & Start Fresh button
         const deleteButton = new Gtk.Button({
-            label: 'Delete & Fresh Start',
+            label: _('Delete & Fresh Start'),
             height_request: 40,
             css_classes: ['pill'],
         });
@@ -164,7 +164,7 @@ export class DatabaseMigrationDialog {
 
         // Backup & Migrate button
         const backupButton = new Gtk.Button({
-            label: 'Backup & Migrate',
+            label: _('Backup & Migrate'),
             height_request: 40,
             css_classes: ['pill', 'suggested-action'],
         });
@@ -191,8 +191,8 @@ export class DatabaseMigrationDialog {
     _createProgressView() {
         const page = new Adw.StatusPage({
             icon_name: 'emblem-synchronizing-symbolic',
-            title: 'Migrating Database',
-            description: 'Please wait while your data is being migrated...',
+            title: _('Migrating Database'),
+            description: _('Please wait while your data is being migrated...'),
         });
 
         // Progress container
@@ -217,7 +217,7 @@ export class DatabaseMigrationDialog {
 
         // Status label
         this.statusLabel = new Gtk.Label({
-            label: 'Initializing...',
+            label: _('Initializing...'),
             wrap: true,
             justify: Gtk.Justification.CENTER,
             margin_top: 8,

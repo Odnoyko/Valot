@@ -218,7 +218,7 @@ export class ProjectsPageInterface {
     updatePaginationInfo(currentPage, totalPages) {
         if (this.elements.pagination.pageInfo) {
             this.elements.pagination.pageInfo.set_label(
-                `Page ${currentPage} of ${totalPages}`
+                _('Page %d of %d').format(currentPage, totalPages)
             );
         }
     }

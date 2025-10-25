@@ -105,8 +105,8 @@ export class ReportExporter {
                 // Show error dialog if both fail
                 //('🚨 Showing error dialog to user...');
                 const errorDialog = new Gtk.AlertDialog({
-                    message: 'Export Failed',
-                    detail: `Both PDF and HTML export failed.\n\nPDF Error: ${pdfError.message}\nHTML Error: ${htmlError.message}`
+                    message: _('Export Failed'),
+                    detail: _('Both PDF and HTML export failed.\n\nPDF Error: %s\nHTML Error: %s').format(pdfError.message, htmlError.message)
                 });
                 errorDialog.show(parentWindow);
                 throw htmlError;

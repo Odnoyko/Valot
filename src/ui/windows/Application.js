@@ -325,7 +325,7 @@ export const ValotApplication = GObject.registerClass(
                                 migrationDialog.showCompletion();
                                 resolve();
                             } else {
-                                migrationDialog.showError('Migration failed - database not created');
+                                migrationDialog.showError(_('Migration failed - database not created'));
                                 reject(new Error('Migration failed'));
                             }
 
@@ -343,7 +343,7 @@ export const ValotApplication = GObject.registerClass(
                                 migrationDialog.showCompletion();
                                 resolve();
                             } else {
-                                migrationDialog.showError('Delete operation failed');
+                                migrationDialog.showError(_('Delete operation failed'));
                                 reject(new Error('Delete failed'));
                             }
                         }

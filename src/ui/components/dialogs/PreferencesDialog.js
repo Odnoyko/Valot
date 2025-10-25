@@ -597,7 +597,7 @@ export const PreferencesDialog = GObject.registerClass({
                         const backupPath = DatabaseMigration.createBackup(sourceDbPath);
 
                         if (!backupPath) {
-                            migrationDialog.showError('Failed to create backup');
+                            migrationDialog.showError(_('Failed to create backup'));
                             return;
                         }
 
@@ -612,7 +612,7 @@ export const PreferencesDialog = GObject.registerClass({
                         if (success) {
                             migrationDialog.showCompletion();
                         } else {
-                            migrationDialog.showError('Migration failed');
+                            migrationDialog.showError(_('Migration failed'));
                         }
 
                     } else if (choice === 'delete') {
@@ -627,7 +627,7 @@ export const PreferencesDialog = GObject.registerClass({
                         if (success) {
                             migrationDialog.showCompletion();
                         } else {
-                            migrationDialog.showError('Delete operation failed');
+                            migrationDialog.showError(_('Delete operation failed'));
                         }
                     }
                 });

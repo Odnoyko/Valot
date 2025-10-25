@@ -88,8 +88,8 @@ export class ReportHTML {
         } catch (error) {
             //('HTML export error:', error);
             const errorDialog = new Gtk.AlertDialog({
-                message: 'HTML Export Failed',
-                detail: `Could not export HTML: ${error.message}`
+                message: _('HTML Export Failed'),
+                detail: _('Could not export HTML: %s').format(error.message)
             });
             errorDialog.show(parentWindow);
         }
@@ -102,7 +102,7 @@ export class ReportHTML {
             if (!GLib.file_test(reportsDir, GLib.FileTest.IS_DIR)) {
                 const result = GLib.mkdir_with_parents(reportsDir, 0o755);
                 if (result !== 0) {
-                    throw new Error(`Failed to create directory: ${reportsDir} (code: ${result})`);
+                    throw new Error(_('Failed to create directory: %s (code: %d)').format(reportsDir, result));
                 }
             } else {
             }
