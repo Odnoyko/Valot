@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Future features and improvements will be listed here
+
+## [0.9.0] - 14.10.2025
+
+    - New App Architecture
+    - Plugins&Addons Extensions support
+    - Page Manager settings update
+    - Sidebar toggle by gestures.
+    - Compact mode by gestures.
+    - Translations can be broken before update v1.0.0
+
 ## [0.8.4] - 06.10.2025
 
     - Fix App icon for KDE by Surjyadip Sen

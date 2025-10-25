@@ -31,5 +31,15 @@
 			<summary>Sidebar last state</summary>
 			<description>Last sidebar visibility state (used in Dynamic mode)</description>
 		</key>
+		<key name="visible-pages" type="as">
+			<default>['tasks', 'projects', 'clients', 'reports']</default>
+			<summary>Visible pages</summary>
+			<description>List of visible page IDs</description>
+		</key>
+		<key name="page-order" type="as">
+			<default>['tasks', 'projects', 'clients', 'reports']</default>
+			<summary>Page order</summary>
+			<description>Order of pages in the view switcher</description>
+		</key>
 	</schema>
 </schemalist>

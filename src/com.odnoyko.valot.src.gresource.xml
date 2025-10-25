@@ -1,101 +1,128 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
   <gresource prefix="/com/odnoyko/valot">
-    <!-- Base Application Files -->
-    <file>js/main.js</file>
-    <file>js/mainwindow.js</file>
-    <file>js/compacttracker.js</file>
+    <!-- Application Entry -->
     <file>config.js</file>
 
-    <!-- Global Functionality -->
-    <file>js/func/global/dbinitialisation.js</file>
-    <file>js/func/global/timetracking.js</file>
-    <file>js/func/global/trackingStateManager.js</file>
-    <file>js/func/global/aboutDialog.js</file>
-    <file>js/func/global/inputValidation.js</file>
-    <file>js/func/global/sidebar.js</file>
-    <file>js/func/global/addtask.js</file>
-    <file>js/func/global/timeUtils.js</file>
-    <file>js/func/global/eventManager.js</file>
-    <file>js/func/global/colorUtils.js</file>
-    <file>js/func/global/dateFilters.js</file>
-    <file>js/func/global/keyboardHandler.js</file>
-    <file>js/func/global/pomodoroManager.js</file>
-    <file>js/func/global/commonStrings.js</file>
+    <!-- UI Windows -->
+    <file>ui/windows/Application.js</file>
+    <file>ui/windows/MainWindow.js</file>
+    <file>ui/windows/CompactTracker.js</file>
+    <file>ui/windows/CompactTrackerWindow.js</file>
 
-    <!-- Page-Specific Functionality -->
-    <file>js/func/pages/projectManager.js</file>
-    <file>js/func/pages/clientManager.js</file>
-    <file>js/func/pages/taskManager.js</file>
-    <file>js/func/pages/taskRenderer.js</file>
-    <file>js/func/pages/simpleChart.js</file>
-    <file>js/func/pages/reportExporter.js</file>
-    <file>js/func/pages/reportPDF.js</file>
-    <file>js/func/pages/reportHTML.js</file>
-    <file>js/func/pages/pdfExporter.js</file>
-    <file>js/func/pages/templateEngine.js</file>
-    <file>js/func/pages/templatePDFGenerator.js</file>
-    <file>js/func/pages/themeLoader.js</file>
-    <file>js/func/pages/ProjectsPageBehavior.js</file>
-    <file>js/func/pages/textCharts.js</file>
-    <file>js/func/pages/templates/professional-report.html</file>
+    <!-- UI Bridges -->
+    <file>ui/bridges/CoreBridge.js</file>
 
-    <!-- Component Functionality -->
-    <file>js/func/components/primitive/ButtonBehavior.js</file>
-    <file>js/func/components/primitive/EntryBehavior.js</file>
-    <file>js/func/components/complex/ProjectCardBehavior.js</file>
+    <!-- UI Pages -->
+    <file>ui/windows/pages/BasePage.js</file>
+    <file>ui/windows/pages/TasksPage.js</file>
+    <file>ui/windows/pages/ProjectsPage.js</file>
+    <file>ui/windows/pages/ProjectsPageInterface.js</file>
+    <file>ui/windows/pages/ClientsPage.js</file>
+    <file>ui/windows/pages/ReportsPage.js</file>
 
-    <!-- Interface Components - Window -->
+    <!-- UI Components - Complex -->
+    <file>ui/components/complex/TrackingWidget.js</file>
+    <file>ui/components/complex/HeaderTrackingWidget.js</file>
+    <file>ui/components/complex/AdvancedTrackingWidget.js</file>
+    <file>ui/components/complex/ProjectCard.js</file>
+    <file>ui/components/complex/FormDialog.js</file>
+    <file>ui/components/complex/ProjectDialog.js</file>
+    <file>ui/components/complex/ProjectAppearanceDialog.js</file>
+    <file>ui/components/complex/ClientDialog.js</file>
+    <file>ui/components/complex/CurrencyDialog.js</file>
+    <file>ui/components/complex/ModularDialogManager.js</file>
+    <file>ui/components/complex/TaskTemplateDialog.js</file>
+    <file>ui/components/complex/DateRangeSelector.js</file>
+    <file>ui/components/complex/TaskTemplate.js</file>
+    <file>ui/components/complex/TaskRowTemplate.js</file>
+    <file>ui/components/complex/TaskStackTemplate.js</file>
 
-    <!-- Interface Components - Pages -->
-    <file>js/interface/pages/BasePage.js</file>
-    <file>js/interface/pages/TasksPage.js</file>
-    <file>js/interface/pages/ProjectsPage.js</file>
-    <file>js/interface/pages/ProjectsPageInterface.js</file>
-    <file>js/interface/pages/ClientsPage.js</file>
-    <file>js/interface/pages/ReportsPage.js</file>
+    <!-- UI Components - Primitive -->
+    <file>ui/components/primitive/Button.js</file>
+    <file>ui/components/primitive/Button.combined.js</file>
+    <file>ui/components/primitive/Entry.js</file>
+    <file>ui/components/primitive/Label.js</file>
+    <file>ui/components/primitive/ColorPicker.js</file>
+    <file>ui/components/primitive/IconPicker.js</file>
 
-    <!-- Interface Components - Dialogs -->
-    <file>js/interface/dialogs/PDFExportPreferencesDialog.js</file>
+    <!-- UI Components - Dialogs -->
+    <file>ui/components/dialogs/CarouselDialog.js</file>
+    <file>ui/components/dialogs/PreferencesDialog.js</file>
+    <file>ui/components/dialogs/PDFExportPreferencesDialog.js</file>
+    <file>ui/components/dialogs/TaskInstanceEditDialog.js</file>
+    <file>ui/components/dialogs/MultipleTasksEditDialog.js</file>
+    <file>ui/components/dialogs/QuickTaskSelector.js</file>
+    <file>ui/components/dialogs/DatabaseMigrationDialog.js</file>
 
-    <!-- Interface Components - Complex -->
-    <file>js/interface/components/complex/TrackingWidget.js</file>
-    <file>js/interface/components/complex/HeaderTrackingWidget.js</file>
-    <file>js/interface/components/complex/ProjectCard.js</file>
-    <file>js/interface/components/complex/FormDialog.js</file>
-    <file>js/interface/components/complex/ProjectDialog.js</file>
-    <file>js/interface/components/complex/ClientDialog.js</file>
-    <file>js/interface/components/complex/CurrencyDialog.js</file>
-    <file>js/interface/components/complex/ModularDialogManager.js</file>
-    <file>js/interface/components/complex/TaskTemplateDialog.js</file>
-    <file>js/interface/components/complex/DateRangeSelector.js</file>
-    <file>js/interface/components/CarouselDialog.js</file>
-    <file>js/interface/components/PreferencesDialog.js</file>
+    <!-- UI Utilities -->
+    <file>ui/utils/widgetFactory.js</file>
+    <file>ui/utils/selectorFactory.js</file>
+    <file>ui/utils/clientDropdown.js</file>
+    <file>ui/utils/projectDropdown.js</file>
+    <file>ui/utils/CoreImports.js</file>
+    <file>ui/utils/commonStrings.js</file>
+    <file>ui/utils/GestureController.js</file>
+    <file>ui/utils/timeUtils.js</file>
+    <file>ui/utils/svgRecolor.js</file>
 
-    <!-- Interface Components - Primitive -->
-    <file>js/interface/components/primitive/Button.js</file>
-    <file>js/interface/components/primitive/Button.combined.js</file>
-    <file>js/interface/components/primitive/Entry.js</file>
-    <file>js/interface/components/primitive/Label.js</file>
-    <file>js/interface/components/primitive/ColorPicker.js</file>
-    <file>js/interface/components/primitive/IconPicker.js</file>
+    <!-- UI Export Utilities -->
+    <file>ui/utils/export/reportExporter.js</file>
+    <file>ui/utils/export/reportPDF.js</file>
+    <file>ui/utils/export/reportHTML.js</file>
+    <file>ui/utils/export/pdfExporter.js</file>
+    <file>ui/utils/export/templatePDFGenerator.js</file>
+    <file>ui/utils/export/templateEngine.js</file>
+    <file>ui/utils/export/templates/professional-report.html</file>
 
-    <!-- Interface Components - Utilities -->
-    <file>js/interface/components/widgetFactory.js</file>
-    <file>js/interface/components/selectorFactory.js</file>
-    <file>js/interface/components/clientDropdown.js</file>
+    <!-- Global Data -->
+    <file>data/currencies.js</file>
+    <file>data/emojis.js</file>
+    <file>data/icons.js</file>
 
-    <!-- Interface Templates -->
-    <file>js/interface/components/complex/TaskTemplate.js</file>
-    <file>js/interface/components/complex/TaskRowTemplate.js</file>
-    <file>js/interface/components/complex/TaskStackTemplate.js</file>
-    
-    <!-- Global Tracking -->
-    <file>js/func/global/globalTracking.js</file>
+    <!-- Global Utils -->
+    <file>utils/InputValidator.js</file>
 
-    <!-- Data Files -->
-    <file>js/data/emojis.js</file>
-    <file>js/data/icons.js</file>
-    <file>js/data/currencies.js</file>
+    <!-- Database Adapters -->
+    <file>data/gdaDBBridge/GdaDatabaseBridge.js</file>
+    <file>data/gdaDBBridge/DatabaseMigration.js</file>
+
+    <!-- Core API (JavaScript) -->
+    <file>core/api/CoreAPI.js</file>
+    <file>core/index.js</file>
+
+    <!-- Core Services -->
+    <file>core/services/BaseService.js</file>
+    <file>core/services/ClientService.js</file>
+    <file>core/services/ProjectService.js</file>
+    <file>core/services/ReportService.js</file>
+    <file>core/services/StatsService.js</file>
+    <file>core/services/TaskInstanceService.js</file>
+    <file>core/services/TaskService.js</file>
+    <file>core/services/TimeTrackingService.js</file>
+
+    <!-- Core Models -->
+    <file>core/models/Client.js</file>
+    <file>core/models/Project.js</file>
+    <file>core/models/Task.js</file>
+    <file>core/models/TaskInstance.js</file>
+    <file>core/models/TimeEntry.js</file>
+
+    <!-- Core Database -->
+    <file>core/database/DatabaseAdapter.js</file>
+    <file>core/database/GdaAdapter.js</file>
+
+    <!-- Core State -->
+    <file>core/state/StateManager.js</file>
+
+    <!-- Core Events -->
+    <file>core/events/EventBus.js</file>
+    <file>core/events/CoreEvents.js</file>
+
+    <!-- Core Utils -->
+    <file>core/utils/TimeUtils.js</file>
+    <file>core/utils/ColorUtils.js</file>
+    <file>core/utils/DateFilters.js</file>
+    <file>core/utils/ValidationUtils.js</file>
   </gresource>
 </gresources>

@@ -18,6 +18,6 @@ Gio.resources_register(srcResource);
 const dataResource = Gio.Resource.load('@pkgdatadir@/com.odnoyko.valot.data.gresource');
 Gio.resources_register(dataResource);
 
-const { main } = await import("resource://@resource_path@/js/main.js");
+const { main } = await import("resource://@resource_path@/ui/windows/Application.js");
 const exit_code = await main([programInvocationName, ...programArgs]);
 exit(exit_code);

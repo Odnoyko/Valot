@@ -1,0 +1,604 @@
+/* Top Tracker Design */
+
+/* Custom color variables for light and dark themes */
+@define-color subtitle_light_color #959595;
+@define-color subtitle_dark_color #7B7B7B;
+
+/* Pomodoro timer active state - red button */
+.pomodoro-active {
+  background-color: @error_bg_color;
+  color: @error_fg_color;
+}
+
+.pomodoro-active:hover {
+  background-color: @error_color;
+}
+
+/* Long press animation - expanding circle */
+@keyframes long-press-pulse {
+  0% {
+    transform: scale(0);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* Carousel overlay text styles */
+.overlay-title {
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+  padding: 8px 16px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.overlay-description {
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 6px;
+  padding: 6px 12px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.content-box{
+	background: @view_bg_color;
+	border-radius: 12px;
+}
+
+.headerbtn {
+  font-size: 14px;
+  background: @headerbar_shade_color;
+  margin-right: 10px;
+}
+entry.headernameinput,
+entry.itemNameEntry {
+  outline: none;
+  outline-width: 0px;
+}
+
+.trackbutton {
+  background: @accent_bg_color;
+  min-width: 20px;
+  min-height: 30px;
+  border-radius: 10px;
+  color: @accent_fg_color;
+  margin-left: 10px;
+  transition: all 0.4s;
+}
+.trackbutton:hover {
+}
+
+/* Project selection and styling */
+.selected-project {
+  background-color: alpha(@accent_bg_color, 0.15);
+}
+
+/* Ensure consistent sizing between project icon and text in dropdowns */
+.boxed-list row .row-title {
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.selected-project .row-title {
+  font-weight: 500;
+}
+
+.project-settings-button {
+  transition: all 0.2s ease-in-out;
+}
+
+.project-name-label {
+  font-weight: 500;
+}
+
+.time-display {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Project appearance styling */
+.emoji-icon {
+  font-size: 18px;
+}
+
+/* Icon selection styling */
+.selected-icon {
+  background-color: alpha(@accent_bg_color, 0.2);
+  border: 2px solid @accent_bg_color;
+  border-radius: 6px;
+}
+
+/* Client selection styling */
+.selected-client {
+  background-color: alpha(@accent_bg_color, 0.15);
+}
+
+.client-name-label {
+  font-weight: 500;
+}
+
+/* Price/rate button in client list */
+.price-value-button {
+  padding: 4px 8px;
+}
+
+
+.price-value-display {
+  font-weight: 700;
+}
+
+.currency-display {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* Currency button styling for dialogs */
+.currency-button-label {
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+/* Currency change button styling */
+.currency-button {
+  transition: all 0.2s ease-in-out;
+}
+
+.currency-button:hover {
+  background-color: alpha(@accent_bg_color, 0.1);
+  border-radius: 4px;
+}
+
+/* Project search and add button integration */
+.linked > entry {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: none;
+}
+.trackItem {
+  margin: 0px 10px 10px 10px;
+  padding: 10px;
+  background: @window_bg_color;
+  border-radius: 10px;
+  border: 1px solid @border_color;
+  transition: all 0.5s;
+}
+.trackItem:hover {
+  box-shadow: 0px 0px 5px 2px alpha(@shadow_color, 0.05);
+  border: 1px solid @accent_bg_color;
+}
+.itemsContainer {
+  background: transparent;
+}
+
+.itemsContainer row:selected {
+  border: 1px solid @accent_bg_color;
+}
+
+.itemNameEntry {
+  min-height: 40px;
+  font-size: 18px;
+  color: @window_fg_color;
+  font-weight: 500;
+}
+.itemNameEntry.focus {
+  color: @window_fg_color;
+}
+.project_btn,
+.project_info {
+  font-weight: 100;
+  background: transparent;
+}
+.search {
+  background: @headerbar_shade_color;
+}
+.time_item_count {
+  margin: 0px 14px;
+}
+.item_track {
+  min-width: 30px;
+}
+
+
+/* Sidebar */
+.sidebarHeader {
+  min-height: 58px;
+  background: transparent;
+}
+.Sidebutton:nth-child(1) {
+  margin-top: 10px;
+}
+.Sidebutton {
+  margin-top: 4px;
+  font-size: 16px;
+  padding: 10px;
+  background: transparent;
+}
+.Sidebutton Label {
+  /* text-align not supported in GTK CSS, using justify instead */
+}
+.Sidebutton:hover {
+  background: alpha(@accent_bg_color, 0.1);
+}
+.Sidebutton.active {
+  padding: 10px;
+  background: alpha(@accent_bg_color, 0.2);
+}
+
+/* Use system accent colors for all elements */
+.bright-subtitle:hover {
+  transition: all 0.2s ease;
+  background: alpha(@window_fg_color, 0.04);
+}
+
+.selected-task {
+  background: alpha(@accent_bg_color, 0.15);
+}
+
+.selected-task:hover,
+.selected-project:hover,
+.selected-client:hover{
+  background: alpha(@accent_bg_color, 0.25);
+}
+
+/* Active tracking task styling */
+.tracking-active {
+  background: alpha(@accent_bg_color, 0.1);
+  border-left: 3px solid @accent_bg_color;
+}
+
+.tracking-active:hover {
+  background: alpha(@accent_bg_color, 0.2);
+}
+
+/* Context selection indicators */
+.context-selected {
+  background: alpha(@window_fg_color, 0);
+}
+
+.context-selected:hover {
+  background: alpha(@window_fg_color, 0.2);
+}
+
+.selected-project {
+  background: alpha(@accent_bg_color, 0.15);
+}
+
+
+/* Project icon and color selector styles */
+.icon-selector {
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.icon-selector:hover {
+  background: alpha(@accent_bg_color, 0.1);
+  transform: scale(1.05);
+}
+
+.icon-selector.icon-selected {
+  background: alpha(@accent_bg_color, 0.2);
+  border: 2px solid @accent_bg_color;
+  transform: scale(1.1);
+}
+
+.project-icon-container {
+  transition: all 0.2s ease;
+}
+
+.project-icon-container:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px alpha(@shadow_color, 0.2);
+}
+
+/* Client context button styling - clean flat appearance */
+#client_context_btn {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  outline: none;
+  border-radius: 0;
+}
+
+#client_context_btn:hover {
+  background: alpha(@window_fg_color, 0.1);
+  border-radius: 6px;
+  border: none;
+  box-shadow: none;
+}
+
+#client_context_btn:active {
+  background: alpha(@window_fg_color, 0.15);
+}
+
+/* Input Validation Error Styling */
+entry.error {
+  border: 2px solid #e01b24;
+  background: rgba(224, 27, 36, 0.1);
+  border-radius: 6px;
+}
+
+/* Also style text entry boxes */
+.error {
+  border: 2px solid #e01b24;
+  background: rgba(224, 27, 36, 0.1);
+  border-radius: 6px;
+}
+
+/* Inline editable labels - clean appearance */
+entry.inline-editable {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  min-height: 20px;
+  outline: none;
+}
+
+entry.inline-editable:focus {
+  background: alpha(@accent_bg_color, 0.1);
+  border: 1px solid @accent_bg_color;
+  border-radius: 6px;
+  padding: 6px;
+  outline: none;
+}
+
+/* === Reusable Component Styles === */
+
+/* Project dots for task lists */
+.project-dot {
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+.project-dot-group {
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+/* Project icon buttons */
+.project-icon-button {
+  border-radius: 50%;
+  min-width: 36px;
+  min-height: 36px;
+  border: 1px solid alpha(@border_color, 0.3);
+}
+
+.project-icon-button:hover {
+  filter: brightness(1.1);
+}
+
+/* Currency indicators */
+.currency-indicator {
+  background: alpha(@accent_color, 0.1);
+  border: 1px solid alpha(@accent_color, 0.3);
+  border-radius: 4px;
+  padding: 2px 4px;
+  min-height: 20px;
+}
+
+/* Emoji display styles */
+.emoji-display {
+  font-size: 16px;
+}
+
+.emoji-preview {
+  font-size: 14px;
+  text-shadow: 0 1px 2px alpha(black, 0.4);
+}
+
+.project-circle-emoji {
+  font-size: 14px;
+  text-shadow: 0 1px 2px alpha(black, 0.4);
+}
+
+.project-circle-icon {
+  color: white;
+  -gtk-icon-shadow: 0 1px 2px alpha(black, 0.4);
+}
+
+/* Icon color overrides */
+.icon-white {
+  color: white;
+  -gtk-icon-style: symbolic;
+}
+
+.icon-black {
+  color: black;
+  -gtk-icon-style: symbolic;
+}
+
+/* Time display formatting */
+.time-display {
+  font-family: monospace;
+  font-weight: bold;
+}
+
+/* Color picker preview */
+.color-preview {
+  border-radius: 50%;
+  border: 2px solid alpha(@border_color, 0.3);
+}
+
+.color-preview:hover {
+  filter: brightness(1.1);
+}
+
+/* Selection highlights */
+.selection-highlight {
+  background-color: alpha(@accent_bg_color, 0.2);
+  border: 2px solid @accent_bg_color;
+  border-radius: 6px;
+}
+
+/* Task Template Styling */
+.template-icon {
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 4px;
+  background-color: alpha(@accent_bg_color, 0.1);
+  color: @accent_fg_color;
+}
+.about-content-box button{
+  padding: 6px;
+  border-radius: 8px;
+}
+.template-badge {
+  background-color: alpha(@accent_bg_color, 0.2);
+  color: @accent_bg_color;
+  border-radius: 18px;
+  margin: 10px 0px;
+  padding: 4px 10px;
+  font-size: 15px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.task-template-row {
+  padding: 12px;
+  border-bottom: 1px solid alpha(@border_color, 0.1);
+}
+
+.task-template-row:hover {
+  background-color: alpha(@accent_bg_color, 0.05);
+}
+
+.task-template-row:selected {
+  background-color: alpha(@accent_bg_color, 0.2);
+}
+
+.template-details {
+  margin-top: 8px;
+  padding: 12px;
+  background-color: alpha(@card_bg_color, 0.5);
+  border-radius: 6px;
+}
+
+
+.caption.dim-label {
+      color: @window_fg_color;
+  }
+  .caption {
+      color: @accent_bg_color;
+  }
+
+.project-entry {
+	min-width: 300px;
+}
+.project-appearance-btn {
+	min-width: 10px;
+	min-height: 10px;
+}
+
+/* Custom project button styles */
+.tracking-widget-project-button {
+  padding:0px;
+}
+
+.widget-factory-project-button {
+  padding:0px;
+}
+
+.header-tracking-project-button {
+  padding:0px;
+}
+
+.project-color-settings-button {
+  padding:0px;
+}
+
+/* Override subtitle opacity to make project dots more visible */
+.subtitle {
+  opacity: 1;
+  color: @subtitle_light_color; /* Default for light theme */
+}
+
+/* Default subtitle color (light theme) */
+.subtitle {
+    color: @subtitle_light_color;
+}
+
+/* Dark theme support - GTK will automatically apply this when Adwaita-dark is used */
+.subtitle:backdrop,
+window.dark .subtitle {
+    color: @subtitle_dark_color;
+}
+.toggle-project-icon-box button:nth-child(1),
+.search-button-box entry,
+.hour-price-input button:nth-child(1){
+	border-radius: 10px 0px 0px 10px;
+}
+.toggle-project-icon-box button:nth-child(2),
+.search-button-box button,
+.hour-price-input button:nth-child(3){
+	border-radius: 0px 10px 10px 0px;
+}
+.hour-price-input entry {
+	border-radius: 0px;
+}
+.search-button-box button,.hour-price-input button{
+ 	background: alpha(@subtitle_dark_color, 0.24);
+}
+.search-button-box button:hover,.hour-price-input button:hover{
+ 	background: alpha(@subtitle_dark_color, 0.4);
+}
+.chart-summary-label {
+ 	color: alpha(@window_fg_color, 0.6);
+ 	font-size: 14px;
+}
+.chart-period-label {
+ 	color: alpha(@window_fg_color, 0.6);
+ 	font-size: 12px;
+}
+.chart-hours-label {
+ 	color: alpha(@window_fg_color, 0.8);
+ 	font-size: 14px;
+}
+.currency-button {
+	background: alpha(@window_fg_color, 0.12);
+	border-radius: 12px;
+}
+.currency-button:hover {
+	background: alpha(@window_fg_color, 0.16);
+	border-radius: 12px;
+}
+.currency-button:hover stack row {
+	background: alpha(@window_fg_color, 0);
+}
+.hint-box {
+  padding: 10px 20px;
+  color: @accent_color;
+}
+.hint-box .caption {
+  color: alpha(@window_fg_color, 0.8);
+}
+.carousel-command-text {
+  padding: 10px 20px;
+}
+
+.version-label {
+  background-color: alpha(@accent_bg_color, 0.2);
+  color: @accent_bg_color;
+  padding: 3px 6px;
+  border-radius: 100px;
+  font-size: 18px;
+}
+.version-marker {
+  font-size: 18px;
+  font-weight: bold;
+}
+.subtitle {
+  font-size: 14px;
+}
+.space {
+  padding: 20px;
+}
+
+/* AlertDialog message-area padding override */
+.message-area {
+  border-spacing: 0px 18px;
+}
+.duration_counter {
+  font-size: 26px;
+  margin-bottom: 24px;
+  font-weight: 800;
+}
