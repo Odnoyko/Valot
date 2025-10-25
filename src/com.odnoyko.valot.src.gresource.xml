@@ -64,6 +64,7 @@
     <file>ui/utils/commonStrings.js</file>
     <file>ui/utils/GestureController.js</file>
     <file>ui/utils/timeUtils.js</file>
+    <file>ui/utils/svgRecolor.js</file>
 
     <!-- UI Export Utilities -->
     <file>ui/utils/export/reportExporter.js</file>

@@ -5,12 +5,16 @@
 
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk?version=4.0';
 import Adw from 'gi://Adw?version=1';
 import Gdk from 'gi://Gdk?version=4.0';
 
 // Import Core
 import { CoreAPI } from 'resource:///com/odnoyko/valot/core/api/CoreAPI.js';
+
+// Import SVG recolor utility
+import { forceUpdateAllSVGs } from 'resource:///com/odnoyko/valot/ui/utils/svgRecolor.js';
 
 // Import bridges
 import { CoreBridge } from 'resource:///com/odnoyko/valot/ui/bridges/CoreBridge.js';
@@ -43,6 +47,11 @@ const AccentColorManager = {
         }
 
         if (mode === 0) {
+            // Force update SVGs when switching to system accent
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+                forceUpdateAllSVGs();
+                return GLib.SOURCE_REMOVE;
+            });
             return;
         } else if (mode === 1 && colorString) {
             const rgba = new Gdk.RGBA();
@@ -62,6 +71,12 @@ const AccentColorManager = {
                     this._customAccentProvider,
                     Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1
                 );
+
+                // Force update all SVG illustrations after accent color change
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+                    forceUpdateAllSVGs();
+                    return GLib.SOURCE_REMOVE;
+                });
             } catch (error) {
                 this._customAccentProvider = null;
             }
@@ -175,8 +190,6 @@ export const ValotApplication = GObject.registerClass(
 
                 // Scenario 1: valot.db.db exists (old schema from 0.8.x or 0.9.x)
                 if (oldSchemaDbFile.query_exists(null)) {
-                    console.log('🔍 Found valot.db.db - checking schema...');
-
                     // Check schema BEFORE creating backup
                     const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/DatabaseMigration.js');
                     const Gda = (await import('gi://Gda?version=6.0')).default;
@@ -194,7 +207,6 @@ export const ValotApplication = GObject.registerClass(
                         isOldSchema = await migration.detectSchema();
 
                         await tempDb.close();
-                        console.log(`📋 Schema detection: ${isOldSchema ? 'Old (0.8.x)' : 'New (0.9.x)'}`);
 
                     } catch (error) {
                         console.error('❌ Error detecting schema:', error);
@@ -203,15 +215,12 @@ export const ValotApplication = GObject.registerClass(
 
                     // Only migrate if old schema
                     if (isOldSchema) {
-                        console.log('🔍 Old schema detected - needs migration');
                         migrationNeeded = true;
                         backupSourcePath = oldSchemaDbPath;
 
                         // Create backup BEFORE showing dialog
                         backupCreatedPath = DatabaseMigration.createBackup(oldSchemaDbPath);
-                        console.log(`💾 Created backup: ${backupCreatedPath}`);
                     } else {
-                        console.log('✅ Database already has new schema - renaming to valot.db');
                         // Rename valot.db.db to valot.db (it's already migrated)
                         oldSchemaDbFile.move(currentDbFile, Gio.FileCopyFlags.OVERWRITE, null, null);
                         migrationNeeded = false;
@@ -219,8 +228,6 @@ export const ValotApplication = GObject.registerClass(
                 }
                 // Scenario 2: valot.db exists but no valot.db.db - check version
                 else if (currentDbFile.query_exists(null)) {
-                    console.log('🔍 Found valot.db - checking schema version...');
-
                     // Open database to check version
                     const tempDb = new GdaDatabaseBridge();
                     const Gda = (await import('gi://Gda?version=6.0')).default;
@@ -234,38 +241,29 @@ export const ValotApplication = GObject.registerClass(
                         await tempDb.close();
 
                         if (version >= 2) {
-                            console.log('✅ Database is up to date (schema v' + version + ') - skip migration');
                             migrationNeeded = false;
                         } else {
-                            console.log('🔍 Found old schema version ' + version + ' - needs migration');
                             migrationNeeded = true;
                             backupSourcePath = currentDbPath;
 
                             // Create backup BEFORE showing dialog
                             const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/DatabaseMigration.js');
                             backupCreatedPath = DatabaseMigration.createBackup(currentDbPath);
-                            console.log(`💾 Created backup: ${backupCreatedPath}`);
                         }
                     } catch (error) {
                         console.error('❌ Error checking schema version:', error);
-                        console.log('🔍 Assuming old schema - needs migration');
                         migrationNeeded = true;
                         backupSourcePath = currentDbPath;
 
                         // Create backup BEFORE showing dialog
                         const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/DatabaseMigration.js');
                         backupCreatedPath = DatabaseMigration.createBackup(currentDbPath);
-                        console.log(`💾 Created backup: ${backupCreatedPath}`);
                     }
-                } else {
-                    console.log('🔍 No existing database - will create fresh database');
                 }
 
                 // If migration is needed, show dialog
                 if (migrationNeeded && backupCreatedPath) {
-                    console.log(`🚀 Starting migration from backup: ${backupCreatedPath}`);
                     await this._runMigration(backupSourcePath, backupCreatedPath, currentDbPath, oldSchemaDbPath, isOldSchema, null);
-                    console.log('✅ Migration completed');
                 }
 
                 // Initialize database (new or already migrated)

@@ -332,8 +332,6 @@ export class HeaderTrackingWidget {
         const state = this.coreBridge.getTrackingState();
         if (state.isTracking) return; // Already tracking
 
-        console.log(`📋 Opening task selector (pendingPomodoroMode: ${this.pendingPomodoroMode})`);
-
         try {
             // Dynamically import dialog
             const { QuickTaskSelector } = await import('resource:///com/odnoyko/valot/ui/components/dialogs/QuickTaskSelector.js');

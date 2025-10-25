@@ -9,6 +9,7 @@ import { ClientDropdown } from 'resource:///com/odnoyko/valot/ui/utils/clientDro
 import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/data/currencies.js';
 import { AdvancedTrackingWidget } from 'resource:///com/odnoyko/valot/ui/components/complex/AdvancedTrackingWidget.js';
 import { MultipleTasksEditDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/MultipleTasksEditDialog.js';
+import { createRecoloredSVG } from 'resource:///com/odnoyko/valot/ui/utils/svgRecolor.js';
 
 /**
  * Tasks management page
@@ -728,6 +729,12 @@ export class TasksPage {
     }
 
     _createTasksList() {
+        // Container for both list and empty state
+        this.tasksContainer = new Gtk.Stack({
+            vexpand: true,
+        });
+
+        // Scrolled window with task list
         const scrolledWindow = new Gtk.ScrolledWindow({
             vexpand: true,
             hscrollbar_policy: Gtk.PolicyType.NEVER,
@@ -740,7 +747,86 @@ export class TasksPage {
 
         scrolledWindow.set_child(this.taskList);
 
-        return scrolledWindow;
+        // Empty state with custom layout
+        const emptyStateBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 0,
+            vexpand: true,
+            valign: Gtk.Align.CENTER,
+            halign: Gtk.Align.CENTER,
+        });
+
+        // Illustration (recolored to accent)
+        const illustration = createRecoloredSVG(
+            '/com/odnoyko/valot/data/illustrations/Task Page.svg',
+            357.8,  // width
+            171.04   // height
+        );
+        emptyStateBox.append(illustration);
+
+        // Title
+        const titleLabel = new Gtk.Label({
+            label: _('No Tasks Yet'),
+            css_classes: ['title-1'],
+            margin_top: 0,
+            margin_bottom: 0,
+        });
+        emptyStateBox.append(titleLabel);
+
+        // Description
+        const descLabel = new Gtk.Label({
+            label: _('Start tracking time to create your first task'),
+            css_classes: ['dim-label'],
+            margin_bottom: 0,
+            margin_top: 0,
+        });
+        emptyStateBox.append(descLabel);
+
+        // Circular play button
+        const startButton = new Gtk.Button({
+            icon_name: 'media-playback-start-symbolic',
+            css_classes: ['circular', 'suggested-action'],
+            halign: Gtk.Align.CENTER,
+            margin_top: 14,
+            width_request: 44,
+            height_request: 44,
+        });
+
+        startButton.connect('clicked', async () => {
+            try {
+                // Create auto-indexed task (like "1", "2", etc.) with default project/client
+                const task = await this.coreBridge.createAutoIndexedTask(
+                    this.currentProjectId,
+                    this.currentClientId
+                );
+
+                // Start tracking with the created task
+                await this.coreBridge.startTracking(
+                    task.id,
+                    this.currentProjectId,
+                    this.currentClientId
+                );
+
+                // Wait a bit for database to update
+                await new Promise(resolve => GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+                    resolve();
+                    return GLib.SOURCE_REMOVE;
+                }));
+
+                // Reload tasks to show the new task and hide empty state
+                await this.loadTasks();
+            } catch (error) {
+                console.error('[TasksPage] Error starting tracking:', error);
+            }
+        });
+
+        emptyStateBox.append(startButton);
+
+        // Add both to stack
+        this.tasksContainer.add_named(scrolledWindow, 'tasks-list');
+        this.tasksContainer.add_named(emptyStateBox, 'empty-state');
+
+        return this.tasksContainer;
     }
 
     /**
@@ -987,6 +1073,11 @@ export class TasksPage {
             return;
         }
 
+        // Show tasks list (switch away from empty state)
+        if (this.tasksContainer) {
+            this.tasksContainer.set_visible_child_name('tasks-list');
+        }
+
         // Group all tasks first
         const allTaskGroups = this._groupSimilarTasks(this.filteredTasks);
 
@@ -1120,21 +1211,27 @@ export class TasksPage {
 
     _showEmptyState() {
         if (!this.taskList) {
-            // Show empty state
-            const emptyRow = new Adw.ActionRow({
-                title: _('No tasks found'),
-                subtitle: _('Start tracking to create your first task'),
-                sensitive: false,
-            });
-            this.taskList.append(emptyRow);
             return;
         }
 
-        // Add tasks to list
-        this.filteredTasks.forEach(task => {
-            const row = this._createTaskRow(task);
-            this.taskList.append(row);
-        });
+        // Check if we have tasks
+        if (this.filteredTasks.length === 0) {
+            // Show empty state page
+            if (this.tasksContainer) {
+                this.tasksContainer.set_visible_child_name('empty-state');
+            }
+        } else {
+            // Show tasks list
+            if (this.tasksContainer) {
+                this.tasksContainer.set_visible_child_name('tasks-list');
+            }
+
+            // Add tasks to list
+            this.filteredTasks.forEach(task => {
+                const row = this._createTaskRow(task);
+                this.taskList.append(row);
+            });
+        }
     }
 
     /**

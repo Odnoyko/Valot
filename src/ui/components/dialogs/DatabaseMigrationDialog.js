@@ -8,6 +8,7 @@
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
+import { createRecoloredSVG } from 'resource:///com/odnoyko/valot/ui/utils/svgRecolor.js';
 
 export class DatabaseMigrationDialog {
     constructor(parent, oldDbPath) {
@@ -100,13 +101,12 @@ export class DatabaseMigrationDialog {
             height_request: 140,
         });
 
-        // Load SVG illustration (larger)
-        const illustration = new Gtk.Picture({
-            file: Gio.File.new_for_path('/home/Val/Projects/valot/data/Illustrations/Migration_tool.svg'),
-            content_fit: Gtk.ContentFit.CONTAIN,
-            width_request: 240,
-            height_request: 140,
-        });
+        // Load SVG illustration (recolored to accent color)
+        const illustration = createRecoloredSVG(
+            '/com/odnoyko/valot/data/illustrations/Migration_tool.svg',
+            240,
+            140
+        );
         illustrationBox.append(illustration);
 
         // Version text

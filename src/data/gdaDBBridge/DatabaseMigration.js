@@ -40,7 +40,6 @@ export class DatabaseMigration {
 
             if (tables.length === 0) {
                 // No _metadata table → Old schema (0.8.x)
-                console.log('📋 Detected old schema (0.8.x) - no _metadata table');
                 return true;
             }
 
@@ -52,7 +51,6 @@ export class DatabaseMigration {
 
                 if (versionResult.length === 0) {
                     // No schema_version in _metadata → Old schema
-                    console.log('📋 Detected old schema - no schema_version in _metadata');
                     return true;
                 }
 
@@ -60,22 +58,18 @@ export class DatabaseMigration {
 
                 if (version >= 2) {
                     // New schema with version 2 or higher
-                    console.log(`📋 Detected new schema (v${version}) - no migration needed`);
                     return false;
                 } else {
                     // Old version
-                    console.log(`📋 Detected old schema (v${version}) - needs migration`);
                     return true;
                 }
             } catch (error) {
                 console.error('📋 Error reading schema_version:', error);
-                console.log('📋 Assuming old schema');
                 return true;
             }
 
         } catch (error) {
             console.error('📋 Error detecting schema:', error);
-            console.log('📋 Assuming old schema (0.8.x) for safety');
             return true; // Default to old schema for safety
         }
     }
@@ -97,14 +91,12 @@ export class DatabaseMigration {
             const backupFileName = `${originalDbName}-backup-${timestamp}.db`;
             const backupPath = GLib.build_filenamev([valotBackupDir, backupFileName]);
 
-            console.log(`💾 Creating backup: ${backupPath}`);
 
             const sourceFile = Gio.File.new_for_path(oldDbPath);
             const backupFile = Gio.File.new_for_path(backupPath);
 
             sourceFile.copy(backupFile, Gio.FileCopyFlags.OVERWRITE, null, null);
 
-            console.log(`✅ Backup created successfully`);
             return backupPath;
         } catch (error) {
             console.error('❌ Backup failed:', error);
@@ -145,7 +137,6 @@ export class DatabaseMigration {
 
             if (oldSchemaDbFile.query_exists(null)) {
                 oldSchemaDbFile.move(tempOldFile, Gio.FileCopyFlags.OVERWRITE, null, null);
-                console.log('📦 Renamed valot.db.db to .migrating');
             }
 
             await updateProgress('Cleaning up old files...');
@@ -154,7 +145,6 @@ export class DatabaseMigration {
             const currentDbFile = Gio.File.new_for_path(newDbPath);
             if (currentDbFile.query_exists(null)) {
                 currentDbFile.delete(null);
-                console.log('🗑️ Deleted existing valot.db');
             }
 
             // Open backup database
@@ -172,7 +162,6 @@ export class DatabaseMigration {
             await updateProgress('Creating new database...');
             const newDb = new GdaDatabaseBridge();
             await newDb.initialize();
-            console.log(`📂 New database created at: ${newDb.dbPath}`);
 
             // Migrate data with sub-progress
             await updateProgress('Starting data migration...');
@@ -181,7 +170,6 @@ export class DatabaseMigration {
             // If forceOldSchema is true, set it before migration
             if (forceOldSchema) {
                 migration.isOldSchema = true;
-                console.log('🔧 Forcing old schema migration (0.8.x → 0.9.x)');
             }
 
             // Create sub-progress callback
@@ -202,7 +190,6 @@ export class DatabaseMigration {
                     newDb.connection.execute_non_select_command('PRAGMA synchronous = FULL');
                 }
             } catch (error) {
-                console.log('Note: Could not execute PRAGMA commands:', error.message);
             }
 
             await updateProgress('Saving changes...');
@@ -222,18 +209,15 @@ export class DatabaseMigration {
                 const dir = Gio.File.new_for_path(GLib.path_get_dirname(newDbPath));
                 const enumerator = dir.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NONE, null);
                 let fileInfo;
-                console.log('Files in directory:');
                 while ((fileInfo = enumerator.next_file(null)) !== null) {
                     const fileName = fileInfo.get_name();
                     if (fileName.endsWith('.db') || fileName.includes('valot')) {
-                        console.log('  -', fileName);
                     }
                 }
 
                 // Restore old database if migration failed
                 if (tempOldFile.query_exists(null)) {
                     tempOldFile.move(oldSchemaDbFile, Gio.FileCopyFlags.OVERWRITE, null, null);
-                    console.log('🔄 Restored valot.db.db after failed migration');
                 }
 
                 return false;
@@ -242,11 +226,8 @@ export class DatabaseMigration {
             // Delete temporary old database file
             if (tempOldFile.query_exists(null)) {
                 tempOldFile.delete(null);
-                console.log('🗑️ Deleted temporary .migrating file');
             }
 
-            console.log(`✅ Migration completed - backup saved at: ${backupDbPath}`);
-            console.log(`✅ New database created: ${newDbPath}`);
             return true;
 
         } catch (error) {
@@ -284,7 +265,6 @@ export class DatabaseMigration {
 
             if (originalDbFile.query_exists(null)) {
                 originalDbFile.move(documentsBackupFile, Gio.FileCopyFlags.NONE, null, null);
-                console.log(`📦 Moved original database to: ${documentsBackupPath}`);
             }
 
             if (onProgress) onProgress(2, 4, 'Deleting old databases...');
@@ -293,14 +273,12 @@ export class DatabaseMigration {
             const currentDbFile = Gio.File.new_for_path(newDbPath);
             if (currentDbFile.query_exists(null)) {
                 currentDbFile.delete(null);
-                console.log('🗑️ Deleted existing valot.db');
             }
 
             // Delete valot.db.db if exists (and not already moved)
             const oldSchemaDbFile = Gio.File.new_for_path(oldSchemaDbPath);
             if (oldSchemaDbFile.query_exists(null)) {
                 oldSchemaDbFile.delete(null);
-                console.log('🗑️ Deleted existing valot.db.db');
             }
 
             // Delete temporary backup file
@@ -308,11 +286,9 @@ export class DatabaseMigration {
             const backupDbFile = Gio.File.new_for_path(backupDbPath);
             if (backupDbFile.query_exists(null)) {
                 backupDbFile.delete(null);
-                console.log('🗑️ Deleted temporary backup');
             }
 
             if (onProgress) onProgress(4, 4, 'Ready to create new database...');
-            console.log(`✅ Old database saved to: ${documentsBackupPath}`);
             return true;
 
         } catch (error) {
@@ -329,7 +305,6 @@ export class DatabaseMigration {
         // Detect source schema (only if not already set)
         if (this.isOldSchema === false || this.isOldSchema === true) {
             // Schema already detected, skip
-            console.log(`📋 Using pre-detected schema: ${this.isOldSchema ? 'Old (0.8.x)' : 'New (0.9.x)'}`);
         } else {
             // Detect schema
             this.isOldSchema = await this.detectSchema();
@@ -369,9 +344,7 @@ export class DatabaseMigration {
                     onProgress(i + 1, total, step.name);
                 }
 
-                console.log(`🔄 ${step.name}...`);
                 await step.fn();
-                console.log(`✅ ${step.name} completed`);
 
                 // Add small delay to show progress visually (25ms per step)
                 await new Promise(resolve => setTimeout(resolve, 25));
@@ -379,9 +352,7 @@ export class DatabaseMigration {
 
             // Set schema version to 2 (0.9.0)
             await this.newDb.setSchemaVersion(2);
-            console.log('✅ Schema version updated to 2');
 
-            console.log('✅ Migration completed successfully');
             return true;
         } catch (error) {
             console.error('❌ Migration failed:', error);
@@ -396,7 +367,6 @@ export class DatabaseMigration {
         // Get all projects from old DB
         const oldProjects = await this.oldDb.query('SELECT * FROM Project');
 
-        console.log(`  → Found ${oldProjects.length} projects`);
 
         for (const project of oldProjects) {
             await this.newDb.execute(
@@ -416,7 +386,6 @@ export class DatabaseMigration {
             );
         }
 
-        console.log(`  ✓ Migrated ${oldProjects.length} projects`);
     }
 
     /**
@@ -426,7 +395,6 @@ export class DatabaseMigration {
         // Get all clients from old DB
         const oldClients = await this.oldDb.query('SELECT * FROM Client');
 
-        console.log(`  → Found ${oldClients.length} clients`);
 
         for (const client of oldClients) {
             await this.newDb.execute(
@@ -441,7 +409,6 @@ export class DatabaseMigration {
             );
         }
 
-        console.log(`  ✓ Migrated ${oldClients.length} clients`);
     }
 
     /**
@@ -451,7 +418,6 @@ export class DatabaseMigration {
         // Get unique task names from old DB
         const oldTasks = await this.oldDb.query('SELECT DISTINCT name FROM Task');
 
-        console.log(`  → Found ${oldTasks.length} unique tasks`);
 
         for (const task of oldTasks) {
             await this.newDb.execute(
@@ -463,7 +429,6 @@ export class DatabaseMigration {
             );
         }
 
-        console.log(`  ✓ Migrated ${oldTasks.length} unique tasks`);
     }
 
     /**
@@ -486,7 +451,6 @@ export class DatabaseMigration {
             FROM Task t
         `);
 
-        console.log(`  → Creating TaskInstances from ${oldTasks.length} old tasks`);
 
         for (const oldTask of oldTasks) {
             // Get new Task id by name
@@ -527,7 +491,6 @@ export class DatabaseMigration {
             });
         }
 
-        console.log(`  ✓ Created ${oldTasks.length} task instances`);
     }
 
     /**
@@ -537,11 +500,9 @@ export class DatabaseMigration {
      */
     async _createTimeEntries() {
         if (!this.taskInstanceMap || this.taskInstanceMap.size === 0) {
-            console.log('  → No task instances to create time entries for');
             return;
         }
 
-        console.log(`  → Creating TimeEntries for ${this.taskInstanceMap.size} task instances`);
 
         let count = 0;
         let recoveredCount = 0;
@@ -614,7 +575,6 @@ export class DatabaseMigration {
             }
         }
 
-        console.log(`  ✓ Created ${count} time entries (${recoveredCount} recovered from duration)`);
     }
 
     /**
@@ -622,7 +582,6 @@ export class DatabaseMigration {
      */
     async _copyProjects() {
         const projects = await this.oldDb.query('SELECT * FROM Project');
-        console.log(`  → Found ${projects.length} projects`);
 
         for (const project of projects) {
             await this.newDb.execute(
@@ -642,7 +601,6 @@ export class DatabaseMigration {
             );
         }
 
-        console.log(`  ✓ Copied ${projects.length} projects`);
     }
 
     /**
@@ -650,7 +608,6 @@ export class DatabaseMigration {
      */
     async _copyClients() {
         const clients = await this.oldDb.query('SELECT * FROM Client');
-        console.log(`  → Found ${clients.length} clients`);
 
         for (const client of clients) {
             await this.newDb.execute(
@@ -665,7 +622,6 @@ export class DatabaseMigration {
             );
         }
 
-        console.log(`  ✓ Copied ${clients.length} clients`);
     }
 
     /**
@@ -673,7 +629,6 @@ export class DatabaseMigration {
      */
     async _copyTasks() {
         const tasks = await this.oldDb.query('SELECT * FROM Task');
-        console.log(`  → Found ${tasks.length} tasks`);
 
         for (const task of tasks) {
             await this.newDb.execute(
@@ -686,7 +641,6 @@ export class DatabaseMigration {
             );
         }
 
-        console.log(`  ✓ Copied ${tasks.length} tasks`);
     }
 
     /**
@@ -694,7 +648,6 @@ export class DatabaseMigration {
      */
     async _copyTaskInstances() {
         const instances = await this.oldDb.query('SELECT * FROM TaskInstance');
-        console.log(`  → Found ${instances.length} task instances`);
 
         for (const instance of instances) {
             await this.newDb.execute(
@@ -712,7 +665,6 @@ export class DatabaseMigration {
             );
         }
 
-        console.log(`  ✓ Copied ${instances.length} task instances`);
     }
 
     /**
@@ -720,7 +672,6 @@ export class DatabaseMigration {
      */
     async _copyTimeEntries() {
         const entries = await this.oldDb.query('SELECT * FROM TimeEntry');
-        console.log(`  → Found ${entries.length} time entries`);
 
         for (const entry of entries) {
             await this.newDb.execute(
@@ -736,7 +687,6 @@ export class DatabaseMigration {
             );
         }
 
-        console.log(`  ✓ Copied ${entries.length} time entries`);
     }
 
     /**
@@ -744,7 +694,6 @@ export class DatabaseMigration {
      * This ensures data integrity after migration by recalculating total_time from TimeEntry.duration
      */
     async _syncTotalTimes() {
-        console.log('  → Recalculating total_time for all task instances...');
 
         // Get count of instances that will be updated
         const instancesWithMismatch = await this.newDb.query(`
@@ -760,7 +709,6 @@ export class DatabaseMigration {
         const mismatchCount = instancesWithMismatch[0]?.count || 0;
 
         if (mismatchCount > 0) {
-            console.log(`  → Found ${mismatchCount} task instances with incorrect total_time`);
         }
 
         // Update all TaskInstance total_time based on sum of TimeEntry durations
@@ -773,6 +721,5 @@ export class DatabaseMigration {
             )
         `);
 
-        console.log(`  ✓ Total times synchronized with actual time entries`);
     }
 }

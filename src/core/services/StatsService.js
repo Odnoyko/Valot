@@ -45,14 +45,8 @@ export class StatsService extends BaseService {
         const startTimestamp = startDate.to_unix();
         const endTimestamp = endDate.to_unix();
 
-        // DEBUG: Log week boundaries
-        console.log('[StatsService] getThisWeekStats() - Week boundaries:');
-        console.log('  Start:', startDate.format('%Y-%m-%d %H:%M:%S'), 'timestamp:', startTimestamp);
-        console.log('  End:', endDate.format('%Y-%m-%d %H:%M:%S'), 'timestamp:', endTimestamp);
-
         // Get all time entries within this week (filter by END TIME from database)
         const allTimeEntries = await this.core.services.tracking.getAllTimeEntries();
-        console.log('[StatsService] Total entries:', allTimeEntries.length);
 
         let totalTime = 0;
         const taskInstanceSet = new Set();
@@ -90,14 +84,11 @@ export class StatsService extends BaseService {
 
             // Check if END TIME is within this week
             if (entryEndTimestamp >= startTimestamp && entryEndTimestamp <= endTimestamp) {
-                console.log('  MATCHED entry:', entry.id, 'end_time:', entry.end_time, 'duration:', entry.duration);
                 totalTime += entry.duration || 0;
                 taskInstanceSet.add(entry.task_instance_id);
                 matchedCount++;
             }
         });
-
-        console.log('[StatsService] Matched entries:', matchedCount, 'Total time:', totalTime, 'seconds =', (totalTime/3600).toFixed(2), 'hours');
 
         return {
             totalTime,
@@ -383,11 +374,8 @@ export class StatsService extends BaseService {
         const startTimestamp = dateRange.startDate.to_unix();
         const endTimestamp = dateRange.endDate.to_unix();
 
-        console.log('[StatsService] getTaskInstanceIdsForPeriod() - Period:', dateRange.startDate.format('%Y-%m-%d %H:%M:%S'), 'to', dateRange.endDate.format('%Y-%m-%d %H:%M:%S'));
-
         // Get all time entries
         const allTimeEntries = await this.core.services.tracking.getAllTimeEntries();
-        console.log('[StatsService] Total entries:', allTimeEntries.length);
 
         const taskInstanceIds = new Set();
 
@@ -423,12 +411,10 @@ export class StatsService extends BaseService {
 
             // Check if END TIME is within the period
             if (entryEndTimestamp >= startTimestamp && entryEndTimestamp <= endTimestamp) {
-                console.log('  MATCHED entry:', entry.id, 'task_instance_id:', entry.task_instance_id, 'end_time:', entry.end_time);
                 taskInstanceIds.add(entry.task_instance_id);
             }
         });
 
-        console.log('[StatsService] Found task instance IDs:', Array.from(taskInstanceIds));
         return Array.from(taskInstanceIds);
     }
 }

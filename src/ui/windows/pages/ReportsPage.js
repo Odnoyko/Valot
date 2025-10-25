@@ -43,10 +43,12 @@ export class ReportsPage {
         // Reload when tracking starts/stops (creates new time entries)
         this.coreBridge.onUIEvent('tracking-started', () => {
             setTimeout(() => this.updateChartsOnly(), 300);
+            this._startTrackingUITimer(); // Start real-time updates
         });
 
         this.coreBridge.onUIEvent('tracking-stopped', () => {
             this.updateChartsOnly();
+            this._stopTrackingUITimer(); // Stop real-time updates
         });
 
         // Reload when tasks are created/updated/deleted
@@ -73,8 +75,6 @@ export class ReportsPage {
 
         // Update on tracking changes (task name, project, client changes)
         this.coreBridge.onUIEvent('tracking-updated', (data) => {
-            console.log('[ReportsPage] tracking-updated event received', data);
-
             // Update statistics in real-time (Total Time, etc.)
             this._updateStatisticsRealtime();
 
@@ -589,6 +589,12 @@ export class ReportsPage {
 
             // Update all reports
             this._updateReports();
+
+            // Start real-time timer if tracking is active
+            const trackingState = this.coreBridge.getTrackingState();
+            if (trackingState.isTracking) {
+                this._startTrackingUITimer();
+            }
         } catch (error) {
             console.error('Error loading reports:', error);
         }
@@ -1255,11 +1261,6 @@ export class ReportsPage {
                     }
                 });
 
-                // Add overflow hidden CSS
-                const stackProvider = new Gtk.CssProvider();
-                stackProvider.load_from_data(`.chart-bar-stack { overflow: hidden; }`, -1);
-                stackedBar.get_style_context().add_provider(stackProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
-
                 barBox.append(stackedBar);
             } else {
                 // Empty day - show gray placeholder
@@ -1691,26 +1692,14 @@ export class ReportsPage {
      * Called every second while tracking is active
      */
     async _updateStatisticsRealtime() {
-        console.log('[ReportsPage] _updateStatisticsRealtime called');
-
-        if (!this.coreBridge) {
-            console.log('[ReportsPage] No coreBridge');
-            return;
-        }
+        if (!this.coreBridge) return;
 
         const trackingState = this.coreBridge.getTrackingState();
-        console.log('[ReportsPage] Tracking state:', trackingState);
 
-        if (!trackingState.isTracking) {
-            console.log('[ReportsPage] Not tracking');
-            return;
-        }
+        if (!trackingState.isTracking) return;
 
         // Need date range from last full update
-        if (!this._currentDateRange) {
-            console.log('[ReportsPage] No current date range');
-            return;
-        }
+        if (!this._currentDateRange) return;
 
         try {
             // Get statistics from Core
@@ -1719,18 +1708,77 @@ export class ReportsPage {
                 this._currentTaskInstanceIds
             );
 
-            console.log('[ReportsPage] Stats from Core:', stats);
-
             // Add current elapsed time to total
             const currentElapsed = trackingState.elapsedSeconds || 0;
             const totalTime = stats.totalTime + currentElapsed;
-
-            console.log('[ReportsPage] Updating Total Time:', totalTime, 'formatted:', this._formatDuration(totalTime));
 
             // Update only Total Time label (other stats don't change in real-time)
             this.totalTimeLabel.set_label(this._formatDuration(totalTime));
         } catch (error) {
             console.error('[ReportsPage] Error updating statistics realtime:', error);
+        }
+    }
+
+    /**
+     * Start real-time UI updates (every second) when tracking is active
+     */
+    _startTrackingUITimer() {
+        if (this.trackingTimerId) return; // Already running
+
+        this.trackingTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+            const state = this.coreBridge.getTrackingState();
+            if (state.isTracking) {
+                // Update Total Time in real-time
+                this._updateStatisticsRealtime();
+
+                // Update Recent Tasks list to show current tracking task with updated time
+                this._updateRecentTasksRealtime(state);
+
+                return true; // Continue timer
+            } else {
+                this.trackingTimerId = null;
+                return false; // Stop timer
+            }
+        });
+    }
+
+    /**
+     * Stop real-time UI updates timer
+     */
+    _stopTrackingUITimer() {
+        if (this.trackingTimerId) {
+            GLib.Source.remove(this.trackingTimerId);
+            this.trackingTimerId = null;
+        }
+    }
+
+    /**
+     * Update Recent Tasks list in real-time (update current tracking task time)
+     */
+    async _updateRecentTasksRealtime(trackingState) {
+        if (!this.recentTasksList || !trackingState.isTracking) return;
+
+        try {
+            // Reload all tasks from Core
+            this.allTasks = await this.coreBridge.getAllTaskInstances() || [];
+
+            // Find current tracking task instance
+            const currentTask = this.allTasks.find(t =>
+                t.task_id === trackingState.currentTaskId &&
+                t.project_id === trackingState.currentProjectId &&
+                t.client_id === trackingState.currentClientId
+            );
+
+            if (currentTask) {
+                // Add current elapsed time to task total_time
+                currentTask.total_time = (currentTask.total_time || 0) + trackingState.elapsedSeconds;
+            }
+
+            // Apply filters and update Recent Tasks list
+            const filteredTasks = this._getFilteredTasks();
+            this._updateRecentTasksList(filteredTasks);
+        } catch (error) {
+            console.error('[ReportsPage] Error updating recent tasks realtime:', error);
         }
     }
 

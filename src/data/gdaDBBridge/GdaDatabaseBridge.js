@@ -32,8 +32,6 @@ export class GdaDatabaseBridge {
         const dbName = GLib.path_get_basename(dbPath).replace('.db', '');
         const connectionString = `DB_DIR=${GLib.path_get_dirname(dbPath)};DB_NAME=${dbName}`;
 
-        console.log(`🔗 Connecting to database: ${connectionString}`);
-
         try {
             this.connection = Gda.Connection.open_from_string(
                 'SQLite',
