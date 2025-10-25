@@ -98,31 +98,25 @@ export class TimeUtils {
     }
 
     /**
-     * Validate and correct start/end dates for task editing
-     * If start > end, adjusts end to maintain original duration
-     * If end < start, adjusts start to maintain original duration
+     * Validate start/end dates for task editing
+     * Ensures duration is never negative
      * @param {Date} startDate - Start date
      * @param {Date} endDate - End date
-     * @param {number} originalDuration - Original duration in seconds
-     * @returns {Object} { startDate, endDate, duration } - Corrected dates and calculated duration
+     * @returns {Object} { startDate, endDate, duration } - Validated dates and calculated duration
      */
-    static validateTaskDates(startDate, endDate, originalDuration) {
+    static validateTaskDates(startDate, endDate) {
         let correctedStart = new Date(startDate);
         let correctedEnd = new Date(endDate);
 
-        // If start is after end, move end forward to maintain original duration
-        if (correctedStart.getTime() > correctedEnd.getTime()) {
-            correctedEnd = new Date(correctedStart.getTime() + originalDuration * 1000);
-            correctedEnd.setSeconds(0);
-        }
+        // Calculate current duration
+        let duration = Math.floor((correctedEnd.getTime() - correctedStart.getTime()) / 1000);
 
-        // If end is before start, move start back to maintain original duration
-        if (correctedEnd.getTime() < correctedStart.getTime()) {
-            correctedStart = new Date(correctedEnd.getTime() - originalDuration * 1000);
-            correctedStart.setSeconds(0);
+        // If duration is negative, it means start > end
+        // In this case, keep duration at 0 and set end = start
+        if (duration < 0) {
+            correctedEnd = new Date(correctedStart);
+            duration = 0;
         }
-
-        const duration = Math.floor((correctedEnd.getTime() - correctedStart.getTime()) / 1000);
 
         return {
             startDate: correctedStart,
@@ -163,5 +157,80 @@ export class TimeUtils {
             return new Date(year, month - 1, day, hours, minutes, seconds || 0);
         }
         return new Date(timestamp);
+    }
+
+    /**
+     * Adjust time by minutes (automatically handles hours and days overflow)
+     * @param {Date} date - Date to adjust
+     * @param {number} minutesDelta - Minutes to add/subtract (positive or negative)
+     * @returns {Date} - New adjusted date
+     */
+    static adjustTimeByMinutes(date, minutesDelta) {
+        const newDate = new Date(date);
+        newDate.setMinutes(newDate.getMinutes() + minutesDelta);
+        return newDate;
+    }
+
+    /**
+     * Adjust date by days (automatically handles months and years overflow)
+     * Preserves time (hours, minutes, seconds)
+     * @param {Date} date - Date to adjust
+     * @param {number} daysDelta - Days to add/subtract (positive or negative)
+     * @returns {Date} - New adjusted date with preserved time
+     */
+    static adjustDateByDays(date, daysDelta) {
+        const newDate = new Date(date.getTime()); // Clone preserving exact time
+        newDate.setDate(newDate.getDate() + daysDelta);
+        return newDate;
+    }
+
+    /**
+     * Adjust start date/time with smart logic
+     * - Decrease: always allowed
+     * - Increase: if would make duration negative, move both start and end together
+     * @param {Date} startDate - Start date
+     * @param {Date} endDate - End date
+     * @param {number} delta - Minutes or days to adjust
+     * @param {string} type - 'minutes' or 'days'
+     * @returns {Object} { startDate, endDate } - Adjusted dates
+     */
+    static adjustStartDateTime(startDate, endDate, delta, type = 'minutes') {
+        let newStart = type === 'minutes'
+            ? this.adjustTimeByMinutes(startDate, delta)
+            : this.adjustDateByDays(startDate, delta);
+
+        let newEnd = new Date(endDate);
+
+        // If increasing start and it would create negative duration
+        if (delta > 0 && newStart.getTime() > endDate.getTime()) {
+            // Move both start and end together (preserve duration)
+            const currentDuration = endDate.getTime() - startDate.getTime();
+            newEnd = new Date(newStart.getTime() + currentDuration);
+        }
+
+        return { startDate: newStart, endDate: newEnd };
+    }
+
+    /**
+     * Adjust end date/time with smart logic
+     * - Increase: always allowed
+     * - Decrease: only if doesn't create negative duration
+     * @param {Date} startDate - Start date
+     * @param {Date} endDate - End date
+     * @param {number} delta - Minutes or days to adjust
+     * @param {string} type - 'minutes' or 'days'
+     * @returns {Date|null} - Adjusted end date or null if not allowed
+     */
+    static adjustEndDateTime(startDate, endDate, delta, type = 'minutes') {
+        const newEnd = type === 'minutes'
+            ? this.adjustTimeByMinutes(endDate, delta)
+            : this.adjustDateByDays(endDate, delta);
+
+        // If decreasing end and it would create negative duration, don't allow
+        if (delta < 0 && newEnd.getTime() <= startDate.getTime()) {
+            return null; // Not allowed
+        }
+
+        return newEnd;
     }
 }

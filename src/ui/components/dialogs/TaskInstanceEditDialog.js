@@ -161,13 +161,35 @@ export class TaskInstanceEditDialog {
 
         this.startTimeButton.connect('clicked', () => {
             this._showTimePicker(this.startDate, (hours, minutes) => {
+                // Calculate current duration
+                const currentDuration = this.endDate.getTime() - this.startDate.getTime();
+
+                // Set new start time
                 this.startDate.setHours(hours);
                 this.startDate.setMinutes(minutes);
                 this.startDate.setSeconds(0);
+
+                // Recalculate end time to preserve duration
+                this.endDate = new Date(this.startDate.getTime() + currentDuration);
+
                 this._onDateTimeChanged();
-                this.startTimeLabel.set_label(this.startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
-            });
+                this._updateDateTimeButtonLabels();
+            }, 'start');
         });
+
+        // Add scroll controller for start time button (use Core for logic)
+        const startTimeScrollController = new Gtk.EventControllerScroll({
+            flags: Gtk.EventControllerScrollFlags.VERTICAL,
+        });
+        startTimeScrollController.connect('scroll', (controller, dx, dy) => {
+            const minutesDelta = dy > 0 ? -1 : 1; // Scroll down = decrease, up = increase
+            const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, minutesDelta, 'minutes');
+            this.startDate = adjusted.startDate;
+            this.endDate = adjusted.endDate;
+            this._onDateTimeChanged();
+            return true;
+        });
+        this.startTimeButton.add_controller(startTimeScrollController);
 
         // Date button with icon inside
         const startDateButtonBox = new Gtk.Box({
@@ -203,6 +225,20 @@ export class TaskInstanceEditDialog {
                 this.startDateLabel.set_label(this.startDate.toLocaleDateString('de-DE'));
             });
         });
+
+        // Add scroll controller for start date button (use Core for logic)
+        const startDateScrollController = new Gtk.EventControllerScroll({
+            flags: Gtk.EventControllerScrollFlags.VERTICAL,
+        });
+        startDateScrollController.connect('scroll', (controller, dx, dy) => {
+            const daysDelta = dy > 0 ? -1 : 1; // Scroll down = decrease, up = increase
+            const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, daysDelta, 'days');
+            this.startDate = adjusted.startDate;
+            this.endDate = adjusted.endDate;
+            this._onDateTimeChanged();
+            return true;
+        });
+        this.startDateButton.add_controller(startDateScrollController);
 
         startButtonsBox.append(this.startTimeButton);
         startButtonsBox.append(this.startDateButton);
@@ -254,13 +290,37 @@ export class TaskInstanceEditDialog {
 
         this.endTimeButton.connect('clicked', () => {
             this._showTimePicker(this.endDate, (hours, minutes) => {
-                this.endDate.setHours(hours);
-                this.endDate.setMinutes(minutes);
-                this.endDate.setSeconds(0);
-                this._onDateTimeChanged();
-                this.endTimeLabel.set_label(this.endDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
-            });
+                // Create new end date with proposed time
+                const proposedEndDate = new Date(this.endDate);
+                proposedEndDate.setHours(hours);
+                proposedEndDate.setMinutes(minutes);
+                proposedEndDate.setSeconds(0);
+
+                // Check if this would create negative duration
+                if (proposedEndDate.getTime() >= this.startDate.getTime()) {
+                    // Valid: duration is not negative
+                    this.endDate = proposedEndDate;
+                    this._onDateTimeChanged();
+                    this._updateDateTimeButtonLabels();
+                }
+                // If negative duration: do nothing (ignore the change)
+            }, 'end');
         });
+
+        // Add scroll controller for end time button (use Core for logic)
+        const endTimeScrollController = new Gtk.EventControllerScroll({
+            flags: Gtk.EventControllerScrollFlags.VERTICAL,
+        });
+        endTimeScrollController.connect('scroll', (controller, dx, dy) => {
+            const minutesDelta = dy > 0 ? -1 : 1; // Scroll down = decrease, up = increase
+            const newEndDate = TimeUtils.adjustEndDateTime(this.startDate, this.endDate, minutesDelta, 'minutes');
+            if (newEndDate !== null) {
+                this.endDate = newEndDate;
+                this._onDateTimeChanged();
+            }
+            return true;
+        });
+        this.endTimeButton.add_controller(endTimeScrollController);
 
         // Date button with icon inside
         const endDateButtonBox = new Gtk.Box({
@@ -297,6 +357,21 @@ export class TaskInstanceEditDialog {
             });
         });
 
+        // Add scroll controller for end date button (use Core for logic)
+        const endDateScrollController = new Gtk.EventControllerScroll({
+            flags: Gtk.EventControllerScrollFlags.VERTICAL,
+        });
+        endDateScrollController.connect('scroll', (controller, dx, dy) => {
+            const daysDelta = dy > 0 ? -1 : 1; // Scroll down = decrease, up = increase
+            const newEndDate = TimeUtils.adjustEndDateTime(this.startDate, this.endDate, daysDelta, 'days');
+            if (newEndDate !== null) {
+                this.endDate = newEndDate;
+                this._onDateTimeChanged();
+            }
+            return true;
+        });
+        this.endDateButton.add_controller(endDateScrollController);
+
         endButtonsBox.append(this.endTimeButton);
         endButtonsBox.append(this.endDateButton);
 
@@ -328,11 +403,10 @@ export class TaskInstanceEditDialog {
      * Handle date/time changes - use Core for validation
      */
     _onDateTimeChanged() {
-        // Use Core TimeUtils to validate and correct dates
+        // Use Core TimeUtils to validate dates (prevents negative duration)
         const validated = TimeUtils.validateTaskDates(
             this.startDate,
-            this.endDate,
-            this.originalDuration
+            this.endDate
         );
 
         // Update dates with corrected values
@@ -390,6 +464,35 @@ export class TaskInstanceEditDialog {
             year: currentDate.getFullYear(),
         });
 
+        // Add scroll controller to calendar for day navigation
+        const calendarScrollController = new Gtk.EventControllerScroll({
+            flags: Gtk.EventControllerScrollFlags.VERTICAL,
+        });
+        calendarScrollController.connect('scroll', (controller, dx, dy) => {
+            const currentGtkDate = calendar.get_date();
+            const currentDay = currentGtkDate.get_day_of_month();
+            const currentMonth = currentGtkDate.get_month(); // 1-12
+            const currentYear = currentGtkDate.get_year();
+
+            // Convert to JS Date
+            const jsDate = new Date(currentYear, currentMonth - 1, currentDay);
+
+            // Adjust by 1 day
+            const daysDelta = dy > 0 ? -1 : 1;
+            const newDate = TimeUtils.adjustDateByDays(jsDate, daysDelta);
+
+            // Set new date to calendar (month is 0-11 for setting)
+            calendar.select_day(GLib.DateTime.new_local(
+                newDate.getFullYear(),
+                newDate.getMonth() + 1,
+                newDate.getDate(),
+                0, 0, 0
+            ));
+
+            return true;
+        });
+        calendar.add_controller(calendarScrollController);
+
         content.append(calendar);
 
         dateDialog.set_extra_child(content);
@@ -410,11 +513,17 @@ export class TaskInstanceEditDialog {
         dateDialog.present(window);
     }
 
-    _showTimePicker(currentDate, onTimeSelected) {
+    _showTimePicker(currentDate, onTimeSelected, type = 'start') {
         const timeDialog = new Adw.AlertDialog({
             heading: _('Choose time'),
-            body: _('Select the time for this task'),
+            body: TimeUtils.formatDate(currentDate.toISOString()),
         });
+
+        // Helper to update dialog body with current date
+        const updateDialogDate = () => {
+            const currentDateForType = type === 'start' ? this.startDate : this.endDate;
+            timeDialog.body = TimeUtils.formatDate(currentDateForType.toISOString());
+        };
 
         const content = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
@@ -429,6 +538,14 @@ export class TaskInstanceEditDialog {
         // Store current values
         let hours = currentDate.getHours();
         let minutes = currentDate.getMinutes();
+
+        // Calculate time limits based on type
+        let minHour = 0;
+        let minMinute = 0;
+        let maxHour = 23;
+        let maxMinute = 59;
+
+        // All logic now uses Core TimeUtils.adjustStartDateTime() and adjustEndDateTime()
 
         // Time picker with +/- buttons
         const timeBox = new Gtk.Box({
@@ -462,13 +579,51 @@ export class TaskInstanceEditDialog {
         });
 
         hourPlusButton.connect('clicked', () => {
-            hours = (hours + 1) % 24;
+            // Use Core logic (60 minutes = 1 hour)
+            const currentDate = new Date(type === 'start' ? this.startDate : this.endDate);
+            currentDate.setHours(hours);
+            currentDate.setMinutes(minutes);
+
+            if (type === 'start') {
+                const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, 60, 'minutes');
+                const newDate = adjusted.startDate;
+                hours = newDate.getHours();
+                this.startDate = newDate;
+                this.endDate = adjusted.endDate;
+            } else {
+                const newEndDate = TimeUtils.adjustEndDateTime(this.startDate, currentDate, 60, 'minutes');
+                if (newEndDate !== null) {
+                    hours = newEndDate.getHours();
+                    this.endDate = newEndDate;
+                }
+            }
+
             hourLabel.set_text(String(hours).padStart(2, '0'));
+            updateDialogDate();
         });
 
         hourMinusButton.connect('clicked', () => {
-            hours = (hours - 1 + 24) % 24;
+            // Use Core logic (60 minutes = 1 hour)
+            const currentDate = new Date(type === 'start' ? this.startDate : this.endDate);
+            currentDate.setHours(hours);
+            currentDate.setMinutes(minutes);
+
+            if (type === 'start') {
+                const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, -60, 'minutes');
+                const newDate = adjusted.startDate;
+                hours = newDate.getHours();
+                this.startDate = newDate;
+                this.endDate = adjusted.endDate;
+            } else {
+                const newEndDate = TimeUtils.adjustEndDateTime(this.startDate, currentDate, -60, 'minutes');
+                if (newEndDate !== null) {
+                    hours = newEndDate.getHours();
+                    this.endDate = newEndDate;
+                }
+            }
+
             hourLabel.set_text(String(hours).padStart(2, '0'));
+            updateDialogDate();
         });
 
         // Add scroll controller for hour label
@@ -476,14 +631,27 @@ export class TaskInstanceEditDialog {
             flags: Gtk.EventControllerScrollFlags.VERTICAL,
         });
         hourScrollController.connect('scroll', (controller, dx, dy) => {
-            if (dy < 0) {
-                // Scroll up - increase hours
-                hours = (hours + 1) % 24;
-            } else if (dy > 0) {
-                // Scroll down - decrease hours
-                hours = (hours - 1 + 24) % 24;
+            const currentDate = new Date(type === 'start' ? this.startDate : this.endDate);
+            currentDate.setHours(hours);
+            currentDate.setMinutes(minutes);
+
+            const delta = dy > 0 ? -60 : 60; // Scroll down = -1 hour, up = +1 hour
+
+            if (type === 'start') {
+                const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, delta, 'minutes');
+                hours = adjusted.startDate.getHours();
+                this.startDate = adjusted.startDate;
+                this.endDate = adjusted.endDate;
+            } else {
+                const newEndDate = TimeUtils.adjustEndDateTime(this.startDate, currentDate, delta, 'minutes');
+                if (newEndDate !== null) {
+                    hours = newEndDate.getHours();
+                    this.endDate = newEndDate;
+                }
             }
+
             hourLabel.set_text(String(hours).padStart(2, '0'));
+            updateDialogDate();
             return true;
         });
         hourBox.add_controller(hourScrollController);
@@ -532,12 +700,54 @@ export class TaskInstanceEditDialog {
         });
 
         minutePlusButton.connect('clicked', () => {
-            minutes = (minutes + 1) % 60;
+            // Use Core logic to adjust time (handles day overflow)
+            const currentDate = new Date(type === 'start' ? this.startDate : this.endDate);
+            currentDate.setHours(hours);
+            currentDate.setMinutes(minutes);
+
+            if (type === 'start') {
+                const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, 1, 'minutes');
+                const newDate = adjusted.startDate;
+                hours = newDate.getHours();
+                minutes = newDate.getMinutes();
+                this.startDate = newDate;
+                this.endDate = adjusted.endDate;
+            } else {
+                const newEndDate = TimeUtils.adjustEndDateTime(this.startDate, currentDate, 1, 'minutes');
+                if (newEndDate !== null) {
+                    hours = newEndDate.getHours();
+                    minutes = newEndDate.getMinutes();
+                    this.endDate = newEndDate;
+                }
+            }
+
+            hourLabel.set_text(String(hours).padStart(2, '0'));
             minuteLabel.set_text(String(minutes).padStart(2, '0'));
         });
 
         minuteMinusButton.connect('clicked', () => {
-            minutes = (minutes - 1 + 60) % 60;
+            // Use Core logic to adjust time (handles day overflow)
+            const currentDate = new Date(type === 'start' ? this.startDate : this.endDate);
+            currentDate.setHours(hours);
+            currentDate.setMinutes(minutes);
+
+            if (type === 'start') {
+                const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, -1, 'minutes');
+                const newDate = adjusted.startDate;
+                hours = newDate.getHours();
+                minutes = newDate.getMinutes();
+                this.startDate = newDate;
+                this.endDate = adjusted.endDate;
+            } else {
+                const newEndDate = TimeUtils.adjustEndDateTime(this.startDate, currentDate, -1, 'minutes');
+                if (newEndDate !== null) {
+                    hours = newEndDate.getHours();
+                    minutes = newEndDate.getMinutes();
+                    this.endDate = newEndDate;
+                }
+            }
+
+            hourLabel.set_text(String(hours).padStart(2, '0'));
             minuteLabel.set_text(String(minutes).padStart(2, '0'));
         });
 
@@ -546,13 +756,28 @@ export class TaskInstanceEditDialog {
             flags: Gtk.EventControllerScrollFlags.VERTICAL,
         });
         minuteScrollController.connect('scroll', (controller, dx, dy) => {
-            if (dy < 0) {
-                // Scroll up - increase minutes
-                minutes = (minutes + 1) % 60;
-            } else if (dy > 0) {
-                // Scroll down - decrease minutes
-                minutes = (minutes - 1 + 60) % 60;
+            const currentDate = new Date(type === 'start' ? this.startDate : this.endDate);
+            currentDate.setHours(hours);
+            currentDate.setMinutes(minutes);
+
+            const delta = dy > 0 ? -1 : 1; // Scroll down = -1 minute, up = +1 minute
+
+            if (type === 'start') {
+                const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, delta, 'minutes');
+                hours = adjusted.startDate.getHours();
+                minutes = adjusted.startDate.getMinutes();
+                this.startDate = adjusted.startDate;
+                this.endDate = adjusted.endDate;
+            } else {
+                const newEndDate = TimeUtils.adjustEndDateTime(this.startDate, currentDate, delta, 'minutes');
+                if (newEndDate !== null) {
+                    hours = newEndDate.getHours();
+                    minutes = newEndDate.getMinutes();
+                    this.endDate = newEndDate;
+                }
             }
+
+            hourLabel.set_text(String(hours).padStart(2, '0'));
             minuteLabel.set_text(String(minutes).padStart(2, '0'));
             return true;
         });
