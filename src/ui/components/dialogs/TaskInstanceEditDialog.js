@@ -218,9 +218,25 @@ export class TaskInstanceEditDialog {
 
         this.startDateButton.connect('clicked', () => {
             this._showDatePicker(this.startDate, (selectedDate) => {
-                this.startDate.setFullYear(selectedDate.get_year());
-                this.startDate.setMonth(selectedDate.get_month() - 1);
-                this.startDate.setDate(selectedDate.get_day_of_month());
+                // Preserve current time when changing date
+                const newDate = new Date(
+                    selectedDate.get_year(),
+                    selectedDate.get_month() - 1,
+                    selectedDate.get_day_of_month(),
+                    this.startDate.getHours(),
+                    this.startDate.getMinutes(),
+                    this.startDate.getSeconds()
+                );
+
+                // Use Core logic to adjust start date (preserves duration or moves both dates)
+                const adjusted = TimeUtils.adjustStartDateTime(
+                    this.startDate,
+                    this.endDate,
+                    Math.floor((newDate.getTime() - this.startDate.getTime()) / (1000 * 60)),
+                    'minutes'
+                );
+                this.startDate = adjusted.startDate;
+                this.endDate = adjusted.endDate;
                 this._onDateTimeChanged();
                 this.startDateLabel.set_label(this.startDate.toLocaleDateString('de-DE'));
             });
@@ -349,11 +365,25 @@ export class TaskInstanceEditDialog {
 
         this.endDateButton.connect('clicked', () => {
             this._showDatePicker(this.endDate, (selectedDate) => {
-                this.endDate.setFullYear(selectedDate.get_year());
-                this.endDate.setMonth(selectedDate.get_month() - 1);
-                this.endDate.setDate(selectedDate.get_day_of_month());
-                this._onDateTimeChanged();
-                this.endDateLabel.set_label(this.endDate.toLocaleDateString('de-DE'));
+                // Preserve current time when changing date
+                const newDate = new Date(
+                    selectedDate.get_year(),
+                    selectedDate.get_month() - 1,
+                    selectedDate.get_day_of_month(),
+                    this.endDate.getHours(),
+                    this.endDate.getMinutes(),
+                    this.endDate.getSeconds()
+                );
+
+                // Use Core logic to adjust end date (prevents negative duration)
+                const minutesDelta = Math.floor((newDate.getTime() - this.endDate.getTime()) / (1000 * 60));
+                const adjustedEndDate = TimeUtils.adjustEndDateTime(this.startDate, this.endDate, minutesDelta, 'minutes');
+
+                if (adjustedEndDate !== null) {
+                    this.endDate = adjustedEndDate;
+                    this._onDateTimeChanged();
+                    this.endDateLabel.set_label(this.endDate.toLocaleDateString('de-DE'));
+                }
             });
         });
 
@@ -474,8 +504,9 @@ export class TaskInstanceEditDialog {
             const currentMonth = currentGtkDate.get_month(); // 1-12
             const currentYear = currentGtkDate.get_year();
 
-            // Convert to JS Date
-            const jsDate = new Date(currentYear, currentMonth - 1, currentDay);
+            // Convert to JS Date (preserve current time!)
+            const jsDate = new Date(currentYear, currentMonth - 1, currentDay,
+                currentDate.getHours(), currentDate.getMinutes(), currentDate.getSeconds());
 
             // Adjust by 1 day
             const daysDelta = dy > 0 ? -1 : 1;
@@ -486,7 +517,7 @@ export class TaskInstanceEditDialog {
                 newDate.getFullYear(),
                 newDate.getMonth() + 1,
                 newDate.getDate(),
-                0, 0, 0
+                newDate.getHours(), newDate.getMinutes(), newDate.getSeconds()
             ));
 
             return true;
@@ -723,6 +754,7 @@ export class TaskInstanceEditDialog {
 
             hourLabel.set_text(String(hours).padStart(2, '0'));
             minuteLabel.set_text(String(minutes).padStart(2, '0'));
+            updateDialogDate();
         });
 
         minuteMinusButton.connect('clicked', () => {
@@ -749,6 +781,7 @@ export class TaskInstanceEditDialog {
 
             hourLabel.set_text(String(hours).padStart(2, '0'));
             minuteLabel.set_text(String(minutes).padStart(2, '0'));
+            updateDialogDate();
         });
 
         // Add scroll controller for minute label
@@ -779,6 +812,7 @@ export class TaskInstanceEditDialog {
 
             hourLabel.set_text(String(hours).padStart(2, '0'));
             minuteLabel.set_text(String(minutes).padStart(2, '0'));
+            updateDialogDate();
             return true;
         });
         minuteBox.add_controller(minuteScrollController);
