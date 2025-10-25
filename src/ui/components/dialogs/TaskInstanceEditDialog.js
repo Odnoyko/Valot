@@ -9,6 +9,7 @@ import Adw from 'gi://Adw?version=1';
 import GLib from 'gi://GLib';
 import { ProjectDropdown } from 'resource:///com/odnoyko/valot/ui/utils/projectDropdown.js';
 import { ClientDropdown } from 'resource:///com/odnoyko/valot/ui/utils/clientDropdown.js';
+import { TimeUtils } from 'resource:///com/odnoyko/valot/core/utils/TimeUtils.js';
 
 export class TaskInstanceEditDialog {
     constructor(taskInstance, parent, coreBridge) {
@@ -31,83 +32,64 @@ export class TaskInstanceEditDialog {
         // Get latest time entry (last one)
         this.latestEntry = timeEntries.length > 0 ? timeEntries[0] : null;
 
-        // Parse timestamps from latest entry or use defaults
+        // Parse timestamps from latest entry or use defaults (use Core TimeUtils)
         if (this.latestEntry) {
-            this.startDate = this._parseTimestamp(this.latestEntry.start_time);
-            this.endDate = this._parseTimestamp(this.latestEntry.end_time);
+            this.startDate = TimeUtils.parseTimestampFromDB(this.latestEntry.start_time);
+            this.endDate = TimeUtils.parseTimestampFromDB(this.latestEntry.end_time);
         } else {
             // No entries yet - use current date
             this.startDate = new Date();
             this.endDate = new Date();
         }
 
-        // Store original duration in seconds
-        this.originalDuration = Math.floor((this.endDate - this.startDate) / 1000);
+        // Store original duration in seconds (use Core TimeUtils)
+        this.originalDuration = TimeUtils.calculateDuration(
+            this.latestEntry?.start_time || this.startDate,
+            this.latestEntry?.end_time || this.endDate
+        );
 
         this._createDialog();
     }
 
-    _parseTimestamp(timestamp) {
-        if (!timestamp) return new Date();
-
-        // Parse local time from database
-        if (timestamp.includes('T')) {
-            const localTimeStr = timestamp.replace('T', ' ').substring(0, 19);
-            const [datePart, timePart] = localTimeStr.split(' ');
-            const [year, month, day] = datePart.split('-').map(Number);
-            const [hours, minutes, seconds] = timePart.split(':').map(Number);
-            return new Date(year, month - 1, day, hours, minutes, seconds || 0);
-        }
-        return new Date(timestamp);
-    }
-
-    _formatTimestamp(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-    }
-
-    _formatDuration(seconds) {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    }
-
     _createDialog() {
         this.dialog = new Adw.AlertDialog({
-            heading: _('Edit Task'),
-            body: `"${this.taskInstance.task_name}"`,
+            heading: _('Edit Task '),
         });
 
         const form = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
-            spacing: 12,
-            margin_top: 12,
-            margin_bottom: 12,
-            margin_start: 12,
-            margin_end: 12,
-            width_request: 600,
+            width_request: 350,
         });
 
-        // First row: name + project + client
-        const firstRow = new Gtk.Box({
+        // Subtitle with task name
+        const subtitleLabel = new Gtk.Label({
+            label: _('Duration'),
+            css_classes: ['subtitle'],
+            halign: Gtk.Align.CENTER,
+        });
+
+        // Duration counter (use Core TimeUtils for formatting)
+        this.durationLabel = new Gtk.Label({
+            label: TimeUtils.formatDuration(this.taskInstance.total_time || 0),
+            halign: Gtk.Align.CENTER,
+            css_classes: ['duration_counter'],
+        });
+
+        // Inline row: name + project + client
+        const inlineRow = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 12,
+            spacing: 10,
+            margin_bottom: 15,
         });
 
-        // Task name
+        // Task name entry
         this.nameEntry = new Gtk.Entry({
             text: this.taskInstance.task_name || '',
-            placeholder_text: _('Task name'),
+            placeholder_text: _('Task name....'),
             hexpand: true,
         });
 
-        // Project dropdown (minimalist button)
+        // Project dropdown
         this.projectDropdown = new ProjectDropdown(
             this.coreBridge,
             this.selectedProjectId,
@@ -116,7 +98,7 @@ export class TaskInstanceEditDialog {
             }
         );
 
-        // Client dropdown (minimalist button)
+        // Client dropdown
         this.clientDropdown = new ClientDropdown(
             this.coreBridge,
             this.selectedClientId,
@@ -125,77 +107,209 @@ export class TaskInstanceEditDialog {
             }
         );
 
-        firstRow.append(this.nameEntry);
-        firstRow.append(this.projectDropdown.getWidget());
-        firstRow.append(this.clientDropdown.getWidget());
+        inlineRow.append(this.nameEntry);
+        inlineRow.append(this.projectDropdown.getWidget());
+        inlineRow.append(this.clientDropdown.getWidget());
 
-        // DateTime row
-        const datetimeRow = new Gtk.Box({
+        // DateTime container (horizontal) - contains Start and End
+        const dateTimeContainer = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 12,
+            spacing: 10,
         });
 
-        // Start time
-        const startBox = this._createDateTimeBox('Start Time:', this.startDate, (newDate) => {
-            this.startDate = newDate;
-
-            // Check if start date/time is after end date/time (negative duration)
-            if (this.startDate.getTime() > this.endDate.getTime()) {
-                // Move end date forward to maintain original duration
-                console.log('Moving end date forward. Start:', this.startDate, 'Original duration:', this.originalDuration);
-                this.endDate = new Date(this.startDate.getTime() + this.originalDuration * 1000);
-                this.endDate.setSeconds(0); // Ensure seconds are reset
-                console.log('New end date:', this.endDate);
-                this._updateDateTimeButtonLabels();
-            }
-
-            this._updateDuration();
-        });
-
-        // End time
-        const endBox = this._createDateTimeBox('End Time:', this.endDate, (newDate) => {
-            this.endDate = newDate;
-
-            // Check if end date/time is before start date/time (negative duration)
-            if (this.endDate.getTime() < this.startDate.getTime()) {
-                // Move start date back to maintain original duration
-                console.log('Moving start date back. End:', this.endDate, 'Original duration:', this.originalDuration);
-                this.startDate = new Date(this.endDate.getTime() - this.originalDuration * 1000);
-                this.startDate.setSeconds(0); // Ensure seconds are reset
-                console.log('New start date:', this.startDate);
-                this._updateDateTimeButtonLabels();
-            }
-
-            this._updateDuration();
-        });
-
-        // Duration display
-        const durationBox = new Gtk.Box({
+        // Start column
+        const startColumn = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
-            spacing: 4,
         });
 
-        const durationLabel = new Gtk.Label({
-            label: _('Duration:'),
+        const startLabel = new Gtk.Label({
+            label: _('Start'),
             halign: Gtk.Align.START,
-            css_classes: ['caption'],
+            margin_start: 10,
+            margin_bottom: 4,
         });
 
-        this.durationLabel = new Gtk.Label({
-            label: this._formatDuration(this.taskInstance.total_time || 0),
-            css_classes: ['title-3'],
+        // Container for time/date buttons (horizontal)
+        const startButtonsBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+        });
+
+        // Time button with icon inside
+        const startTimeButtonBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 6,
+        });
+
+        const startTimeIcon = new Gtk.Image({
+            icon_name: 'preferences-system-time-symbolic',
+            pixel_size: 8,
+        });
+
+        const startTimeLabel = new Gtk.Label({
+            label: this.startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
+        });
+
+        startTimeButtonBox.append(startTimeIcon);
+        startTimeButtonBox.append(startTimeLabel);
+
+        this.startTimeButton = new Gtk.Button({
+            child: startTimeButtonBox,
+            css_classes: ['flat'],
+        });
+
+        this.startTimeLabel = startTimeLabel; // Сохраняем ссылку для обновления
+
+        this.startTimeButton.connect('clicked', () => {
+            this._showTimePicker(this.startDate, (hours, minutes) => {
+                this.startDate.setHours(hours);
+                this.startDate.setMinutes(minutes);
+                this.startDate.setSeconds(0);
+                this._onDateTimeChanged();
+                this.startTimeLabel.set_label(this.startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
+            });
+        });
+
+        // Date button with icon inside
+        const startDateButtonBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 6,
+        });
+
+        const startDateIcon = new Gtk.Image({
+            icon_name: 'x-office-calendar-symbolic',
+            pixel_size: 8,
+        });
+
+        const startDateLabel = new Gtk.Label({
+            label: this.startDate.toLocaleDateString('de-DE'),
+        });
+
+        startDateButtonBox.append(startDateIcon);
+        startDateButtonBox.append(startDateLabel);
+
+        this.startDateButton = new Gtk.Button({
+            child: startDateButtonBox,
+            css_classes: ['flat'],
+        });
+
+        this.startDateLabel = startDateLabel; // Сохраняем ссылку для обновления
+
+        this.startDateButton.connect('clicked', () => {
+            this._showDatePicker(this.startDate, (selectedDate) => {
+                this.startDate.setFullYear(selectedDate.get_year());
+                this.startDate.setMonth(selectedDate.get_month() - 1);
+                this.startDate.setDate(selectedDate.get_day_of_month());
+                this._onDateTimeChanged();
+                this.startDateLabel.set_label(this.startDate.toLocaleDateString('de-DE'));
+            });
+        });
+
+        startButtonsBox.append(this.startTimeButton);
+        startButtonsBox.append(this.startDateButton);
+
+        startColumn.append(startLabel);
+        startColumn.append(startButtonsBox);
+
+        // End column
+        const endColumn = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+        });
+
+        const endLabel = new Gtk.Label({
+            label: _('End'),
             halign: Gtk.Align.START,
+            margin_start: 10,
+            margin_bottom: 4,
         });
 
-        durationBox.append(durationLabel);
-        durationBox.append(this.durationLabel);
+        // Container for time/date buttons (horizontal)
+        const endButtonsBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+        });
 
-        datetimeRow.append(startBox);
-        datetimeRow.append(endBox);
-        datetimeRow.append(durationBox);
+        // Time button with icon inside
+        const endTimeButtonBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 6,
+        });
 
-        form.append(firstRow);
-        form.append(datetimeRow);
+        const endTimeIcon = new Gtk.Image({
+            icon_name: 'preferences-system-time-symbolic',
+            pixel_size: 8,
+        });
+
+        const endTimeLabel = new Gtk.Label({
+            label: this.endDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
+        });
+
+        endTimeButtonBox.append(endTimeIcon);
+        endTimeButtonBox.append(endTimeLabel);
+
+        this.endTimeButton = new Gtk.Button({
+            child: endTimeButtonBox,
+            css_classes: ['flat'],
+        });
+
+        this.endTimeLabel = endTimeLabel; // Сохраняем ссылку для обновления
+
+        this.endTimeButton.connect('clicked', () => {
+            this._showTimePicker(this.endDate, (hours, minutes) => {
+                this.endDate.setHours(hours);
+                this.endDate.setMinutes(minutes);
+                this.endDate.setSeconds(0);
+                this._onDateTimeChanged();
+                this.endTimeLabel.set_label(this.endDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
+            });
+        });
+
+        // Date button with icon inside
+        const endDateButtonBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 6,
+        });
+
+        const endDateIcon = new Gtk.Image({
+            icon_name: 'x-office-calendar-symbolic',
+            pixel_size: 8,
+        });
+
+        const endDateLabel = new Gtk.Label({
+            label: this.endDate.toLocaleDateString('de-DE'),
+        });
+
+        endDateButtonBox.append(endDateIcon);
+        endDateButtonBox.append(endDateLabel);
+
+        this.endDateButton = new Gtk.Button({
+            child: endDateButtonBox,
+            css_classes: ['flat'],
+        });
+
+        this.endDateLabel = endDateLabel; // Сохраняем ссылку для обновления
+
+        this.endDateButton.connect('clicked', () => {
+            this._showDatePicker(this.endDate, (selectedDate) => {
+                this.endDate.setFullYear(selectedDate.get_year());
+                this.endDate.setMonth(selectedDate.get_month() - 1);
+                this.endDate.setDate(selectedDate.get_day_of_month());
+                this._onDateTimeChanged();
+                this.endDateLabel.set_label(this.endDate.toLocaleDateString('de-DE'));
+            });
+        });
+
+        endButtonsBox.append(this.endTimeButton);
+        endButtonsBox.append(this.endDateButton);
+
+        endColumn.append(endLabel);
+        endColumn.append(endButtonsBox);
+
+        dateTimeContainer.append(startColumn);
+        dateTimeContainer.append(endColumn);
+
+        form.append(subtitleLabel);
+        form.append(this.durationLabel);
+        form.append(inlineRow);
+        form.append(dateTimeContainer);
 
         this.dialog.set_extra_child(form);
         this.dialog.add_response('cancel', _('Cancel'));
@@ -210,102 +324,48 @@ export class TaskInstanceEditDialog {
         });
     }
 
-    _createDateTimeBox(labelText, initialDate, onChange) {
-        const box = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 4,
-        });
+    /**
+     * Handle date/time changes - use Core for validation
+     */
+    _onDateTimeChanged() {
+        // Use Core TimeUtils to validate and correct dates
+        const validated = TimeUtils.validateTaskDates(
+            this.startDate,
+            this.endDate,
+            this.originalDuration
+        );
 
-        const label = new Gtk.Label({
-            label: labelText,
-            halign: Gtk.Align.START,
-            css_classes: ['caption'],
-        });
+        // Update dates with corrected values
+        this.startDate = validated.startDate;
+        this.endDate = validated.endDate;
 
-        const buttonBox = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 8,
-        });
+        // Update UI labels
+        this._updateDateTimeButtonLabels();
 
-        // Time button
-        const timeButton = new Gtk.Button({
-            label: initialDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
-            css_classes: ['flat'],
-            tooltip_text: _('Change time'),
-        });
-
-        // Date button
-        const dateButton = new Gtk.Button({
-            label: initialDate.toLocaleDateString('de-DE'),
-            css_classes: ['flat'],
-            tooltip_text: _('Change date'),
-        });
-
-        // Store button references for updating later
-        if (labelText === 'Start Time:') {
-            this.startTimeButton = timeButton;
-            this.startDateButton = dateButton;
-        } else if (labelText === 'End Time:') {
-            this.endTimeButton = timeButton;
-            this.endDateButton = dateButton;
-        }
-
-        // Time button click - show time picker
-        timeButton.connect('clicked', () => {
-            // Get current time from the date object (it may have been updated)
-            const currentDate = labelText === 'Start Time:' ? this.startDate : this.endDate;
-            this._showTimePicker(currentDate, (hours, minutes) => {
-                currentDate.setHours(hours);
-                currentDate.setMinutes(minutes);
-                currentDate.setSeconds(0); // Reset seconds when changing time
-                onChange(currentDate);
-                timeButton.set_label(currentDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
-                this._updateDuration();
-            });
-        });
-
-        // Date button click - show date picker
-        dateButton.connect('clicked', () => {
-            // Get current date from the date object (it may have been updated)
-            const currentDate = labelText === 'Start Time:' ? this.startDate : this.endDate;
-            this._showDatePicker(currentDate, (selectedDate) => {
-                // GTK get_month() returns 1-12, but JavaScript needs 0-11
-                currentDate.setFullYear(selectedDate.get_year());
-                currentDate.setMonth(selectedDate.get_month() - 1);
-                currentDate.setDate(selectedDate.get_day_of_month());
-
-                onChange(currentDate);
-                dateButton.set_label(currentDate.toLocaleDateString('de-DE'));
-                this._updateDuration();
-            });
-        });
-
-        buttonBox.append(timeButton);
-        buttonBox.append(dateButton);
-
-        box.append(label);
-        box.append(buttonBox);
-
-        return box;
+        // Update duration display (use Core TimeUtils for formatting)
+        this.durationLabel.set_label(TimeUtils.formatDuration(validated.duration));
     }
 
-    _showDateTimePicker(currentDate, onSelected) {
-        // First show date picker
-        this._showDatePicker(currentDate, (selectedDate) => {
-            // Then show time picker
-            this._showTimePicker(currentDate, (hours, minutes) => {
-                // Combine date and time
-                const newDate = new Date(
-                    selectedDate.get_year(),
-                    selectedDate.get_month(),
-                    selectedDate.get_day_of_month(),
-                    hours,
-                    minutes,
-                    0
-                );
-                onSelected(newDate);
-            });
-        });
+    /**
+     * Update all date/time button labels
+     */
+    _updateDateTimeButtonLabels() {
+        if (this.startTimeLabel) {
+            this.startTimeLabel.set_label(
+                this.startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+            );
+        }
+        if (this.startDateLabel) {
+            this.startDateLabel.set_label(this.startDate.toLocaleDateString('de-DE'));
+        }
+        if (this.endTimeLabel) {
+            this.endTimeLabel.set_label(
+                this.endDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+            );
+        }
+        if (this.endDateLabel) {
+            this.endDateLabel.set_label(this.endDate.toLocaleDateString('de-DE'));
+        }
     }
 
     _showDatePicker(currentDate, onDateSelected) {
@@ -541,33 +601,6 @@ export class TaskInstanceEditDialog {
         timeDialog.present(window);
     }
 
-    _updateDuration() {
-        const duration = Math.floor((this.endDate - this.startDate) / 1000);
-        this.durationLabel.set_label(this._formatDuration(duration));
-    }
-
-    _updateDateTimeButtonLabels() {
-        // Update start time/date buttons
-        if (this.startTimeButton) {
-            this.startTimeButton.set_label(
-                this.startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-            );
-        }
-        if (this.startDateButton) {
-            this.startDateButton.set_label(this.startDate.toLocaleDateString('de-DE'));
-        }
-
-        // Update end time/date buttons
-        if (this.endTimeButton) {
-            this.endTimeButton.set_label(
-                this.endDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-            );
-        }
-        if (this.endDateButton) {
-            this.endDateButton.set_label(this.endDate.toLocaleDateString('de-DE'));
-        }
-    }
-
     async _saveChanges() {
         try {
 
@@ -593,11 +626,11 @@ export class TaskInstanceEditDialog {
                 });
             }
 
-            // Update project, client, and last_used_at (use ID=1 for default, not null)
+            // Update project, client, and last_used_at (use Core TimeUtils for formatting)
             await this.coreBridge.updateTaskInstance(this.taskInstance.id, {
                 project_id: this.selectedProjectId,
                 client_id: this.selectedClientId,
-                last_used_at: this._formatTimestamp(this.endDate),
+                last_used_at: TimeUtils.formatTimestampForDB(this.endDate),
             });
 
             // If editing currently tracked task, update tracking state in Core
@@ -618,13 +651,16 @@ export class TaskInstanceEditDialog {
                 });
             }
 
-            // Update time entry timestamps if we have one
+            // Update time entry timestamps if we have one (use Core TimeUtils)
             if (this.latestEntry) {
-                const duration = Math.floor((this.endDate - this.startDate) / 1000);
+                const duration = TimeUtils.calculateDuration(
+                    this.startDate,
+                    this.endDate
+                );
 
                 await this.coreBridge.updateTimeEntry(this.latestEntry.id, {
-                    start_time: this._formatTimestamp(this.startDate),
-                    end_time: this._formatTimestamp(this.endDate),
+                    start_time: TimeUtils.formatTimestampForDB(this.startDate),
+                    end_time: TimeUtils.formatTimestampForDB(this.endDate),
                     duration: duration,
                 });
 

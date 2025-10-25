@@ -603,5 +603,17 @@ window.dark .subtitle {
 }
 .subtitle {
   font-size: 14px;
-  text-align: center;
+}
+.space {
+  padding: 20px;
+}
+
+/* AlertDialog message-area padding override */
+.message-area {
+  border-spacing: 0px 18px;
+}
+.duration_counter {
+  font-size: 26px;
+  margin-bottom: 24px;
+  font-weight: 800;
 }

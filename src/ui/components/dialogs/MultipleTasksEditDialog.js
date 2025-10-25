@@ -8,6 +8,7 @@ import Gtk from 'gi://Gtk?version=4.0';
 import Adw from 'gi://Adw?version=1';
 import { ProjectDropdown } from 'resource:///com/odnoyko/valot/ui/utils/projectDropdown.js';
 import { ClientDropdown } from 'resource:///com/odnoyko/valot/ui/utils/clientDropdown.js';
+import { TimeUtils } from 'resource:///com/odnoyko/valot/core/utils/TimeUtils.js';
 
 export class MultipleTasksEditDialog {
     constructor(taskInstances, parent, coreBridge) {
@@ -28,87 +29,83 @@ export class MultipleTasksEditDialog {
         const count = this.taskInstances.length;
 
         this.dialog = new Adw.AlertDialog({
-            heading: _('Edit Multiple Tasks'),
-            body: `Editing ${count} task${count > 1 ? 's' : ''}`,
+            heading: _(`Edit ${count} task${count > 1 ? 's' : ''}`),
         });
 
         const form = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
-            spacing: 12,
-            margin_top: 12,
-            margin_bottom: 12,
-            margin_start: 12,
-            margin_end: 12,
-            width_request: 700,
+            width_request: 350,
         });
 
-        // Calculate total duration of selected tasks
+        // Calculate total duration of selected tasks (use Core TimeUtils)
         const totalDuration = this._calculateTotalDuration();
 
-        // Info label
-        const infoLabel = new Gtk.Label({
-            label: 'Leave fields empty to keep current values',
-            css_classes: ['dim-label', 'caption'],
-            xalign: 0,
+        // Subtitle - "Duration"
+        const subtitleLabel = new Gtk.Label({
+            label: _('Duration'),
+            css_classes: ['subtitle'],
+            halign: Gtk.Align.CENTER,
         });
-        form.append(infoLabel);
 
-        // Single row with all fields
-        const fieldsRow = new Gtk.Box({
+        // Duration counter (use Core TimeUtils for formatting)
+        this.durationLabel = new Gtk.Label({
+            label: TimeUtils.formatDuration(totalDuration),
+            halign: Gtk.Align.CENTER,
+            css_classes: ['duration_counter'],
+        });
+
+        // Inline row: name + project + client
+        const inlineRow = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 8,
+            spacing: 10,
+            margin_bottom: 15,
         });
 
         // Task name entry (optional)
         this.nameEntry = new Gtk.Entry({
-            placeholder_text: _('Task Name (optional)'),
+            placeholder_text: _('Task name....'),
             hexpand: true,
         });
-        fieldsRow.append(this.nameEntry);
 
-        // Project dropdown
+        // Project dropdown (use ID=1 for default, not null)
         this.projectDropdown = new ProjectDropdown(
             this.coreBridge,
-            null, // No initial selection
+            1, // Default project
             (selectedProject) => {
                 this.selectedProjectId = selectedProject ? selectedProject.id : null;
             }
         );
-        fieldsRow.append(this.projectDropdown.getWidget());
 
-        // Client dropdown
+        // Client dropdown (use ID=1 for default, not null)
         this.clientDropdown = new ClientDropdown(
             this.coreBridge,
-            null, // No initial selection
+            1, // Default client
             (selectedClient) => {
                 this.selectedClientId = selectedClient ? selectedClient.id : null;
             }
         );
-        fieldsRow.append(this.clientDropdown.getWidget());
 
-        // Duration label (read-only, shows total)
-        this.durationLabel = new Gtk.Label({
-            label: this._formatDuration(totalDuration),
-            css_classes: ['title-4'],
-        });
-        fieldsRow.append(this.durationLabel);
-
-        form.append(fieldsRow);
+        inlineRow.append(this.nameEntry);
+        inlineRow.append(this.projectDropdown.getWidget());
+        inlineRow.append(this.clientDropdown.getWidget());
 
         // Help text
         const helpLabel = new Gtk.Label({
-            label: 'Changes will be applied to all selected tasks',
+            label: _('Changes will be applied to all selected tasks'),
             css_classes: ['dim-label', 'caption'],
-            xalign: 0,
-            margin_top: 6,
+            halign: Gtk.Align.CENTER,
         });
+
+        form.append(subtitleLabel);
+        form.append(this.durationLabel);
+        form.append(inlineRow);
         form.append(helpLabel);
 
         this.dialog.set_extra_child(form);
 
         // Add buttons
         this.dialog.add_response('cancel', _('Cancel'));
-        this.dialog.add_response('save', _('Save Changes'));
+        this.dialog.add_response('save', _('Save changes'));
         this.dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
 
         // Handle responses
@@ -223,13 +220,6 @@ export class MultipleTasksEditDialog {
         return this.taskInstances.reduce((total, task) => {
             return total + (task.total_time || 0);
         }, 0);
-    }
-
-    _formatDuration(seconds) {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     }
 
     present(parent) {

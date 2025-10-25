@@ -439,8 +439,12 @@ export class ReportsPage {
 
         const valueLabel = new Gtk.Label({
             label: defaultValue,
-            css_classes: ['title-1'],
+            // Remove css_classes for real-time updateable labels
+            // css_classes: ['title-1'],
         });
+
+        // Apply title-1 CSS manually to avoid GTK render cache issues
+        valueLabel.add_css_class('title-1');
 
         const descLabel = new Gtk.Label({
             label: label,
@@ -453,7 +457,7 @@ export class ReportsPage {
 
         card.append(contentBox);
 
-        return { card, valueLabel };
+        return { card, valueLabel, contentBox };
     }
 
     /**
