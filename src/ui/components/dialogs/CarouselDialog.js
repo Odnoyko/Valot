@@ -206,7 +206,7 @@ export const CarouselDialog = GObject.registerClass({
             {
                 imagePath: '/com/odnoyko/valot/data/slides/slide5.svg',
                 title: _('Pomodoro Timer'),
-                description: _('Long press track button or press P key to activate Pomodoro mode'),
+                description: _('Long press track button to activate Pomodoro mode'),
                 hint: _('Configure duration in settings • Auto-stops after timer ends')
             }
         ];

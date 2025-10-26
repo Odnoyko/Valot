@@ -106,6 +106,8 @@
           <li>Updated Export to the PDF</li>
           <li>Added multi-currency export</li>
           <li>Added DB Navigator and Providers System</li>
+          <li>Added Database Export - backup your data to a file</li>
+          <li>Added Database Reset - reset database and restart the app</li>
           <li>Translations updated to new structure</li>
         </ul>
       </description>

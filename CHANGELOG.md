@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Future features and improvements will be listed here
 
 ## [0.9.0] - 26.10.2025
-    
+
     - Fixed critical perfomance bugs which crashes our App.
     - New Multiplatform Architecture, focused to make Plugins and Addons support.
     - Created Migration tool for adopt old DB version to new .
@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Updated Export to the PDF
     - Added multi-currency export.
     - Added DB Navigator and Providers System.
+    - Added Database Export - backup your data to a file
+    - Added Database Reset - reset database and restart the app
     - Translations updated to new structure
 
 ## [0.8.4] - 06.10.2025

@@ -1283,6 +1283,11 @@ export const PreferencesDialog = GObject.registerClass({
                 });
                 this.add_toast(toast);
             } catch (error) {
+                // User cancelled the dialog - this is normal, don't show error
+                if (error.matches(Gtk.DialogError, Gtk.DialogError.DISMISSED)) {
+                    return;
+                }
+
                 console.error('Error exporting database:', error);
                 const toast = new Adw.Toast({
                     title: _('Failed to export database'),
@@ -1319,32 +1324,14 @@ export const PreferencesDialog = GObject.registerClass({
                     if (dbFile.query_exists(null)) {
                         dbFile.delete(null);
                     }
-
-                    // Show success message and ask to restart
-                    const restartDialog = new Adw.AlertDialog({
-                        heading: _('Database Reset'),
-                        body: _('The database has been reset. Please restart the application to create a new database.'),
-                    });
-
-                    restartDialog.add_response('ok', _('OK'));
-                    restartDialog.set_default_response('ok');
-
-                    restartDialog.connect('response', () => {
-                        // Close the app
-                        const app = this.get_application();
-                        if (app) {
-                            app.quit();
-                        }
-                    });
-
-                    restartDialog.present(this);
                 } catch (error) {
                     console.error('Error resetting database:', error);
-                    const toast = new Adw.Toast({
-                        title: _('Failed to reset database'),
-                        timeout: 3,
-                    });
-                    this.add_toast(toast);
+                }
+
+                // Close the app after confirmation regardless of deletion result
+                const window = this.get_transient_for();
+                if (window) {
+                    window.close();
                 }
             }
         });

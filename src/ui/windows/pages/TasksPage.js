@@ -728,7 +728,9 @@ export class TasksPage {
         this.taskSearch.connect('search-changed', () => {
             const query = this.taskSearch.get_text();
             this.currentTasksPage = 0;
-            this._filterTasks(query);
+            this._filterTasks(query).catch(err => {
+                console.error('Error filtering tasks:', err);
+            });
         });
 
         box.append(this.taskSearch);
@@ -1063,7 +1065,7 @@ export class TasksPage {
         if (query.trim()) {
             const lowerQuery = query.toLowerCase();
             filtered = filtered.filter(task =>
-                task.name.toLowerCase().includes(lowerQuery) ||
+                (task.name && task.name.toLowerCase().includes(lowerQuery)) ||
                 (task.project_name && task.project_name.toLowerCase().includes(lowerQuery))
             );
         }
@@ -1521,27 +1523,48 @@ export class TasksPage {
     }
 
     /**
-     * Select all tasks on current page
+     * Toggle select all tasks on current page (select all or deselect all)
      */
-    _selectAllOnPage() {
+    _toggleSelectAll() {
         // Get all groups on current page
         const allTaskGroups = this._groupSimilarTasks(this.filteredTasks);
         const start = this.currentTasksPage * this.tasksPerPage;
         const end = Math.min(start + this.tasksPerPage, allTaskGroups.length);
         const groupsOnPage = allTaskGroups.slice(start, end);
 
-        // Select all tasks and stacks on current page
-        groupsOnPage.forEach(group => {
-            // Add all tasks from this group
-            group.tasks.forEach(task => {
-                this.selectedTasks.add(task.id);
-            });
-
-            // If group has multiple tasks, mark stack as selected
-            if (group.tasks.length > 1) {
-                this.selectedStacks.add(group.groupKey);
+        // Check if all tasks on current page are already selected
+        let allSelected = true;
+        for (const group of groupsOnPage) {
+            for (const task of group.tasks) {
+                if (!this.selectedTasks.has(task.id)) {
+                    allSelected = false;
+                    break;
+                }
             }
-        });
+            if (!allSelected) break;
+        }
+
+        if (allSelected) {
+            // All are selected - deselect all on current page
+            groupsOnPage.forEach(group => {
+                group.tasks.forEach(task => {
+                    this.selectedTasks.delete(task.id);
+                });
+                if (group.tasks.length > 1) {
+                    this.selectedStacks.delete(group.groupKey);
+                }
+            });
+        } else {
+            // Not all selected - select all on current page
+            groupsOnPage.forEach(group => {
+                group.tasks.forEach(task => {
+                    this.selectedTasks.add(task.id);
+                });
+                if (group.tasks.length > 1) {
+                    this.selectedStacks.add(group.groupKey);
+                }
+            });
+        }
 
         // Update display
         this._updateTasksDisplay();
@@ -1822,6 +1845,15 @@ export class TasksPage {
     async refresh() {
         await this.loadTasks();
         // Dropdowns reload themselves automatically via Core events
+    }
+
+    /**
+     * Focus search input (called by Ctrl+F shortcut)
+     */
+    _focusSearch() {
+        if (this.taskSearch) {
+            this.taskSearch.grab_focus();
+        }
     }
 
     /**

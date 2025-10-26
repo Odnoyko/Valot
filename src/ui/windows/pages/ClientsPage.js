@@ -1312,17 +1312,26 @@ export class ClientsPage {
     /**
      * Select all clients on current page (except default client ID=1)
      */
-    _selectAllOnPage() {
+    _toggleSelectAll() {
         const start = this.currentClientsPage * this.clientsPerPage;
         const end = Math.min(start + this.clientsPerPage, this.filteredClients.length);
         const clientsOnPage = this.filteredClients.slice(start, end);
 
-        // Select all clients except default (ID=1)
-        clientsOnPage.forEach(client => {
-            if (client.id !== 1) {
+        // Check if all selectable clients on page are selected
+        const selectableClients = clientsOnPage.filter(c => c.id !== 1);
+        const allSelected = selectableClients.every(c => this.selectedClients.has(c.id));
+
+        if (allSelected) {
+            // Deselect all on current page
+            selectableClients.forEach(client => {
+                this.selectedClients.delete(client.id);
+            });
+        } else {
+            // Select all on current page (except default ID=1)
+            selectableClients.forEach(client => {
                 this.selectedClients.add(client.id);
-            }
-        });
+            });
+        }
 
         // Update display
         this._updateClientsDisplay();
@@ -1398,5 +1407,14 @@ export class ClientsPage {
      */
     async refresh() {
         await this.loadClients();
+    }
+
+    /**
+     * Focus search input (called by Ctrl+F shortcut)
+     */
+    _focusSearch() {
+        if (this.clientSearch) {
+            this.clientSearch.grab_focus();
+        }
     }
 }

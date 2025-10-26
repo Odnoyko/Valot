@@ -493,21 +493,21 @@ export const ValotMainWindow = GObject.registerClass({
 
             const pageTag = visiblePage.get_tag();
 
-            // Select all items on current page based on page type
+            // Toggle select all items on current page based on page type
             switch (pageTag) {
                 case 'tasks':
-                    if (this.pages.tasks && this.pages.tasks._selectAllOnPage) {
-                        this.pages.tasks._selectAllOnPage();
+                    if (this.pages.tasks && this.pages.tasks._toggleSelectAll) {
+                        this.pages.tasks._toggleSelectAll();
                     }
                     break;
                 case 'projects':
-                    if (this.pages.projects && this.pages.projects._selectAllOnPage) {
-                        this.pages.projects._selectAllOnPage();
+                    if (this.pages.projects && this.pages.projects._toggleSelectAll) {
+                        this.pages.projects._toggleSelectAll();
                     }
                     break;
                 case 'clients':
-                    if (this.pages.clients && this.pages.clients._selectAllOnPage) {
-                        this.pages.clients._selectAllOnPage();
+                    if (this.pages.clients && this.pages.clients._toggleSelectAll) {
+                        this.pages.clients._toggleSelectAll();
                     }
                     break;
             }
@@ -516,6 +516,82 @@ export const ValotMainWindow = GObject.registerClass({
         // Add action and set Shift+A accelerator
         this.application.add_action(selectAllAction);
         this.application.set_accels_for_action('app.select-all-page', ['<Alt>a']);
+
+        // Create application-level action for Escape (deselect all)
+        const deselectAllAction = new Gio.SimpleAction({
+            name: 'deselect-all-page',
+            parameter_type: null
+        });
+
+        deselectAllAction.connect('activate', () => {
+            // Get current visible page
+            const visiblePage = this.navigationView.get_visible_page();
+            if (!visiblePage) return;
+
+            const pageTag = visiblePage.get_tag();
+
+            // Deselect all items on current page based on page type
+            switch (pageTag) {
+                case 'tasks':
+                    if (this.pages.tasks && this.pages.tasks._clearSelection) {
+                        this.pages.tasks._clearSelection();
+                    }
+                    break;
+                case 'projects':
+                    if (this.pages.projects && this.pages.projects._clearSelection) {
+                        this.pages.projects._clearSelection();
+                    }
+                    break;
+                case 'clients':
+                    if (this.pages.clients && this.pages.clients._clearSelection) {
+                        this.pages.clients._clearSelection();
+                    }
+                    break;
+            }
+        });
+
+        // Add action and set Escape accelerator
+        this.application.add_action(deselectAllAction);
+        this.application.set_accels_for_action('app.deselect-all-page', ['Escape']);
+
+        // Create application-level action for Ctrl+F (focus search)
+        const focusSearchAction = new Gio.SimpleAction({
+            name: 'focus-search',
+            parameter_type: null
+        });
+
+        focusSearchAction.connect('activate', () => {
+            // Get current visible page
+            const visiblePage = this.navigationView.get_visible_page();
+            if (!visiblePage) {
+                return;
+            }
+
+            const pageTag = visiblePage.get_tag();
+
+            // Focus search input on current page
+            switch (pageTag) {
+                case 'tasks':
+                    if (this.pages.tasks && this.pages.tasks._focusSearch) {
+                        this.pages.tasks._focusSearch();
+                    }
+                    break;
+                case 'projects':
+                    if (this.pages.projects && this.pages.projects._focusSearch) {
+                        this.pages.projects._focusSearch();
+                    }
+                    break;
+                case 'clients':
+                    if (this.pages.clients && this.pages.clients._focusSearch) {
+                        this.pages.clients._focusSearch();
+                    }
+                    break;
+            }
+        });
+
+        // Add action and set Ctrl+F accelerator
+        this.application.add_action(focusSearchAction);
+        this.application.set_accels_for_action('app.focus-search', ['<Primary>f']);
     }
 
     /**

@@ -879,17 +879,26 @@ export class ProjectsPage {
     /**
      * Select all projects on current page (except default project ID=1)
      */
-    _selectAllOnPage() {
+    _toggleSelectAll() {
         const start = this.currentProjectsPage * this.projectsPerPage;
         const end = Math.min(start + this.projectsPerPage, this.filteredProjects.length);
         const projectsOnPage = this.filteredProjects.slice(start, end);
 
-        // Select all projects except default (ID=1)
-        projectsOnPage.forEach(project => {
-            if (project.id !== 1) {
+        // Check if all selectable projects on page are selected
+        const selectableProjects = projectsOnPage.filter(p => p.id !== 1);
+        const allSelected = selectableProjects.every(p => this.selectedProjects.has(p.id));
+
+        if (allSelected) {
+            // Deselect all on current page
+            selectableProjects.forEach(project => {
+                this.selectedProjects.delete(project.id);
+            });
+        } else {
+            // Select all on current page (except default ID=1)
+            selectableProjects.forEach(project => {
                 this.selectedProjects.add(project.id);
-            }
-        });
+            });
+        }
 
         // Update display
         this._updateProjectsDisplay();
@@ -1179,5 +1188,14 @@ export class ProjectsPage {
      */
     async refresh() {
         await this.loadProjects();
+    }
+
+    /**
+     * Focus search input (called by Ctrl+F shortcut)
+     */
+    _focusSearch() {
+        if (this.projectSearch) {
+            this.projectSearch.grab_focus();
+        }
     }
 }
