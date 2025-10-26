@@ -1678,8 +1678,12 @@ export class ReportsPage {
             this._currentTaskInstanceIds
         );
 
-        // Cache the base stats total for real-time updates
+        // Cache the base stats total and earnings for real-time updates
         this._cachedStatsTotal = stats.totalTime;
+        this._cachedEarningsByCurrency = stats.earningsByCurrency;
+
+        // Cache current tracking task client info for real-time earnings calculation
+        await this._cacheCurrentTrackingClient();
 
         // Calculate display total (add current elapsed if tracking)
         let displayTotal = stats.totalTime;
@@ -1693,8 +1697,26 @@ export class ReportsPage {
         this.activeProjectsLabel.set_label(stats.activeProjects.toString());
         this.trackedTasksLabel.set_label(stats.trackedTasks.toString());
 
-        // Update currency carousel
-        this._updateCurrencyCarousel(stats.earningsByCurrency);
+        // Update currency carousel - only rebuild if needed (structure changed)
+        // Real-time updates will handle the values
+        if (trackingState.isTracking) {
+            // If tracking, real-time update will handle carousel update
+            // Just rebuild structure if currencies changed
+            const currentCurrencies = this._currencyCarouselPages ?
+                Array.from(this._currencyCarouselPages.keys()).sort() : [];
+            const newCurrencies = stats.earningsByCurrency ?
+                Array.from(stats.earningsByCurrency.keys()).sort() : [];
+
+            const currenciesChanged = currentCurrencies.length !== newCurrencies.length ||
+                !currentCurrencies.every((c, i) => c === newCurrencies[i]);
+
+            if (currenciesChanged) {
+                this._rebuildCurrencyCarousel(stats.earningsByCurrency);
+            }
+        } else {
+            // Not tracking - update carousel normally
+            this._updateCurrencyCarousel(stats.earningsByCurrency);
+        }
     }
 
     /**
@@ -1718,6 +1740,56 @@ export class ReportsPage {
 
         // Update Total Time label (no async, no glitches)
         this.totalTimeLabel.set_label(this._formatDuration(totalTime));
+
+        // Update currency earnings in real-time
+        this._updateCurrencyEarningsRealtime(trackingState, currentElapsed);
+    }
+
+    /**
+     * Cache current tracking task client info for real-time earnings updates
+     */
+    async _cacheCurrentTrackingClient() {
+        const trackingState = this.coreBridge.getTrackingState();
+
+        if (!trackingState.isTracking || !trackingState.currentTaskInstanceId) {
+            this._cachedTrackingClient = null;
+            return;
+        }
+
+        try {
+            const taskInstance = await this.coreBridge.getTaskInstance(trackingState.currentTaskInstanceId);
+            if (!taskInstance) {
+                this._cachedTrackingClient = null;
+                return;
+            }
+
+            const client = await this.coreBridge.getClient(taskInstance.client_id);
+            this._cachedTrackingClient = client;
+        } catch (error) {
+            this._cachedTrackingClient = null;
+        }
+    }
+
+    /**
+     * Update currency earnings in real-time
+     * Calculates current task earnings and adds to cached base
+     */
+    _updateCurrencyEarningsRealtime(trackingState, currentElapsed) {
+        if (!this._cachedEarningsByCurrency) return;
+        if (!this._cachedTrackingClient || !this._cachedTrackingClient.rate) return;
+
+        // Calculate current earnings for this tracking session
+        const hoursElapsed = currentElapsed / 3600;
+        const currentEarnings = hoursElapsed * this._cachedTrackingClient.rate;
+        const currency = this._cachedTrackingClient.currency || 'USD';
+
+        // Clone cached earnings and add current earnings
+        const updatedEarnings = new Map(this._cachedEarningsByCurrency);
+        const baseAmount = updatedEarnings.get(currency) || 0;
+        updatedEarnings.set(currency, baseAmount + currentEarnings);
+
+        // Update carousel with real-time values
+        this._updateCurrencyCarousel(updatedEarnings);
     }
 
     /**
@@ -1836,27 +1908,69 @@ export class ReportsPage {
      * Update currency carousel with earnings
      */
     _updateCurrencyCarousel(currencyTotals) {
+        // Try to update existing carousel labels first (no flicker)
+        if (this._updateCurrencyCarouselLabels(currencyTotals)) {
+            return; // Successfully updated existing labels
+        }
+
+        // Rebuild carousel if structure changed (different currencies)
+        this._rebuildCurrencyCarousel(currencyTotals);
+    }
+
+    /**
+     * Update existing carousel labels without rebuilding (prevents flicker)
+     * Returns true if successful, false if rebuild needed
+     */
+    _updateCurrencyCarouselLabels(currencyTotals) {
+        if (!this._currencyCarouselPages) return false;
+
+        // Check if currencies match
+        const currentCurrencies = Array.from(this._currencyCarouselPages.keys()).sort();
+        const newCurrencies = currencyTotals ? Array.from(currencyTotals.keys()).sort() : [];
+
+        if (currentCurrencies.length !== newCurrencies.length) return false;
+        if (!currentCurrencies.every((c, i) => c === newCurrencies[i])) return false;
+
+        // Update amounts in existing labels
+        for (const [currency, amountLabel] of this._currencyCarouselPages) {
+            const amount = currencyTotals.get(currency) || 0;
+            amountLabel.set_label(amount.toFixed(2));
+        }
+
+        return true;
+    }
+
+    /**
+     * Rebuild currency carousel from scratch
+     */
+    _rebuildCurrencyCarousel(currencyTotals) {
         // Clear existing carousel content
         while (this.currencyCarousel.get_first_child()) {
             this.currencyCarousel.remove(this.currencyCarousel.get_first_child());
         }
 
+        // Track carousel pages for updates
+        this._currencyCarouselPages = new Map();
+
         if (!currencyTotals || currencyTotals.size === 0) {
             // Show 0.00 if no earnings
-            const zeroBox = this._createCurrencyBox('0.00', 'USD');
-            this.currencyCarousel.append(zeroBox);
+            const { box, amountLabel } = this._createCurrencyBox('0.00', 'USD');
+            this.currencyCarousel.append(box);
+            this._currencyCarouselPages.set('USD', amountLabel);
         } else {
             // Add a page for each currency to carousel
             for (const [currency, amount] of currencyTotals) {
                 const formattedAmount = amount.toFixed(2);
-                const currencyBox = this._createCurrencyBox(formattedAmount, currency);
-                this.currencyCarousel.append(currencyBox);
+                const { box, amountLabel } = this._createCurrencyBox(formattedAmount, currency);
+                this.currencyCarousel.append(box);
+                this._currencyCarouselPages.set(currency, amountLabel);
             }
         }
     }
 
     /**
      * Create currency display box for carousel
+     * Returns object with box and amountLabel reference for updates
      */
     _createCurrencyBox(amount, currency) {
         const box = new Gtk.Box({
@@ -1886,7 +2000,7 @@ export class ReportsPage {
         box.append(amountLabel);
         box.append(currencyLabel);
 
-        return box;
+        return { box, amountLabel };
     }
 
     /**

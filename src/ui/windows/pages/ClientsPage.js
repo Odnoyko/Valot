@@ -462,6 +462,7 @@ export class ClientsPage {
         this.clientList = new Gtk.ListBox({
             css_classes: ['content-box'],
             selection_mode: Gtk.SelectionMode.SINGLE,
+            overflow: Gtk.Overflow.HIDDEN,
         });
 
         scrolledWindow.set_child(this.clientList);

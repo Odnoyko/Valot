@@ -764,6 +764,7 @@ export class TasksPage {
         this.taskList = new Gtk.ListBox({
             css_classes: ['content-box'],
             selection_mode: Gtk.SelectionMode.NONE,
+            overflow: Gtk.Overflow.HIDDEN,
         });
 
         scrolledWindow.set_child(this.taskList);
