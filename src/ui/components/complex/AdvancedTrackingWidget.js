@@ -25,9 +25,12 @@ export class AdvancedTrackingWidget {
         this.coreBridge = coreBridge;
         this.parentWindow = parentWindow;
 
-        // Current selections
-        this.currentProjectId = 1;
-        this.currentClientId = 1;
+        // Initialize GSettings for persistence
+        this.settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
+
+        // Current selections - restore from GSettings (Core will validate)
+        this.currentProjectId = this.settings.get_int('last-project-id') || 1;
+        this.currentClientId = this.settings.get_int('last-client-id') || 1;
 
         // UI update timer
         this.trackingUITimer = null;
@@ -179,6 +182,9 @@ export class AdvancedTrackingWidget {
             async (selectedProject) => {
                 this.currentProjectId = selectedProject.id;
 
+                // Save to GSettings for persistence
+                this.settings.set_int('last-project-id', selectedProject.id);
+
                 // If tracking, update project in real-time
                 const state = this.coreBridge?.getTrackingState();
                 if (state && state.isTracking) {
@@ -194,6 +200,9 @@ export class AdvancedTrackingWidget {
             this.currentClientId,
             async (selectedClient) => {
                 this.currentClientId = selectedClient.id;
+
+                // Save to GSettings for persistence
+                this.settings.set_int('last-client-id', selectedClient.id);
 
                 // If tracking, update client in real-time
                 const state = this.coreBridge?.getTrackingState();
@@ -231,22 +240,22 @@ export class AdvancedTrackingWidget {
 
         if (state.isTracking) {
             // Tracking active - allow editing!
-            const cursorPosition = this.taskNameEntry.get_position();
             const oldText = this.taskNameEntry.get_text();
             const newText = state.currentTaskName || '';
 
-            // Block change handler during programmatic update
-            this._blockTaskNameUpdate = true;
-            this.taskNameEntry.set_text(newText);
-            this.taskNameEntry.set_sensitive(true);
-            this._blockTaskNameUpdate = false;
+            // Only update text if entry doesn't have focus (user is not typing)
+            // This prevents cursor jumping and text being overwritten while typing
+            const hasFocus = this.taskNameEntry.is_focus();
 
-            // Restore cursor position if text didn't change, otherwise move to end
-            if (oldText === newText && cursorPosition >= 0) {
-                this.taskNameEntry.set_position(cursorPosition);
-            } else {
-                this.taskNameEntry.set_position(-1); // -1 = end of text
+            if (!hasFocus && oldText !== newText) {
+                // Block change handler during programmatic update
+                this._blockTaskNameUpdate = true;
+                this.taskNameEntry.set_text(newText);
+                this._blockTaskNameUpdate = false;
+                this.taskNameEntry.set_position(-1); // Move cursor to end
             }
+
+            this.taskNameEntry.set_sensitive(true);
 
             // Update dropdowns with current tracking context
             if (state.currentProjectId && this.projectDropdown) {
@@ -287,17 +296,13 @@ export class AdvancedTrackingWidget {
             // Tracking idle - KEEP task name in input (don't clear it)
             this.taskNameEntry.set_sensitive(true);
 
-            // Restore last used project/client (or default if never tracked)
-            const lastProjectId = this.coreBridge.getLastUsedProjectId() || 1;
-            const lastClientId = this.coreBridge.getLastUsedClientId() || 1;
-
-            this.currentProjectId = lastProjectId;
-            this.currentClientId = lastClientId;
+            // Use values already loaded from GSettings in constructor
+            // (this.currentProjectId and this.currentClientId are already set from GSettings)
             if (this.projectDropdown) {
-                this.projectDropdown.setCurrentProject(lastProjectId);
+                this.projectDropdown.setCurrentProject(this.currentProjectId);
             }
             if (this.clientDropdown) {
-                this.clientDropdown.setSelectedClient(lastClientId);
+                this.clientDropdown.setSelectedClient(this.currentClientId);
             }
 
             // Change icon to play, keep green
@@ -340,7 +345,8 @@ export class AdvancedTrackingWidget {
         }
 
         // Update task name if changed (e.g., from edit dialog)
-        if (state.isTracking && data.taskName) {
+        // Only update if entry doesn't have focus (user is not typing)
+        if (state.isTracking && data.taskName && !this.taskNameEntry.is_focus()) {
             const currentText = this.taskNameEntry.get_text();
             if (currentText !== data.taskName) {
                 this._blockTaskNameUpdate = true;

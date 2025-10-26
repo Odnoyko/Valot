@@ -429,6 +429,7 @@ export const PreferencesDialog = GObject.registerClass({
 
         const timerSpinButton = new Gtk.SpinButton({
             valign: Gtk.Align.CENTER,
+            orientation: Gtk.Orientation.HORIZONTAL,
         });
         timerSpinButton.set_range(5, 120);
         timerSpinButton.set_increments(5, 15);
@@ -448,6 +449,52 @@ export const PreferencesDialog = GObject.registerClass({
 
         pomodoroGroup.add(timerRow);
         page.add(pomodoroGroup);
+
+        // Database Group
+        const databaseGroup = new Adw.PreferencesGroup({
+            title: _('Database'),
+            description: _('Backup and manage your data'),
+        });
+
+        // Export DB button row
+        const exportDbRow = new Adw.ActionRow({
+            title: _('Export Database'),
+            subtitle: _('Save a backup of your database'),
+        });
+
+        const exportButton = new Gtk.Button({
+            label: _('Export'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat'],
+        });
+
+        exportButton.connect('clicked', () => {
+            this._exportDatabase();
+        });
+
+        exportDbRow.add_suffix(exportButton);
+        databaseGroup.add(exportDbRow);
+
+        // Reset DB button row
+        const resetDbRow = new Adw.ActionRow({
+            title: _('Reset Database'),
+            subtitle: _('Delete all data and start fresh'),
+        });
+
+        const resetButton = new Gtk.Button({
+            label: _('Reset'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat', 'destructive-action'],
+        });
+
+        resetButton.connect('clicked', () => {
+            this._resetDatabase();
+        });
+
+        resetDbRow.add_suffix(resetButton);
+        databaseGroup.add(resetDbRow);
+
+        page.add(databaseGroup);
 
         // Welcome Info Group
         const welcomeGroup = new Adw.PreferencesGroup({
@@ -1198,5 +1245,110 @@ export const PreferencesDialog = GObject.registerClass({
         });
         dialog.present();
         return dialog;
+    }
+
+    /**
+     * Export database to a file
+     */
+    _exportDatabase() {
+        const fileDialog = new Gtk.FileDialog({
+            title: _('Export Database'),
+            accept_label: _('Export'),
+        });
+
+        const defaultName = `valot-backup-${new Date().toISOString().split('T')[0]}.db`;
+        fileDialog.set_initial_name(defaultName);
+
+        fileDialog.save(this, null, (dialog, result) => {
+            try {
+                const file = dialog.save_finish(result);
+                if (!file) return;
+
+                // Get database path
+                const dbPath = GLib.get_user_data_dir() + '/valot/valot.db';
+                const sourceFile = Gio.File.new_for_path(dbPath);
+
+                // Copy database to selected location
+                sourceFile.copy(
+                    file,
+                    Gio.FileCopyFlags.OVERWRITE,
+                    null,
+                    null
+                );
+
+                // Show success toast
+                const toast = new Adw.Toast({
+                    title: _('Database exported successfully'),
+                    timeout: 3,
+                });
+                this.add_toast(toast);
+            } catch (error) {
+                console.error('Error exporting database:', error);
+                const toast = new Adw.Toast({
+                    title: _('Failed to export database'),
+                    timeout: 3,
+                });
+                this.add_toast(toast);
+            }
+        });
+    }
+
+    /**
+     * Reset database with confirmation
+     */
+    _resetDatabase() {
+        const dialog = new Adw.AlertDialog({
+            heading: _('Reset Database?'),
+            body: _('This will delete all your tasks, projects, clients, and time entries. This action cannot be undone.'),
+        });
+
+        dialog.add_response('cancel', _('Cancel'));
+        dialog.add_response('reset', _('Reset Database'));
+        dialog.set_response_appearance('reset', Adw.ResponseAppearance.DESTRUCTIVE);
+        dialog.set_default_response('cancel');
+        dialog.set_close_response('cancel');
+
+        dialog.connect('response', (dlg, response) => {
+            if (response === 'reset') {
+                try {
+                    // Get database path
+                    const dbPath = GLib.get_user_data_dir() + '/valot/valot.db';
+                    const dbFile = Gio.File.new_for_path(dbPath);
+
+                    // Delete database file
+                    if (dbFile.query_exists(null)) {
+                        dbFile.delete(null);
+                    }
+
+                    // Show success message and ask to restart
+                    const restartDialog = new Adw.AlertDialog({
+                        heading: _('Database Reset'),
+                        body: _('The database has been reset. Please restart the application to create a new database.'),
+                    });
+
+                    restartDialog.add_response('ok', _('OK'));
+                    restartDialog.set_default_response('ok');
+
+                    restartDialog.connect('response', () => {
+                        // Close the app
+                        const app = this.get_application();
+                        if (app) {
+                            app.quit();
+                        }
+                    });
+
+                    restartDialog.present(this);
+                } catch (error) {
+                    console.error('Error resetting database:', error);
+                    const toast = new Adw.Toast({
+                        title: _('Failed to reset database'),
+                        timeout: 3,
+                    });
+                    this.add_toast(toast);
+                }
+            }
+        });
+
+        dialog.present(this);
     }
 });

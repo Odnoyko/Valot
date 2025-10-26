@@ -142,7 +142,7 @@ export class TaskInstanceEditDialog {
 
         const startTimeIcon = new Gtk.Image({
             icon_name: 'preferences-system-time-symbolic',
-            pixel_size: 8,
+            pixel_size: 12,
         });
 
         const startTimeLabel = new Gtk.Label({
@@ -199,7 +199,7 @@ export class TaskInstanceEditDialog {
 
         const startDateIcon = new Gtk.Image({
             icon_name: 'x-office-calendar-symbolic',
-            pixel_size: 8,
+            pixel_size: 12,
         });
 
         const startDateLabel = new Gtk.Label({
@@ -287,7 +287,7 @@ export class TaskInstanceEditDialog {
 
         const endTimeIcon = new Gtk.Image({
             icon_name: 'preferences-system-time-symbolic',
-            pixel_size: 8,
+            pixel_size: 12,
         });
 
         const endTimeLabel = new Gtk.Label({
@@ -346,7 +346,7 @@ export class TaskInstanceEditDialog {
 
         const endDateIcon = new Gtk.Image({
             icon_name: 'x-office-calendar-symbolic',
-            pixel_size: 8,
+            pixel_size: 12,
         });
 
         const endDateLabel = new Gtk.Label({

@@ -51,7 +51,7 @@ export class ProjectService extends BaseService {
         const projectId = await this.execute(sql, [
             finalName,
             input.color || '#cccccc',
-            input.icon || 'folder-symbolic',
+            input.icon !== undefined ? input.icon : null,
             input.client_id || null,
             input.dark_icons !== undefined ? (input.dark_icons ? 1 : 0) : 0,
             input.icon_color || '#cccccc',

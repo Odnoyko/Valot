@@ -61,7 +61,7 @@ export class ProjectDialog extends FormDialog {
         this.project = project;
         this.onProjectSave = onProjectSave;
         this.currentColor = isEdit ? (project.color || '#3584e4') : '#3584e4';
-        this.currentIcon = isEdit ? (project.icon || 'folder-symbolic') : 'folder-symbolic';
+        this.currentIcon = isEdit ? project.icon : null;
         this.currentIconColorMode = isEdit ? (project.icon_color_mode || 'auto') : 'auto';
 
         // Now create and set the custom content
@@ -149,7 +149,7 @@ export class ProjectDialog extends FormDialog {
             });
         } else {
             iconWidget = new Gtk.Image({
-                icon_name: this.currentIcon || 'folder-symbolic',
+                icon_name: this.currentIcon || null,
                 pixel_size: 20
             });
         }
@@ -319,7 +319,7 @@ export class ProjectDialog extends FormDialog {
             this.nameEntry.set_text(project.name || '');
         }
         this.currentColor = project.color || '#3584e4';
-        this.currentIcon = project.icon || 'folder-symbolic';
+        this.currentIcon = project.icon;
         this.currentIconColorMode = project.icon_color_mode || 'auto';
         this._updateProjectButton();
     }
@@ -341,7 +341,7 @@ export class ProjectDialog extends FormDialog {
             this.nameEntry.set_text('');
         }
         this.currentColor = '#3584e4';
-        this.currentIcon = 'folder-symbolic';
+        this.currentIcon = null;
         this.currentIconColorMode = 'auto';
         this._updateProjectButton();
         this._clearNameError();
@@ -362,7 +362,7 @@ export class ProjectDialog extends FormDialog {
             name: this.nameEntry ? this.nameEntry.get_text() || 'Untitled Project' : 'Untitled Project',
             description: '', // No description in inline version
             color: this.currentColor || '#3584e4',
-            icon: this.currentIcon || 'folder-symbolic',
+            icon: this.currentIcon,
             iconColorMode: this.currentIconColorMode || 'auto'
         };
     }

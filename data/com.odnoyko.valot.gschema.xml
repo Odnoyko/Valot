@@ -41,5 +41,15 @@
 			<summary>Page order</summary>
 			<description>Order of pages in the view switcher</description>
 		</key>
+		<key name="last-project-id" type="i">
+			<default>1</default>
+			<summary>Last selected project ID</summary>
+			<description>Last selected project ID for tracking widget persistence</description>
+		</key>
+		<key name="last-client-id" type="i">
+			<default>1</default>
+			<summary>Last selected client ID</summary>
+			<description>Last selected client ID for tracking widget persistence</description>
+		</key>
 	</schema>
 </schemalist>

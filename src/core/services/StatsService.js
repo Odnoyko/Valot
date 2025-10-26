@@ -327,8 +327,8 @@ export class StatsService extends BaseService {
         const projectSet = new Set();
         const earningsByCurrency = new Map();
 
-        // Get all task instances for lookup
-        const allTaskInstances = await this.core.services.taskInstances.getAll();
+        // Get all task instances with client rates for lookup
+        const allTaskInstances = await this.core.services.taskInstances.getAllViews();
         const taskInstanceMap = new Map();
         allTaskInstances.forEach(ti => taskInstanceMap.set(ti.id, ti));
 

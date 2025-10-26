@@ -1,6 +1,7 @@
 import Gtk from 'gi://Gtk';
 import Gdk from 'gi://Gdk';
 import { PLACEHOLDER } from 'resource:///com/odnoyko/valot/ui/utils/commonStrings.js';
+import { createProjectIconWidget } from 'resource:///com/odnoyko/valot/ui/utils/widgetFactory.js';
 
 /**
  * Custom project dropdown with search functionality and color preview
@@ -147,21 +148,7 @@ export class ProjectDropdown {
         };
 
         // Create icon widget (can be emoji or symbolic icon)
-        let iconWidget;
-        if (currentProject.icon && currentProject.icon.startsWith('emoji:')) {
-            const emoji = currentProject.icon.substring(6);
-            iconWidget = new Gtk.Label({
-                label: emoji,
-                css_classes: ['emoji-icon'],
-                halign: Gtk.Align.CENTER,
-                valign: Gtk.Align.CENTER,
-            });
-        } else {
-            iconWidget = new Gtk.Image({
-                icon_name: currentProject.icon || 'folder-symbolic',
-                pixel_size: 16,
-            });
-        }
+        const iconWidget = createProjectIconWidget(currentProject, 16);
 
         // Get icon color (auto, white, black based on background)
         const iconColor = this._getProjectIconColor(currentProject);
@@ -255,21 +242,7 @@ export class ProjectDropdown {
         });
 
         // Create icon for preview
-        let previewIcon;
-        if (project.icon && project.icon.startsWith('emoji:')) {
-            const emoji = project.icon.substring(6);
-            previewIcon = new Gtk.Label({
-                label: emoji,
-                css_classes: ['emoji-icon-small'],
-                halign: Gtk.Align.CENTER,
-                valign: Gtk.Align.CENTER,
-            });
-        } else {
-            previewIcon = new Gtk.Image({
-                icon_name: project.icon || 'folder-symbolic',
-                pixel_size: 14,
-            });
-        }
+        const previewIcon = createProjectIconWidget(project, 14);
 
         const iconColor = this._getProjectIconColor(project);
         const previewProvider = new Gtk.CssProvider();

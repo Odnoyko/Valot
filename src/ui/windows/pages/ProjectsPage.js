@@ -5,6 +5,7 @@ import GLib from 'gi://GLib';
 import { ProjectDialog } from 'resource:///com/odnoyko/valot/ui/components/complex/ProjectDialog.js';
 import { ProjectAppearanceDialog } from 'resource:///com/odnoyko/valot/ui/components/complex/ProjectAppearanceDialog.js';
 import { AdvancedTrackingWidget } from 'resource:///com/odnoyko/valot/ui/components/complex/AdvancedTrackingWidget.js';
+import { createProjectIconWidget } from 'resource:///com/odnoyko/valot/ui/utils/widgetFactory.js';
 
 /**
  * Projects management page
@@ -658,21 +659,7 @@ export class ProjectsPage {
         });
 
         // Create icon widget
-        let iconWidget;
-        if (project.icon && project.icon.startsWith('emoji:')) {
-            const emoji = project.icon.substring(6);
-            iconWidget = new Gtk.Label({
-                label: emoji,
-                css_classes: ['emoji-icon'],
-                halign: Gtk.Align.CENTER,
-                valign: Gtk.Align.CENTER,
-            });
-        } else {
-            iconWidget = new Gtk.Image({
-                icon_name: project.icon || 'folder-symbolic',
-                pixel_size: 20,
-            });
-        }
+        const iconWidget = createProjectIconWidget(project, 20);
 
         // Apply background color
         const iconColor = this._getProjectIconColor(project);
@@ -1006,7 +993,7 @@ export class ProjectsPage {
             const createdProject = await this.coreBridge.createProject({
                 name: projectName,
                 color: '#3584e4',
-                icon: 'folder-symbolic',
+                icon: null,
                 icon_color_mode: 'auto',
             });
 

@@ -38,6 +38,10 @@ export class TasksPage {
         // Template tracking for real-time updates
         this.taskTemplates = new Map(); // taskInstanceId -> template instance
 
+        // Track the currently tracking task row for real-time updates
+        this.trackingTaskTimeLabel = null; // Reference to time label of tracking task
+        this.trackingTaskId = null; // ID of currently tracking task
+
         // Track expanded stacks to preserve state after reload
         this.expandedStacks = new Set(); // groupKey -> expanded state
 
@@ -47,6 +51,17 @@ export class TasksPage {
 
         // Subscribe to Core events for automatic updates
         this._subscribeToCore();
+
+        // Validate context and initialize (async)
+        this._initializeAsync();
+    }
+
+    /**
+     * Async initialization - validate context before building UI
+     */
+    async _initializeAsync() {
+        // Validate that current project/client exist
+        await this._validateCurrentContext();
     }
 
     /**
@@ -74,13 +89,17 @@ export class TasksPage {
             this.loadTasks();
         });
 
-        // Real-time tracking updates
+        // Real-time tracking updates (every second)
         this.coreBridge.onUIEvent('tracking-updated', (data) => {
             this._updateTrackingTimeDisplay();
 
-            // If task name, project, or client changed, reload tasks to show updates
-            if (data.taskName || data.taskId || data.projectId !== undefined || data.clientId !== undefined) {
+            // If task name, project, or client changed, reload full list
+            // Note: taskId and elapsedSeconds are sent every second, but we ignore them
+            if (data && (data.taskName || data.projectId !== undefined || data.clientId !== undefined)) {
                 this.loadTasks();
+            } else {
+                // Otherwise, just update the currently tracking task row's duration
+                this._updateTrackingTaskRow();
             }
         });
 
@@ -934,6 +953,10 @@ export class TasksPage {
             return;
         }
 
+        // Clear tracking task reference since we're rebuilding the list
+        this.trackingTaskTimeLabel = null;
+        this.trackingTaskId = null;
+
         try {
             // Get TaskInstances from Core (these include task_name, project_name, client_name, total_time)
             const taskInstances = await this.coreBridge.getAllTaskInstances({
@@ -1291,8 +1314,37 @@ export class TasksPage {
         });
         mainBox.append(timeLabel);
 
+        // Store reference if this is the currently tracking task
+        const trackingState = this.coreBridge.getTrackingState();
+        if (trackingState.isTracking && trackingState.taskInstanceId === task.id) {
+            this.trackingTaskTimeLabel = timeLabel;
+            this.trackingTaskId = task.id;
+        }
+
         row.set_child(mainBox);
         return row;
+    }
+
+    /**
+     * Update only the tracking task row's duration (called every second)
+     */
+    _updateTrackingTaskRow() {
+        const trackingState = this.coreBridge.getTrackingState();
+
+        // If not tracking or no reference, nothing to update
+        if (!trackingState.isTracking || !this.trackingTaskTimeLabel) {
+            return;
+        }
+
+        // Get task instance to calculate total duration
+        const taskInstance = this.coreBridge.getTaskInstance(trackingState.taskInstanceId);
+        if (!taskInstance) return;
+
+        // Calculate total duration: existing duration + current elapsed time
+        const totalDuration = (taskInstance.duration || 0) + (trackingState.elapsedSeconds || 0);
+
+        // Update just the time label
+        this.trackingTaskTimeLabel.set_label(this._formatDurationHMS(totalDuration));
     }
 
     /**
@@ -1770,5 +1822,36 @@ export class TasksPage {
     async refresh() {
         await this.loadTasks();
         // Dropdowns reload themselves automatically via Core events
+    }
+
+    /**
+     * Validate that current project/client IDs exist in database
+     * Reset to first available if they don't exist
+     */
+    async _validateCurrentContext() {
+        try {
+            // Get all projects and clients
+            const projects = await this.coreBridge.getAllProjects();
+            const clients = await this.coreBridge.getAllClients();
+
+            // Validate project ID
+            const projectExists = projects.some(p => p.id === this.currentProjectId);
+            if (!projectExists && projects.length > 0) {
+                this.currentProjectId = projects[0].id;
+                console.warn('[TasksPage] Reset to default project:', this.currentProjectId);
+            }
+
+            // Validate client ID
+            const clientExists = clients.some(c => c.id === this.currentClientId);
+            if (!clientExists && clients.length > 0) {
+                this.currentClientId = clients[0].id;
+                console.warn('[TasksPage] Reset to default client:', this.currentClientId);
+            }
+        } catch (error) {
+            console.error('[TasksPage] Error validating context:', error);
+            // Fallback to ID 1 if validation fails
+            this.currentProjectId = 1;
+            this.currentClientId = 1;
+        }
     }
 }

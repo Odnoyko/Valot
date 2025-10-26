@@ -210,7 +210,7 @@ export const ValotMainWindow = GObject.registerClass({
 
         // Hide sidebar button
         const hideButton = new Gtk.Button({
-            icon_name: 'sidebar-hide-symbolic',
+            icon_name: 'sidebar-show-symbolic',
             tooltip_text: _('Hide Sidebar'),
         });
         hideButton.connect('clicked', () => {
@@ -433,6 +433,19 @@ export const ValotMainWindow = GObject.registerClass({
         });
 
         pomodoroAction.connect('activate', () => {
+            // Check if user is currently typing in an input field
+            const focusedWidget = this.get_focus();
+            if (focusedWidget) {
+                const widgetType = focusedWidget.constructor.name;
+                // Block shortcut if typing in Entry, SearchEntry, or Text widgets
+                if (widgetType === 'GtkEntry' ||
+                    widgetType === 'GtkSearchEntry' ||
+                    widgetType === 'GtkText' ||
+                    widgetType === 'GtkTextView') {
+                    return;
+                }
+            }
+
             // Trigger Pomodoro mode on the current page's tracking widget
             const visiblePage = this.navigationView.get_visible_page();
             if (!visiblePage) return;
@@ -464,7 +477,8 @@ export const ValotMainWindow = GObject.registerClass({
 
         // Add Pomodoro action to application and set P key accelerator
         this.application.add_action(pomodoroAction);
-        this.application.set_accels_for_action('app.start-pomodoro', ['P']);
+        // DISABLED: P key conflicts with typing in input fields
+        // this.application.set_accels_for_action('app.start-pomodoro', ['P']);
 
         // Create application-level action for Select All (Shift+A)
         const selectAllAction = new Gio.SimpleAction({

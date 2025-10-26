@@ -2,6 +2,7 @@ import Gtk from 'gi://Gtk';
 import Pango from 'gi://Pango';
 import { Button } from '../primitive/Button.js';
 import { Label } from '../primitive/Label.js';
+import { createProjectIconWidget } from 'resource:///com/odnoyko/valot/ui/utils/widgetFactory.js';
 
 /**
  * Complex component for displaying project information in a card format
@@ -74,10 +75,7 @@ export class ProjectCard {
             height_request: 32
         });
 
-        const icon = new Gtk.Image({
-            icon_name: project.icon || 'folder-symbolic',
-            pixel_size: 24
-        });
+        const icon = createProjectIconWidget(project, 24);
 
         // Apply project color styling
         this._applyProjectColor(iconBox, project.color);

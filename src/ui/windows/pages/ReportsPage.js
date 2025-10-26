@@ -478,7 +478,7 @@ export class ReportsPage {
             margin_end: 12,
         });
 
-        // Currency carousel
+        // Currency carousel (without dots, no icon)
         this.currencyCarousel = new Adw.Carousel({
             halign: Gtk.Align.CENTER,
             valign: Gtk.Align.CENTER,
@@ -1841,12 +1841,12 @@ export class ReportsPage {
             this.currencyCarousel.remove(this.currencyCarousel.get_first_child());
         }
 
-        if (currencyTotals.size === 0) {
+        if (!currencyTotals || currencyTotals.size === 0) {
             // Show 0.00 if no earnings
             const zeroBox = this._createCurrencyBox('0.00', 'USD');
             this.currencyCarousel.append(zeroBox);
         } else {
-            // Add a page for each currency
+            // Add a page for each currency to carousel
             for (const [currency, amount] of currencyTotals) {
                 const formattedAmount = amount.toFixed(2);
                 const currencyBox = this._createCurrencyBox(formattedAmount, currency);

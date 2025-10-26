@@ -139,7 +139,14 @@ export class ProjectAppearanceDialog {
 
     _updateIconPreview() {
         let iconWidget;
-        if (this.project.icon && this.project.icon.startsWith('emoji:')) {
+        if (!this.project.icon) {
+            // Empty icon - show placeholder icon
+            iconWidget = new Gtk.Image({
+                icon_name: 'applications-graphics-symbolic',
+                pixel_size: 24,
+                css_classes: ['dim-label'],
+            });
+        } else if (this.project.icon.startsWith('emoji:')) {
             const emoji = this.project.icon.substring(6);
             iconWidget = new Gtk.Label({
                 label: emoji,
@@ -147,7 +154,7 @@ export class ProjectAppearanceDialog {
             });
         } else {
             iconWidget = new Gtk.Image({
-                icon_name: this.project.icon || 'folder-symbolic',
+                icon_name: this.project.icon,
                 pixel_size: 24,
             });
         }
@@ -174,6 +181,10 @@ export class ProjectAppearanceDialog {
                 this.project.color = hexColor;
                 this._updateColorPreview();
             } catch (error) {
+                // User cancelled color selection - this is normal, ignore silently
+                if (error.matches(Gtk.DialogError, Gtk.DialogError.DISMISSED)) {
+                    return;
+                }
                 console.error('Error selecting color:', error);
             }
         });
@@ -203,17 +214,85 @@ export class ProjectAppearanceDialog {
             margin_bottom: 12,
         });
 
+        // Create button content boxes with label and icon
+        const clearBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 6,
+        });
+        const clearLabel = new Gtk.Label({ label: _('Clear') });
+        const clearIcon = new Gtk.Image({
+            icon_name: 'object-select-symbolic',
+            visible: !this.project.icon, // Show if no icon selected
+        });
+        clearBox.append(clearLabel);
+        clearBox.append(clearIcon);
+
+        const iconsBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 6,
+        });
+        const iconsLabel = new Gtk.Label({ label: _('Icons') });
+        const iconsIcon = new Gtk.Image({
+            icon_name: 'object-select-symbolic',
+            visible: this.project.icon && !this.project.icon.startsWith('emoji:'),
+        });
+        iconsBox.append(iconsLabel);
+        iconsBox.append(iconsIcon);
+
+        const emojisBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 6,
+        });
+        const emojisLabel = new Gtk.Label({ label: _('Emojis') });
+        const emojisIcon = new Gtk.Image({
+            icon_name: 'object-select-symbolic',
+            visible: this.project.icon && this.project.icon.startsWith('emoji:'),
+        });
+        emojisBox.append(emojisLabel);
+        emojisBox.append(emojisIcon);
+
+        const clearTabBtn = new Gtk.ToggleButton({
+            child: clearBox,
+            active: !this.project.icon,
+        });
         const iconsTabBtn = new Gtk.ToggleButton({
-            label: _('Icons'),
-            active: !this.project.icon || !this.project.icon.startsWith('emoji:'),
+            child: iconsBox,
+            active: this.project.icon && !this.project.icon.startsWith('emoji:'),
         });
         const emojisTabBtn = new Gtk.ToggleButton({
-            label: _('Emojis'),
+            child: emojisBox,
             active: this.project.icon && this.project.icon.startsWith('emoji:'),
         });
 
+        // Function to show toast notification
+        const showModeToast = (mode) => {
+            let message;
+            if (mode === 'clear') {
+                message = _('Clear mode selected - No icon will be displayed');
+            } else if (mode === 'icon') {
+                message = _('Icon selected');
+            } else if (mode === 'emoji') {
+                message = _('Emoji selected');
+            }
+
+            // Use parentWindow's showToast method if available
+            if (this.parentWindow && this.parentWindow.showToast) {
+                this.parentWindow.showToast(message);
+            }
+        };
+
+        // Function to update mode indicators (object-select-symbolic icons)
+        let updateModeIndicators = () => {
+            // Show indicator based on actual icon state, not active tab
+            clearIcon.set_visible(!this.project.icon);
+            iconsIcon.set_visible(this.project.icon && !this.project.icon.startsWith('emoji:'));
+            emojisIcon.set_visible(this.project.icon && this.project.icon.startsWith('emoji:'));
+        };
+
         // Tab switching logic
-        let currentTab = iconsTabBtn.get_active() ? 'icons' : 'emojis';
+        let currentTab = clearTabBtn.get_active() ? 'clear' : (iconsTabBtn.get_active() ? 'icons' : 'emojis');
+        // Remember last content tab (icons or emojis) - default to icons
+        let lastContentTab = (this.project.icon && this.project.icon.startsWith('emoji:')) ? 'emojis' : 'icons';
 
         const updateGrid = () => {
             // Clear current grid
@@ -224,7 +303,19 @@ export class ProjectAppearanceDialog {
                 child = next;
             }
 
-            if (currentTab === 'emojis') {
+            // Determine which grid to show
+            const gridToShow = currentTab === 'clear' ? lastContentTab : currentTab;
+
+            // If Clear tab is active, set icon to null immediately
+            if (currentTab === 'clear') {
+                this.project.icon = null;
+                this.project.icon_color_mode = 'auto';
+                this._updateIconPreview();
+                updateModeIndicators();
+                showModeToast('clear');
+            }
+
+            if (gridToShow === 'emojis') {
                 const emojis = getAllEmojis();
                 emojis.forEach((emoji, index) => {
                     const emojiButton = new Gtk.Button({
@@ -238,6 +329,8 @@ export class ProjectAppearanceDialog {
                         this.project.icon = `emoji:${emoji}`;
                         this.project.icon_color_mode = 'auto';
                         this._updateIconPreview();
+                        updateModeIndicators();
+                        showModeToast('emoji');
                         dialog.close();
                     });
 
@@ -262,6 +355,8 @@ export class ProjectAppearanceDialog {
                         this.project.icon = iconName;
                         this.project.icon_color_mode = 'auto'; // Always auto
                         this._updateIconPreview();
+                        updateModeIndicators();
+                        showModeToast('icon');
                         dialog.close();
                     });
 
@@ -270,22 +365,42 @@ export class ProjectAppearanceDialog {
             }
         };
 
+        // Will be defined after iconGrid creation
+        let updateGridOpacity = null;
+
+        clearTabBtn.connect('toggled', () => {
+            if (clearTabBtn.get_active()) {
+                iconsTabBtn.set_active(false);
+                emojisTabBtn.set_active(false);
+                currentTab = 'clear';
+                updateGrid();
+                if (updateGridOpacity) updateGridOpacity();
+            }
+        });
+
         iconsTabBtn.connect('toggled', () => {
             if (iconsTabBtn.get_active()) {
+                clearTabBtn.set_active(false);
                 emojisTabBtn.set_active(false);
                 currentTab = 'icons';
+                lastContentTab = 'icons'; // Remember last content tab
                 updateGrid();
+                if (updateGridOpacity) updateGridOpacity();
             }
         });
 
         emojisTabBtn.connect('toggled', () => {
             if (emojisTabBtn.get_active()) {
+                clearTabBtn.set_active(false);
                 iconsTabBtn.set_active(false);
                 currentTab = 'emojis';
+                lastContentTab = 'emojis'; // Remember last content tab
                 updateGrid();
+                if (updateGridOpacity) updateGridOpacity();
             }
         });
 
+        tabBar.append(clearTabBtn);
         tabBar.append(iconsTabBtn);
         tabBar.append(emojisTabBtn);
 
@@ -312,8 +427,20 @@ export class ProjectAppearanceDialog {
         mainContainer.append(tabBar);
         mainContainer.append(scrolled);
 
+        // Function to update grid opacity and sensitivity based on mode
+        updateGridOpacity = () => {
+            if (currentTab === 'clear') {
+                iconGrid.set_opacity(0.5); // 50% transparent in Clear mode
+                iconGrid.set_sensitive(false); // Make unclickable
+            } else {
+                iconGrid.set_opacity(1.0); // Full opacity when icon/emoji selected
+                iconGrid.set_sensitive(true); // Make clickable
+            }
+        };
+
         // Initial grid populate
         updateGrid();
+        updateGridOpacity();
 
         dialog.set_extra_child(mainContainer);
         dialog.add_response('cancel', _('Cancel'));

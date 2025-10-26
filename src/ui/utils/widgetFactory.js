@@ -5,6 +5,33 @@ import { getCurrencySymbol as getCurrencySymbolFromData } from 'resource:///com/
 // Note: PAGINATION is not in commonStrings, using inline strings for now
 
 /**
+ * Create project icon widget
+ * Returns empty box if project.icon is null/empty, otherwise returns image
+ */
+export function createProjectIconWidget(project, pixelSize = 24) {
+    if (!project.icon) {
+        // Empty icon - return empty box with same size
+        return new Gtk.Box({
+            width_request: pixelSize,
+            height_request: pixelSize,
+        });
+    }
+
+    if (project.icon.startsWith('emoji:')) {
+        const emoji = project.icon.substring(6);
+        return new Gtk.Label({
+            label: emoji,
+            css_classes: ['emoji-icon'],
+        });
+    }
+
+    return new Gtk.Image({
+        icon_name: project.icon,
+        pixel_size: pixelSize,
+    });
+}
+
+/**
  * Factory for creating reusable UI components with consistent styling
  */
 export class WidgetFactory {
@@ -421,20 +448,7 @@ export class WidgetFactory {
     static createProjectIconWidget(project) {
         let iconWidget;
 
-        if (project.icon && project.icon.startsWith('emoji:')) {
-            const emoji = project.icon.substring(6);
-            iconWidget = new Gtk.Label({
-                label: emoji,
-                css_classes: ['emoji-display']
-            });
-        } else {
-            iconWidget = new Gtk.Image({
-                icon_name: project.icon || 'folder-symbolic',
-                pixel_size: 16
-            });
-        }
-
-        return iconWidget;
+        return createProjectIconWidget(project, 16);
     }
 
     /**

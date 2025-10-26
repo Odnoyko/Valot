@@ -22,16 +22,34 @@ export class TimeTrackingService extends BaseService {
         if (currentState.isTracking) {
             await this.stop();
         }
+
+        // Validate that project and client exist, fallback to first available
+        let validProjectId = projectId || 1;
+        let validClientId = clientId || 1;
+
+        // Get all projects and clients
+        const projects = await this.core.services.projects.getAll();
+        const clients = await this.core.services.clients.getAll();
+
+        // Validate project exists
+        if (projectId && !projects.some(p => p.id === projectId)) {
+            validProjectId = projects.length > 0 ? projects[0].id : 1;
+        }
+
+        // Validate client exists
+        if (clientId && !clients.some(c => c.id === clientId)) {
+            validClientId = clients.length > 0 ? clients[0].id : 1;
+        }
+
         // Always create NEW task instance for each tracking session (even if combination exists)
-        // Use default project/client (ID=1) if not specified instead of NULL
         const taskInstance = await this.core.services.taskInstances.create({
             task_id: taskId,
-            project_id: projectId || 1,
-            client_id: clientId || 1
+            project_id: validProjectId,
+            client_id: validClientId
         });
-        // Save last used project/client for UI persistence
-        this.lastUsedProjectId = projectId;
-        this.lastUsedClientId = clientId;
+        // Save last used project/client for UI persistence (use validated IDs)
+        this.lastUsedProjectId = validProjectId;
+        this.lastUsedClientId = validClientId;
 
         // Get task name for state
         const task = await this.core.services.tasks.getById(taskId);
@@ -41,14 +59,14 @@ export class TimeTrackingService extends BaseService {
             task_instance_id: taskInstance.id,
             start_time: startTime,
         });
-        // Update state
+        // Update state (use validated IDs)
         const trackingState = {
             isTracking: true,
             currentTaskId: taskId,
             currentTaskName: task.name,
             currentTaskInstanceId: taskInstance.id,
-            currentProjectId: projectId,
-            currentClientId: clientId,
+            currentProjectId: validProjectId,
+            currentClientId: validClientId,
             startTime: startTime,
             elapsedSeconds: 0,
             pomodoroMode: pomodoroMode,
@@ -63,8 +81,8 @@ export class TimeTrackingService extends BaseService {
             taskId,
             taskName: task.name,
             taskInstanceId: taskInstance.id,
-            projectId,
-            clientId,
+            projectId: validProjectId,
+            clientId: validClientId,
             startTime,
             timeEntryId: entryId,
         });

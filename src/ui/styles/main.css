@@ -602,3 +602,13 @@ window.dark .subtitle {
   margin-bottom: 24px;
   font-weight: 800;
 }
+
+/* Hide carousel indicators/dots */
+carousel carouselindicatordots,
+.card carousel carouselindicatordots {
+  opacity: 0;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+}
