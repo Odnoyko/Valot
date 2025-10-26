@@ -115,7 +115,7 @@ export class DatabaseMigration {
      */
     static async performBackupAndMigrate(backupDbPath, newDbPath, oldSchemaDbPath, forceOldSchema = false, onProgress = null) {
         try {
-            const { GdaDatabaseBridge } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/GdaDatabaseBridge.js');
+            const { GdaDatabaseBridge } = await import('resource:///com/odnoyko/valot/data/providers/gdaDBBridge/GdaDatabaseBridge.js');
 
             const totalSteps = 20; // Total progress steps for smooth animation
             let currentStep = 0;

@@ -172,7 +172,7 @@ export const ValotApplication = GObject.registerClass(
             try {
                 const GLib = (await import('gi://GLib')).default;
                 const Gio = (await import('gi://Gio')).default;
-                const { GdaDatabaseBridge } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/GdaDatabaseBridge.js');
+                const { GdaDatabaseBridge } = await import('resource:///com/odnoyko/valot/data/providers/gdaDBBridge/GdaDatabaseBridge.js');
 
                 // Paths
                 const oldSchemaDbPath = GLib.build_filenamev([GLib.get_user_data_dir(), 'valot', 'valot.db.db']);
@@ -191,7 +191,7 @@ export const ValotApplication = GObject.registerClass(
                 // Scenario 1: valot.db.db exists (old schema from 0.8.x or 0.9.x)
                 if (oldSchemaDbFile.query_exists(null)) {
                     // Check schema BEFORE creating backup
-                    const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/DatabaseMigration.js');
+                    const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/providers/gdaDBBridge/DatabaseMigration.js');
                     const Gda = (await import('gi://Gda?version=6.0')).default;
 
                     // Open database to check schema
@@ -247,7 +247,7 @@ export const ValotApplication = GObject.registerClass(
                             backupSourcePath = currentDbPath;
 
                             // Create backup BEFORE showing dialog
-                            const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/DatabaseMigration.js');
+                            const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/providers/gdaDBBridge/DatabaseMigration.js');
                             backupCreatedPath = DatabaseMigration.createBackup(currentDbPath);
                         }
                     } catch (error) {
@@ -256,7 +256,7 @@ export const ValotApplication = GObject.registerClass(
                         backupSourcePath = currentDbPath;
 
                         // Create backup BEFORE showing dialog
-                        const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/DatabaseMigration.js');
+                        const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/providers/gdaDBBridge/DatabaseMigration.js');
                         backupCreatedPath = DatabaseMigration.createBackup(currentDbPath);
                     }
                 }
@@ -266,13 +266,17 @@ export const ValotApplication = GObject.registerClass(
                     await this._runMigration(backupSourcePath, backupCreatedPath, currentDbPath, oldSchemaDbPath, isOldSchema, null);
                 }
 
-                // Initialize database (new or already migrated)
-                this.databaseBridge = new GdaDatabaseBridge();
-                await this.databaseBridge.initialize();
+                // Initialize DataNavigator
+                const { DataNavigator } = await import('resource:///com/odnoyko/valot/data/DataNavigator.js');
+                this.dataNavigator = new DataNavigator();
+                await this.dataNavigator.initialize();
 
-                // Initialize Core API
+                // Get active provider for Core
+                const activeProvider = this.dataNavigator.getActiveProvider();
+
+                // Initialize Core API with active provider
                 this.coreAPI = new CoreAPI();
-                await this.coreAPI.initialize(this.databaseBridge);
+                await this.coreAPI.initialize(activeProvider.getBridge());
 
                 // Create Core Bridge
                 this.coreBridge = new CoreBridge(this.coreAPI);
@@ -309,7 +313,7 @@ export const ValotApplication = GObject.registerClass(
 
                 migrationDialog.show(async (choice) => {
                     try {
-                        const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/DatabaseMigration.js');
+                        const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/providers/gdaDBBridge/DatabaseMigration.js');
 
                         if (choice === 'backup') {
                             // Backup & Migrate - all logic in DatabaseMigration

@@ -83,9 +83,14 @@
     <!-- Global Utils -->
     <file>utils/InputValidator.js</file>
 
-    <!-- Database Adapters -->
-    <file>data/gdaDBBridge/GdaDatabaseBridge.js</file>
-    <file>data/gdaDBBridge/DatabaseMigration.js</file>
+    <!-- Data Layer -->
+    <file>data/DataProvider.js</file>
+    <file>data/DataNavigator.js</file>
+
+    <!-- Data Providers -->
+    <file>data/providers/LocalDBProvider.js</file>
+    <file>data/providers/gdaDBBridge/GdaDatabaseBridge.js</file>
+    <file>data/providers/gdaDBBridge/DatabaseMigration.js</file>
 
     <!-- Core API (JavaScript) -->
     <file>core/api/CoreAPI.js</file>
