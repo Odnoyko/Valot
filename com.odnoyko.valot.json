@@ -34,18 +34,6 @@
         "*.a"
     ],
     "modules" : [
-        {
-            "name": "blueprint-compiler",
-            "buildsystem": "meson",
-            "cleanup": ["*"],
-            "sources": [
-                {
-                    "type": "git",
-                    "url": "https://gitlab.gnome.org/jwestman/blueprint-compiler",
-                    "tag": "v0.18.0"
-                }
-            ]
-        },
         "shared-modules/intltool/intltool-0.51.json",
         {
             "name": "libgda",
@@ -62,11 +50,14 @@
             "name" : "valot",
             "builddir" : true,
             "buildsystem" : "meson",
+            "config-opts" : [
+                "--Default"
+            ],
             "sources" : [
                 {
                     "type" : "git",
                     "url" : "https://gitlab.com/Valo27/valot.git",
-                    "tag" : "v0.8.4"
+                    "tag" : "v0.9.0"
                 }
             ]
         }

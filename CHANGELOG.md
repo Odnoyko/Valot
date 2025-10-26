@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Future features and improvements will be listed here
+
+## [0.9.0] - 26.10.2025
+
+    - Fixed critical perfomance bugs which crashes our App.
+    - New Multiplatform Architecture, focused to make Plugins and Addons support.
+    - Created Migration tool for adopt old DB version to new .
+    - New Database architecture.
+    - Pommodoro timer Update
+    - Task tracking improvements
+        - Change name, project or Clients while you track a time.
+        - Notification when user try close the App when Time Tracking in progress.
+        - App remember last tracked Project & Client
+    - Added multiple Tasks Edit.
+    - Updated Task editor UI.
+    - Project page improvements
+    - Updated Project Prefferences UI
+    - Reports page UI Update.
+    - Updated Export to the PDF
+    - Added multi-currency export.
+    - Added DB Navigator and Providers System.
+    - Added Database Export - backup your data to a file
+    - Added Database Reset - reset database and restart the app
+    - Translations updated to new structure
+
 ## [0.8.4] - 06.10.2025
 
     - Fix App icon for KDE by Surjyadip Sen

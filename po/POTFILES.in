@@ -1,49 +1,55 @@
 # List of source files containing translatable strings.
 # Please keep this file sorted alphabetically.
+
+# Data files
 data/com.odnoyko.valot.desktop.in
 data/com.odnoyko.valot.gschema.xml
 # data/com.odnoyko.valot.metainfo.xml.in - Has manual translations, not extracted
-src/gtk/help-overlay.ui
-src/js/compacttracker.js
-src/js/func/components/complex/ProjectCardBehavior.js
-src/js/func/global/commonStrings.js
-src/js/func/global/inputValidation.js
-src/js/func/pages/clientManager.js
-src/js/func/pages/pdfExporter.js
-src/js/func/pages/projectManager.js
-src/js/func/pages/reportExporter.js
-src/js/func/pages/reportHTML.js
-src/js/func/pages/reportPDF.js
-src/js/func/pages/simpleChart.js
-src/js/func/pages/taskRenderer.js
-src/js/func/pages/templatePDFGenerator.js
-src/js/func/pages/textCharts.js
-src/js/interface/components/CarouselDialog.js
-src/js/interface/components/PreferencesDialog.js
-src/js/interface/components/clientDropdown.js
-src/js/interface/components/complex/ClientDialog.js
-src/js/interface/components/complex/CurrencyDialog.js
-src/js/interface/components/complex/DateRangeSelector.js
-src/js/interface/components/complex/HeaderTrackingWidget.js
-src/js/interface/components/complex/ModularDialogManager.js
-src/js/interface/components/complex/ProjectCard.js
-src/js/interface/components/complex/ProjectDialog.js
-src/js/interface/components/complex/TaskStackTemplate.js
-src/js/interface/components/complex/TaskTemplate.js
-src/js/interface/components/complex/TaskTemplateDialog.js
-src/js/interface/components/complex/TrackingWidget.js
-src/js/interface/components/primitive/ColorPicker.js
-src/js/interface/components/primitive/IconPicker.js
-src/js/interface/components/selectorFactory.js
-src/js/interface/components/widgetFactory.js
-src/js/interface/dialogs/PDFExportPreferencesDialog.js
-src/js/interface/pages/BasePage.js
-src/js/interface/pages/ClientsPage.js
-src/js/interface/pages/ProjectsPage.js
-src/js/interface/pages/ProjectsPageInterface.js
-src/js/interface/pages/ReportsPage.js
-src/js/interface/pages/TasksPage.js
-src/js/main.js
-src/js/mainwindow.js
-src/ui/compact-tracker.blp
-src/ui/window.blp
+
+# UI Windows
+src/ui/windows/Application.js
+src/ui/windows/CompactTracker.js
+src/ui/windows/CompactTrackerWindow.js
+src/ui/windows/MainWindow.js
+
+# UI Pages
+src/ui/windows/pages/BasePage.js
+src/ui/windows/pages/ClientsPage.js
+src/ui/windows/pages/ProjectsPage.js
+src/ui/windows/pages/ProjectsPageInterface.js
+src/ui/windows/pages/ReportsPage.js
+src/ui/windows/pages/TasksPage.js
+
+# UI Components - Complex
+src/ui/components/complex/AdvancedTrackingWidget.js
+src/ui/components/complex/ClientDialog.js
+src/ui/components/complex/CurrencyDialog.js
+src/ui/components/complex/DateRangeSelector.js
+src/ui/components/complex/HeaderTrackingWidget.js
+src/ui/components/complex/ModularDialogManager.js
+src/ui/components/complex/ProjectAppearanceDialog.js
+src/ui/components/complex/ProjectCard.js
+src/ui/components/complex/ProjectDialog.js
+src/ui/components/complex/TaskRowTemplate.js
+src/ui/components/complex/TaskStackTemplate.js
+src/ui/components/complex/TaskTemplate.js
+src/ui/components/complex/TaskTemplateDialog.js
+src/ui/components/complex/TrackingWidget.js
+
+# UI Components - Dialogs
+src/ui/components/dialogs/CarouselDialog.js
+src/ui/components/dialogs/DatabaseMigrationDialog.js
+src/ui/components/dialogs/MultipleTasksEditDialog.js
+src/ui/components/dialogs/PDFExportPreferencesDialog.js
+src/ui/components/dialogs/PreferencesDialog.js
+src/ui/components/dialogs/QuickTaskSelector.js
+src/ui/components/dialogs/TaskInstanceEditDialog.js
+
+# UI Components - Primitive
+src/ui/components/primitive/ColorPicker.js
+src/ui/components/primitive/IconPicker.js
+
+# UI Utils
+src/ui/utils/commonStrings.js
+src/ui/utils/selectorFactory.js
+src/ui/utils/widgetFactory.js
