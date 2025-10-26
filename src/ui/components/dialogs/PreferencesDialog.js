@@ -523,120 +523,7 @@ export const PreferencesDialog = GObject.registerClass({
         commandRow.add_suffix(commandBox);
         commandGroup.add(commandRow);
         page.add(commandGroup);
-
-        // Database Group
-        const databaseGroup = new Adw.PreferencesGroup({
-            title: _('Database'),
-            description: _('Manage database and migration'),
-        });
-
-        // Database Migration row
-        const migrationRow = new Adw.ActionRow({
-            title: _('Database Migration'),
-            subtitle: _('Migrate data from old database format'),
-            activatable: true,
-        });
-
-        migrationRow.add_suffix(new Gtk.Image({
-            icon_name: 'go-next-symbolic',
-            valign: Gtk.Align.CENTER,
-        }));
-
-        migrationRow.connect('activated', () => {
-            this._showDatabaseMigrationDialog();
-        });
-
-        databaseGroup.add(migrationRow);
-        page.add(databaseGroup);
     }
-
-    /**
-     * Show database migration dialog
-     */
-    _showDatabaseMigrationDialog() {
-        const GLib = imports.gi.GLib;
-        const Gio = imports.gi.Gio;
-
-        // Check for old databases (both valot.db.db and valot.db)
-        const oldSchemaDbPath1 = GLib.build_filenamev([GLib.get_user_data_dir(), 'valot', 'valot.db.db']);
-        const oldSchemaDbPath2 = GLib.build_filenamev([GLib.get_user_data_dir(), 'valot', 'valot.db']);
-
-        const oldSchemaDbFile1 = Gio.File.new_for_path(oldSchemaDbPath1);
-        const oldSchemaDbFile2 = Gio.File.new_for_path(oldSchemaDbPath2);
-
-        let sourceDbPath = null;
-
-        // Priority: valot.db.db first, then valot.db
-        if (oldSchemaDbFile1.query_exists(null)) {
-            sourceDbPath = oldSchemaDbPath1;
-        } else if (oldSchemaDbFile2.query_exists(null)) {
-            sourceDbPath = oldSchemaDbPath2;
-        } else {
-            // Show info dialog - no old database found
-            const dialog = new Adw.AlertDialog({
-                heading: _('No Database Found'),
-                body: _('There is no database to migrate.\n\nPlace your database file in:\n~/.var/app/com.odnoyko.valot/data/valot/\n\nSupported files:\n• valot.db.db (old format)\n• valot.db (current format)'),
-            });
-            dialog.add_response('ok', _('OK'));
-            dialog.present(this);
-            return;
-        }
-
-        // Import and show migration dialog
-        import('resource:///com/odnoyko/valot/ui/components/dialogs/DatabaseMigrationDialog.js')
-            .then(({ DatabaseMigrationDialog }) => {
-                const migrationDialog = new DatabaseMigrationDialog(this, sourceDbPath);
-
-                migrationDialog.show(async (choice) => {
-                    const { DatabaseMigration } = await import('resource:///com/odnoyko/valot/data/gdaDBBridge/DatabaseMigration.js');
-                    const currentDbPath = GLib.build_filenamev([GLib.get_user_data_dir(), 'valot', 'valot.db']);
-                    const oldSchemaDbPath = GLib.build_filenamev([GLib.get_user_data_dir(), 'valot', 'valot.db.db']);
-
-                    if (choice === 'backup') {
-                        // Create backup and start migration
-                        const backupPath = DatabaseMigration.createBackup(sourceDbPath);
-
-                        if (!backupPath) {
-                            migrationDialog.showError(_('Failed to create backup'));
-                            return;
-                        }
-
-                        const success = await DatabaseMigration.performBackupAndMigrate(
-                            backupPath,
-                            currentDbPath,
-                            oldSchemaDbPath,
-                            true, // Force old schema migration
-                            (step, total, message) => migrationDialog.updateProgress(step, total, message)
-                        );
-
-                        if (success) {
-                            migrationDialog.showCompletion();
-                        } else {
-                            migrationDialog.showError(_('Migration failed'));
-                        }
-
-                    } else if (choice === 'delete') {
-                        const success = await DatabaseMigration.performDeleteAndStartFresh(
-                            sourceDbPath,
-                            sourceDbPath, // No backup created yet
-                            currentDbPath,
-                            oldSchemaDbPath,
-                            (step, total, message) => migrationDialog.updateProgress(step, total, message)
-                        );
-
-                        if (success) {
-                            migrationDialog.showCompletion();
-                        } else {
-                            migrationDialog.showError(_('Delete operation failed'));
-                        }
-                    }
-                });
-            })
-            .catch(error => {
-                console.error('Failed to load DatabaseMigrationDialog:', error);
-            });
-    }
-
 
     _setupClientsPage(page) {
         // Initialize currency data
@@ -759,7 +646,7 @@ export const PreferencesDialog = GObject.registerClass({
 
         const websiteRow = new Adw.ActionRow({
             title: _('Visit Website'),
-            subtitle: 'odnoyko.com',
+            subtitle: 'odnoyko.com/valot',
             activatable: true,
         });
         websiteRow.add_suffix(new Gtk.Image({
@@ -767,7 +654,7 @@ export const PreferencesDialog = GObject.registerClass({
             valign: Gtk.Align.CENTER,
         }));
         websiteRow.connect('activated', () => {
-            Gtk.show_uri(this, 'https://odnoyko.com', Gdk.CURRENT_TIME);
+            Gtk.show_uri(this, 'https://odnoyko.com/valot', Gdk.CURRENT_TIME);
         });
         websiteGroup.add(websiteRow);
         contentBox.append(websiteGroup);

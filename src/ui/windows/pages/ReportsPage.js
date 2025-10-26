@@ -1678,8 +1678,18 @@ export class ReportsPage {
             this._currentTaskInstanceIds
         );
 
+        // Cache the base stats total for real-time updates
+        this._cachedStatsTotal = stats.totalTime;
+
+        // Calculate display total (add current elapsed if tracking)
+        let displayTotal = stats.totalTime;
+        const trackingState = this.coreBridge.getTrackingState();
+        if (trackingState.isTracking) {
+            displayTotal += trackingState.elapsedSeconds || 0;
+        }
+
         // Update UI labels
-        this.totalTimeLabel.set_label(this._formatDuration(stats.totalTime));
+        this.totalTimeLabel.set_label(this._formatDuration(displayTotal));
         this.activeProjectsLabel.set_label(stats.activeProjects.toString());
         this.trackedTasksLabel.set_label(stats.trackedTasks.toString());
 
@@ -1690,33 +1700,24 @@ export class ReportsPage {
     /**
      * Update statistics in real-time (without full reload)
      * Called every second while tracking is active
+     * Uses cached stats + current elapsed time (no database queries)
      */
-    async _updateStatisticsRealtime() {
+    _updateStatisticsRealtime() {
         if (!this.coreBridge) return;
 
         const trackingState = this.coreBridge.getTrackingState();
 
         if (!trackingState.isTracking) return;
 
-        // Need date range from last full update
-        if (!this._currentDateRange) return;
+        // Need cached base stats from last full update
+        if (this._cachedStatsTotal === undefined) return;
 
-        try {
-            // Get statistics from Core
-            const stats = await this.coreBridge.getStatsForPeriod(
-                this._currentDateRange,
-                this._currentTaskInstanceIds
-            );
+        // Simply add current elapsed time to cached base total
+        const currentElapsed = trackingState.elapsedSeconds || 0;
+        const totalTime = this._cachedStatsTotal + currentElapsed;
 
-            // Add current elapsed time to total
-            const currentElapsed = trackingState.elapsedSeconds || 0;
-            const totalTime = stats.totalTime + currentElapsed;
-
-            // Update only Total Time label (other stats don't change in real-time)
-            this.totalTimeLabel.set_label(this._formatDuration(totalTime));
-        } catch (error) {
-            console.error('[ReportsPage] Error updating statistics realtime:', error);
-        }
+        // Update Total Time label (no async, no glitches)
+        this.totalTimeLabel.set_label(this._formatDuration(totalTime));
     }
 
     /**
@@ -1754,16 +1755,18 @@ export class ReportsPage {
 
     /**
      * Update Recent Tasks list in real-time (update current tracking task time)
+     * Uses cached tasks + current elapsed time (no database queries)
      */
-    async _updateRecentTasksRealtime(trackingState) {
+    _updateRecentTasksRealtime(trackingState) {
         if (!this.recentTasksList || !trackingState.isTracking) return;
+        if (!this.allTasks || this.allTasks.length === 0) return;
 
         try {
-            // Reload all tasks from Core
-            this.allTasks = await this.coreBridge.getAllTaskInstances() || [];
+            // Create a temporary copy of tasks for display
+            const tasksForDisplay = this.allTasks.map(t => ({...t}));
 
-            // Find current tracking task instance
-            const currentTask = this.allTasks.find(t =>
+            // Find current tracking task instance in the copy
+            const currentTask = tasksForDisplay.find(t =>
                 t.task_id === trackingState.currentTaskId &&
                 t.project_id === trackingState.currentProjectId &&
                 t.client_id === trackingState.currentClientId
@@ -1774,12 +1777,34 @@ export class ReportsPage {
                 currentTask.total_time = (currentTask.total_time || 0) + trackingState.elapsedSeconds;
             }
 
-            // Apply filters and update Recent Tasks list
-            const filteredTasks = this._getFilteredTasks();
+            // Apply filters and update Recent Tasks list (using temporary copy)
+            const filteredTasks = this._getFilteredTasksFromArray(tasksForDisplay);
             this._updateRecentTasksList(filteredTasks);
         } catch (error) {
             console.error('[ReportsPage] Error updating recent tasks realtime:', error);
         }
+    }
+
+    /**
+     * Get filtered tasks from provided array (used for real-time updates with temp data)
+     */
+    _getFilteredTasksFromArray(tasksArray) {
+        let filtered = [...tasksArray];
+
+        // Filter by project
+        if (this.chartFilters.projectId) {
+            filtered = filtered.filter(t => t.project_id === this.chartFilters.projectId);
+        }
+
+        // Filter by client
+        if (this.chartFilters.clientId) {
+            filtered = filtered.filter(t => t.client_id === this.chartFilters.clientId);
+        }
+
+        // Filter by period
+        filtered = this._filterByPeriod(filtered, this.chartFilters.period);
+
+        return filtered;
     }
 
     /**

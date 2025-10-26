@@ -9,6 +9,7 @@
     <!-- Illustrations -->
     <file alias="data/illustrations/Task Page.svg">../data/Illustrations/Task Page.svg</file>
     <file alias="data/illustrations/Migration_tool.svg">../data/Illustrations/Migration_tool.svg</file>
+    <file alias="data/illustrations/Bottom Tasks.svg">../data/Illustrations/Bottom Tasks.svg</file>
     <!-- Carousel Slides -->
     <file alias="data/slides/slide1.svg">../data/slides/slide1.svg</file>
     <file alias="data/slides/slide2.svg">../data/slides/slide2.svg</file>

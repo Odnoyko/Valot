@@ -12,11 +12,6 @@ if desktop_utils.found()
   test('Validate desktop file', desktop_utils, args: [desktop_file])
 endif
 
-# Install compact tracker desktop file
-install_data('com.odnoyko.valot.compact.desktop',
-  install_dir: get_option('datadir') / 'applications'
-)
-
 appstream_file = i18n.merge_file(
         input: 'com.odnoyko.valot.metainfo.xml.in',
        output: 'com.odnoyko.valot.metainfo.xml',

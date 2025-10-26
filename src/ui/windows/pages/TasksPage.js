@@ -822,6 +822,16 @@ export class TasksPage {
 
         emptyStateBox.append(startButton);
 
+        // Bottom Tasks illustration at the bottom of empty state
+        const bottomTasksIllustration = createRecoloredSVG(
+            '/com/odnoyko/valot/data/illustrations/Bottom Tasks.svg',
+            440,  // width
+            150   // height
+        );
+        bottomTasksIllustration.set_halign(Gtk.Align.CENTER);
+        bottomTasksIllustration.set_margin_top(8);
+        emptyStateBox.append(bottomTasksIllustration);
+
         // Add both to stack
         this.tasksContainer.add_named(scrolledWindow, 'tasks-list');
         this.tasksContainer.add_named(emptyStateBox, 'empty-state');
@@ -1018,18 +1028,11 @@ export class TasksPage {
 
             if (startDate && endDate) {
                 // Get task instance IDs that have time entries with end_time in this period (from Core)
-                console.log('[TasksPage] Filtering by period:', startDate.format('%Y-%m-%d'), 'to', endDate.format('%Y-%m-%d'));
                 const taskInstanceIds = await this.coreBridge.getTaskInstanceIdsForPeriod({ startDate, endDate });
-                console.log('[TasksPage] Task IDs with entries in period:', taskInstanceIds);
                 const taskIdsSet = new Set(taskInstanceIds);
 
-                console.log('[TasksPage] Total tasks before filter:', filtered.length);
-                console.log('[TasksPage] Sample task structure:', filtered[0] ? Object.keys(filtered[0]) : 'no tasks');
                 // Filter tasks by IDs
                 filtered = filtered.filter(task => taskIdsSet.has(task.id));
-                console.log('[TasksPage] Tasks after filter:', filtered.length);
-                console.log('[TasksPage] Filtered task IDs:', filtered.map(t => t.id));
-                console.log('[TasksPage] Filtered task names:', filtered.map(t => t.task_name || t.name));
             }
         }
 
