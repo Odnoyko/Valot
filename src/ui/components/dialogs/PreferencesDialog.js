@@ -475,6 +475,25 @@ export const PreferencesDialog = GObject.registerClass({
         exportDbRow.add_suffix(exportButton);
         databaseGroup.add(exportDbRow);
 
+        // Import DB button row
+        const importDbRow = new Adw.ActionRow({
+            title: _('Import Database'),
+            subtitle: _('Restore a backup of your database'),
+        });
+
+        const importButton = new Gtk.Button({
+            label: _('Import'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat'],
+        });
+
+        importButton.connect('clicked', () => {
+            this._importDatabase();
+        });
+
+        importDbRow.add_suffix(importButton);
+        databaseGroup.add(importDbRow);
+
         // Reset DB button row
         const resetDbRow = new Adw.ActionRow({
             title: _('Reset Database'),
@@ -1291,6 +1310,102 @@ export const PreferencesDialog = GObject.registerClass({
                 console.error('Error exporting database:', error);
                 const toast = new Adw.Toast({
                     title: _('Failed to export database'),
+                    timeout: 3,
+                });
+                this.add_toast(toast);
+            }
+        });
+    }
+
+    /**
+     * Import database from a backup file
+     */
+    _importDatabase() {
+        const fileDialog = new Gtk.FileDialog({
+            title: _('Import Database'),
+            accept_label: _('Import'),
+        });
+
+        // Add file filter for .db files
+        const filter = new Gtk.FileFilter();
+        filter.set_name(_('Database files'));
+        filter.add_pattern('*.db');
+
+        const filterList = new Gio.ListStore({ item_type: Gtk.FileFilter.$gtype });
+        filterList.append(filter);
+        fileDialog.set_filters(filterList);
+        fileDialog.set_default_filter(filter);
+
+        fileDialog.open(this, null, (dialog, result) => {
+            try {
+                const file = dialog.open_finish(result);
+                if (!file) return;
+
+                // Show confirmation dialog
+                const confirmDialog = new Adw.AlertDialog({
+                    heading: _('Import Database?'),
+                    body: _('This will replace your current database with the imported one. All existing data will be lost. This action cannot be undone.\n\nThe app will restart after import.'),
+                });
+
+                confirmDialog.add_response('cancel', _('Cancel'));
+                confirmDialog.add_response('import', _('Import'));
+                confirmDialog.set_response_appearance('import', Adw.ResponseAppearance.DESTRUCTIVE);
+                confirmDialog.set_default_response('cancel');
+                confirmDialog.set_close_response('cancel');
+
+                confirmDialog.connect('response', (dlg, response) => {
+                    if (response === 'import') {
+                        try {
+                            // Get database path
+                            const dbPath = GLib.get_user_data_dir() + '/valot/valot.db';
+                            const destFile = Gio.File.new_for_path(dbPath);
+
+                            // Copy imported file to database location
+                            file.copy(
+                                destFile,
+                                Gio.FileCopyFlags.OVERWRITE,
+                                null,
+                                null
+                            );
+
+                            // Show success toast
+                            const toast = new Adw.Toast({
+                                title: _('Database imported successfully. Restarting app...'),
+                                timeout: 2,
+                            });
+                            this.add_toast(toast);
+
+                            // Close and restart the app after a short delay
+                            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
+                                const window = this.get_transient_for();
+                                if (window) {
+                                    window.close();
+                                }
+                                return GLib.SOURCE_REMOVE;
+                            });
+
+                        } catch (error) {
+                            console.error('Error importing database:', error);
+                            const toast = new Adw.Toast({
+                                title: _('Failed to import database'),
+                                timeout: 3,
+                            });
+                            this.add_toast(toast);
+                        }
+                    }
+                });
+
+                confirmDialog.present(this);
+
+            } catch (error) {
+                // User cancelled the dialog - this is normal, don't show error
+                if (error.matches(Gtk.DialogError, Gtk.DialogError.DISMISSED)) {
+                    return;
+                }
+
+                console.error('Error selecting file:', error);
+                const toast = new Adw.Toast({
+                    title: _('Failed to select file'),
                     timeout: 3,
                 });
                 this.add_toast(toast);
