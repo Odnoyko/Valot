@@ -5,6 +5,8 @@
  */
 
 import { LocalDBProvider } from './providers/LocalDBProvider.js';
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 
 export class DataNavigator {
     constructor() {
@@ -18,6 +20,9 @@ export class DataNavigator {
         this.activeProviderType = null;
 
         this._initialized = false;
+
+        // Simple event callbacks (provider-switched, providers-changed)
+        this._callbacks = new Map();
     }
 
     /**
@@ -120,12 +125,61 @@ export class DataNavigator {
             this.activeProvider = provider;
             this.activeProviderType = providerName;
 
+            // Notify listeners
+            this._emit('provider-switched', { name: providerName, provider });
+
         } catch (error) {
             // Rollback to previous provider on error
             this.activeProvider = previousProvider;
             this.activeProviderType = previousProviderType;
 
             throw new Error(`Failed to switch to provider '${providerName}': ${error.message}`);
+        }
+    }
+
+    /**
+     * Register a new local database by absolute path and optional name
+     * @param {string} name - Provider key (unique)
+     * @param {string} dbPath - Absolute path to .db file
+     */
+    async registerLocalDatabase(name, dbPath) {
+        if (!name || !dbPath)
+            throw new Error('registerLocalDatabase requires name and dbPath');
+
+        const provider = new LocalDBProvider(dbPath);
+        this.registerProvider(name, provider);
+        this._emit('providers-changed', Array.from(this.providers.keys()));
+    }
+
+    /**
+     * Switch to a local SQLite database by file path (creates a provider if needed)
+     * @param {string} dbPath - Absolute path to .db file
+     */
+    async switchToLocalDatabaseByPath(dbPath) {
+        const existing = Array.from(this.providers.entries()).find(([key, prov]) => prov.getProviderType && prov.getProviderType() === 'local' && prov.getDatabasePath && prov.getDatabasePath() === dbPath);
+        let name = existing?.[0];
+        if (!name) {
+            name = `local:${dbPath}`;
+            await this.registerLocalDatabase(name, dbPath);
+        }
+        await this.switchProvider(name);
+    }
+
+    /**
+     * Subscribe to DataNavigator events
+     * @param {string} event
+     * @param {Function} cb
+     */
+    on(event, cb) {
+        if (!this._callbacks.has(event)) this._callbacks.set(event, new Set());
+        this._callbacks.get(event).add(cb);
+    }
+
+    _emit(event, data) {
+        const set = this._callbacks.get(event);
+        if (!set) return;
+        for (const cb of set) {
+            try { cb(data); } catch (e) { console.error('DataNavigator event error', e); }
         }
     }
 
@@ -293,5 +347,85 @@ export class DataNavigator {
         this.activeProviderType = null;
         this.providers.clear();
         this._initialized = false;
+    }
+
+    /**
+     * Merge data from an external SQLite database file into the ACTIVE provider
+     * @param {string} importPath - Absolute path to source .db
+     * @param {(step:number,total:number,message:string)=>void} progress - Optional progress callback
+     */
+    async mergeFromDatabaseFile(importPath, progress = null) {
+        const active = this._getActiveProvider();
+        if (active.getProviderType() !== 'local' || !active.getBridge) {
+            throw new Error('mergeFromDatabaseFile is supported only for local SQLite provider');
+        }
+        const { DatabaseImport } = await import('resource:///com/odnoyko/valot/data/providers/gdaDBBridge/DatabaseImport.js');
+        const dbImport = new DatabaseImport(active.getBridge());
+        const result = await dbImport.mergeData(importPath, progress);
+        this._emit('data-merged', result);
+        return result;
+    }
+
+    /**
+     * Replace active database contents with data from external SQLite file
+     * @param {string} importPath
+     * @param {(step:number,total:number,message:string)=>void} progress
+     */
+    async replaceWithDatabaseFile(importPath, progress = null) {
+        const active = this._getActiveProvider();
+        if (active.getProviderType() !== 'local' || !active.getBridge) {
+            throw new Error('replaceWithDatabaseFile is supported only for local SQLite provider');
+        }
+        const { DatabaseImport } = await import('resource:///com/odnoyko/valot/data/providers/gdaDBBridge/DatabaseImport.js');
+        const dbImport = new DatabaseImport(active.getBridge());
+        const result = await dbImport.replaceData(importPath, progress);
+        this._emit('data-replaced', result);
+        return result;
+    }
+
+    /**
+     * Export active database file to destination path (overwrites)
+     * @param {string} destPath
+     */
+    async exportActiveDatabase(destPath) {
+        const active = this._getActiveProvider();
+        const srcPath = active.getDatabasePath?.();
+        if (!srcPath) throw new Error('Active provider does not expose database path');
+
+        const src = Gio.File.new_for_path(srcPath);
+        const dst = Gio.File.new_for_path(destPath);
+        src.copy(dst, Gio.FileCopyFlags.OVERWRITE, null, null);
+        this._emit('database-exported', { from: srcPath, to: destPath });
+    }
+
+    /**
+     * Reset active database contents without closing connection
+     */
+    async resetActiveDatabase() {
+        const active = this._getActiveProvider();
+        const appDb = active.getBridge?.() || active;
+        if (!appDb?.execute) throw new Error('Active provider has no execute capability');
+
+        await appDb.execute('BEGIN IMMEDIATE');
+        try {
+            await appDb.execute('DELETE FROM TimeEntry');
+            await appDb.execute('DELETE FROM TaskInstance');
+            await appDb.execute('DELETE FROM Task');
+            await appDb.execute('DELETE FROM Project WHERE id != 1');
+            await appDb.execute('DELETE FROM Client WHERE id != 1');
+            await appDb.execute('COMMIT');
+        } catch (e) {
+            try { await appDb.execute('ROLLBACK'); } catch {}
+            throw e;
+        }
+        this._emit('database-reset', true);
+    }
+
+    /**
+     * Get active database absolute path (if available)
+     */
+    getActiveDatabasePath() {
+        const active = this._getActiveProvider();
+        return active.getDatabasePath?.() || null;
     }
 }

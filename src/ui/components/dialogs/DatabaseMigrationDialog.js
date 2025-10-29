@@ -11,7 +11,7 @@ import Gio from 'gi://Gio';
 import { createRecoloredSVG } from 'resource:///com/odnoyko/valot/ui/utils/svgRecolor.js';
 
 export class DatabaseMigrationDialog {
-    constructor(parent, oldDbPath) {
+    constructor(parent, oldDbPath, options = {}) {
         this.parent = parent;
         this.oldDbPath = oldDbPath;
         this.dialog = null;
@@ -21,6 +21,17 @@ export class DatabaseMigrationDialog {
         this.progressBar = null;
         this.statusLabel = null;
         this.onChoiceMade = null;
+
+        // Customization options for import mode
+        this.options = {
+            title: options.title || _('Database Migration Tool'),
+            headerText: options.headerText || _('Valot was updated to the'),
+            version: options.version || ' v0.9.0 ',
+            subtitle: options.subtitle || _('Please choose your way to continue \nafter update'),
+            deleteButtonLabel: options.deleteButtonLabel || _('Delete & Fresh Start'),
+            backupButtonLabel: options.backupButtonLabel || _('Backup & Migrate'),
+            showVersion: options.showVersion !== false,
+        };
     }
 
     /**
@@ -45,7 +56,7 @@ export class DatabaseMigrationDialog {
             show_start_title_buttons: false,
             css_classes: ['flat'],
             title_widget: new Gtk.Label({
-                label: _('Database Migration Tool'),
+                label: this.options.title,
                 css_classes: ['title'],
             }),
         });
@@ -109,32 +120,35 @@ export class DatabaseMigrationDialog {
         );
         illustrationBox.append(illustration);
 
-        // Version text
-        const versionBox = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 6,
-            halign: Gtk.Align.CENTER,
-            margin_top: 24,
-        });
+        // Version text (only show if enabled)
+        let versionBox = null;
+        if (this.options.showVersion) {
+            versionBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 6,
+                halign: Gtk.Align.CENTER,
+                margin_top: 24,
+            });
 
-        const versionText1 = new Gtk.Label({
-            label: _('Valot was updated to the'),
-            css_classes: ['version-marker'],
-        });
+            const versionText1 = new Gtk.Label({
+                label: this.options.headerText,
+                css_classes: ['version-marker'],
+            });
 
-        const versionBadge = new Gtk.Label({
-            label: ' v0.9.0 ',
-            css_classes: ['pill', 'success', 'version-label'],
-        });
-        versionBadge.set_markup('<b> v0.9.0 </b>');
+            const versionBadge = new Gtk.Label({
+                label: this.options.version,
+                css_classes: ['pill', 'success', 'version-label'],
+            });
+            versionBadge.set_markup(`<b>${this.options.version}</b>`);
 
-        versionBox.append(versionText1);
-        versionBox.append(versionBadge);
+            versionBox.append(versionText1);
+            versionBox.append(versionBadge);
+        }
 
         // Subtitle
         const subtitle = new Gtk.Label({
-            label: _('Please choose your way to continue \nafter update'),
-            margin_top: 8,
+            label: this.options.subtitle,
+            margin_top: this.options.showVersion ? 8 : 24,
             halign: Gtk.Align.CENTER,
             justify: Gtk.Justification.CENTER,
             margin_bottom: 4,
@@ -151,9 +165,9 @@ export class DatabaseMigrationDialog {
             valign: Gtk.Align.CENTER,
         });
 
-        // Delete & Start Fresh button
+        // Delete / Replace button
         const deleteButton = new Gtk.Button({
-            label: _('Delete & Fresh Start'),
+            label: this.options.deleteButtonLabel,
             height_request: 40,
             css_classes: ['pill'],
         });
@@ -162,9 +176,9 @@ export class DatabaseMigrationDialog {
             this._startMigration('delete');
         });
 
-        // Backup & Migrate button
+        // Backup / Save and Add button
         const backupButton = new Gtk.Button({
-            label: _('Backup & Migrate'),
+            label: this.options.backupButtonLabel,
             height_request: 40,
             css_classes: ['pill', 'suggested-action'],
         });
@@ -178,7 +192,9 @@ export class DatabaseMigrationDialog {
 
         // Assemble
         mainBox.append(illustrationBox);
-        mainBox.append(versionBox);
+        if (versionBox) {
+            mainBox.append(versionBox);
+        }
         mainBox.append(subtitle);
         mainBox.append(this.buttonsContainer);
 
@@ -239,7 +255,11 @@ export class DatabaseMigrationDialog {
         // Wait 400ms before starting migration to show progress bar at 0%
         if (this.onChoiceMade) {
             setTimeout(() => {
-                this.onChoiceMade(choice);
+                // Handle async callback with error catching
+                Promise.resolve(this.onChoiceMade(choice)).catch(error => {
+                    console.error('Migration error:', error);
+                    this.showError(error.message || 'Unknown error occurred');
+                });
             }, 400);
         }
     }

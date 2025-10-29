@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-27 04:57+0100\n"
+"POT-Creation-Date: 2025-10-27 05:10+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -227,8 +227,7 @@ msgstr ""
 #: src/ui/components/complex/ProjectAppearanceDialog.js:44
 #: src/ui/components/complex/ProjectAppearanceDialog.js:446
 #: src/ui/components/dialogs/MultipleTasksEditDialog.js:107
-#: src/ui/components/dialogs/PreferencesDialog.js:1350
-#: src/ui/components/dialogs/PreferencesDialog.js:1425
+#: src/ui/components/dialogs/PreferencesDialog.js:1611
 #: src/ui/components/dialogs/QuickTaskSelector.js:122
 #: src/ui/components/dialogs/TaskInstanceEditDialog.js:420
 #: src/ui/components/dialogs/TaskInstanceEditDialog.js:530
@@ -1404,37 +1403,37 @@ msgstr ""
 msgid "This is slide %d content. The carousel is working!"
 msgstr ""
 
-#: src/ui/components/dialogs/DatabaseMigrationDialog.js:48
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:27
 msgid "Database Migration Tool"
 msgstr ""
 
-#: src/ui/components/dialogs/DatabaseMigrationDialog.js:121
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:28
 msgid "Valot was updated to the"
 msgstr ""
 
-#: src/ui/components/dialogs/DatabaseMigrationDialog.js:136
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:30
 msgid ""
 "Please choose your way to continue \n"
 "after update"
 msgstr ""
 
-#: src/ui/components/dialogs/DatabaseMigrationDialog.js:156
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:31
 msgid "Delete & Fresh Start"
 msgstr ""
 
-#: src/ui/components/dialogs/DatabaseMigrationDialog.js:167
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:32
 msgid "Backup & Migrate"
 msgstr ""
 
-#: src/ui/components/dialogs/DatabaseMigrationDialog.js:194
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:210
 msgid "Migrating Database"
 msgstr ""
 
-#: src/ui/components/dialogs/DatabaseMigrationDialog.js:195
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:211
 msgid "Please wait while your data is being migrated..."
 msgstr ""
 
-#: src/ui/components/dialogs/DatabaseMigrationDialog.js:220
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:236
 msgid "Initializing..."
 msgstr ""
 
@@ -1762,6 +1761,7 @@ msgstr ""
 
 #: src/ui/components/dialogs/PreferencesDialog.js:480
 #: src/ui/components/dialogs/PreferencesDialog.js:1325
+#: src/ui/components/dialogs/PreferencesDialog.js:1373
 msgid "Import Database"
 msgstr ""
 
@@ -1770,13 +1770,11 @@ msgid "Restore a backup of your database"
 msgstr ""
 
 #: src/ui/components/dialogs/PreferencesDialog.js:485
-#: src/ui/components/dialogs/PreferencesDialog.js:1326
-#: src/ui/components/dialogs/PreferencesDialog.js:1351
 msgid "Import"
 msgstr ""
 
 #: src/ui/components/dialogs/PreferencesDialog.js:499
-#: src/ui/components/dialogs/PreferencesDialog.js:1426
+#: src/ui/components/dialogs/PreferencesDialog.js:1612
 msgid "Reset Database"
 msgstr ""
 
@@ -1956,39 +1954,82 @@ msgstr ""
 msgid "Failed to export database"
 msgstr ""
 
+#: src/ui/components/dialogs/PreferencesDialog.js:1326
+#: src/ui/utils/commonStrings.js:19
+msgid "Select"
+msgstr ""
+
 #: src/ui/components/dialogs/PreferencesDialog.js:1331
 msgid "Database files"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1346
-msgid "Import Database?"
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:1347
-msgid ""
-"This will replace your current database with the imported one. All existing "
-"data will be lost. This action cannot be undone.\n"
-"\n"
-"The app will restart after import."
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:1373
-msgid "Database imported successfully. Restarting app..."
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:1390
-msgid "Failed to import database"
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:1408
+#: src/ui/components/dialogs/PreferencesDialog.js:1357
 msgid "Failed to select file"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1421
+#: src/ui/components/dialogs/PreferencesDialog.js:1374
+msgid "Choose how to import the database"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1375
+msgid "Replace Data"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1376
+msgid "Save and Add Data"
+msgstr ""
+
+#. Update progress
+#: src/ui/components/dialogs/PreferencesDialog.js:1401
+msgid "Replacing database..."
+msgstr ""
+
+#. Update progress to complete
+#: src/ui/components/dialogs/PreferencesDialog.js:1412
+#: src/ui/components/dialogs/PreferencesDialog.js:1573
+msgid "Complete"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1426
+msgid "Failed to replace database"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1437
+msgid "Opening databases..."
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1451
+msgid "Reading clients..."
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1494
+msgid "Reading projects..."
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1534
+msgid "Reading tasks..."
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1568
+msgid "Finalizing..."
+msgstr ""
+
+#. Show summary toast
+#: src/ui/components/dialogs/PreferencesDialog.js:1576
+#, javascript-format
+msgid "Import complete: %d clients, %d projects, %d tasks added"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1598
+#, javascript-format
+msgid "Failed to merge database: %s"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1607
 msgid "Reset Database?"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1422
+#: src/ui/components/dialogs/PreferencesDialog.js:1608
 msgid ""
 "This will delete all your tasks, projects, clients, and time entries. This "
 "action cannot be undone."
@@ -2090,10 +2131,6 @@ msgstr ""
 
 #: src/ui/utils/commonStrings.js:16
 msgid "Create Task"
-msgstr ""
-
-#: src/ui/utils/commonStrings.js:19
-msgid "Select"
 msgstr ""
 
 #: src/ui/utils/commonStrings.js:20

@@ -56,8 +56,8 @@ export class TaskInstanceService extends BaseService {
                 COUNT(te.id) as entry_count
             FROM TaskInstance ti
             JOIN Task t ON t.id = ti.task_id
-            JOIN Project p ON p.id = ti.project_id
-            JOIN Client c ON c.id = ti.client_id
+            LEFT JOIN Project p ON p.id = ti.project_id
+            LEFT JOIN Client c ON c.id = ti.client_id
             LEFT JOIN TimeEntry te ON te.task_instance_id = ti.id
             WHERE ti.id = ${id}
             GROUP BY ti.id
@@ -96,8 +96,8 @@ export class TaskInstanceService extends BaseService {
                 COUNT(te.id) as entry_count
             FROM TaskInstance ti
             JOIN Task t ON t.id = ti.task_id
-            JOIN Project p ON p.id = ti.project_id
-            JOIN Client c ON c.id = ti.client_id
+            LEFT JOIN Project p ON p.id = ti.project_id
+            LEFT JOIN Client c ON c.id = ti.client_id
             LEFT JOIN TimeEntry te ON te.task_instance_id = ti.id
             ${whereClause}
             GROUP BY ti.id

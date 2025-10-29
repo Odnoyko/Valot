@@ -558,9 +558,10 @@ export const PreferencesDialog = GObject.registerClass({
         });
 
         const commandLabel = new Gtk.Label({
-            label: 'com.odnoyko.valot --compact',
+            label: 'flatpak run\ncom.odnoyko.valot --compact',
             css_classes: ['monospace', 'caption', 'dim-label'],
             selectable: true,
+            justify: Gtk.Justification.LEFT,
         });
 
         const copyButton = new Gtk.Button({
@@ -571,7 +572,7 @@ export const PreferencesDialog = GObject.registerClass({
 
         copyButton.connect('clicked', () => {
             const clipboard = Gdk.Display.get_default().get_clipboard();
-            clipboard.set('com.odnoyko.valot --compact');
+            clipboard.set('flatpak run com.odnoyko.valot --compact');
             
             // Show feedback
             copyButton.icon_name = 'emblem-ok-symbolic';
@@ -1283,36 +1284,29 @@ export const PreferencesDialog = GObject.registerClass({
                 const file = dialog.save_finish(result);
                 if (!file) return;
 
-                // Get database path
-                const dbPath = GLib.get_user_data_dir() + '/valot/valot.db';
-                const sourceFile = Gio.File.new_for_path(dbPath);
-
-                // Copy database to selected location
-                sourceFile.copy(
-                    file,
-                    Gio.FileCopyFlags.OVERWRITE,
-                    null,
-                    null
-                );
-
-                // Show success toast
-                const toast = new Adw.Toast({
-                    title: _('Database exported successfully'),
-                    timeout: 3,
-                });
-                this.add_toast(toast);
+                // Delegate export to DataNavigator (data layer)
+                const app = this.get_transient_for().application;
+                app.dataNavigator.exportActiveDatabase(file.get_path())
+                    .then(() => {
+                        const toast = new Adw.Toast({
+                            title: _('Database exported successfully'),
+                            timeout: 3,
+                        });
+                        this.add_toast(toast);
+                    })
+                    .catch((error) => {
+                        console.error('Error exporting database:', error);
+                        const toast = new Adw.Toast({
+                            title: _('Failed to export database'),
+                            timeout: 3,
+                        });
+                        this.add_toast(toast);
+                    });
             } catch (error) {
                 // User cancelled the dialog - this is normal, don't show error
                 if (error.matches(Gtk.DialogError, Gtk.DialogError.DISMISSED)) {
                     return;
                 }
-
-                console.error('Error exporting database:', error);
-                const toast = new Adw.Toast({
-                    title: _('Failed to export database'),
-                    timeout: 3,
-                });
-                this.add_toast(toast);
             }
         });
     }
@@ -1323,7 +1317,7 @@ export const PreferencesDialog = GObject.registerClass({
     _importDatabase() {
         const fileDialog = new Gtk.FileDialog({
             title: _('Import Database'),
-            accept_label: _('Import'),
+            accept_label: _('Select'),
         });
 
         // Add file filter for .db files
@@ -1341,61 +1335,10 @@ export const PreferencesDialog = GObject.registerClass({
                 const file = dialog.open_finish(result);
                 if (!file) return;
 
-                // Show confirmation dialog
-                const confirmDialog = new Adw.AlertDialog({
-                    heading: _('Import Database?'),
-                    body: _('This will replace your current database with the imported one. All existing data will be lost. This action cannot be undone.\n\nThe app will restart after import.'),
-                });
+                const importPath = file.get_path();
 
-                confirmDialog.add_response('cancel', _('Cancel'));
-                confirmDialog.add_response('import', _('Import'));
-                confirmDialog.set_response_appearance('import', Adw.ResponseAppearance.DESTRUCTIVE);
-                confirmDialog.set_default_response('cancel');
-                confirmDialog.set_close_response('cancel');
-
-                confirmDialog.connect('response', (dlg, response) => {
-                    if (response === 'import') {
-                        try {
-                            // Get database path
-                            const dbPath = GLib.get_user_data_dir() + '/valot/valot.db';
-                            const destFile = Gio.File.new_for_path(dbPath);
-
-                            // Copy imported file to database location
-                            file.copy(
-                                destFile,
-                                Gio.FileCopyFlags.OVERWRITE,
-                                null,
-                                null
-                            );
-
-                            // Show success toast
-                            const toast = new Adw.Toast({
-                                title: _('Database imported successfully. Restarting app...'),
-                                timeout: 2,
-                            });
-                            this.add_toast(toast);
-
-                            // Close and restart the app after a short delay
-                            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
-                                const window = this.get_transient_for();
-                                if (window) {
-                                    window.close();
-                                }
-                                return GLib.SOURCE_REMOVE;
-                            });
-
-                        } catch (error) {
-                            console.error('Error importing database:', error);
-                            const toast = new Adw.Toast({
-                                title: _('Failed to import database'),
-                                timeout: 3,
-                            });
-                            this.add_toast(toast);
-                        }
-                    }
-                });
-
-                confirmDialog.present(this);
+                // Show Database Migration Dialog with import context
+                this._showImportDialog(importPath);
 
             } catch (error) {
                 // User cancelled the dialog - this is normal, don't show error
@@ -1414,6 +1357,172 @@ export const PreferencesDialog = GObject.registerClass({
     }
 
     /**
+     * Show import dialog using DatabaseMigrationDialog
+     */
+    async _showImportDialog(importPath) {
+        const { DatabaseMigrationDialog } = await import('resource:///com/odnoyko/valot/ui/components/dialogs/DatabaseMigrationDialog.js');
+
+        // Customize dialog for import context
+        const migrationDialog = new DatabaseMigrationDialog(this, importPath, {
+            title: _('Import Database'),
+            subtitle: _('Choose how to import the database'),
+            deleteButtonLabel: _('Replace Data'),
+            backupButtonLabel: _('Save and Add Data'),
+            showVersion: false, // Don't show version badge for import
+        });
+
+        migrationDialog.show(async (choice) => {
+            if (choice === 'delete') {
+                // Replace Data - delete current and copy imported
+                await this._replaceDatabase(importPath, migrationDialog);
+            } else if (choice === 'backup') {
+                // Save and Add Data - merge databases
+                await this._mergeDatabase(importPath, migrationDialog);
+            }
+        });
+    }
+
+    /**
+     * Replace current database with imported one
+     */
+    async _replaceDatabase(importPath, migrationDialog) {
+        try {
+            const app = this.get_transient_for().application;
+            // Replace via DataNavigator (data layer)
+            const result = await app.dataNavigator.replaceWithDatabaseFile(importPath, (step, total, message) => {
+                migrationDialog.updateProgress(step, total, _(message));
+            });
+
+            migrationDialog.showCompletion();
+
+            console.log('✅ Replace completed:', result);
+
+            // Force reload all services from database
+            console.log('🔄 Force reloading all services...');
+            if (app.coreAPI) {
+                // Clear any caches and force reload
+                try {
+                    if (app.coreAPI.taskService) {
+                        console.log('  Reloading TaskService...');
+                        await app.coreAPI.taskService.loadAllTasks?.();
+                    }
+                    if (app.coreAPI.taskInstanceService) {
+                        console.log('  Reloading TaskInstanceService...');
+                        await app.coreAPI.taskInstanceService.loadAll?.();
+                    }
+                    if (app.coreAPI.clientService) {
+                        console.log('  Reloading ClientService...');
+                        await app.coreAPI.clientService.loadAll?.();
+                    }
+                    if (app.coreAPI.projectService) {
+                        console.log('  Reloading ProjectService...');
+                        await app.coreAPI.projectService.loadAll?.();
+                    }
+                } catch (reloadError) {
+                    console.error('⚠️  Service reload error:', reloadError);
+                }
+
+                // Notify UI directly via CoreBridge to force reload
+                app.coreBridge?.emitUIEvent('client-updated');
+                app.coreBridge?.emitUIEvent('project-updated');
+                app.coreBridge?.emitUIEvent('task-updated');
+
+                console.log('✅ Services reloaded and events emitted');
+            }
+
+        } catch (error) {
+            console.error('Error replacing database:', error);
+            migrationDialog.showError(_('Failed to replace database'));
+        }
+    }
+
+    /**
+     * Merge imported database with current one (add new data, check duplicates)
+     */
+    async _mergeDatabase(importPath, migrationDialog) {
+        const { DatabaseImport } = await import('resource:///com/odnoyko/valot/data/providers/gdaDBBridge/DatabaseImport.js');
+
+        try {
+            // Get EXISTING database connection from application's DataNavigator
+            const app = this.get_transient_for().application;
+            const activeProvider = app.dataNavigator?.getActiveProvider();
+            const appDb = activeProvider?.getBridge();
+
+            if (!appDb) {
+                throw new Error('Database bridge not found');
+            }
+
+            console.log('📂 Using app database connection for merge');
+
+            // Merge via DataNavigator (data layer)
+            const result = await app.dataNavigator.mergeFromDatabaseFile(importPath, (step, total, message) => {
+                migrationDialog.updateProgress(step, total, _(message));
+            });
+
+            // Show summary toast
+            const summaryMessage = _('Import complete: %d clients, %d projects, %d tasks, %d time entries added')
+                .format(result.clientsAdded, result.projectsAdded, result.tasksAdded, result.entriesAdded);
+
+            const toast = new Adw.Toast({
+                title: summaryMessage,
+                timeout: 5,
+            });
+            this.add_toast(toast);
+
+            migrationDialog.showCompletion();
+
+            console.log('✅ Merge completed:', result);
+
+            // Force reload all services from database
+            console.log('🔄 Force reloading all services...');
+            if (app.coreAPI) {
+                // Clear any caches and force reload
+                try {
+                    if (app.coreAPI.taskService) {
+                        console.log('  Reloading TaskService...');
+                        await app.coreAPI.taskService.loadAllTasks?.();
+                    }
+                    if (app.coreAPI.taskInstanceService) {
+                        console.log('  Reloading TaskInstanceService...');
+                        await app.coreAPI.taskInstanceService.loadAll?.();
+                    }
+                    if (app.coreAPI.clientService) {
+                        console.log('  Reloading ClientService...');
+                        await app.coreAPI.clientService.loadAll?.();
+                    }
+                    if (app.coreAPI.projectService) {
+                        console.log('  Reloading ProjectService...');
+                        await app.coreAPI.projectService.loadAll?.();
+                    }
+                } catch (reloadError) {
+                    console.error('⚠️  Service reload error:', reloadError);
+                }
+
+                // Notify UI directly via CoreBridge to force reload
+                app.coreBridge?.emitUIEvent('client-updated');
+                app.coreBridge?.emitUIEvent('project-updated');
+                app.coreBridge?.emitUIEvent('task-updated');
+
+                console.log('✅ Services reloaded and events emitted');
+            }
+
+            // Close dialog after 1 second
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+                try {
+                    migrationDialog.close();
+                } catch (e) {
+                    // Ignore if already closed
+                }
+                return GLib.SOURCE_REMOVE;
+            });
+
+        } catch (error) {
+            console.error('Error merging database:', error);
+            migrationDialog.showError(_('Failed to merge database: %s').format(error.message));
+        }
+    }
+
+    /**
      * Reset database with confirmation
      */
     _resetDatabase() {
@@ -1428,26 +1537,27 @@ export const PreferencesDialog = GObject.registerClass({
         dialog.set_default_response('cancel');
         dialog.set_close_response('cancel');
 
-        dialog.connect('response', (dlg, response) => {
+        dialog.connect('response', async (dlg, response) => {
             if (response === 'reset') {
+                // Soft reset via DataNavigator
+                const app = this.get_transient_for().application;
                 try {
-                    // Get database path
-                    const dbPath = GLib.get_user_data_dir() + '/valot/valot.db';
-                    const dbFile = Gio.File.new_for_path(dbPath);
-
-                    // Delete database file
-                    if (dbFile.query_exists(null)) {
-                        dbFile.delete(null);
-                    }
-                } catch (error) {
-                    console.error('Error resetting database:', error);
+                    await app.dataNavigator.resetActiveDatabase();
+                } catch (e) {
+                    console.error('Soft reset failed:', e);
                 }
 
-                // Close the app after confirmation regardless of deletion result
-                const window = this.get_transient_for();
-                if (window) {
-                    window.close();
+                // Reload services and emit events so UI updates
+                try {
+                    app.coreBridge?.emitUIEvent('client-updated');
+                    app.coreBridge?.emitUIEvent('project-updated');
+                    app.coreBridge?.emitUIEvent('task-updated');
+                } catch (reloadError) {
+                    console.error('Error emitting refresh events after reset:', reloadError);
                 }
+
+                const toast = new Adw.Toast({ title: _('Database reset complete'), timeout: 3 });
+                this.add_toast(toast);
             }
         });
 

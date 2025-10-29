@@ -91,6 +91,7 @@
     <file>data/providers/LocalDBProvider.js</file>
     <file>data/providers/gdaDBBridge/GdaDatabaseBridge.js</file>
     <file>data/providers/gdaDBBridge/DatabaseMigration.js</file>
+    <file>data/providers/gdaDBBridge/DatabaseImport.js</file>
 
     <!-- Core API (JavaScript) -->
     <file>core/api/CoreAPI.js</file>

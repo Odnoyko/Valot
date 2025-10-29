@@ -15,9 +15,10 @@ export class GdaDatabaseBridge {
 
     /**
      * Initialize database connection
+     * @param {string|null} customDbPath - Optional absolute path to a SQLite .db file
      */
-    async initialize() {
-        const dbPath = GLib.build_filenamev([
+    async initialize(customDbPath = null) {
+        const dbPath = customDbPath || GLib.build_filenamev([
             GLib.get_user_data_dir(),
             'valot',
             'valot.db'
@@ -25,8 +26,12 @@ export class GdaDatabaseBridge {
 
         this.dbPath = dbPath;
 
-        // Ensure directory exists
-        GLib.mkdir_with_parents(GLib.path_get_dirname(dbPath), 0o755);
+        // Ensure directory exists for local paths
+        try {
+            GLib.mkdir_with_parents(GLib.path_get_dirname(dbPath), 0o755);
+        } catch (e) {
+            // Ignore if path is not creatable (e.g., read-only or external file)
+        }
 
         // SQLite connection string - use basename WITHOUT extension, GDA adds .db automatically
         const dbName = GLib.path_get_basename(dbPath).replace('.db', '');

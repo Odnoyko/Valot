@@ -8,11 +8,12 @@ import { DataProvider } from '../DataProvider.js';
 import { GdaDatabaseBridge } from './gdaDBBridge/GdaDatabaseBridge.js';
 
 export class LocalDBProvider extends DataProvider {
-    constructor() {
+    constructor(dbPath = null) {
         super();
         this.bridge = new GdaDatabaseBridge();
         this.providerType = 'local';
         this.providerName = 'local-sqlite';
+        this.dbPathOverride = dbPath;
     }
 
     /**
@@ -20,7 +21,7 @@ export class LocalDBProvider extends DataProvider {
      * @returns {Promise<void>}
      */
     async initialize() {
-        await this.bridge.initialize();
+        await this.bridge.initialize(this.dbPathOverride || null);
     }
 
     /**
@@ -141,6 +142,14 @@ export class LocalDBProvider extends DataProvider {
      */
     getDatabasePath() {
         return this.bridge.dbPath;
+    }
+
+    /**
+     * Change database path for this provider (must re-initialize)
+     * @param {string} dbPath
+     */
+    setDatabasePath(dbPath) {
+        this.dbPathOverride = dbPath;
     }
 
     /**

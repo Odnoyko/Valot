@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: valot 0.6.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-27 04:57+0100\n"
+"POT-Creation-Date: 2025-10-27 05:10+0100\n"
 "PO-Revision-Date: 2025-10-06 12:04+0200\n"
 "Last-Translator: Vitalii Odnoiko <kontakt@odnoyko.com>\n"
 "Language-Team: Ukrainian\n"
@@ -107,19 +107,9 @@ msgstr ""
 msgid "Order of pages in the view switcher"
 msgstr "Порядок сторінок у перемикачі вигляду"
 
-#: data/com.odnoyko.valot.gschema.xml:46
-#, fuzzy
-msgid "Last selected project ID"
-msgstr "Видалити проєкт"
-
 #: data/com.odnoyko.valot.gschema.xml:47
 msgid "Last selected project ID for tracking widget persistence"
 msgstr "ID останнього вибраного проєкту для збереження віджета відстеження"
-
-#: data/com.odnoyko.valot.gschema.xml:51
-#, fuzzy
-msgid "Last selected client ID"
-msgstr "Вибрати клієнта"
 
 #: data/com.odnoyko.valot.gschema.xml:52
 msgid "Last selected client ID for tracking widget persistence"
@@ -151,11 +141,6 @@ msgstr "Компактний таймер"
 msgid "Open main window"
 msgstr "Відкрити головне вікно"
 
-#: src/ui/windows/CompactTracker.js:61 src/ui/windows/CompactTracker.js:228
-#, fuzzy
-msgid "No task selected"
-msgstr "Ще немає завдань"
-
 #: src/ui/windows/CompactTracker.js:77 src/ui/windows/CompactTracker.js:230
 #: src/ui/windows/pages/ClientsPage.js:198
 #: src/ui/windows/pages/ClientsPage.js:267
@@ -171,14 +156,6 @@ msgstr "Ще немає завдань"
 #: src/ui/utils/widgetFactory.js:542
 msgid "Start tracking"
 msgstr "Почати відстеження"
-
-#. Update UI to tracking mode
-#: src/ui/windows/CompactTracker.js:222
-#: src/ui/components/complex/HeaderTrackingWidget.js:154
-#: src/ui/components/complex/TrackingWidget.js:145
-#, fuzzy
-msgid "Tracking..."
-msgstr "Завантаження..."
 
 #: src/ui/windows/CompactTracker.js:224 src/ui/windows/pages/ClientsPage.js:251
 #: src/ui/windows/pages/ProjectsPage.js:282
@@ -243,8 +220,7 @@ msgstr ""
 #: src/ui/components/complex/ProjectAppearanceDialog.js:44
 #: src/ui/components/complex/ProjectAppearanceDialog.js:446
 #: src/ui/components/dialogs/MultipleTasksEditDialog.js:107
-#: src/ui/components/dialogs/PreferencesDialog.js:1350
-#: src/ui/components/dialogs/PreferencesDialog.js:1425
+#: src/ui/components/dialogs/PreferencesDialog.js:1611
 #: src/ui/components/dialogs/QuickTaskSelector.js:122
 #: src/ui/components/dialogs/TaskInstanceEditDialog.js:420
 #: src/ui/components/dialogs/TaskInstanceEditDialog.js:530
@@ -317,14 +293,6 @@ msgstr "Пошук"
 msgid "Show Sidebar"
 msgstr "Показати бічну панель"
 
-#: src/ui/windows/pages/ClientsPage.js:119
-#: src/ui/windows/pages/ProjectsPage.js:153
-#: src/ui/windows/pages/ReportsPage.js:168
-#: src/ui/windows/pages/TasksPage.js:337
-#, fuzzy
-msgid "Open Compact Tracker (Shift: keep main window)"
-msgstr "Закрити компактний таймер і відкрити головне вікно"
-
 #: src/ui/windows/pages/ClientsPage.js:158
 #: src/ui/windows/pages/ProjectsPage.js:192
 #: src/ui/windows/pages/TasksPage.js:377
@@ -362,17 +330,6 @@ msgstr "Додати клієнта"
 #: src/ui/windows/pages/TasksPage.js:884
 msgid "Back"
 msgstr "Назад"
-
-#. Update pagination info
-#: src/ui/windows/pages/ClientsPage.js:500
-#: src/ui/windows/pages/ClientsPage.js:1274
-#: src/ui/windows/pages/ProjectsPage.js:811
-#: src/ui/windows/pages/ProjectsPage.js:841
-#: src/ui/windows/pages/ProjectsPageInterface.js:221
-#: src/ui/windows/pages/TasksPage.js:1611 src/ui/utils/widgetFactory.js:365
-#, fuzzy, javascript-format
-msgid "Page %d of %d"
-msgstr "1 з 1"
 
 #: src/ui/windows/pages/ClientsPage.js:507
 #: src/ui/windows/pages/ProjectsPage.js:507
@@ -417,11 +374,6 @@ msgstr ""
 msgid "Create Client"
 msgstr "Створити клієнта"
 
-#: src/ui/windows/pages/ClientsPage.js:821
-#, fuzzy
-msgid "Add a new client with name and currency"
-msgstr "Додати нову власну валюту"
-
 #: src/ui/windows/pages/ClientsPage.js:837
 msgid "Client name"
 msgstr "Ім'я клієнта"
@@ -439,11 +391,6 @@ msgstr "Введіть нове ім'я для цього клієнта"
 #: src/ui/utils/commonStrings.js:12
 msgid "Save"
 msgstr "Зберегти"
-
-#: src/ui/windows/pages/ClientsPage.js:970
-#, fuzzy
-msgid "Client name updated"
-msgstr "Ім'я клієнта"
 
 #: src/ui/windows/pages/ClientsPage.js:971
 #: src/ui/windows/pages/ClientsPage.js:1086
@@ -469,11 +416,6 @@ msgstr "Змінити погодинну ставку та валюту для 
 msgid "Save Changes"
 msgstr "Зберегти зміни"
 
-#: src/ui/windows/pages/ClientsPage.js:1085
-#, fuzzy
-msgid "Client rate updated"
-msgstr "Клієнта успішно оновлено"
-
 #: src/ui/windows/pages/ClientsPage.js:1109
 msgid "Select Currency"
 msgstr "Вибрати валюту"
@@ -485,11 +427,6 @@ msgstr "Виберіть валюту для цього клієнта"
 #: src/ui/windows/pages/ClientsPage.js:1356
 msgid "Delete Clients"
 msgstr "Видалити клієнтів"
-
-#: src/ui/windows/pages/ClientsPage.js:1384
-#, fuzzy
-msgid "Client deleted"
-msgstr "Фільтр клієнтів"
 
 #: src/ui/windows/pages/ProjectsPage.js:419 src/ui/utils/commonStrings.js:86
 msgid "Search projects..."
@@ -529,11 +466,6 @@ msgstr "Створіть свій перший проєкт для початк�
 msgid "Delete Projects"
 msgstr "Видалити проекти"
 
-#: src/ui/windows/pages/ProjectsPage.js:951
-#, fuzzy
-msgid "Project deleted"
-msgstr "Фільтр проєктів"
-
 #: src/ui/windows/pages/ProjectsPage.js:1036
 msgid "Failed to update project"
 msgstr "Не вдалося оновити проєкт"
@@ -557,11 +489,6 @@ msgstr "Зберегти"
 #: src/ui/windows/pages/ProjectsPageInterface.js:154
 msgid "Delete Selected"
 msgstr "Видалити вибране"
-
-#: src/ui/windows/pages/ReportsPage.js:152
-#, fuzzy
-msgid "Export PDF Report"
-msgstr "Експортувати PDF"
 
 #: src/ui/windows/pages/ReportsPage.js:208
 msgid "Task Reports"
@@ -599,11 +526,6 @@ msgstr "Фільтрувати за клієнтом"
 #: src/ui/windows/pages/ReportsPage.js:309
 msgid "bis"
 msgstr "до"
-
-#: src/ui/windows/pages/ReportsPage.js:358
-#, fuzzy
-msgid "Loading chart..."
-msgstr "Завантаження..."
 
 #: src/ui/windows/pages/ReportsPage.js:384
 msgid "Total Time"
@@ -649,21 +571,9 @@ msgstr "Усі проєкти"
 msgid "All Clients"
 msgstr "Усі клієнти"
 
-#: src/ui/windows/pages/ReportsPage.js:667
-#, fuzzy
-msgid ""
-"📊 No data for selected period\n"
-"Start tracking time to see your chart"
-msgstr "Почніть відстежувати час, щоб переглядати свої завдання тут"
-
 #. Chart title with period-specific formatting
 #: src/ui/windows/pages/ReportsPage.js:1149
 msgid "📊 Weekly Activity"
-msgstr "📊 Щотижнева активність"
-
-#: src/ui/windows/pages/ReportsPage.js:1153
-#, fuzzy
-msgid "Weekly Activity"
 msgstr "📊 Щотижнева активність"
 
 #: src/ui/windows/pages/ReportsPage.js:1155
@@ -692,21 +602,6 @@ msgstr "Застосувати"
 msgid "No tasks found"
 msgstr "Завдання не знайдено"
 
-#: src/ui/windows/pages/ReportsPage.js:2021
-#, fuzzy
-msgid "Try adjusting your filters"
-msgstr "Спробуйте налаштувати пошук або фільтр категорій"
-
-#: src/ui/windows/pages/ReportsPage.js:2040
-#, fuzzy
-msgid "Unnamed Task"
-msgstr "Відстежувані завдання"
-
-#: src/ui/windows/pages/ReportsPage.js:2153
-#, fuzzy
-msgid "PDF export failed"
-msgstr "Параметри експорту PDF"
-
 #: src/ui/windows/pages/TasksPage.js:724
 msgid "Search tasks..."
 msgstr "Пошук завдань..."
@@ -727,29 +622,9 @@ msgstr "Сьогодні"
 msgid "This Month"
 msgstr "Цього місяця"
 
-#: src/ui/windows/pages/TasksPage.js:791
-#, fuzzy
-msgid "No Tasks Yet"
-msgstr "Ще немає завдань"
-
-#: src/ui/windows/pages/TasksPage.js:800
-#, fuzzy
-msgid "Start tracking time to create your tasks"
-msgstr "Почніть відстежувати час, щоб переглядати свої завдання тут"
-
-#: src/ui/windows/pages/TasksPage.js:927
-#, fuzzy
-msgid "Edit Selected"
-msgstr "Вибрано: %d"
-
 #: src/ui/windows/pages/TasksPage.js:1658 src/ui/utils/commonStrings.js:28
 msgid "Delete Tasks"
 msgstr "Видалити завдання"
-
-#: src/ui/windows/pages/TasksPage.js:1714
-#, fuzzy
-msgid "Task deleted"
-msgstr "Завдання успішно видалено"
 
 #: src/ui/components/complex/AdvancedTrackingWidget.js:116
 #: src/ui/components/complex/AdvancedTrackingWidget.js:310
@@ -876,26 +751,9 @@ msgstr "Виберіть дату початку для діапазону зв�
 msgid "Choose the end date for the report range"
 msgstr "Виберіть дату закінчення для діапазону звіту"
 
-#. Update UI to idle mode
-#: src/ui/components/complex/HeaderTrackingWidget.js:43
-#: src/ui/components/complex/HeaderTrackingWidget.js:186
-#, fuzzy
-msgid "Select task..."
-msgstr "Пошук завдань..."
-
-#: src/ui/components/complex/HeaderTrackingWidget.js:52
-#, fuzzy
-msgid "Select project"
-msgstr "Вибрати проєкт"
-
 #: src/ui/components/complex/HeaderTrackingWidget.js:60
 msgid "Select client"
 msgstr "Вибрати клієнта"
-
-#: src/ui/components/complex/HeaderTrackingWidget.js:105
-#, fuzzy
-msgid "Open compact tracker (Shift: keep main window)"
-msgstr "Закрити компактний таймер і відкрити головне вікно"
 
 #: src/ui/components/complex/ModularDialogManager.js:139
 msgid "Task Name"
@@ -935,16 +793,6 @@ msgstr "Підтвердити"
 msgid "Error Details"
 msgstr "Подробиці помилки"
 
-#: src/ui/components/complex/ModularDialogManager.js:395
-#, fuzzy, javascript-format
-msgid "Delete %s"
-msgstr "Видалити завдання"
-
-#: src/ui/components/complex/ModularDialogManager.js:396
-#, fuzzy, javascript-format
-msgid "Are you sure you want to delete \"%s\"? This action cannot be undone."
-msgstr "Ви впевнені, що хочете видалити це завдання?"
-
 #: src/ui/components/complex/ProjectAppearanceDialog.js:20
 msgid "Project Appearance"
 msgstr "Зовнішній вигляд проєкту"
@@ -961,29 +809,9 @@ msgstr "Колір проєкту:"
 msgid "Click to change color"
 msgstr "Клацніть, щоб змінити колір"
 
-#: src/ui/components/complex/ProjectAppearanceDialog.js:101
-#, fuzzy
-msgid "Project Symbol:"
-msgstr "Колір проєкту:"
-
-#: src/ui/components/complex/ProjectAppearanceDialog.js:112
-#, fuzzy
-msgid "Click to choose symbol"
-msgstr "Клацніть, щоб змінити колір"
-
 #: src/ui/components/complex/ProjectAppearanceDialog.js:166
 msgid "Select Project Color"
 msgstr "Вибрати колір проєкту"
-
-#: src/ui/components/complex/ProjectAppearanceDialog.js:195
-#, fuzzy
-msgid "Choose Symbol"
-msgstr "Символ валюти"
-
-#: src/ui/components/complex/ProjectAppearanceDialog.js:196
-#, fuzzy
-msgid "Select an icon or emoji for the project"
-msgstr "Виберіть конкретний проєкт або включіть усі проєкти"
 
 #: src/ui/components/complex/ProjectAppearanceDialog.js:222
 msgid "Clear"
@@ -994,24 +822,9 @@ msgstr "Очистити"
 msgid "Icons"
 msgstr "Значки"
 
-#: src/ui/components/complex/ProjectAppearanceDialog.js:246
-#, fuzzy
-msgid "Emojis"
-msgstr "Емодзі"
-
 #: src/ui/components/complex/ProjectAppearanceDialog.js:271
 msgid "Clear mode selected - No icon will be displayed"
 msgstr "Обрано режим очищення - Значок не відображатиметься"
-
-#: src/ui/components/complex/ProjectAppearanceDialog.js:273
-#, fuzzy
-msgid "Icon selected"
-msgstr "0 вибрано"
-
-#: src/ui/components/complex/ProjectAppearanceDialog.js:275
-#, fuzzy
-msgid "Emoji selected"
-msgstr "0 вибрано"
 
 #: src/ui/components/complex/ProjectCard.js:102
 #, javascript-format
@@ -1047,22 +860,12 @@ msgstr "Зараз відстежується"
 msgid "Enter project name..."
 msgstr "Введіть назву проєкту..."
 
-#: src/ui/components/complex/ProjectDialog.js:261
-#, fuzzy
-msgid "Failed to save project. Please try again."
-msgstr "Не вдалося оновити проєкт"
-
 #. Update dialog title
 #: src/ui/components/complex/ProjectDialog.js:313
 #: src/ui/components/complex/ProjectDialog.js:337
 #: src/ui/utils/commonStrings.js:17
 msgid "Create Project"
 msgstr "Створити проєкт"
-
-#: src/ui/components/complex/ProjectDialog.js:314
-#, fuzzy
-msgid "Update project name and appearance"
-msgstr "Зовнішній вигляд проєкту"
 
 #. Update dialog title
 #: src/ui/components/complex/ProjectDialog.js:335
@@ -1576,15 +1379,15 @@ msgstr "Слайд"
 msgid "This is slide %d content. The carousel is working!"
 msgstr "Це вміст слайда %d. Каруселя працює!"
 
-#: src/ui/components/dialogs/DatabaseMigrationDialog.js:48
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:27
 msgid "Database Migration Tool"
 msgstr ""
 
-#: src/ui/components/dialogs/DatabaseMigrationDialog.js:121
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:28
 msgid "Valot was updated to the"
 msgstr "Valot оновлено до"
 
-#: src/ui/components/dialogs/DatabaseMigrationDialog.js:136
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:30
 msgid ""
 "Please choose your way to continue \n"
 "after update"
@@ -1592,23 +1395,23 @@ msgstr ""
 "Будь ласка, оберіть спосіб продовження \n"
 "після оновлення"
 
-#: src/ui/components/dialogs/DatabaseMigrationDialog.js:156
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:31
 msgid "Delete & Fresh Start"
 msgstr "Видалити та почати заново"
 
-#: src/ui/components/dialogs/DatabaseMigrationDialog.js:167
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:32
 msgid "Backup & Migrate"
 msgstr "Резервувати та мігрувати"
 
-#: src/ui/components/dialogs/DatabaseMigrationDialog.js:194
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:210
 msgid "Migrating Database"
 msgstr ""
 
-#: src/ui/components/dialogs/DatabaseMigrationDialog.js:195
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:211
 msgid "Please wait while your data is being migrated..."
 msgstr ""
 
-#: src/ui/components/dialogs/DatabaseMigrationDialog.js:220
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:236
 msgid "Initializing..."
 msgstr "Ініціалізація..."
 
@@ -1616,33 +1419,9 @@ msgstr "Ініціалізація..."
 msgid "s"
 msgstr "с"
 
-#: src/ui/components/dialogs/MultipleTasksEditDialog.js:45
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:66
-#: src/ui/utils/commonStrings.js:74
-#, fuzzy
-msgid "Duration"
-msgstr "Тривалість таймера"
-
-#: src/ui/components/dialogs/MultipleTasksEditDialog.js:66
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:88
-#, fuzzy
-msgid "Task name...."
-msgstr "Назва завдання"
-
 #: src/ui/components/dialogs/MultipleTasksEditDialog.js:94
 msgid "Changes will be applied to all selected tasks"
 msgstr "Зміни будуть застосовані до всіх вибраних завдань"
-
-#: src/ui/components/dialogs/MultipleTasksEditDialog.js:108
-#, fuzzy
-msgid "Save changes"
-msgstr "Зберегти зміни"
-
-#: src/ui/components/dialogs/MultipleTasksEditDialog.js:183
-#: src/ui/utils/commonStrings.js:54
-#, fuzzy
-msgid "Failed to save changes"
-msgstr "Не вдалося оновити проєкт"
 
 #: src/ui/components/dialogs/PDFExportPreferencesDialog.js:15
 #: src/ui/components/dialogs/PDFExportPreferencesDialog.js:61
@@ -1759,21 +1538,6 @@ msgstr "Дані про виставлення рахунків та фінан�
 #: src/ui/components/dialogs/PDFExportPreferencesDialog.js:253
 msgid "Include rates, costs, and financial calculations"
 msgstr "Включити ставки, витрати та фінансові розрахунки"
-
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:277
-#, fuzzy
-msgid "Billing Currencies"
-msgstr "Приховані валюти"
-
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:278
-#, fuzzy
-msgid "Select which currencies to include in billing report"
-msgstr "Виберіть, які розділи включити у ваш PDF-звіт"
-
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:306
-#, fuzzy
-msgid "All Currencies"
-msgstr "Приховані валюти"
 
 #: src/ui/components/dialogs/PDFExportPreferencesDialog.js:396
 #: src/ui/components/dialogs/PDFExportPreferencesDialog.js:432
@@ -1919,53 +1683,19 @@ msgstr "Тривалість таймера"
 msgid "Default pomodoro session length in minutes"
 msgstr "Тривалість сеансу помодоро за замовчуванням у хвилинах"
 
-#: src/ui/components/dialogs/PreferencesDialog.js:455
-#, fuzzy
-msgid "Database"
-msgstr "Помилка бази даних"
-
 #: src/ui/components/dialogs/PreferencesDialog.js:456
 msgid "Backup and manage your data"
 msgstr "Резервне копіювання та керування вашими даними"
-
-#: src/ui/components/dialogs/PreferencesDialog.js:461
-#: src/ui/components/dialogs/PreferencesDialog.js:1274
-#, fuzzy
-msgid "Export Database"
-msgstr "Експортувати PDF"
 
 #: src/ui/components/dialogs/PreferencesDialog.js:462
 msgid "Save a backup of your database"
 msgstr "Зберегти резервну копію вашої бази даних"
 
-#: src/ui/components/dialogs/PreferencesDialog.js:466
-#: src/ui/components/dialogs/PreferencesDialog.js:1275
-#, fuzzy
-msgid "Export"
-msgstr "Експортувати PDF"
-
 #: src/ui/components/dialogs/PreferencesDialog.js:480
 #: src/ui/components/dialogs/PreferencesDialog.js:1325
+#: src/ui/components/dialogs/PreferencesDialog.js:1373
 msgid "Import Database"
 msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:481
-#, fuzzy
-msgid "Restore a backup of your database"
-msgstr "Зберегти резервну копію вашої бази даних"
-
-#: src/ui/components/dialogs/PreferencesDialog.js:485
-#: src/ui/components/dialogs/PreferencesDialog.js:1326
-#: src/ui/components/dialogs/PreferencesDialog.js:1351
-#, fuzzy
-msgid "Import"
-msgstr "Звіти"
-
-#: src/ui/components/dialogs/PreferencesDialog.js:499
-#: src/ui/components/dialogs/PreferencesDialog.js:1426
-#, fuzzy
-msgid "Reset Database"
-msgstr "Вибрати дату"
 
 #: src/ui/components/dialogs/PreferencesDialog.js:500
 msgid "Delete all data and start fresh"
@@ -2135,105 +1865,53 @@ msgstr "Ліцензовано за LGPL 2.1"
 msgid "%d currencies hidden"
 msgstr "%d валют приховано"
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1300
-#, fuzzy
-msgid "Database exported successfully"
-msgstr "Завдання успішно створено"
+#: src/ui/components/dialogs/PreferencesDialog.js:1326
+#: src/ui/utils/commonStrings.js:19
+msgid "Select"
+msgstr "Вибрати"
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1312
-#, fuzzy
-msgid "Failed to export database"
-msgstr "Не вдалося ініціалізувати базу даних"
+#: src/ui/components/dialogs/PreferencesDialog.js:1376
+msgid "Save and Add Data"
+msgstr "Зберегти та додати дані"
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1331
-#, fuzzy
-msgid "Database files"
-msgstr "Помилка бази даних"
-
-#: src/ui/components/dialogs/PreferencesDialog.js:1346
-msgid "Import Database?"
+#. Update progress
+#: src/ui/components/dialogs/PreferencesDialog.js:1401
+msgid "Replacing database..."
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1347
-msgid ""
-"This will replace your current database with the imported one. All existing "
-"data will be lost. This action cannot be undone.\n"
-"\n"
-"The app will restart after import."
+#. Update progress to complete
+#: src/ui/components/dialogs/PreferencesDialog.js:1412
+#: src/ui/components/dialogs/PreferencesDialog.js:1573
+msgid "Complete"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1373
-msgid "Database imported successfully. Restarting app..."
+#: src/ui/components/dialogs/PreferencesDialog.js:1437
+msgid "Opening databases..."
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1390
-#, fuzzy
-msgid "Failed to import database"
-msgstr "Не вдалося ініціалізувати базу даних"
+#. Show summary toast
+#: src/ui/components/dialogs/PreferencesDialog.js:1576
+#, javascript-format
+msgid "Import complete: %d clients, %d projects, %d tasks added"
+msgstr "Імпорт завершено: додано %d клієнтів, %d проєктів, %d завдань"
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1408
-#, fuzzy
-msgid "Failed to select file"
-msgstr "Не вдалося оновити проєкт"
-
-#: src/ui/components/dialogs/PreferencesDialog.js:1421
-#, fuzzy
-msgid "Reset Database?"
-msgstr "Вибрати дату"
-
-#: src/ui/components/dialogs/PreferencesDialog.js:1422
+#: src/ui/components/dialogs/PreferencesDialog.js:1608
 msgid ""
 "This will delete all your tasks, projects, clients, and time entries. This "
 "action cannot be undone."
 msgstr ""
 
-#: src/ui/components/dialogs/QuickTaskSelector.js:26
-#: src/ui/components/dialogs/QuickTaskSelector.js:123
-#, fuzzy
-msgid "Start Tracking"
-msgstr "Почати відстеження"
-
-#: src/ui/components/dialogs/QuickTaskSelector.js:27
-#, fuzzy
-msgid "Select task, project and client"
-msgstr "Виберіть конкретний проєкт або включіть усі проєкти"
-
-#: src/ui/components/dialogs/QuickTaskSelector.js:47
-#, fuzzy
-msgid "Task:"
-msgstr "Завдання"
-
 #: src/ui/components/dialogs/QuickTaskSelector.js:83
 msgid "Project:"
 msgstr "Проєкт:"
-
-#: src/ui/components/dialogs/QuickTaskSelector.js:98
-#, fuzzy
-msgid "Client:"
-msgstr "Клієнт"
 
 #: src/ui/components/dialogs/TaskInstanceEditDialog.js:56
 msgid "Edit Task "
 msgstr ""
 
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:126
-#, fuzzy
-msgid "Start"
-msgstr "Дата початку"
-
 #: src/ui/components/dialogs/TaskInstanceEditDialog.js:271
 msgid "End"
 msgstr "Кінець"
-
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:477
-#, fuzzy
-msgid "Choose date"
-msgstr "Виберіть шаблон завдання"
-
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:478
-#, fuzzy
-msgid "Select the date for this task"
-msgstr "Виберіть шаблон для перегляду подробиць"
 
 #: src/ui/components/dialogs/TaskInstanceEditDialog.js:549
 msgid "Choose time"
@@ -2242,11 +1920,6 @@ msgstr ""
 #: src/ui/components/primitive/ColorPicker.js:100
 msgid "Custom Color..."
 msgstr "Власний колір..."
-
-#: src/ui/components/primitive/IconPicker.js:53
-#, fuzzy
-msgid "Search icons..."
-msgstr "Пошук клієнтів..."
 
 #: src/ui/components/primitive/IconPicker.js:69
 msgid "Actions"
@@ -2292,10 +1965,6 @@ msgstr "Створити"
 #: src/ui/utils/commonStrings.js:16
 msgid "Create Task"
 msgstr "Створити завдання"
-
-#: src/ui/utils/commonStrings.js:19
-msgid "Select"
-msgstr "Вибрати"
 
 #: src/ui/utils/commonStrings.js:20
 msgid "Close"
@@ -2357,63 +2026,13 @@ msgstr "Помилка видалення"
 msgid "Are you sure you want to delete this task?"
 msgstr "Ви впевнені, що хочете видалити це завдання?"
 
-#: src/ui/utils/commonStrings.js:48
-#, fuzzy
-msgid "Are you sure you want to delete {0} tasks?"
-msgstr "Ви впевнені, що хочете видалити це завдання?"
-
-#: src/ui/utils/commonStrings.js:49
-#, fuzzy
-msgid "Are you sure you want to delete this project?"
-msgstr "Ви впевнені, що хочете видалити це завдання?"
-
-#: src/ui/utils/commonStrings.js:50
-#, fuzzy
-msgid "Are you sure you want to delete this client?"
-msgstr "Ви впевнені, що хочете видалити це завдання?"
-
-#: src/ui/utils/commonStrings.js:51
-#, fuzzy
-msgid "No results found"
-msgstr "Проєкти не знайдено"
-
-#: src/ui/utils/commonStrings.js:52
-#, fuzzy
-msgid "Failed to connect to database"
-msgstr "Не вдалося ініціалізувати базу даних"
-
-#: src/ui/utils/commonStrings.js:53
-#, fuzzy
-msgid "Failed to load data"
-msgstr "Не вдалося ініціалізувати базу даних"
-
-#: src/ui/utils/commonStrings.js:55
-#, fuzzy
-msgid "Failed to delete"
-msgstr "Не вдалося оновити проєкт"
-
 #: src/ui/utils/commonStrings.js:56
 msgid "Please check your input and try again"
 msgstr "Будь ласка, перевірте введення та спробуйте знову"
 
-#: src/ui/utils/commonStrings.js:61
-#, fuzzy
-msgid "Name"
-msgstr "Повне ім'я"
-
-#: src/ui/utils/commonStrings.js:64
-#, fuzzy
-msgid "Task"
-msgstr "Завдання"
-
 #: src/ui/utils/commonStrings.js:66
 msgid "Color"
 msgstr ""
-
-#: src/ui/utils/commonStrings.js:67
-#, fuzzy
-msgid "Currency"
-msgstr "Змінити валюту"
 
 #: src/ui/utils/commonStrings.js:68
 msgid "Hourly Rate"
@@ -2431,54 +2050,9 @@ msgstr "Телефон"
 msgid "Notes"
 msgstr "Нотатки"
 
-#: src/ui/utils/commonStrings.js:75
-#, fuzzy
-msgid "Total"
-msgstr "Усього: %s"
-
-#: src/ui/utils/commonStrings.js:76 src/ui/utils/commonStrings.js:99
-#, fuzzy
-msgid "Filter"
-msgstr "Фільтри"
-
 #: src/ui/utils/commonStrings.js:78
 msgid "Sort by"
 msgstr "Сортувати за"
-
-#: src/ui/utils/commonStrings.js:83
-#, fuzzy
-msgid "Enter name..."
-msgstr "Введіть назву завдання..."
-
-#: src/ui/utils/commonStrings.js:84
-#, fuzzy
-msgid "Enter description..."
-msgstr "Введіть ім'я клієнта..."
-
-#: src/ui/utils/commonStrings.js:85
-#, fuzzy
-msgid "Search..."
-msgstr "Пошук"
-
-#: src/ui/utils/commonStrings.js:88
-#, fuzzy
-msgid "Select client..."
-msgstr "Вибрати клієнта"
-
-#: src/ui/utils/commonStrings.js:89
-#, fuzzy
-msgid "Select project..."
-msgstr "Вибрати проєкт"
-
-#: src/ui/utils/commonStrings.js:90
-#, fuzzy
-msgid "Select color..."
-msgstr "Вибрати значок"
-
-#: src/ui/utils/commonStrings.js:91
-#, fuzzy
-msgid "Select currency..."
-msgstr "Вибрати валюту"
 
 #: src/ui/utils/commonStrings.js:92
 msgid "Optional"
@@ -2491,31 +2065,6 @@ msgstr ""
 #: src/ui/utils/commonStrings.js:102
 msgid "Add"
 msgstr ""
-
-#: src/ui/utils/commonStrings.js:103
-#, fuzzy
-msgid "Settings"
-msgstr "Зустріч"
-
-#: src/ui/utils/commonStrings.js:104
-#, fuzzy
-msgid "Change color and icon"
-msgstr "Клацніть, щоб змінити колір та значок"
-
-#: src/ui/utils/commonStrings.js:110
-#, fuzzy
-msgid "No projects yet"
-msgstr "Проєкти не знайдено"
-
-#: src/ui/utils/commonStrings.js:111
-#, fuzzy
-msgid "No clients yet"
-msgstr "Немає клієнта"
-
-#: src/ui/utils/commonStrings.js:112
-#, fuzzy
-msgid "No reports yet"
-msgstr "Ще немає завдань"
 
 #: src/ui/utils/commonStrings.js:113
 msgid "Create your first task to get started"
@@ -2565,29 +2114,9 @@ msgstr "Клієнта успішно видалено"
 msgid "An unknown error occurred"
 msgstr "Сталася невідома помилка"
 
-#: src/ui/utils/commonStrings.js:139
-#, fuzzy
-msgid "Database error"
-msgstr "Помилка бази даних"
-
 #: src/ui/utils/commonStrings.js:140
 msgid "Network error"
 msgstr "Помилка мережі"
-
-#: src/ui/utils/commonStrings.js:141
-#, fuzzy
-msgid "Validation error"
-msgstr "Помилка перевірки"
-
-#: src/ui/utils/commonStrings.js:142
-#, fuzzy
-msgid "Not found"
-msgstr "Завдання не знайдено"
-
-#: src/ui/utils/commonStrings.js:147
-#, fuzzy
-msgid "Active"
-msgstr "Дії"
 
 #: src/ui/utils/commonStrings.js:148
 msgid "Inactive"
@@ -2620,11 +2149,6 @@ msgstr "Немає доступних елементів"
 #: src/ui/utils/selectorFactory.js:61
 msgid "Go to the appropriate page to add items"
 msgstr "Перейдіть на відповідну сторінку, щоб додати елементи"
-
-#: src/ui/utils/selectorFactory.js:114
-#, fuzzy
-msgid "Choose a project for time tracking"
-msgstr "Виберіть клієнта для відстеження часу"
 
 #: src/ui/utils/selectorFactory.js:132
 msgid "Choose a client for time tracking"
