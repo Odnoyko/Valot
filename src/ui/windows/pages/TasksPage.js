@@ -1365,7 +1365,23 @@ export class TasksPage {
      */
     _formatDate(dateStr) {
         if (!dateStr) return '';
-        const date = new Date(dateStr);
+        
+        // Parse date string
+        // New format from TimeUtils.getCurrentTimestamp(): YYYY-MM-DD HH:MM:SS (local time)
+        // Old format from datetime('now'): YYYY-MM-DD HH:MM:SS (UTC time)
+        // We treat all as local time now
+        let date;
+        
+        if (!dateStr.includes('T') && !dateStr.includes('Z')) {
+            // SQLite format: YYYY-MM-DD HH:MM:SS
+            // Convert to ISO format for parsing (local time, no 'Z')
+            const isoStr = dateStr.replace(' ', 'T');
+            date = new Date(isoStr);
+        } else {
+            // Already ISO format
+            date = new Date(dateStr);
+        }
+        
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const year = date.getFullYear();

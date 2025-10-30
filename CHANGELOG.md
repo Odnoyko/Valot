@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Future features and improvements will be listed here
+- 
+## [0.9.1] - 30.10.2025
+
+    - Reset, Import, Export Database fully avaible
+    - Preference dialog changed.
+    - Experemental features avaible.
+    - Bug Fixes.
 
 ## [0.9.0] - 26.10.2025
 

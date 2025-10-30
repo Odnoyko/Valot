@@ -130,5 +130,9 @@
     <file>core/utils/ColorUtils.js</file>
     <file>core/utils/DateFilters.js</file>
     <file>core/utils/ValidationUtils.js</file>
+
+    <!-- Extensions -->
+    <file>extensions/ExtensionManager.js</file>
+    <file>extensions/builtin/QuickTaskAddon.js</file>
   </gresource>
 </gresources>

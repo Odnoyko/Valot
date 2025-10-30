@@ -372,7 +372,7 @@ export class DatabaseImport {
             // Map IDs
             const newTaskId = taskIdMap.get(taskInstance.task_id);
             const newProjectId = projectIdMap.get(taskInstance.project_id) || 1;
-            const newClientId = taskInstance.client_id ? clientIdMap.get(taskInstance.client_id) || null : null;
+            const newClientId = taskInstance.client_id ? clientIdMap.get(taskInstance.client_id) || 1 : 1;
 
             if (!newTaskId) continue;
 
@@ -444,7 +444,7 @@ export class DatabaseImport {
         for (const oldTask of oldTasks) {
             const taskId = taskNameToIdMap.get(oldTask.name);
             const projectId = projectIdMap.get(oldTask.project_id) || 1;
-            const clientId = oldTask.client_id ? clientIdMap.get(oldTask.client_id) || null : null;
+            const clientId = oldTask.client_id ? clientIdMap.get(oldTask.client_id) || 1 : 1;
 
             if (!taskId) continue;
 

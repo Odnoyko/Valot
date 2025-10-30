@@ -110,9 +110,12 @@ export class TaskInstanceService extends BaseService {
      * Create new task instance
      */
     async create(data) {
+        const { TimeUtils } = await import('resource:///com/odnoyko/valot/core/utils/TimeUtils.js');
+        const now = TimeUtils.getCurrentTimestamp();
+        
         const sql = `
             INSERT INTO TaskInstance (task_id, project_id, client_id, last_used_at)
-            VALUES (${data.task_id}, ${data.project_id || 'NULL'}, ${data.client_id || 'NULL'}, datetime('now'))
+            VALUES (${data.task_id}, ${data.project_id || 'NULL'}, ${data.client_id || 'NULL'}, '${now}')
         `;
         const result = await this.execute(sql);
         return await this.getById(result);
@@ -162,7 +165,10 @@ export class TaskInstanceService extends BaseService {
      * Update last_used_at timestamp
      */
     async updateLastUsed(id) {
-        const sql = `UPDATE TaskInstance SET last_used_at = datetime('now') WHERE id = ${id}`;
+        const { TimeUtils } = await import('resource:///com/odnoyko/valot/core/utils/TimeUtils.js');
+        const now = TimeUtils.getCurrentTimestamp();
+        
+        const sql = `UPDATE TaskInstance SET last_used_at = '${now}' WHERE id = ${id}`;
         await this.execute(sql);
     }
     /**

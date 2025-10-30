@@ -2084,9 +2084,15 @@ export class ReportsPage {
     _formatDate(dateStr) {
         if (!dateStr) return '';
 
+        // Parse date string
+        // New format from TimeUtils.getCurrentTimestamp(): YYYY-MM-DD HH:MM:SS (local time)
+        // We treat all as local time now (no 'Z')
         let cleanDateStr = dateStr;
-        if (!cleanDateStr.endsWith('Z') && !cleanDateStr.includes('+')) {
-            cleanDateStr = cleanDateStr + 'Z';
+        
+        if (!cleanDateStr.includes('T') && !cleanDateStr.includes('Z')) {
+            // SQLite format: YYYY-MM-DD HH:MM:SS (local time)
+            // Convert to ISO format without 'Z' (local time)
+            cleanDateStr = cleanDateStr.replace(' ', 'T');
         }
 
         const date = GLib.DateTime.new_from_iso8601(cleanDateStr, null);

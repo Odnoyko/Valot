@@ -52,6 +52,17 @@ export const PreferencesDialog = GObject.registerClass({
         });
         this._setupClientsPage(clientsPage);
         this.add(clientsPage);
+
+        // Integrations Page
+        const integrationsPage = new Adw.PreferencesPage({
+            title: _('Integrations'),
+            icon_name: 'network-server-symbolic',
+        });
+        this._setupIntegrationsPage(integrationsPage);
+        this.add(integrationsPage);
+
+        // Extensions Page (only if extensions are available)
+        this._setupExtensionsPage();
     }
 
     _setupAboutPage(page) {
@@ -158,6 +169,9 @@ export const PreferencesDialog = GObject.registerClass({
     }
 
     _setupGlobalPage(page) {
+        // Get settings for the entire page
+        const settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
+        
         // Appearance Group
         const appearanceGroup = new Adw.PreferencesGroup({
             title: _('Appearance'),
@@ -202,7 +216,6 @@ export const PreferencesDialog = GObject.registerClass({
         appearanceGroup.add(themeRow);
 
         // Load saved theme preference and set initial state
-        const settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
         const savedTheme = settings.get_int('theme-preference');
         
         // Set initial button state
@@ -450,70 +463,39 @@ export const PreferencesDialog = GObject.registerClass({
         pomodoroGroup.add(timerRow);
         page.add(pomodoroGroup);
 
-        // Database Group
-        const databaseGroup = new Adw.PreferencesGroup({
-            title: _('Database'),
-            description: _('Backup and manage your data'),
+        // Experimental Features Group
+        const experimentalGroup = new Adw.PreferencesGroup({
+            title: _('Experimental'),
+            description: _('Enable experimental and unstable features'),
         });
 
-        // Export DB button row
-        const exportDbRow = new Adw.ActionRow({
-            title: _('Export Database'),
-            subtitle: _('Save a backup of your database'),
+        // Experimental features toggle
+        const experimentalRow = new Adw.SwitchRow({
+            title: _('Enable Experimental Features'),
+            subtitle: _('Unlock extensions, addons, and other experimental functionality'),
         });
 
-        const exportButton = new Gtk.Button({
-            label: _('Export'),
-            valign: Gtk.Align.CENTER,
-            css_classes: ['flat'],
+        // Load current setting
+        experimentalRow.set_active(settings.get_boolean('experimental-features'));
+
+        // Connect to settings
+        experimentalRow.connect('notify::active', () => {
+            const isEnabled = experimentalRow.get_active();
+            settings.set_boolean('experimental-features', isEnabled);
+            
+            // If disabling, deactivate all extensions
+            if (!isEnabled) {
+                this._deactivateAllExtensions();
+            }
+            
+            // Update extensions page visibility
+            this._updateExtensionsPageVisibility();
         });
 
-        exportButton.connect('clicked', () => {
-            this._exportDatabase();
-        });
+        experimentalGroup.add(experimentalRow);
+        page.add(experimentalGroup);
 
-        exportDbRow.add_suffix(exportButton);
-        databaseGroup.add(exportDbRow);
-
-        // Import DB button row
-        const importDbRow = new Adw.ActionRow({
-            title: _('Import Database'),
-            subtitle: _('Restore a backup of your database'),
-        });
-
-        const importButton = new Gtk.Button({
-            label: _('Import'),
-            valign: Gtk.Align.CENTER,
-            css_classes: ['flat'],
-        });
-
-        importButton.connect('clicked', () => {
-            this._importDatabase();
-        });
-
-        importDbRow.add_suffix(importButton);
-        databaseGroup.add(importDbRow);
-
-        // Reset DB button row
-        const resetDbRow = new Adw.ActionRow({
-            title: _('Reset Database'),
-            subtitle: _('Delete all data and start fresh'),
-        });
-
-        const resetButton = new Gtk.Button({
-            label: _('Reset'),
-            valign: Gtk.Align.CENTER,
-            css_classes: ['flat', 'destructive-action'],
-        });
-
-        resetButton.connect('clicked', () => {
-            this._resetDatabase();
-        });
-
-        resetDbRow.add_suffix(resetButton);
-        databaseGroup.add(resetDbRow);
-
-        page.add(databaseGroup);
+        // Database group removed - moved to Integrations page
 
         // Welcome Info Group
         const welcomeGroup = new Adw.PreferencesGroup({
@@ -1259,6 +1241,182 @@ export const PreferencesDialog = GObject.registerClass({
         }
     }
 
+    /**
+     * Setup Extensions Page (dynamically, only if extensions exist)
+     */
+    _setupExtensionsPage() {
+        // Check if experimental features are enabled
+        const settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
+        const experimentalEnabled = settings.get_boolean('experimental-features');
+        
+        if (!experimentalEnabled) {
+            // Don't create extensions page if experimental features are disabled
+            return;
+        }
+
+        const app = this.get_transient_for()?.application;
+        if (!app || !app.extensionManager) return;
+
+        const extensions = app.extensionManager.getAllExtensions();
+        if (extensions.length === 0) return; // Don't show tab if no extensions
+
+        const extensionsPage = new Adw.PreferencesPage({
+            title: _('Extensions'),
+            icon_name: 'application-x-addon-symbolic',
+        });
+        
+        // Store reference for dynamic visibility
+        this.extensionsPage = extensionsPage;
+
+        const extensionsGroup = new Adw.PreferencesGroup({
+            title: _('Installed Extensions'),
+            description: _('Manage addons and plugins'),
+        });
+
+        // Add extension from file button
+        const loadExtensionRow = new Adw.ActionRow({
+            title: _('Load Extension from File'),
+            subtitle: _('Install a custom extension (.js file)'),
+            activatable: true,
+        });
+
+        const loadButton = new Gtk.Button({
+            icon_name: 'list-add-symbolic',
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat'],
+        });
+
+        loadButton.connect('clicked', () => {
+            this._loadExtensionFromFile(app);
+        });
+
+        loadExtensionRow.add_suffix(loadButton);
+        extensionsGroup.add(loadExtensionRow);
+
+        // List all extensions
+        extensions.forEach(ext => {
+            const row = new Adw.SwitchRow({
+                title: ext.name,
+                subtitle: ext.description,
+                active: ext.active,
+            });
+
+            // Add type badge
+            const typeBadge = new Gtk.Label({
+                label: ext.type === 'addon' ? _('Addon') : _('Plugin'),
+                css_classes: ['caption', 'dim-label'],
+                valign: Gtk.Align.CENTER,
+            });
+            row.add_prefix(typeBadge);
+
+            // Toggle extension on/off
+            row.connect('notify::active', async (switchRow) => {
+                const active = switchRow.get_active();
+                if (active) {
+                    await app.extensionManager.activateExtension(ext.id);
+                } else {
+                    await app.extensionManager.deactivateExtension(ext.id);
+                }
+            });
+
+            // Add settings button if extension has settings
+            const settingsPageFn = app.extensionManager.getExtensionSettingsPage(ext.id);
+            if (settingsPageFn) {
+                const settingsButton = new Gtk.Button({
+                    icon_name: 'emblem-system-symbolic',
+                    valign: Gtk.Align.CENTER,
+                    css_classes: ['flat'],
+                    tooltip_text: _('Extension Settings'),
+                });
+
+                settingsButton.connect('clicked', () => {
+                    const settingsPage = settingsPageFn();
+                    if (settingsPage) {
+                        this.add(settingsPage);
+                        this.set_visible_page(settingsPage);
+                    }
+                });
+
+                row.add_suffix(settingsButton);
+            }
+
+            extensionsGroup.add(row);
+        });
+
+        extensionsPage.add(extensionsGroup);
+        this.add(extensionsPage);
+    }
+
+    /**
+     * Setup Integrations Page
+     */
+    _setupIntegrationsPage(page) {
+        // Database Management Group
+        const databaseGroup = new Adw.PreferencesGroup({
+            title: _('Database'),
+            description: _('Backup and manage your data'),
+        });
+
+        // Export DB button row
+        const exportDbRow = new Adw.ActionRow({
+            title: _('Export Database'),
+            subtitle: _('Save a backup of your database'),
+        });
+
+        const exportButton = new Gtk.Button({
+            label: _('Export'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat'],
+        });
+
+        exportButton.connect('clicked', () => {
+            this._exportDatabase();
+        });
+
+        exportDbRow.add_suffix(exportButton);
+        databaseGroup.add(exportDbRow);
+
+        // Import DB button row
+        const importDbRow = new Adw.ActionRow({
+            title: _('Import Database'),
+            subtitle: _('Restore a backup of your database'),
+        });
+
+        const importButton = new Gtk.Button({
+            label: _('Import'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat'],
+        });
+
+        importButton.connect('clicked', () => {
+            this._importDatabase();
+        });
+
+        importDbRow.add_suffix(importButton);
+        databaseGroup.add(importDbRow);
+
+        // Reset DB button row
+        const resetDbRow = new Adw.ActionRow({
+            title: _('Reset Database'),
+            subtitle: _('Delete all data and start fresh'),
+        });
+
+        const resetButton = new Gtk.Button({
+            label: _('Reset'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat', 'destructive-action'],
+        });
+
+        resetButton.connect('clicked', () => {
+            this._resetDatabase();
+        });
+
+        resetDbRow.add_suffix(resetButton);
+        databaseGroup.add(resetDbRow);
+
+        page.add(databaseGroup);
+    }
+
     static show(parent = null) {
         const dialog = new PreferencesDialog({
             transient_for: parent,
@@ -1519,6 +1677,103 @@ export const PreferencesDialog = GObject.registerClass({
         } catch (error) {
             console.error('Error merging database:', error);
             migrationDialog.showError(_('Failed to merge database: %s').format(error.message));
+        }
+    }
+
+    /**
+     * Load extension from file
+     */
+    _loadExtensionFromFile(app) {
+        const fileDialog = new Gtk.FileDialog({
+            title: _('Select Extension File'),
+            accept_label: _('Load'),
+        });
+
+        // Add file filter for .js files
+        const filter = new Gtk.FileFilter();
+        filter.set_name(_('JavaScript files'));
+        filter.add_pattern('*.js');
+
+        const filterList = new Gio.ListStore({ item_type: Gtk.FileFilter.$gtype });
+        filterList.append(filter);
+        fileDialog.set_filters(filterList);
+        fileDialog.set_default_filter(filter);
+
+        fileDialog.open(this, null, async (dialog, result) => {
+            try {
+                const file = dialog.open_finish(result);
+                if (!file) return;
+
+                const filePath = file.get_path();
+
+                // Load extension
+                const metadata = await app.extensionManager.loadExtensionFromFile(filePath);
+
+                // Show success toast
+                const toast = new Adw.Toast({
+                    title: _('Extension loaded: %s').format(metadata.name),
+                    timeout: 3,
+                });
+                this.add_toast(toast);
+
+                // Refresh extensions page
+                this.close();
+                const newDialog = PreferencesDialog.show(this.get_transient_for());
+                newDialog.set_visible_page_name('extensions');
+
+            } catch (error) {
+                // User cancelled the dialog
+                if (error.matches(Gtk.DialogError, Gtk.DialogError.DISMISSED)) {
+                    return;
+                }
+
+                console.error('Error loading extension:', error);
+                const toast = new Adw.Toast({
+                    title: _('Failed to load extension: %s').format(error.message),
+                    timeout: 5,
+                });
+                this.add_toast(toast);
+            }
+        });
+    }
+
+    /**
+     * Deactivate all active extensions
+     */
+    _deactivateAllExtensions() {
+        const app = this.get_transient_for()?.application;
+        if (!app || !app.extensionManager) return;
+
+        const extensions = app.extensionManager.getAllExtensions();
+        
+        // Deactivate all active extensions
+        for (const ext of extensions) {
+            if (ext.active) {
+                app.extensionManager.deactivateExtension(ext.id).catch(error => {
+                    console.error(`PreferencesDialog: Failed to deactivate ${ext.id}:`, error);
+                });
+            }
+        }
+    }
+
+    /**
+     * Update Extensions page visibility based on experimental features setting
+     */
+    _updateExtensionsPageVisibility() {
+        const settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
+        const experimentalEnabled = settings.get_boolean('experimental-features');
+
+        if (experimentalEnabled) {
+            // Add extensions page if not already present
+            if (!this.extensionsPage) {
+                this._setupExtensionsPage();
+            }
+        } else {
+            // Remove extensions page if present
+            if (this.extensionsPage) {
+                this.remove(this.extensionsPage);
+                this.extensionsPage = null;
+            }
         }
     }
 

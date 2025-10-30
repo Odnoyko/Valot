@@ -281,6 +281,12 @@ export const ValotApplication = GObject.registerClass(
                 // Create Core Bridge
                 this.coreBridge = new CoreBridge(this.coreAPI);
 
+                // Initialize Extension Manager (non-blocking)
+                const { ExtensionManager } = await import('resource:///com/odnoyko/valot/extensions/ExtensionManager.js');
+                this.extensionManager = new ExtensionManager(this);
+                await this.extensionManager.loadBuiltinExtensions();
+                this.extensionManager.autoActivateExtensions(); // Don't await - activate in background
+
                 return true;
             } catch (error) {
                 console.error('❌ Core initialization failed:', error);
