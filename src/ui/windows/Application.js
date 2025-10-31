@@ -28,7 +28,9 @@ import { PreferencesDialog } from 'resource:///com/odnoyko/valot/ui/components/d
 import { CarouselDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/CarouselDialog.js';
 import { DatabaseMigrationDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/DatabaseMigrationDialog.js';
 
-// Note: i18n is already initialized in com.odnoyko.valot.in, no need to re-init here
+// Init i18n
+pkg.initGettext();
+pkg.initFormat();
 
 /**
  * Accent Color Manager (legacy)
