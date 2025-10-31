@@ -221,11 +221,11 @@ export class DatabaseImport {
             entriesAdded = await this._importFromNewSchema(clientIdMap, projectIdMap, taskIdMap);
         }
 
-        // Sync total_time for all TaskInstances
-        await this._syncTotalTimes();
+            // Sync total_time for all TaskInstances
+            await this._syncTotalTimes();
 
         // Let caller handle COMMIT/ROLLBACK
-        return { clientsAdded, projectsAdded, tasksAdded, entriesAdded };
+            return { clientsAdded, projectsAdded, tasksAdded, entriesAdded };
     }
 
     /**

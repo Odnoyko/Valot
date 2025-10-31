@@ -28,7 +28,7 @@ export class GdaDatabaseBridge {
 
         // Ensure directory exists for local paths
         try {
-            GLib.mkdir_with_parents(GLib.path_get_dirname(dbPath), 0o755);
+        GLib.mkdir_with_parents(GLib.path_get_dirname(dbPath), 0o755);
         } catch (e) {
             // Ignore if path is not creatable (e.g., read-only or external file)
         }
@@ -218,29 +218,49 @@ export class GdaDatabaseBridge {
                 const row = {};
                 for (let j = 0; j < nCols; j++) {
                     const columnName = dataModel.get_column_name(j);
-                    const value = dataModel.get_value_at(j, i);
-
-                    // Convert GDA value to JavaScript value
-                    if (value === null || value === undefined) {
+                    let value;
+                    try {
+                        value = dataModel.get_value_at(j, i);
+                    } catch (e) {
+                        // If libgda throws for special NULL typed values, store null and continue
                         row[columnName] = null;
-                    } else if (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') {
-                        // Already a JS primitive (happens when we use escaped params)
-                        row[columnName] = value;
-                    } else if (typeof value === 'object' && typeof value.get_value_type === 'function') {
-                        // GDA Value object
-                        const gType = value.get_value_type();
-                        if (gType === GLib.TYPE_INT64 || gType === GLib.TYPE_INT) {
-                            row[columnName] = value.get_int();
-                        } else if (gType === GLib.TYPE_DOUBLE) {
-                            row[columnName] = value.get_double();
-                        } else if (gType === GLib.TYPE_STRING) {
-                            row[columnName] = value.get_string();
+                        continue;
+                    }
+
+                    try {
+                        // Convert GDA value to JavaScript value
+                        if (value === null || value === undefined) {
+                            row[columnName] = null;
+                        } else if (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') {
+                            // Already a JS primitive (happens when we use escaped params)
+                            row[columnName] = value;
+                        } else if (typeof value === 'object') {
+                            // Some GDA values expose helpers, guard all calls
+                            if (typeof value.is_null === 'function' && value.is_null()) {
+                                row[columnName] = null;
+                            } else if (typeof value.get_value_type === 'function') {
+                                const gType = value.get_value_type();
+                                if (gType === GLib.TYPE_INT64 || gType === GLib.TYPE_INT) {
+                                    row[columnName] = value.get_int();
+                                } else if (gType === GLib.TYPE_DOUBLE) {
+                                    row[columnName] = value.get_double();
+                                } else if (gType === GLib.TYPE_STRING) {
+                                    row[columnName] = value.get_string();
+                                } else {
+                                    // Best effort string fallback
+                                    row[columnName] = (typeof value.get_string === 'function') ? value.get_string() : null;
+                                }
+                            } else {
+                                // Unknown object – best effort stringify
+                                row[columnName] = String(value);
+                            }
                         } else {
-                            row[columnName] = value.get_string();
+                            // Fallback: convert to string
+                            row[columnName] = String(value);
                         }
-                    } else {
-                        // Fallback: convert to string
-                        row[columnName] = String(value);
+                    } catch (e) {
+                        // Any failure decoding a cell → treat as NULL
+                        row[columnName] = null;
                     }
                 }
                 results.push(row);

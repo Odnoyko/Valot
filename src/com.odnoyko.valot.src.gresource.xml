@@ -133,6 +133,5 @@
 
     <!-- Extensions -->
     <file>extensions/ExtensionManager.js</file>
-    <file>extensions/builtin/QuickTaskAddon.js</file>
   </gresource>
 </gresources>

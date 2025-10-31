@@ -5,6 +5,7 @@ export class TimeTrackingService extends BaseService {
     trackingTimer = null;
     lastUsedProjectId = null;
     lastUsedClientId = null;
+    timerStartTime = null;
     constructor(core) {
         super(core);
     }
@@ -53,7 +54,7 @@ export class TimeTrackingService extends BaseService {
 
         // Get task name for state
         const task = await this.core.services.tasks.getById(taskId);
-        // Create time entry for this instance
+        // Always create a NEW unique time entry for this instance
         const startTime = TimeUtils.getCurrentTimestamp();
         const entryId = await this.createTimeEntry({
             task_instance_id: taskInstance.id,
@@ -72,6 +73,8 @@ export class TimeTrackingService extends BaseService {
             pomodoroMode: pomodoroMode,
             pomodoroDuration: pomodoroDuration,
             pomodoroRemaining: pomodoroDuration,
+            // Persist the concrete open TimeEntry ID to avoid NULL-based lookups
+            currentTimeEntryId: entryId,
         };
 
         this.state.updateTrackingState(trackingState);
@@ -99,16 +102,30 @@ export class TimeTrackingService extends BaseService {
         this.stopTimer();
         const endTime = TimeUtils.getCurrentTimestamp();
         const duration = currentState.elapsedSeconds;
-        // Get current time entry
-        const timeEntry = await this.getCurrentTimeEntry();
-        if (timeEntry) {
-            // Update time entry with end time
-            await this.updateTimeEntry(timeEntry.id, {
-                end_time: endTime,
-                duration: duration,
-            });
-            // Update TaskInstance total_time cache
-            await this.core.services.taskInstances.updateTotalTime(timeEntry.task_instance_id);
+        // Prefer the stored open TimeEntry ID to avoid NULL queries
+        if (currentState.currentTimeEntryId) {
+            // Fetch task_instance_id for cache update
+            const row = await this.query(`SELECT task_instance_id FROM TimeEntry WHERE id = ?`, [currentState.currentTimeEntryId]);
+            if (row && row.length > 0) {
+                const instanceId = row[0].task_instance_id || currentState.currentTaskInstanceId;
+                await this.updateTimeEntry(currentState.currentTimeEntryId, {
+                    end_time: endTime,
+                    duration: duration,
+                });
+                if (instanceId) {
+                    await this.core.services.taskInstances.updateTotalTime(instanceId);
+                }
+            }
+        } else {
+            // Fallback to legacy lookup (scoped to current instance)
+            const timeEntry = await this.getCurrentTimeEntry();
+            if (timeEntry) {
+                await this.updateTimeEntry(timeEntry.id, {
+                    end_time: endTime,
+                    duration: duration,
+                });
+                await this.core.services.taskInstances.updateTotalTime(timeEntry.task_instance_id);
+            }
         }
         const trackingData = {
             taskId: currentState.currentTaskId,
@@ -131,6 +148,7 @@ export class TimeTrackingService extends BaseService {
             pomodoroMode: false,
             pomodoroDuration: 0,
             pomodoroRemaining: 0,
+            currentTimeEntryId: null,
         });
         this.events.emit(CoreEvents.TRACKING_STOPPED, trackingData);
     }
@@ -289,17 +307,28 @@ export class TimeTrackingService extends BaseService {
      * Get current time entry (active tracking)
      */
     async getCurrentTimeEntry() {
-        const sql = `SELECT * FROM TimeEntry WHERE end_time IS NULL ORDER BY id DESC LIMIT 1`;
-        const results = await this.query(sql);
+        const currentState = this.state.getTrackingState();
+        // Scope to the current task instance to avoid unrelated NULL rows causing issues
+        const sql = `SELECT id, task_instance_id, start_time, end_time, duration, created_at
+                     FROM TimeEntry
+                     WHERE end_time IS NULL AND task_instance_id = ?
+                     ORDER BY id DESC LIMIT 1`;
+        const results = await this.query(sql, [currentState.currentTaskInstanceId]);
         return results.length > 0 ? results[0] : null;
     }
     /**
      * Start internal timer
      */
     startTimer() {
+        // Always clear any existing timer first
         if (this.trackingTimer) {
             clearInterval(this.trackingTimer);
+            this.trackingTimer = null;
         }
+        
+        // Store when timer started for watchdog
+        this.timerStartTime = Date.now();
+        
         this.trackingTimer = setInterval(() => {
             const currentState = this.state.getTrackingState();
             if (currentState.isTracking) {
@@ -336,8 +365,31 @@ export class TimeTrackingService extends BaseService {
                     elapsedSeconds: newElapsed,
                     pomodoroRemaining: updates.pomodoroRemaining,
                 });
+                
+                // Watchdog: restart timer every 1 hour to prevent GWeakRef accumulation
+                const hoursRunning = (Date.now() - this.timerStartTime) / (1000 * 60 * 60);
+                if (hoursRunning >= 1) {
+                    console.warn('Timer running for 1+ hour, restarting to prevent memory leaks...');
+                    this.restartTimer();
+                }
             }
         }, 1000);
+    }
+    
+    /**
+     * Restart timer to prevent memory leaks from long-running intervals
+     */
+    restartTimer() {
+        const currentState = this.state.getTrackingState();
+        if (!currentState.isTracking) return;
+        
+        // Stop old timer
+        this.stopTimer();
+        
+        // Restart fresh timer
+        this.startTimer();
+        
+        console.warn('Timer restarted successfully');
     }
     /**
      * Stop internal timer
@@ -347,6 +399,7 @@ export class TimeTrackingService extends BaseService {
             clearInterval(this.trackingTimer);
             this.trackingTimer = null;
         }
+        this.timerStartTime = null;
     }
     /**
      * Get all time entries

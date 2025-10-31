@@ -1,0 +1,23 @@
+{
+  "id": "example-extension",
+  "name": "Example Extension",
+  "description": "A template extension showing how to create custom functionality",
+  "version": "1.0.0",
+  "author": "Your Name",
+  "type": "plugin",
+  "license": "GPL-3.0-or-later",
+  "repository": "https://gitlab.com/valot/extensions",
+  "main": "Example.js",
+  "icon": "resources/icon.svg",
+  "tags": [],
+  "requirements": {
+    "valot": ">= 0.9.1",
+    "runtime": "GNOME 40+"
+  },
+  "files": [
+    "Example.js",
+    "logic/*.js",
+    "resources/*"
+  ]
+}
+

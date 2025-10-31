@@ -11,6 +11,10 @@ imports.package.init({
   datadir: "@datadir@",
 });
 
+// Initialize i18n (gettext) before resource registration
+pkg.initGettext();
+pkg.initFormat();
+
 // Register resource files
 const srcResource = Gio.Resource.load('@pkgdatadir@/com.odnoyko.valot.src.gresource');
 Gio.resources_register(srcResource);

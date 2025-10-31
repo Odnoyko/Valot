@@ -24,6 +24,12 @@ export const PreferencesDialog = GObject.registerClass({
             modal: true,
             ...params
         });
+        
+        // Store application reference if available from transient_for
+        const parent = this.get_transient_for();
+        if (parent && parent.application) {
+            this.application = parent.application;
+        }
 
         this._setupPages();
     }
@@ -463,37 +469,32 @@ export const PreferencesDialog = GObject.registerClass({
         pomodoroGroup.add(timerRow);
         page.add(pomodoroGroup);
 
-        // Experimental Features Group
-        const experimentalGroup = new Adw.PreferencesGroup({
-            title: _('Experimental'),
-            description: _('Enable experimental and unstable features'),
-        });
+        // Experimental Features Group - DISABLED FOR USERS
+        // const experimentalGroup = new Adw.PreferencesGroup({
+        //     title: _('Experimental'),
+        //     description: _('Enable experimental and unstable features'),
+        // });
 
-        // Experimental features toggle
-        const experimentalRow = new Adw.SwitchRow({
-            title: _('Enable Experimental Features'),
-            subtitle: _('Unlock extensions, addons, and other experimental functionality'),
-        });
+        // const experimentalRow = new Adw.SwitchRow({
+        //     title: _('Enable Experimental Features'),
+        //     subtitle: _('Unlock extensions, addons, and other experimental functionality'),
+        // });
 
-        // Load current setting
-        experimentalRow.set_active(settings.get_boolean('experimental-features'));
+        // experimentalRow.set_active(settings.get_boolean('experimental-features') || false);
 
-        // Connect to settings
-        experimentalRow.connect('notify::active', () => {
-            const isEnabled = experimentalRow.get_active();
-            settings.set_boolean('experimental-features', isEnabled);
-            
-            // If disabling, deactivate all extensions
-            if (!isEnabled) {
-                this._deactivateAllExtensions();
-            }
-            
-            // Update extensions page visibility
-            this._updateExtensionsPageVisibility();
-        });
+        // experimentalRow.connect('notify::active', () => {
+        //     const isEnabled = experimentalRow.get_active();
+        //     settings.set_boolean('experimental-features', isEnabled);
+        //     
+        //     if (!isEnabled) {
+        //         this._deactivateAllExtensions();
+        //     }
+        //     
+        //     this._updateExtensionsPageVisibility();
+        // });
 
-        experimentalGroup.add(experimentalRow);
-        page.add(experimentalGroup);
+        // experimentalGroup.add(experimentalRow);
+        // page.add(experimentalGroup);
 
         // Database group removed - moved to Integrations page
 
@@ -1249,17 +1250,17 @@ export const PreferencesDialog = GObject.registerClass({
         const settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
         const experimentalEnabled = settings.get_boolean('experimental-features');
         
+        // console.warn('_setupExtensionsPage: experimentalEnabled =', experimentalEnabled);
+        
         if (!experimentalEnabled) {
             // Don't create extensions page if experimental features are disabled
             return;
         }
 
-        const app = this.get_transient_for()?.application;
-        if (!app || !app.extensionManager) return;
-
-        const extensions = app.extensionManager.getAllExtensions();
-        if (extensions.length === 0) return; // Don't show tab if no extensions
-
+        // Use stored application reference or get from transient_for
+        const app = this.application || this.get_transient_for()?.application;
+        
+        // Always create extensions page when experimental features are enabled
         const extensionsPage = new Adw.PreferencesPage({
             title: _('Extensions'),
             icon_name: 'application-x-addon-symbolic',
@@ -1273,78 +1274,142 @@ export const PreferencesDialog = GObject.registerClass({
             description: _('Manage addons and plugins'),
         });
 
-        // Add extension from file button
-        const loadExtensionRow = new Adw.ActionRow({
-            title: _('Load Extension from File'),
-            subtitle: _('Install a custom extension (.js file)'),
-            activatable: true,
+        // Create header box with Reload (left) and Add (right) buttons
+        const headerBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 6,
         });
-
-        const loadButton = new Gtk.Button({
-            icon_name: 'list-add-symbolic',
-            valign: Gtk.Align.CENTER,
+        
+        // Reload button (left)
+        const reloadButton = new Gtk.Button({
+            icon_name: 'view-refresh-symbolic',
             css_classes: ['flat'],
+            tooltip_text: _('Reload Extensions'),
+        });
+        
+        reloadButton.connect('clicked', () => {
+            if (app && app.extensionManager) {
+                this._reloadExtensionsList();
+            }
+        });
+        
+        // Add button (right)
+        const addButton = new Gtk.Button({
+            icon_name: 'list-add-symbolic',
+            css_classes: ['flat'],
+            tooltip_text: _('Add Extension'),
+        });
+        
+        addButton.connect('clicked', () => {
+            if (app && app.extensionManager) {
+                this._showAddExtensionDialog(app);
+            }
+        });
+        
+        headerBox.append(reloadButton);
+        headerBox.append(addButton);
+        
+        extensionsGroup.set_header_suffix(headerBox);
+
+        // Separate extensions by source
+        if (app && app.extensionManager) {
+            const extensions = app.extensionManager.getAllExtensions();
+            const development = extensions.filter(ext => ext.source && ext.source.includes('development'));
+            const user = extensions.filter(ext => !ext.source || (!ext.source.includes('development') && !ext.source.includes('flatpak')));
+            const flatpak = extensions.filter(ext => ext.source && ext.source.includes('flatpak'));
+            
+            // Add development extensions group if any exist
+            if (development.length > 0) {
+                const devGroup = new Adw.PreferencesGroup({
+                    title: _('Development Extensions'),
+                    description: _('Extensions from development environment'),
+                });
+                development.forEach(ext => devGroup.add(this._createExtensionRow(ext, app)));
+                extensionsPage.add(devGroup);
+            }
+            
+            // Add user extensions (merge with old extensionsGroup header)
+            user.forEach(ext => extensionsGroup.add(this._createExtensionRow(ext, app)));
+            
+            // Add Flatpak extensions group if any exist
+            if (flatpak.length > 0) {
+                const flatpakGroup = new Adw.PreferencesGroup({
+                    title: _('System Extensions'),
+                    description: _('Extensions installed via Flatpak'),
+                });
+                flatpak.forEach(ext => flatpakGroup.add(this._createExtensionRow(ext, app)));
+                extensionsPage.add(flatpakGroup);
+            }
+        }
+
+        extensionsPage.add(extensionsGroup);
+        
+        // Add Available Extensions group (loaded on demand)
+        const availableGroup = new Adw.PreferencesGroup({
+            title: _('Available Extensions'),
+            description: _('Extensions available for download from GitLab'),
+        });
+        
+        // Load available extensions on page open
+        if (app && app.extensionManager) {
+            this._loadAndDisplayAvailableExtensions(app, availableGroup);
+        }
+        
+        extensionsPage.add(availableGroup);
+        this.add(extensionsPage);
+        // console.warn('_setupExtensionsPage: Page added to preferences dialog');
+    }
+    
+    /**
+     * Create extension row widget
+     */
+    _createExtensionRow(ext, app) {
+        const row = new Adw.SwitchRow({
+            title: ext.name,
+            subtitle: ext.description,
+            active: ext.active,
         });
 
-        loadButton.connect('clicked', () => {
-            this._loadExtensionFromFile(app);
+        // Add type badge
+        const typeBadge = new Gtk.Label({
+            label: ext.type === 'addon' ? _('Addon') : _('Plugin'),
+            css_classes: ['caption', 'dim-label'],
+            valign: Gtk.Align.CENTER,
+        });
+        row.add_prefix(typeBadge);
+
+        // Toggle extension on/off
+        row.connect('notify::active', async (switchRow) => {
+            const active = switchRow.get_active();
+            if (active) {
+                await app.extensionManager.activateExtension(ext.id);
+            } else {
+                await app.extensionManager.deactivateExtension(ext.id);
+            }
         });
 
-        loadExtensionRow.add_suffix(loadButton);
-        extensionsGroup.add(loadExtensionRow);
-
-        // List all extensions
-        extensions.forEach(ext => {
-            const row = new Adw.SwitchRow({
-                title: ext.name,
-                subtitle: ext.description,
-                active: ext.active,
-            });
-
-            // Add type badge
-            const typeBadge = new Gtk.Label({
-                label: ext.type === 'addon' ? _('Addon') : _('Plugin'),
-                css_classes: ['caption', 'dim-label'],
+        // Add settings button if extension has settings
+        const settingsPageFn = app.extensionManager.getExtensionSettingsPage(ext.id);
+        if (settingsPageFn) {
+            const settingsButton = new Gtk.Button({
+                icon_name: 'emblem-system-symbolic',
                 valign: Gtk.Align.CENTER,
+                css_classes: ['flat'],
+                tooltip_text: _('Extension Settings'),
             });
-            row.add_prefix(typeBadge);
 
-            // Toggle extension on/off
-            row.connect('notify::active', async (switchRow) => {
-                const active = switchRow.get_active();
-                if (active) {
-                    await app.extensionManager.activateExtension(ext.id);
-                } else {
-                    await app.extensionManager.deactivateExtension(ext.id);
+            settingsButton.connect('clicked', () => {
+                const settingsPage = settingsPageFn();
+                if (settingsPage) {
+                    this.add(settingsPage);
+                    this.set_visible_page(settingsPage);
                 }
             });
 
-            // Add settings button if extension has settings
-            const settingsPageFn = app.extensionManager.getExtensionSettingsPage(ext.id);
-            if (settingsPageFn) {
-                const settingsButton = new Gtk.Button({
-                    icon_name: 'emblem-system-symbolic',
-                    valign: Gtk.Align.CENTER,
-                    css_classes: ['flat'],
-                    tooltip_text: _('Extension Settings'),
-                });
+            row.add_suffix(settingsButton);
+        }
 
-                settingsButton.connect('clicked', () => {
-                    const settingsPage = settingsPageFn();
-                    if (settingsPage) {
-                        this.add(settingsPage);
-                        this.set_visible_page(settingsPage);
-                    }
-                });
-
-                row.add_suffix(settingsButton);
-            }
-
-            extensionsGroup.add(row);
-        });
-
-        extensionsPage.add(extensionsGroup);
-        this.add(extensionsPage);
+        return row;
     }
 
     /**
@@ -1446,19 +1511,19 @@ export const PreferencesDialog = GObject.registerClass({
                 const app = this.get_transient_for().application;
                 app.dataNavigator.exportActiveDatabase(file.get_path())
                     .then(() => {
-                        const toast = new Adw.Toast({
-                            title: _('Database exported successfully'),
-                            timeout: 3,
-                        });
-                        this.add_toast(toast);
+                const toast = new Adw.Toast({
+                    title: _('Database exported successfully'),
+                    timeout: 3,
+                });
+                this.add_toast(toast);
                     })
                     .catch((error) => {
-                        console.error('Error exporting database:', error);
-                        const toast = new Adw.Toast({
-                            title: _('Failed to export database'),
-                            timeout: 3,
-                        });
-                        this.add_toast(toast);
+                console.error('Error exporting database:', error);
+                const toast = new Adw.Toast({
+                    title: _('Failed to export database'),
+                    timeout: 3,
+                });
+                this.add_toast(toast);
                     });
             } catch (error) {
                 // User cancelled the dialog - this is normal, don't show error
@@ -1667,7 +1732,7 @@ export const PreferencesDialog = GObject.registerClass({
             // Close dialog after 1 second
             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
                 try {
-                    migrationDialog.close();
+                migrationDialog.close();
                 } catch (e) {
                     // Ignore if already closed
                 }
@@ -1817,5 +1882,146 @@ export const PreferencesDialog = GObject.registerClass({
         });
 
         dialog.present(this);
+    }
+
+    /**
+     * Reload extensions list from GitLab repository
+     */
+    async _reloadExtensionsList() {
+        const app = this.get_transient_for()?.application;
+        if (!app || !app.extensionManager) return;
+        
+        try {
+            await app.extensionManager.loadAvailableExtensionsFromGitLab();
+            // Refresh the extensions page
+            this._refreshExtensionsList();
+        } catch (error) {
+            console.error('Error reloading extensions:', error);
+            const toast = new Adw.Toast({
+                title: _('Failed to reload extensions'),
+                timeout: 3,
+            });
+            this.add_toast(toast);
+        }
+    }
+
+    /**
+     * Show dialog to add extension (file or URL)
+     */
+    _showAddExtensionDialog(app) {
+        const dialog = new Adw.AlertDialog({
+            heading: _('Add Extension'),
+            body: _('Select how to add the extension'),
+        });
+
+        dialog.add_response('cancel', _('Cancel'));
+        dialog.add_response('file', _('From File'));
+        dialog.add_response('url', _('From URL'));
+        
+        dialog.set_response_appearance('file', Adw.ResponseAppearance.SUGGESTED);
+        dialog.set_response_appearance('url', Adw.ResponseAppearance.SUGGESTED);
+
+        dialog.connect('response', async (dlg, response) => {
+            if (response === 'file') {
+                this._loadExtensionFromFile(app);
+            } else if (response === 'url') {
+                this._loadExtensionFromURLInput(app);
+            }
+        });
+
+        dialog.present(this);
+    }
+
+    /**
+     * Load extension from URL with text input
+     */
+    _loadExtensionFromURLInput(app) {
+        // TODO: Show text input dialog for URL
+        console.warn('Load from URL dialog not implemented yet');
+    }
+
+    /**
+     * Refresh extensions list in UI
+     */
+    _refreshExtensionsList() {
+        // Recreate the extensions page
+        if (this.extensionsPage) {
+            this.remove(this.extensionsPage);
+        }
+        this._setupExtensionsPage();
+    }
+    
+    /**
+     * Load and display available extensions from GitLab
+     */
+    async _loadAndDisplayAvailableExtensions(app, availableGroup) {
+        try {
+            const available = await app.extensionManager.loadAvailableExtensionsFromGitLab();
+            const installed = app.extensionManager.getAllExtensions().map(e => e.id);
+            
+            for (const ext of available) {
+                // Check if already installed
+                const isInstalled = installed.includes(ext.id);
+                
+                const row = new Adw.ActionRow({
+                    title: ext.name,
+                    subtitle: ext.description,
+                    activatable: !isInstalled,
+                });
+
+                // Add type badge
+                const typeBadge = new Gtk.Label({
+                    label: ext.type === 'addon' ? _('Addon') : _('Plugin'),
+                    css_classes: ['caption', 'dim-label'],
+                    valign: Gtk.Align.CENTER,
+                });
+                row.add_prefix(typeBadge);
+
+                if (isInstalled) {
+                    // Already installed - show installed badge
+                    const installedLabel = new Gtk.Label({
+                        label: _('Installed'),
+                        css_classes: ['caption', 'dim-label'],
+                        valign: Gtk.Align.CENTER,
+                    });
+                    row.add_suffix(installedLabel);
+                } else {
+                    // Download button
+                    const downloadButton = new Gtk.Button({
+                        label: _('Install'),
+                        css_classes: ['suggested-action'],
+                        valign: Gtk.Align.CENTER,
+                    });
+                    
+                    downloadButton.connect('clicked', async () => {
+                        try {
+                            await app.extensionManager.loadExtensionFromURL(ext.url);
+                            
+                            // Refresh to show in installed list
+                            this._refreshExtensionsList();
+                            
+                            const toast = new Adw.Toast({
+                                title: _('Extension installed: %s').format(ext.name),
+                                timeout: 3,
+                            });
+                            this.add_toast(toast);
+                        } catch (error) {
+                            console.error('Failed to install extension:', error);
+                            const toast = new Adw.Toast({
+                                title: _('Failed to install extension: %s').format(error.message),
+                                timeout: 5,
+                            });
+                            this.add_toast(toast);
+                        }
+                    });
+                    
+                    row.add_suffix(downloadButton);
+                }
+
+                availableGroup.add(row);
+            }
+        } catch (error) {
+            console.error('Error loading available extensions:', error);
+        }
     }
 });

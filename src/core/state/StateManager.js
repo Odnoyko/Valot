@@ -18,6 +18,7 @@ export class StateManager {
                 currentProjectId: null,
                 currentClientId: null,
                 currentTaskInstanceId: null,
+                currentTimeEntryId: null,
                 startTime: null,
                 elapsedSeconds: 0,
                 pomodoroMode: false,
