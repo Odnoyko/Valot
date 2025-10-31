@@ -10,6 +10,10 @@ import Gtk from 'gi://Gtk?version=4.0';
 import Adw from 'gi://Adw?version=1';
 import Gdk from 'gi://Gdk?version=4.0';
 
+// Init i18n - must be called before any imports that use _()
+pkg.initGettext();
+pkg.initFormat();
+
 // Import Core
 import { CoreAPI } from 'resource:///com/odnoyko/valot/core/api/CoreAPI.js';
 
@@ -27,10 +31,6 @@ import { Config } from 'resource:///com/odnoyko/valot/config.js';
 import { PreferencesDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/PreferencesDialog.js';
 import { CarouselDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/CarouselDialog.js';
 import { DatabaseMigrationDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/DatabaseMigrationDialog.js';
-
-// Init i18n
-pkg.initGettext();
-pkg.initFormat();
 
 /**
  * Accent Color Manager (legacy)
@@ -281,11 +281,13 @@ export const ValotApplication = GObject.registerClass(
                 // Create Core Bridge
                 this.coreBridge = new CoreBridge(this.coreAPI);
 
-                // Initialize Extension Manager (non-blocking)
-                const { ExtensionManager } = await import('resource:///com/odnoyko/valot/extensions/ExtensionManager.js');
-                this.extensionManager = new ExtensionManager(this);
-                await this.extensionManager.loadBuiltinExtensions();
-                this.extensionManager.autoActivateExtensions(); // Don't await - activate in background
+                // Initialize Extension Manager only if enabled at build time
+                if (Config.ENABLE_EXTENSIONS) {
+                    const { ExtensionManager } = await import('resource:///com/odnoyko/valot/extensions/ExtensionManager.js');
+                    this.extensionManager = new ExtensionManager(this);
+                    await this.extensionManager.loadBuiltinExtensions();
+                    this.extensionManager.autoActivateExtensions(); // Don't await - activate in background
+                }
 
                 return true;
             } catch (error) {

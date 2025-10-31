@@ -338,24 +338,22 @@ export class ClientsPage {
      * UI update timer - refreshes time display from Core
      */
     _startTrackingUITimer() {
-        if (this.trackingTimerId) return;
+        if (this.trackingTimerToken) return;
 
-        this.trackingTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+        this.trackingTimerToken = this.coreBridge.subscribeTick(() => {
             const state = this.coreBridge.getTrackingState();
             if (state.isTracking) {
                 this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-                return true; // Continue
             } else {
-                this.trackingTimerId = null;
-                return false; // Stop
+                this._stopTrackingUITimer();
             }
         });
     }
 
     _stopTrackingUITimer() {
-        if (this.trackingTimerId) {
-            GLib.Source.remove(this.trackingTimerId);
-            this.trackingTimerId = null;
+        if (this.trackingTimerToken) {
+            this.coreBridge.unsubscribeTick(this.trackingTimerToken);
+            this.trackingTimerToken = 0;
         }
     }
 

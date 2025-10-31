@@ -1,8 +1,10 @@
 import { BaseService } from './BaseService.js';
+import { TimerScheduler } from './TimerScheduler.js';
 import { CoreEvents } from '../events/CoreEvents.js';
 import { TimeUtils } from '../utils/TimeUtils.js';
 export class TimeTrackingService extends BaseService {
     trackingTimer = null;
+    _timerToken = 0;
     lastUsedProjectId = null;
     lastUsedClientId = null;
     timerStartTime = null;
@@ -260,10 +262,10 @@ export class TimeTrackingService extends BaseService {
         const sql = `
             SELECT COALESCE(SUM(duration), 0) as total
             FROM TimeEntry
-            WHERE task_instance_id = ${currentState.currentTaskInstanceId}
+            WHERE task_instance_id = ?
                 AND end_time IS NOT NULL
         `;
-        const results = await this.query(sql);
+        const results = await this.query(sql, [currentState.currentTaskInstanceId]);
         return results.length > 0 ? results[0].total : 0;
     }
     /**
@@ -320,16 +322,16 @@ export class TimeTrackingService extends BaseService {
      * Start internal timer
      */
     startTimer() {
-        // Always clear any existing timer first
-        if (this.trackingTimer) {
-            clearInterval(this.trackingTimer);
-            this.trackingTimer = null;
+        // Unsubscribe previous token if any
+        if (this._timerToken) {
+            this._getScheduler().unsubscribe(this._timerToken);
+            this._timerToken = 0;
         }
-        
+
         // Store when timer started for watchdog
         this.timerStartTime = Date.now();
-        
-        this.trackingTimer = setInterval(() => {
+
+        this._timerToken = this._getScheduler().subscribe(() => {
             const currentState = this.state.getTrackingState();
             if (currentState.isTracking) {
                 const newElapsed = currentState.elapsedSeconds + 1;
@@ -369,11 +371,10 @@ export class TimeTrackingService extends BaseService {
                 // Watchdog: restart timer every 1 hour to prevent GWeakRef accumulation
                 const hoursRunning = (Date.now() - this.timerStartTime) / (1000 * 60 * 60);
                 if (hoursRunning >= 1) {
-                    console.warn('Timer running for 1+ hour, restarting to prevent memory leaks...');
                     this.restartTimer();
                 }
             }
-        }, 1000);
+        });
     }
     
     /**
@@ -389,17 +390,24 @@ export class TimeTrackingService extends BaseService {
         // Restart fresh timer
         this.startTimer();
         
-        console.warn('Timer restarted successfully');
+        // no-op log in release
     }
     /**
      * Stop internal timer
      */
     stopTimer() {
-        if (this.trackingTimer) {
-            clearInterval(this.trackingTimer);
-            this.trackingTimer = null;
+        if (this._timerToken) {
+            this._getScheduler().unsubscribe(this._timerToken);
+            this._timerToken = 0;
         }
         this.timerStartTime = null;
+    }
+
+    _getScheduler() {
+        if (!this._sharedScheduler) {
+            this._sharedScheduler = new TimerScheduler(1);
+        }
+        return this._sharedScheduler;
     }
     /**
      * Get all time entries

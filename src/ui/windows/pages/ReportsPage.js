@@ -32,6 +32,10 @@ export class ReportsPage {
 
         // Subscribe to UI events for real-time updates
         this._subscribeToEvents();
+
+        // Throttle guards for realtime UI updates
+        this._lastStatsUpdateMs = 0;
+        this._lastRecentUpdateMs = 0;
     }
 
     /**
@@ -1796,21 +1800,24 @@ export class ReportsPage {
      * Start real-time UI updates (every second) when tracking is active
      */
     _startTrackingUITimer() {
-        if (this.trackingTimerId) return; // Already running
+        if (this.trackingTimerToken) return; // Already running
 
-        this.trackingTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+        this.trackingTimerToken = this.coreBridge.subscribeTick(() => {
             const state = this.coreBridge.getTrackingState();
             if (state.isTracking) {
-                // Update Total Time in real-time
-                this._updateStatisticsRealtime();
-
-                // Update Recent Tasks list to show current tracking task with updated time
-                this._updateRecentTasksRealtime(state);
-
-                return true; // Continue timer
+                const now = Date.now();
+                // Update stats at most every 250ms
+                if (now - this._lastStatsUpdateMs >= 250) {
+                    this._lastStatsUpdateMs = now;
+                    this._updateStatisticsRealtime();
+                }
+                // Update recent tasks at most every 2000ms (heavier)
+                if (now - this._lastRecentUpdateMs >= 2000) {
+                    this._lastRecentUpdateMs = now;
+                    this._updateRecentTasksRealtime(state);
+                }
             } else {
-                this.trackingTimerId = null;
-                return false; // Stop timer
+                this._stopTrackingUITimer();
             }
         });
     }
@@ -1819,9 +1826,9 @@ export class ReportsPage {
      * Stop real-time UI updates timer
      */
     _stopTrackingUITimer() {
-        if (this.trackingTimerId) {
-            GLib.Source.remove(this.trackingTimerId);
-            this.trackingTimerId = null;
+        if (this.trackingTimerToken) {
+            this.coreBridge.unsubscribeTick(this.trackingTimerToken);
+            this.trackingTimerToken = 0;
         }
     }
 

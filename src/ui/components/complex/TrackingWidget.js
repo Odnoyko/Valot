@@ -22,8 +22,8 @@ export class TrackingWidget {
 
         this.config = { ...defaultConfig, ...config };
 
-        // UI update timer (NOT state!)
-        this.updateTimerId = null;
+        // UI tick subscription token
+        this.updateTimerToken = 0;
 
         // Build widget
         this.widget = this._createWidget();
@@ -162,7 +162,7 @@ export class TrackingWidget {
                     this.timeLabel.set_label(this._formatDuration(state.elapsedSeconds));
                 }
 
-                // Start UI update timer
+                // Start UI tick updates
                 this._startUIUpdateTimer();
             } else {
                 // Update UI to idle mode
@@ -185,7 +185,7 @@ export class TrackingWidget {
                     this.timeLabel.set_label('00:00:00');
                 }
 
-                // Stop UI update timer
+                // Stop UI tick updates
                 this._stopUIUpdateTimer();
             }
         } catch (error) {
@@ -256,24 +256,22 @@ export class TrackingWidget {
      * UI update timer - refreshes display from Core state
      */
     _startUIUpdateTimer() {
-        if (this.updateTimerId) return;
-
-        this.updateTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+        if (this.updateTimerToken) return;
+        if (!this.config.coreBridge) return;
+        this.updateTimerToken = this.config.coreBridge.subscribeTick(() => {
             const state = this.config.coreBridge.getTrackingState();
             if (state.isTracking && this.timeLabel) {
                 this.timeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-                return true; // Continue timer
             } else {
-                this.updateTimerId = null;
-                return false; // Stop timer
+                this._stopUIUpdateTimer();
             }
         });
     }
 
     _stopUIUpdateTimer() {
-        if (this.updateTimerId) {
-            GLib.Source.remove(this.updateTimerId);
-            this.updateTimerId = null;
+        if (this.updateTimerToken && this.config.coreBridge) {
+            this.config.coreBridge.unsubscribeTick(this.updateTimerToken);
+            this.updateTimerToken = 0;
         }
     }
 

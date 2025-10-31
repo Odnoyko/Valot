@@ -8,6 +8,7 @@ import { TaskInstanceService } from '../services/TaskInstanceService.js';
 import { TimeTrackingService } from '../services/TimeTrackingService.js';
 import { ReportService } from '../services/ReportService.js';
 import { StatsService } from '../services/StatsService.js';
+import { TimerScheduler } from '../services/TimerScheduler.js';
 /**
  * Core API
  * Main interface for interacting with the application core
@@ -23,6 +24,7 @@ export class CoreAPI {
         this.state = new StateManager(this.events);
         this.database = null;
         this.initialized = false;
+        this.scheduler = new TimerScheduler(1);
     }
     /**
      * Initialize Core with database adapter
@@ -46,6 +48,9 @@ export class CoreAPI {
         this.events.emit(CoreEvents.DATABASE_CONNECTED);
         this.events.emit(CoreEvents.CORE_INITIALIZED);
         this.initialized = true;
+    }
+    getScheduler() {
+        return this.scheduler;
     }
     /**
      * Check if core is initialized

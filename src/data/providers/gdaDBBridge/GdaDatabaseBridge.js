@@ -5,6 +5,7 @@
 
 import Gda from 'gi://Gda?version=6.0';
 import GLib from 'gi://GLib';
+import { Logger } from 'resource:///com/odnoyko/valot/core/utils/Logger.js';
 
 export class GdaDatabaseBridge {
     constructor() {
@@ -159,9 +160,122 @@ export class GdaDatabaseBridge {
                 )`;
             await this.execute(createTimeEntryTable);
 
+            // Apply indices and integrity constraints/migrations
+            await this._applyIndicesAndConstraints();
+
         } catch (error) {
             console.error('❌ Schema initialization error:', error);
             throw error;
+        }
+    }
+
+    /**
+     * Create indices, triggers and apply light migrations for integrity.
+     * - Indices for common queries
+     * - Trigger to ensure only one active entry (end_time IS NULL) per task_instance
+     * - Schema version bump to 3 when applied
+     */
+    async _applyIndicesAndConstraints() {
+        const version = await this.getSchemaVersion();
+
+        // For fresh installs (version == 0) also try to enforce CHECK via recreate is skipped; rely on triggers.
+
+        // Indices (idempotent)
+        await this.execute(`CREATE INDEX IF NOT EXISTS idx_timeentry_task_start ON TimeEntry(task_instance_id, start_time)`);
+        await this.execute(`CREATE INDEX IF NOT EXISTS idx_taskinstance_task_proj_client ON TaskInstance(task_id, project_id, client_id)`);
+
+        // Repair data before enabling constraints: close extra active entries per task_instance
+        await this._repairMultipleActiveEntries();
+        // Repair invalid time intervals and durations
+        await this._repairInvalidTimeIntervals();
+        await this._normalizeDurations();
+
+        // Note: Triggers are disabled due to libgda parsing issues with BEGIN/END blocks
+        // Integrity is enforced at application level (TimeTrackingService ensures single active entry)
+        // Database-level triggers would be ideal but libgda cannot parse them correctly
+
+        // Bump schema version if needed
+        if (version < 4) {
+            await this.setSchemaVersion(4);
+        }
+    }
+
+    /**
+     * Close extra active entries: if multiple rows have end_time IS NULL for the same task_instance_id,
+     * keep the latest by start_time as active, close others with end_time = start_time and duration = 0.
+     */
+    async _repairMultipleActiveEntries() {
+        // Find task_instance_ids with more than one active entry
+        const rows = await this.query(`
+            SELECT task_instance_id
+            FROM TimeEntry
+            WHERE end_time IS NULL
+            GROUP BY task_instance_id
+            HAVING COUNT(1) > 1
+        `);
+
+        for (const row of rows) {
+            const taskInstanceId = row.task_instance_id;
+            const actives = await this.query(
+                `SELECT id, start_time FROM TimeEntry WHERE task_instance_id = ? AND end_time IS NULL ORDER BY start_time DESC`,
+                [taskInstanceId]
+            );
+            if (!actives || actives.length <= 1) continue;
+
+            // Keep the most recent as the only active
+            const [keep, ...close] = actives;
+            for (const c of close) {
+                await this.execute(
+                    `UPDATE TimeEntry SET end_time = start_time, duration = 0 WHERE id = ?`,
+                    [c.id]
+                );
+            }
+        }
+    }
+
+    /**
+     * Repair invalid time intervals where end_time <= start_time.
+     * Strategy: set end_time = start_time and duration = 0 to mark as zero-length completed entries.
+     */
+    async _repairInvalidTimeIntervals() {
+        // Find invalid rows
+        const rows = await this.query(`
+            SELECT id FROM TimeEntry
+            WHERE end_time IS NOT NULL AND start_time IS NOT NULL AND end_time <= start_time
+        `);
+        for (const row of rows) {
+            await this.execute(
+                `UPDATE TimeEntry SET end_time = start_time, duration = 0 WHERE id = ?`,
+                [row.id]
+            );
+        }
+    }
+
+    /**
+     * Normalize durations: if end_time IS NOT NULL and duration is NULL/negative, recalculate as max(0, end-start) in seconds.
+     * If end_time IS NULL (active), leave duration as-is (should be 0 for active rows in our model).
+     */
+    async _normalizeDurations() {
+        // Select rows with end_time and invalid/missing duration
+        const rows = await this.query(`
+            SELECT id, start_time, end_time, duration FROM TimeEntry
+            WHERE end_time IS NOT NULL AND (duration IS NULL OR duration < 0)
+        `);
+        for (const row of rows) {
+            const start = row.start_time;
+            const end = row.end_time;
+            if (!start || !end) continue;
+            // SQLite datetime difference in seconds
+            await this.execute(
+                `UPDATE TimeEntry SET duration = CAST((strftime('%s', end_time) - strftime('%s', start_time)) AS INTEGER)
+                 WHERE id = ?`,
+                [row.id]
+            );
+            // Ensure non-negative
+            await this.execute(
+                `UPDATE TimeEntry SET duration = 0 WHERE id = ? AND duration < 0`,
+                [row.id]
+            );
         }
     }
 
@@ -175,34 +289,10 @@ export class GdaDatabaseBridge {
 
         try {
             let dataModel;
-
-            // If no params, execute directly
             if (!params || params.length === 0) {
                 dataModel = this.connection.execute_select_command(sql);
             } else {
-                // Simple approach: escape and substitute params
-                // For SQLite, we can safely escape strings
-                let processedSql = sql;
-                for (let i = 0; i < params.length; i++) {
-                    const value = params[i];
-                    let escapedValue;
-
-                    if (value === null || value === undefined) {
-                        escapedValue = 'NULL';
-                    } else if (typeof value === 'number') {
-                        escapedValue = value.toString();
-                    } else if (typeof value === 'boolean') {
-                        escapedValue = value ? '1' : '0';
-                    } else {
-                        // Escape string: replace ' with ''
-                        escapedValue = "'" + String(value).replace(/'/g, "''") + "'";
-                    }
-
-                    // Replace first occurrence of ?
-                    processedSql = processedSql.replace('?', escapedValue);
-                }
-
-                dataModel = this.connection.execute_select_command(processedSql);
+                dataModel = this._executeSelectPrepared(sql, params);
             }
 
             if (!dataModel) {
@@ -283,32 +373,10 @@ export class GdaDatabaseBridge {
         }
 
         try {
-            let processedSql = sql;
-
-            // If params provided, escape and substitute
-            if (params && params.length > 0) {
-                for (let i = 0; i < params.length; i++) {
-                    const value = params[i];
-                    let escapedValue;
-
-                    if (value === null || value === undefined) {
-                        escapedValue = 'NULL';
-                    } else if (typeof value === 'number') {
-                        escapedValue = value.toString();
-                    } else if (typeof value === 'boolean') {
-                        escapedValue = value ? '1' : '0';
-                    } else {
-                        // Escape string: replace ' with ''
-                        escapedValue = "'" + String(value).replace(/'/g, "''") + "'";
-                    }
-
-                    // Replace first occurrence of ?
-                    processedSql = processedSql.replace('?', escapedValue);
-                }
-            }
-
-            // Execute
-            const result = this.connection.execute_non_select_command(processedSql);
+            // Execute (prepared when params provided)
+            const result = (params && params.length > 0)
+                ? this._executeNonSelectPrepared(sql, params)
+                : this.connection.execute_non_select_command(sql);
 
             // For INSERT, get last insert rowid
             if (sql.trim().toUpperCase().startsWith('INSERT')) {
@@ -338,6 +406,85 @@ export class GdaDatabaseBridge {
         } catch (error) {
             console.error('❌ Execute error:', sql, error);
             throw error;
+        }
+    }
+
+    /**
+     * Execute a prepared SELECT using Gda.Statement and holders.
+     */
+    _executeSelectPrepared(sql, params) {
+        try {
+            const stmt = this.connection.parse_sentence(sql, null, null);
+            const prep = this.connection.prepare_statement(stmt);
+            const holders = prep.get_parameters();
+            if (holders) {
+                for (let i = 0; i < params.length; i++) {
+                    const holder = holders.get_holder(i);
+                    if (!holder) continue;
+                    this._bindHolder(holder, params[i]);
+                }
+            }
+            return this.connection.statement_execute_select(prep, null);
+        } catch (e) {
+            // Fallback to manual substitution if prepare not supported
+            let processed = sql;
+            for (let i = 0; i < params.length; i++) {
+                const v = params[i];
+                const esc = (v === null || v === undefined) ? 'NULL' :
+                    (typeof v === 'number') ? String(v) :
+                    (typeof v === 'boolean') ? (v ? '1' : '0') :
+                    "'" + String(v).replace(/'/g, "''") + "'";
+                processed = processed.replace('?', esc);
+            }
+            return this.connection.execute_select_command(processed);
+        }
+    }
+
+    /**
+     * Execute a prepared non-SELECT statement.
+     */
+    _executeNonSelectPrepared(sql, params) {
+        try {
+            const stmt = this.connection.parse_sentence(sql, null, null);
+            const prep = this.connection.prepare_statement(stmt);
+            const holders = prep.get_parameters();
+            if (holders) {
+                for (let i = 0; i < params.length; i++) {
+                    const holder = holders.get_holder(i);
+                    if (!holder) continue;
+                    this._bindHolder(holder, params[i]);
+                }
+            }
+            return this.connection.statement_execute_non_select(prep, null);
+        } catch (e) {
+            // Fallback to manual substitution
+            let processed = sql;
+            for (let i = 0; i < params.length; i++) {
+                const v = params[i];
+                const esc = (v === null || v === undefined) ? 'NULL' :
+                    (typeof v === 'number') ? String(v) :
+                    (typeof v === 'boolean') ? (v ? '1' : '0') :
+                    "'" + String(v).replace(/'/g, "''") + "'";
+                processed = processed.replace('?', esc);
+            }
+            return this.connection.execute_non_select_command(processed);
+        }
+    }
+
+    _bindHolder(holder, value) {
+        try {
+            if (value === null || value === undefined) {
+                holder.set_value(null);
+            } else if (typeof value === 'number') {
+                holder.set_value(value);
+            } else if (typeof value === 'boolean') {
+                holder.set_value(value ? 1 : 0);
+            } else {
+                holder.set_value(String(value));
+            }
+        } catch (e) {
+            // Best-effort fallback
+            holder.set_value(String(value));
         }
     }
 

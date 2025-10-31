@@ -5,6 +5,7 @@ import Gdk from 'gi://Gdk?version=4.0';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import { Config } from 'resource:///com/odnoyko/valot/config.js';
+import { Logger } from 'resource:///com/odnoyko/valot/core/utils/Logger.js';
 import { AccentColorManager } from 'resource:///com/odnoyko/valot/ui/windows/Application.js';
 // TODO: Restore when migrated
 // import { pomodoroManager } from 'resource:///com/odnoyko/valot/js/func/global/pomodoroManager.js';
@@ -1246,6 +1247,10 @@ export const PreferencesDialog = GObject.registerClass({
      * Setup Extensions Page (dynamically, only if extensions exist)
      */
     _setupExtensionsPage() {
+        // Build-time gate: completely hide extensions UI when disabled
+        if (!Config.ENABLE_EXTENSIONS) {
+            return;
+        }
         // Check if experimental features are enabled
         const settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
         const experimentalEnabled = settings.get_boolean('experimental-features');
@@ -1618,27 +1623,27 @@ export const PreferencesDialog = GObject.registerClass({
 
             migrationDialog.showCompletion();
 
-            console.log('✅ Replace completed:', result);
+            Logger.debug('✅ Replace completed:', result);
 
             // Force reload all services from database
-            console.log('🔄 Force reloading all services...');
+            Logger.debug('🔄 Force reloading all services...');
             if (app.coreAPI) {
                 // Clear any caches and force reload
                 try {
                     if (app.coreAPI.taskService) {
-                        console.log('  Reloading TaskService...');
+                        Logger.debug('  Reloading TaskService...');
                         await app.coreAPI.taskService.loadAllTasks?.();
                     }
                     if (app.coreAPI.taskInstanceService) {
-                        console.log('  Reloading TaskInstanceService...');
+                        Logger.debug('  Reloading TaskInstanceService...');
                         await app.coreAPI.taskInstanceService.loadAll?.();
                     }
                     if (app.coreAPI.clientService) {
-                        console.log('  Reloading ClientService...');
+                        Logger.debug('  Reloading ClientService...');
                         await app.coreAPI.clientService.loadAll?.();
                     }
                     if (app.coreAPI.projectService) {
-                        console.log('  Reloading ProjectService...');
+                        Logger.debug('  Reloading ProjectService...');
                         await app.coreAPI.projectService.loadAll?.();
                     }
                 } catch (reloadError) {
@@ -1650,7 +1655,7 @@ export const PreferencesDialog = GObject.registerClass({
                 app.coreBridge?.emitUIEvent('project-updated');
                 app.coreBridge?.emitUIEvent('task-updated');
 
-                console.log('✅ Services reloaded and events emitted');
+                Logger.debug('✅ Services reloaded and events emitted');
             }
 
         } catch (error) {
@@ -1675,7 +1680,7 @@ export const PreferencesDialog = GObject.registerClass({
                 throw new Error('Database bridge not found');
             }
 
-            console.log('📂 Using app database connection for merge');
+            Logger.debug('📂 Using app database connection for merge');
 
             // Merge via DataNavigator (data layer)
             const result = await app.dataNavigator.mergeFromDatabaseFile(importPath, (step, total, message) => {
@@ -1694,27 +1699,27 @@ export const PreferencesDialog = GObject.registerClass({
 
             migrationDialog.showCompletion();
 
-            console.log('✅ Merge completed:', result);
+            Logger.debug('✅ Merge completed:', result);
 
             // Force reload all services from database
-            console.log('🔄 Force reloading all services...');
+            Logger.debug('🔄 Force reloading all services...');
             if (app.coreAPI) {
                 // Clear any caches and force reload
                 try {
                     if (app.coreAPI.taskService) {
-                        console.log('  Reloading TaskService...');
+                        Logger.debug('  Reloading TaskService...');
                         await app.coreAPI.taskService.loadAllTasks?.();
                     }
                     if (app.coreAPI.taskInstanceService) {
-                        console.log('  Reloading TaskInstanceService...');
+                        Logger.debug('  Reloading TaskInstanceService...');
                         await app.coreAPI.taskInstanceService.loadAll?.();
                     }
                     if (app.coreAPI.clientService) {
-                        console.log('  Reloading ClientService...');
+                        Logger.debug('  Reloading ClientService...');
                         await app.coreAPI.clientService.loadAll?.();
                     }
                     if (app.coreAPI.projectService) {
-                        console.log('  Reloading ProjectService...');
+                        Logger.debug('  Reloading ProjectService...');
                         await app.coreAPI.projectService.loadAll?.();
                     }
                 } catch (reloadError) {
@@ -1726,7 +1731,7 @@ export const PreferencesDialog = GObject.registerClass({
                 app.coreBridge?.emitUIEvent('project-updated');
                 app.coreBridge?.emitUIEvent('task-updated');
 
-                console.log('✅ Services reloaded and events emitted');
+                Logger.debug('✅ Services reloaded and events emitted');
             }
 
             // Close dialog after 1 second
@@ -1937,7 +1942,7 @@ export const PreferencesDialog = GObject.registerClass({
      */
     _loadExtensionFromURLInput(app) {
         // TODO: Show text input dialog for URL
-        console.warn('Load from URL dialog not implemented yet');
+        Logger.warn('Load from URL dialog not implemented yet');
     }
 
     /**

@@ -21,6 +21,8 @@ bin_conf.set('libdir', get_option('prefix') / get_option('libdir'))
 bin_conf.set('datadir', get_option('prefix') / get_option('datadir'))
 bin_conf.set('pkgdatadir', get_option('prefix') / get_option('datadir') / meson.project_name())
 bin_conf.set('resource_path', '/com/odnoyko/valot')
+# enable_extensions as JavaScript boolean literal
+bin_conf.set('enable_extensions', get_option('enable-extensions') ? 'true' : 'false')
 
 # Generate config.js with version info
 config_js = configure_file(

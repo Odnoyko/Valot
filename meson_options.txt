@@ -1,1 +1,2 @@
 option('profile', type: 'combo', choices: ['default', 'development'], value: 'default')
+option('enable-extensions', type: 'boolean', value: false, description: 'Build with extensions system enabled')

@@ -8,6 +8,7 @@ export const Config = {
     DEVELOPER: 'Vitaly Odnoyko',
     APPLICATION_ID: '@APPLICATION_ID@',
     RESOURCE_PATH: '@resource_path@',
+    ENABLE_EXTENSIONS: JSON.parse('@enable_extensions@'),
 
     getValotReportsDir() {
         // Always use Documents/valot (localized Documents directory)

@@ -105,6 +105,7 @@
     <file>core/services/StatsService.js</file>
     <file>core/services/TaskInstanceService.js</file>
     <file>core/services/TaskService.js</file>
+    <file>core/services/TimerScheduler.js</file>
     <file>core/services/TimeTrackingService.js</file>
 
     <!-- Core Models -->
@@ -130,6 +131,7 @@
     <file>core/utils/ColorUtils.js</file>
     <file>core/utils/DateFilters.js</file>
     <file>core/utils/ValidationUtils.js</file>
+    <file>core/utils/Logger.js</file>
 
     <!-- Extensions -->
     <file>extensions/ExtensionManager.js</file>

@@ -110,6 +110,16 @@ export class CoreBridge {
         }
     }
 
+    // ==================== Tick Scheduler API ====================
+
+    subscribeTick(callback) {
+        return this.core.getScheduler().subscribe(callback);
+    }
+
+    unsubscribeTick(token) {
+        return this.core.getScheduler().unsubscribe(token);
+    }
+
     // ==================== Projects API ====================
 
     async getAllProjects() {

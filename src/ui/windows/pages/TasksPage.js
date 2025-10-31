@@ -10,6 +10,7 @@ import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/data/currencies
 import { AdvancedTrackingWidget } from 'resource:///com/odnoyko/valot/ui/components/complex/AdvancedTrackingWidget.js';
 import { MultipleTasksEditDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/MultipleTasksEditDialog.js';
 import { createRecoloredSVG } from 'resource:///com/odnoyko/valot/ui/utils/svgRecolor.js';
+import { Logger } from 'resource:///com/odnoyko/valot/core/utils/Logger.js';
 
 /**
  * Tasks management page
@@ -581,24 +582,22 @@ export class TasksPage {
      * UI update timer - refreshes time display from Core
      */
     _startTrackingUITimer() {
-        if (this.trackingTimerId) return;
+        if (this.trackingTimerToken) return;
 
-        this.trackingTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+        this.trackingTimerToken = this.coreBridge.subscribeTick(() => {
             const state = this.coreBridge.getTrackingState();
             if (state.isTracking) {
                 this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-                return true; // Continue
             } else {
-                this.trackingTimerId = null;
-                return false; // Stop
+                this._stopTrackingUITimer();
             }
         });
     }
 
     _stopTrackingUITimer() {
-        if (this.trackingTimerId) {
-            GLib.Source.remove(this.trackingTimerId);
-            this.trackingTimerId = null;
+        if (this.trackingTimerToken) {
+            this.coreBridge.unsubscribeTick(this.trackingTimerToken);
+            this.trackingTimerToken = 0;
         }
     }
 
@@ -1887,14 +1886,14 @@ export class TasksPage {
             const projectExists = projects.some(p => p.id === this.currentProjectId);
             if (!projectExists && projects.length > 0) {
                 this.currentProjectId = projects[0].id;
-                console.warn('[TasksPage] Reset to default project:', this.currentProjectId);
+                Logger.debug('[TasksPage] Reset to default project:', this.currentProjectId);
             }
 
             // Validate client ID
             const clientExists = clients.some(c => c.id === this.currentClientId);
             if (!clientExists && clients.length > 0) {
                 this.currentClientId = clients[0].id;
-                console.warn('[TasksPage] Reset to default client:', this.currentClientId);
+                Logger.debug('[TasksPage] Reset to default client:', this.currentClientId);
             }
         } catch (error) {
             console.error('[TasksPage] Error validating context:', error);
