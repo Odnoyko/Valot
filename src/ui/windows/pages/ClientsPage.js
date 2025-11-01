@@ -61,11 +61,12 @@ export class ClientsPage {
         this._eventHandlers['tracking-stopped'] = () => {
             this.loadClients();
         };
-        this._eventHandlers['tracking-updated'] = () => {
-            // tracking-updated fires every second during tracking
-            // Time label updates are handled by subscribeTick timer (_startTrackingUITimer)
-            // to avoid unnecessary UI redraws every second
-        };
+        // DISABLED: tracking-updated handler removed - causes RAM growth
+        // Handler was empty but still registered, causing unnecessary processing
+        // this._eventHandlers['tracking-updated'] = () => {
+        //     // tracking-updated fires every second during tracking
+        //     // Handler removed to prevent RAM growth
+        // };
 
         // Subscribe with stored handlers
         Object.keys(this._eventHandlers).forEach(event => {
@@ -262,9 +263,11 @@ export class ClientsPage {
             this._onTrackingStopped(data);
         });
 
-        this.coreBridge.onUIEvent('tracking-updated', (data) => {
-            this._onTrackingUpdated(data);
-        });
+        // DISABLED: tracking-updated handler removed - causes RAM growth
+        // Handler calls getTrackingState() which creates objects every second
+        // this.coreBridge.onUIEvent('tracking-updated', (data) => {
+        //     this._onTrackingUpdated(data);
+        // });
 
         // Load initial state
         this._updateTrackingUIFromCore();
@@ -291,10 +294,12 @@ export class ClientsPage {
             this.trackButton.remove_css_class('suggested-action');
             this.trackButton.add_css_class('destructive-action');
 
-            this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+            // DISABLED: Time updates in ClientsPage (only header widget shows time)
+            // this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
 
+            // DISABLED: Time updates in ClientsPage (only header widget shows time)
             // Start UI update timer
-            this._startTrackingUITimer();
+            // this._startTrackingUITimer();
         } else {
             // Tracking idle
             this.taskNameEntry.set_text('');
@@ -309,8 +314,7 @@ export class ClientsPage {
 
             this.actualTimeLabel.set_label('00:00:00');
 
-            // Stop UI update timer
-            this._stopTrackingUITimer();
+            // REMOVED: No timer to stop
         }
     }
 
@@ -330,10 +334,14 @@ export class ClientsPage {
 
     /**
      * Core event: tracking updated (every second)
+     * DISABLED: Time updates disabled - only header widget shows time
      */
     _onTrackingUpdated(data) {
-        const state = this.coreBridge.getTrackingState();
-        this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+        // DISABLED: Time updates in ClientsPage (only header widget shows time)
+        return;
+        
+        // const state = this.coreBridge.getTrackingState();
+        // this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
     }
 
     /**
@@ -373,28 +381,8 @@ export class ClientsPage {
         }
     }
 
-    /**
-     * UI update timer - refreshes time display from Core
-     */
-    _startTrackingUITimer() {
-        if (this.trackingTimerToken) return;
-
-        this.trackingTimerToken = this.coreBridge.subscribeTick(() => {
-            const state = this.coreBridge.getTrackingState();
-            if (state.isTracking) {
-                this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-            } else {
-                this._stopTrackingUITimer();
-            }
-        });
-    }
-
-    _stopTrackingUITimer() {
-        if (this.trackingTimerToken) {
-            this.coreBridge.unsubscribeTick(this.trackingTimerToken);
-            this.trackingTimerToken = 0;
-        }
-    }
+    // REMOVED: _startTrackingUITimer() and _stopTrackingUITimer()
+    // No separate timers needed - only header widget shows time
 
     _formatDuration(seconds) {
         const hours = Math.floor(seconds / 3600);
@@ -1476,11 +1464,7 @@ export class ClientsPage {
             this._eventHandlers = {};
         }
 
-        // Stop tracking timer
-        if (this.trackingTimerToken) {
-            this.coreBridge?.unsubscribeTick(this.trackingTimerToken);
-            this.trackingTimerToken = 0;
-        }
+        // REMOVED: No timer to stop
 
         // Disconnect GTK signal handlers
         // Disconnect tracked widget connections
@@ -1530,6 +1514,11 @@ export class ClientsPage {
      * Lightweight cleanup - clears data but keeps UI structure
      */
     onHide() {
+        // Cleanup tracking widget subscriptions
+        if (this.trackingWidget && typeof this.trackingWidget.cleanup === 'function') {
+            this.trackingWidget.cleanup();
+        }
+        
         // Clear data arrays
         this.clients = [];
         this.filteredClients = [];

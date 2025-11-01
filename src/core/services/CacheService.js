@@ -79,7 +79,8 @@ export class CacheService {
             Logger.info('Cache', `Cache initialized: ${this.tasks.size} tasks, ${this.projects.size} projects, ${this.clients.size} clients, ${this.taskInstances.size} instances`);
             
             // Start periodic sync
-            this.startPeriodicSync();
+            // DISABLED: Periodic sync timer - sync on demand only, not every 5 seconds
+            // this.startPeriodicSync();
         } catch (error) {
             Logger.error('Cache', 'Failed to initialize cache:', error);
             throw error;
@@ -412,20 +413,24 @@ export class CacheService {
     
     /**
      * Start periodic sync to DB
+     * DISABLED: We don't want periodic sync timer - sync on demand only
      */
     startPeriodicSync() {
-        if (this.syncTimerId) return;
+        // DISABLED: Periodic sync timer - sync on demand via flush() only
+        return;
         
-        this.syncTimerId = GLib.timeout_add_seconds(
-            GLib.PRIORITY_DEFAULT,
-            Math.floor(this.syncInterval / 1000),
-            () => {
-                this.syncToDB().catch(err => {
-                    Logger.error('Cache', 'Periodic sync error:', err);
-                });
-                return true; // Continue timer
-            }
-        );
+        // if (this.syncTimerId) return;
+        // 
+        // this.syncTimerId = GLib.timeout_add_seconds(
+        //     GLib.PRIORITY_DEFAULT,
+        //     Math.floor(this.syncInterval / 1000),
+        //     () => {
+        //         this.syncToDB().catch(err => {
+        //             Logger.error('Cache', 'Periodic sync error:', err);
+        //         });
+        //         return true; // Continue timer
+        //     }
+        // );
     }
     
     /**

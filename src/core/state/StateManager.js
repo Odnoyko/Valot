@@ -19,13 +19,13 @@ export class StateManager {
                 currentClientId: null,
                 currentTaskInstanceId: null,
                 currentTimeEntryId: null,
-                startTime: null,
-                elapsedSeconds: 0,
-                oldTime: 0, // Cached completed time (excludes active entry) - updated only on start/stop/edit
-                savedTimeFromCrash: 0, // Time saved in JSON from previous crash - added to duration on stop
+                startTime: null, // ONLY stored value - all time computed as (current time - startTime)
+                // elapsedSeconds removed - calculated dynamically from startTime to prevent RAM growth
+                // oldTime removed - calculated on demand when needed, not stored in RAM
+                savedTimeFromCrash: 0, // Time saved in JSON from previous crash - added to duration on stop (small number)
                 pomodoroMode: false,
                 pomodoroDuration: 0,
-                pomodoroRemaining: 0,
+                pomodoroRemaining: 0, // Calculated dynamically from elapsedSeconds and pomodoroDuration
             },
             ui: {
                 currentPage: 'tasks',
@@ -42,9 +42,28 @@ export class StateManager {
     }
     /**
      * Get tracking state
+     * Calculates elapsedSeconds dynamically from startTime to prevent RAM growth
      */
     getTrackingState() {
-        return { ...this.state.tracking };
+        const tracking = { ...this.state.tracking };
+        
+        // Calculate elapsedSeconds dynamically from startTime (not stored in state)
+        // This prevents state updates every second, reducing RAM usage
+        if (tracking.isTracking && tracking.startTime) {
+            const startDate = new Date(tracking.startTime);
+            const now = Date.now();
+            tracking.elapsedSeconds = Math.floor((now - startDate.getTime()) / 1000);
+            
+            // Calculate pomodoroRemaining if in pomodoro mode
+            if (tracking.pomodoroMode && tracking.pomodoroDuration > 0) {
+                tracking.pomodoroRemaining = Math.max(0, tracking.pomodoroDuration - tracking.elapsedSeconds);
+            }
+        } else {
+            tracking.elapsedSeconds = 0;
+            tracking.pomodoroRemaining = 0;
+        }
+        
+        return tracking;
     }
     /**
      * Update tracking state

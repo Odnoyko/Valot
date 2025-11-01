@@ -22,8 +22,7 @@ export class TrackingWidget {
 
         this.config = { ...defaultConfig, ...config };
 
-        // UI tick subscription token
-        this.updateTimerToken = 0;
+        // REMOVED: updateTimerToken - no longer using separate timers
 
         // Build widget
         this.widget = this._createWidget();
@@ -167,8 +166,8 @@ export class TrackingWidget {
                     this.timeLabel.set_label(this._formatDuration(state.elapsedSeconds));
                 }
 
-                // Start UI tick updates
-                this._startUIUpdateTimer();
+                // DISABLED: No timer - use tracking-updated events instead
+                // this._startUIUpdateTimer();
             } else {
                 // Update UI to idle mode
                 this.taskButton.set_label(this.config.taskPlaceholder);
@@ -190,8 +189,7 @@ export class TrackingWidget {
                     this.timeLabel.set_label('00:00:00');
                 }
 
-                // Stop UI tick updates
-                this._stopUIUpdateTimer();
+                // REMOVED: No timer to stop
             }
         } catch (error) {
             console.error('Error updating UI from Core:', error);
@@ -215,11 +213,17 @@ export class TrackingWidget {
     /**
      * Core event: tracking timer updated
      */
+    /**
+     * Core event: tracking timer updated
+     */
     _onTrackingUpdated(data) {
-        // Update time display (Core increments elapsedSeconds every second)
-        const state = this.config.coreBridge.getTrackingState();
-        if (this.timeLabel) {
-            this.timeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+        // tracking-updated fires every second from Core timer
+        // Core timer calculates elapsedSeconds (currentTime - startTime), we just show it
+        // No calculation in UI, no RAM storage - just display Core timer result
+        
+        // Update time display directly from Core timer data (already calculated, just show it)
+        if (data && data.elapsedSeconds !== undefined && this.timeLabel) {
+            this.timeLabel.set_label(this._formatDuration(data.elapsedSeconds));
         }
     }
 
@@ -257,28 +261,8 @@ export class TrackingWidget {
         }
     }
 
-    /**
-     * UI update timer - refreshes display from Core state
-     */
-    _startUIUpdateTimer() {
-        if (this.updateTimerToken) return;
-        if (!this.config.coreBridge) return;
-        this.updateTimerToken = this.config.coreBridge.subscribeTick(() => {
-            const state = this.config.coreBridge.getTrackingState();
-            if (state.isTracking && this.timeLabel) {
-                this.timeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-            } else {
-                this._stopUIUpdateTimer();
-            }
-        });
-    }
-
-    _stopUIUpdateTimer() {
-        if (this.updateTimerToken && this.config.coreBridge) {
-            this.config.coreBridge.unsubscribeTick(this.updateTimerToken);
-            this.updateTimerToken = 0;
-        }
-    }
+    // REMOVED: _startUIUpdateTimer() and _stopUIUpdateTimer()
+    // No separate timers needed - listen to Core TRACKING_UPDATED events instead
 
     _formatDuration(seconds) {
         const hours = Math.floor(seconds / 3600);
@@ -348,7 +332,7 @@ export class TrackingWidget {
             this._coreEventHandlers = {};
         }
 
-        this._stopUIUpdateTimer();
+        // REMOVED: No timer to stop
     }
 
     /**

@@ -30,6 +30,7 @@ export class ProjectsPage {
         
         // Map to store project rows for reuse (projectId -> row widget)
         this.projectRowMap = new Map(); // projectId -> Gtk.ListBoxRow
+        this._cssProviders = new Map(); // settingsButton -> CssProvider (for cleanup)
 
         // Track last tracking project to reset its time when switching
         this.lastTrackingProjectId = null;
@@ -46,8 +47,7 @@ export class ProjectsPage {
         // Store widget handler connections for cleanup (widget -> handlerId)
         this._widgetConnections = new Map();
 
-        // Timer token for real-time UI updates (uses centralized TimerScheduler)
-        this.trackingTimerToken = 0;
+        // REMOVED: trackingTimerToken - no longer using separate timers
 
         // Subscribe to Core events for automatic updates
         this._subscribeToCore();
@@ -66,12 +66,12 @@ export class ProjectsPage {
         this._eventHandlers['tracking-stopped'] = () => {
             this.loadProjects();
         };
-        this._eventHandlers['tracking-updated'] = () => {
-            // tracking-updated fires every second during tracking
-            // Use throttling to avoid updating project times too frequently
-            // Updates are handled by subscribeTick timer with throttling
-            // Only update if actually needed (project time labels visible)
-        };
+        // DISABLED: tracking-updated handler removed - causes RAM growth
+        // Handler was empty but still registered, causing unnecessary processing
+        // this._eventHandlers['tracking-updated'] = () => {
+        //     // tracking-updated fires every second during tracking
+        //     // Handler removed to prevent RAM growth
+        // };
         this._eventHandlers['task-updated'] = () => {
             this.loadProjects();
         };
@@ -287,17 +287,12 @@ export class ProjectsPage {
             this._updateTrackingUIFromCore();
         });
 
-        this.coreBridge.onUIEvent('tracking-updated', (data) => {
-            // tracking-updated fires every second during tracking
-            // Time updates are handled by subscribeTick timer
-            // Only update task name if it actually changed
-            const state = this.coreBridge.getTrackingState();
-            if (state.currentTaskName && this.taskNameEntry.get_text() !== state.currentTaskName) {
-                this.taskNameEntry.set_text(state.currentTaskName);
-            }
-            // NOTE: Time label updates are handled by subscribeTick (_startTrackingUITimer)
-            // to avoid unnecessary UI redraws every second
-        });
+        // DISABLED: tracking-updated handler removed - causes RAM growth
+        // getTrackingState() creates objects every second
+        // this.coreBridge.onUIEvent('tracking-updated', (data) => {
+        //     // tracking-updated fires every second during tracking
+        //     // Handler removed to prevent RAM growth
+        // });
 
         this._updateTrackingUIFromCore();
     }
@@ -318,8 +313,9 @@ export class ProjectsPage {
             this.trackButton.remove_css_class('suggested-action');
             this.trackButton.add_css_class('destructive-action');
 
-            this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-            this._startTrackingUITimer();
+            // DISABLED: Time updates in ProjectsPage (only header widget shows time)
+            // this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+            // this._startTrackingUITimer();
         } else {
             this.taskNameEntry.set_text('');
             this.taskNameEntry.set_sensitive(true);
@@ -332,7 +328,7 @@ export class ProjectsPage {
             this.trackButton.add_css_class('suggested-action');
 
             this.actualTimeLabel.set_label('00:00:00');
-            this._stopTrackingUITimer();
+            // REMOVED: No timer to stop
         }
     }
 
@@ -365,46 +361,8 @@ export class ProjectsPage {
         }
     }
 
-    _startTrackingUITimer() {
-        if (this.trackingTimerToken) return;
-        if (!this.coreBridge) return;
-
-        // Track last update time for throttling
-        if (!this._lastProjectTimeUpdateMs) {
-            this._lastProjectTimeUpdateMs = 0;
-        }
-
-        // Use centralized TimerScheduler instead of individual GLib.timeout_add
-        this.trackingTimerToken = this.coreBridge.subscribeTick(() => {
-            const state = this.coreBridge.getTrackingState();
-            if (state.isTracking) {
-                // Update time label (every second)
-                if (this.actualTimeLabel) {
-                    this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-                }
-
-                // Update project time labels with throttling (every 1 second, not every tick)
-                const now = Date.now();
-                if (now - this._lastProjectTimeUpdateMs >= 1000) {
-                    this._lastProjectTimeUpdateMs = now;
-                    // Async call - result is ignored (updates happen in background)
-                    this._updateTrackingProjectTime().catch(err => {
-                        // Silently ignore errors - UI update failures shouldn't crash the app
-                    });
-                }
-            } else {
-                // Stop timer if not tracking
-                this._stopTrackingUITimer();
-            }
-        });
-    }
-
-    _stopTrackingUITimer() {
-        if (this.trackingTimerToken && this.coreBridge) {
-            this.coreBridge.unsubscribeTick(this.trackingTimerToken);
-            this.trackingTimerToken = 0;
-        }
-    }
+    // REMOVED: _startTrackingUITimer() and _stopTrackingUITimer()
+    // No separate timers needed - only header widget shows time
 
     _formatDuration(seconds) {
         const hours = Math.floor(seconds / 3600);
@@ -769,6 +727,14 @@ export class ProjectsPage {
 
             // Update CSS color
             const iconColor = this._getProjectIconColor(project);
+            
+            // Remove old provider if exists (GTK4 doesn't have remove_all_providers)
+            const oldProvider = this._cssProviders.get(settingsButton);
+            if (oldProvider) {
+                settingsButton.get_style_context().remove_provider(oldProvider);
+                this._cssProviders.delete(settingsButton);
+            }
+            
             const provider = new Gtk.CssProvider();
             provider.load_from_string(
                 `.project-settings-button {
@@ -787,8 +753,8 @@ export class ProjectsPage {
                     font-size: 18px;
                 }`
             );
-            settingsButton.get_style_context().remove_all_providers();
             settingsButton.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+            this._cssProviders.set(settingsButton, provider);
         }
 
         // Update selection styling
@@ -1352,86 +1318,8 @@ export class ProjectsPage {
         dialog.present(this.parentWindow);
     }
 
-    /**
-     * Update currently tracking project time in real-time
-     * Gets accurate old time from database to handle TimeEntry edits correctly
-     */
-    async _updateTrackingProjectTime() {
-        if (!this.coreBridge) return;
-
-        const trackingState = this.coreBridge.getTrackingState();
-        if (!trackingState.isTracking || !trackingState.currentProjectId) {
-            // Reset last tracking project when stopped
-            this.lastTrackingProjectId = null;
-            return;
-        }
-
-        const currentProjectId = trackingState.currentProjectId;
-
-        try {
-            // Get all task instances
-            const taskInstances = await this.coreBridge.getAllTaskInstances();
-
-            // If project changed, reset old project time to saved value
-            if (this.lastTrackingProjectId && this.lastTrackingProjectId !== currentProjectId) {
-                const oldTimeLabel = this.projectTimeLabels.get(this.lastTrackingProjectId);
-                if (oldTimeLabel) {
-                    // Calculate saved time for old project (without tracking time)
-                    const oldProjectTasks = taskInstances.filter(t => t.project_id === this.lastTrackingProjectId);
-                    let oldTotalSeconds = 0;
-                    oldProjectTasks.forEach(task => {
-                        oldTotalSeconds += task.total_time || 0;
-                    });
-                    // Reset to saved value
-                    oldTimeLabel.set_label(this._formatDurationHMS(oldTotalSeconds));
-                }
-            }
-
-            // Update current project time with tracking time
-            const timeLabel = this.projectTimeLabels.get(currentProjectId);
-            if (timeLabel) {
-                // Calculate total saved time for current project (excluding active entry)
-                const projectTasks = taskInstances.filter(t => t.project_id === currentProjectId);
-                
-                // Check if current project has the tracked task
-                const trackedTask = projectTasks.find(t => trackingState.currentTaskInstanceId === t.id);
-                
-                if (trackedTask) {
-                    // Use cached oldTime from state (no database query)
-                    // oldTime is updated only on start/stop/edit, not every second
-                    const oldTime = trackingState.oldTime || 0;
-                    const currentElapsed = trackingState.elapsedSeconds || 0;
-                    
-                    // Calculate total: other tasks' total_time + tracked task's old time + elapsed
-                    let projectTotal = 0;
-                    projectTasks.forEach(t => {
-                        if (t.id === trackedTask.id) {
-                            projectTotal += oldTime;
-                        } else {
-                            projectTotal += t.total_time || 0;
-                        }
-                    });
-                    projectTotal += currentElapsed;
-                    
-                    timeLabel.set_label(this._formatDurationHMS(projectTotal));
-                } else {
-                    // No tracked task in this project - use simple calculation
-                    let totalSeconds = 0;
-                    projectTasks.forEach(task => {
-                        totalSeconds += task.total_time || 0;
-                    });
-                    const currentElapsed = trackingState.elapsedSeconds || 0;
-                    totalSeconds += currentElapsed;
-                    timeLabel.set_label(this._formatDurationHMS(totalSeconds));
-                }
-            }
-
-            // Update last tracking project
-            this.lastTrackingProjectId = currentProjectId;
-        } catch (error) {
-            Logger.error('[ProjectsPage] Error updating tracking project time:', error);
-        }
-    }
+    // REMOVED: _updateTrackingProjectTime()
+    // No real-time time updates in pages - only header widget shows time
 
     /**
      * Refresh page data
@@ -1461,11 +1349,7 @@ export class ProjectsPage {
             this._eventHandlers = {};
         }
 
-        // Stop tracking timer (using centralized TimerScheduler)
-        if (this.trackingTimerToken) {
-            this.coreBridge?.unsubscribeTick(this.trackingTimerToken);
-            this.trackingTimerToken = 0;
-        }
+        // REMOVED: No timer to stop
 
         // Disconnect GTK signal handlers
         // Disconnect tracked widget connections
@@ -1516,6 +1400,13 @@ export class ProjectsPage {
      * Lightweight cleanup - clears data but keeps UI structure
      */
     onHide() {
+        // REMOVED: No timer to stop
+        
+        // Cleanup tracking widget subscriptions
+        if (this.trackingWidget && typeof this.trackingWidget.cleanup === 'function') {
+            this.trackingWidget.cleanup();
+        }
+        
         // Clear data arrays
         this.projects = [];
         this.filteredProjects = [];
@@ -1526,6 +1417,9 @@ export class ProjectsPage {
         
         // Clear project rows map
         this.projectRowMap.clear();
+        
+        // Clear CSS providers map
+        this._cssProviders.clear();
         this._lastDisplayedProjects = [];
         
         // Reset tracking references

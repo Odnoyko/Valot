@@ -30,12 +30,16 @@ export class TrackingPersistenceService extends BaseService {
         // NO automatic recovery - just keep time in JSON file
         // Time will be synchronized when user starts tracking again with same task/project/client
         
+        // DISABLED: Periodic persistence timer - we don't want to save in RAM/JSON during tracking
+        // Time is calculated from startTime, not stored
         // Subscribe to tracking events to manage persistence (store handlers for cleanup)
         this._eventHandlers.trackingStarted = () => {
-            this.startPeriodicPersist();
+            // DISABLED: Periodic persistence - no timer during tracking
+            // this.startPeriodicPersist();
         };
         this._eventHandlers.trackingStopped = () => {
-            this.stopPeriodicPersist();
+            // DISABLED: Periodic persistence - no timer during tracking
+            // this.stopPeriodicPersist();
             // Clear cache when tracking stops normally (TimeEntry is already closed in TimeTrackingService.stop())
             // If crash happened, time remains in JSON for next start
             this._fileCache.clear();
@@ -70,17 +74,25 @@ export class TrackingPersistenceService extends BaseService {
                 savedProjectId === projectId && 
                 savedClientId === clientId) {
                 
-                // Match! Calculate total saved time (including time since last persist)
-                const savedElapsedSeconds = cachedState.elapsedSeconds || 0;
-                const lastPersistTime = cachedState.lastPersistTime || Date.now();
-                const now = Date.now();
-                const timeSinceLastPersist = Math.floor((now - lastPersistTime) / 1000);
-                
-                // Return total saved time
-                const totalSavedTime = savedElapsedSeconds + timeSinceLastPersist;
-                
-                Logger.info(`[TrackingPersistence] Found saved time for task: ${totalSavedTime}s`);
-                return Math.max(0, totalSavedTime);
+                // Match! Calculate saved time from startTime (not from elapsedSeconds in file)
+                // This is more accurate and doesn't require storing elapsedSeconds
+                if (cachedState.startTime) {
+                    const startDate = new Date(cachedState.startTime);
+                    const now = Date.now();
+                    const totalSavedTime = Math.floor((now - startDate.getTime()) / 1000);
+                    
+                    Logger.info(`[TrackingPersistence] Found saved time for task (from startTime): ${totalSavedTime}s`);
+                    return Math.max(0, totalSavedTime);
+                } else if (cachedState.elapsedSeconds) {
+                    // Fallback for old format (if file has elapsedSeconds from previous version)
+                    const lastPersistTime = cachedState.lastPersistTime || Date.now();
+                    const now = Date.now();
+                    const timeSinceLastPersist = Math.floor((now - lastPersistTime) / 1000);
+                    const totalSavedTime = cachedState.elapsedSeconds + timeSinceLastPersist;
+                    
+                    Logger.info(`[TrackingPersistence] Found saved time for task (legacy format): ${totalSavedTime}s`);
+                    return Math.max(0, totalSavedTime);
+                }
             }
             
             return 0; // Task/project/client don't match
@@ -99,36 +111,40 @@ export class TrackingPersistenceService extends BaseService {
 
     /**
      * Start periodic persistence of tracking duration
+     * DISABLED: We don't want periodic persistence during tracking - time is calculated from startTime
      */
     startPeriodicPersist() {
-        // Stop existing timer if any
-        this.stopPeriodicPersist();
+        // DISABLED: Periodic persistence timer - time calculated from startTime, not stored
+        return;
         
-        // Reset last persist time
-        this._lastPersistTime = Date.now();
-        
-        // Subscribe to scheduler for periodic saves
-        const scheduler = this.core.services.timerScheduler;
-        this._persistTimerToken = scheduler.subscribe(() => {
-            const currentState = this.state.getTrackingState();
-            
-            // Only persist if actively tracking
-            if (!currentState.isTracking || !currentState.currentTimeEntryId) {
-                return;
-            }
-            
-            // Check if enough time has passed (60 seconds)
-            const now = Date.now();
-            const timeSinceLastPersist = (now - this._lastPersistTime) / 1000;
-            
-            if (timeSinceLastPersist >= this._persistIntervalSeconds) {
-                this._lastPersistTime = now;
-                // Use void but also catch errors to prevent silent failures
-                void this.persistCurrentTracking().catch(error => {
-                    Logger.error(`[TrackingPersistence] Periodic persist failed: ${error.message}`);
-                });
-            }
-        });
+        // // Stop existing timer if any
+        // this.stopPeriodicPersist();
+        // 
+        // // Reset last persist time
+        // this._lastPersistTime = Date.now();
+        // 
+        // // Subscribe to scheduler for periodic saves
+        // const scheduler = this.core.services.timerScheduler;
+        // this._persistTimerToken = scheduler.subscribe(() => {
+        //     const currentState = this.state.getTrackingState();
+        //     
+        //     // Only persist if actively tracking
+        //     if (!currentState.isTracking || !currentState.currentTimeEntryId) {
+        //         return;
+        //     }
+        //     
+        //     // Check if enough time has passed (60 seconds)
+        //     const now = Date.now();
+        //     const timeSinceLastPersist = (now - this._lastPersistTime) / 1000;
+        //     
+        //     if (timeSinceLastPersist >= this._persistIntervalSeconds) {
+        //         this._lastPersistTime = now;
+        //         // Use void but also catch errors to prevent silent failures
+        //         void this.persistCurrentTracking().catch(error => {
+        //             Logger.error(`[TrackingPersistence] Periodic persist failed: ${error.message}`);
+        //         });
+        //     }
+        // });
     }
 
     /**
@@ -156,10 +172,8 @@ export class TrackingPersistenceService extends BaseService {
         }
 
         try {
-            const elapsedSeconds = currentState.elapsedSeconds || 0;
-            
-            // Save to JSON file ONLY - no database updates during tracking
-            // Database is updated only when tracking starts (create TimeEntry) and stops (close TimeEntry)
+            // elapsedSeconds is calculated dynamically - save only startTime to file
+            // This prevents storing time in RAM and reduces memory usage
             const stateToSave = {
                 entryId: currentState.currentTimeEntryId,
                 taskInstanceId: currentState.currentTaskInstanceId,
@@ -167,13 +181,14 @@ export class TrackingPersistenceService extends BaseService {
                 taskName: currentState.currentTaskName,
                 projectId: currentState.currentProjectId,
                 clientId: currentState.currentClientId,
-                startTime: currentState.startTime,
-                elapsedSeconds: elapsedSeconds,
+                startTime: currentState.startTime, // Only save startTime - elapsedSeconds calculated from this
                 lastPersistTime: Date.now(),
             };
             this._fileCache.write(stateToSave);
             
-            Logger.debug(`[TrackingPersistence] Saved to file: ${elapsedSeconds}s for entry ${currentState.currentTimeEntryId}`);
+            // Calculate elapsedSeconds for logging only (not stored)
+            const elapsedSeconds = currentState.elapsedSeconds || 0;
+            Logger.debug(`[TrackingPersistence] Saved startTime to file (elapsed: ${elapsedSeconds}s) for entry ${currentState.currentTimeEntryId}`);
         } catch (error) {
             Logger.error(`[TrackingPersistence] Failed to persist tracking: ${error.message}`);
         }

@@ -230,10 +230,18 @@ export const ValotCompactTracker = GObject.registerClass({
     /**
      * Event: Tracking updated
      */
+    /**
+     * Event: Tracking updated
+     */
     _onTrackingUpdated(data) {
-        // Read from Core state, not from event data
-        const state = this.coreBridge.getTrackingState();
-        this._updateTime(state.elapsedSeconds);
+        // tracking-updated fires every second from Core timer
+        // Core timer calculates elapsedSeconds (currentTime - startTime), we just show it
+        // No calculation in UI, no RAM storage - just display Core timer result
+        
+        // Update time display directly from Core timer data (already calculated, just show it)
+        if (data && data.elapsedSeconds !== undefined && this._updateTime) {
+            this._updateTime(data.elapsedSeconds);
+        }
     }
 
     /**

@@ -11,6 +11,7 @@ export class TimeTrackingService extends BaseService {
     _lastRecoveryAttempt = 0;
     _recoveryThrottleMs = 30000; // Only attempt recovery once per 30 seconds
     timerStartTime = null;
+    _cachedStartTimestamp = null; // Cache startTime as timestamp to avoid Date creation every second
     constructor(core) {
         super(core);
     }
@@ -78,13 +79,12 @@ export class TimeTrackingService extends BaseService {
                 const instanceIds = taskInstances.map(ti => ti.id);
                 const placeholders = instanceIds.map(() => '?').join(',');
                 
+                // Always calculate duration from start_time to now (never use existing duration)
+                // For active entries, duration should always be calculated from startTime
                 await this.execute(
                     `UPDATE TimeEntry 
                      SET end_time = datetime('now'), 
-                         duration = CASE 
-                             WHEN duration > 0 THEN duration 
-                             ELSE CAST((julianday('now') - julianday(start_time)) * 86400 AS INTEGER)
-                         END
+                         duration = CAST((julianday('now') - julianday(start_time)) * 86400 AS INTEGER)
                      WHERE task_instance_id IN (${placeholders}) AND end_time IS NULL`,
                     instanceIds
                 );
@@ -108,8 +108,9 @@ export class TimeTrackingService extends BaseService {
             Logger.info(`[TimeTracking] Found ${savedTimeFromCrash}s saved from crash, will be added on stop`);
         }
         
-        // Get old completed time (excludes active entry) - cache it in state to avoid frequent DB queries
-        const oldTime = await this.getCurrentTaskOldTime();
+        // REMOVED: oldTime from state - will be calculated on demand when needed
+        // This prevents storing computed values in RAM
+        // oldTime is only needed when displaying total time (start/stop/edit), not every second
         
         // Update state (use validated IDs)
         // savedTimeFromCrash is stored separately - will be added to duration when stopping
@@ -120,10 +121,10 @@ export class TimeTrackingService extends BaseService {
             currentTaskInstanceId: taskInstance.id,
             currentProjectId: validProjectId,
             currentClientId: validClientId,
-            startTime: startTime,
-            elapsedSeconds: 0, // Always start from 0 - saved time will be added on stop
-            savedTimeFromCrash: savedTimeFromCrash, // Store saved time separately
-            oldTime: oldTime, // Cache old time to avoid frequent DB queries
+            startTime: startTime, // ONLY startTime stored - all time computed from current time - startTime
+            // elapsedSeconds removed - calculated dynamically from startTime
+            // oldTime removed - calculated on demand when needed (not every second)
+            savedTimeFromCrash: savedTimeFromCrash, // Store saved time separately (will be added on stop)
             pomodoroMode: pomodoroMode,
             pomodoroDuration: pomodoroDuration,
             pomodoroRemaining: pomodoroDuration,
@@ -132,7 +133,12 @@ export class TimeTrackingService extends BaseService {
         };
 
         this.state.updateTrackingState(trackingState);
-        // Start timer
+        
+        // IMPORTANT: Ensure old timer is stopped before starting new one
+        // This prevents memory leaks when starting new Pomodoro session
+        this.stopTimer();
+        
+        // Start fresh timer
         this.startTimer();
         this.events.emit(CoreEvents.TRACKING_STARTED, {
             taskId,
@@ -163,9 +169,12 @@ export class TimeTrackingService extends BaseService {
         this.stopTimer();
         const endTime = TimeUtils.getCurrentTimestamp();
         
-        // Calculate total duration: current elapsed + saved time from crash
+        // Calculate duration: time from startTime to now (NOT from DB duration field)
+        // elapsedSeconds is calculated from startTime in getTrackingState(), not from duration
         const savedTimeFromCrash = currentState.savedTimeFromCrash || 0;
-        const duration = currentState.elapsedSeconds + savedTimeFromCrash;
+        const calculatedElapsed = currentState.elapsedSeconds; // Calculated from startTime
+        // Duration = time since start + saved time from crash
+        const duration = calculatedElapsed + savedTimeFromCrash;
         // Prefer the stored open TimeEntry ID to avoid NULL queries
         let entryUpdated = false;
         if (currentState.currentTimeEntryId) {
@@ -178,11 +187,9 @@ export class TimeTrackingService extends BaseService {
                         end_time: endTime,
                         duration: duration,
                     });
-                    await this.core.services.taskInstances.updateTotalTime(instanceId);
-                    // Update oldTime in state after total_time is recalculated
-                    const newOldTime = await this.getCurrentTaskOldTime();
-                    this.state.updateTrackingState({ oldTime: newOldTime });
-                    entryUpdated = true;
+                       await this.core.services.taskInstances.updateTotalTime(instanceId);
+                       // REMOVED: oldTime update - no longer stored in state (calculated on demand)
+                       entryUpdated = true;
                 }
             } catch (error) {
                 Logger.warn(`[TimeTracking] Failed to update entry ${currentState.currentTimeEntryId}: ${error.message}`);
@@ -244,8 +251,8 @@ export class TimeTrackingService extends BaseService {
             currentProjectId: null,
             currentClientId: null,
             startTime: null,
-            elapsedSeconds: 0,
-            oldTime: 0, // Reset oldTime when tracking stops
+            // elapsedSeconds removed - calculated dynamically
+            // oldTime removed - not stored in state (calculated on demand)
             savedTimeFromCrash: 0, // Reset saved time when tracking stops
             pomodoroMode: false,
             pomodoroDuration: 0,
@@ -254,7 +261,17 @@ export class TimeTrackingService extends BaseService {
         });
         this.events.emit(CoreEvents.TRACKING_STOPPED, trackingData);
         
-        // Force cache sync for critical operations
+        // "Write and Forget" principle: Completed TimeEntry is now in DB, ensure it's removed from cache
+        // This prevents RAM growth from accumulating completed time entries
+        if (this.core.services?.cache && currentState.currentTimeEntryId) {
+            try {
+                this.core.services.cache.timeEntries.delete(currentState.currentTimeEntryId);
+            } catch (e) {
+                // Ignore if cache doesn't have this entry
+            }
+        }
+        
+        // Force cache sync for other critical operations
         if (this.core.services?.cache) {
             await this.core.services.cache.flush().catch(err => {
                 Logger.warn('TimeTracking', 'Failed to flush cache after stop:', err);
@@ -377,8 +394,12 @@ export class TimeTrackingService extends BaseService {
     }
     /**
      * Create a time entry
+     * For active tracking: duration is always 0, calculated from startTime and current time
+     * Duration is only set when entry is closed (stop tracking)
      */
     async createTimeEntry(input) {
+        // Explicitly set duration = 0 for active entries
+        // Time is calculated from startTime + current time, not from duration
         const sql = `
             INSERT INTO TimeEntry (task_instance_id, start_time, end_time, duration, created_at)
             VALUES (?, ?, NULL, 0, datetime('now'))
@@ -412,52 +433,56 @@ export class TimeTrackingService extends BaseService {
         const sql = `UPDATE TimeEntry SET ${updates.join(', ')} WHERE id = ?`;
         await this.execute(sql, params);
         
+        // "Write and Forget" principle: Remove completed TimeEntry from cache after write
+        // This prevents RAM growth from accumulating completed time entries
+        if (input.end_time !== undefined && this.core.services?.cache) {
+            // TimeEntry is completed - remove from cache (data is safely in DB)
+            try {
+                this.core.services.cache.timeEntries.delete(id);
+            } catch (e) {
+                // Ignore if cache doesn't have this entry
+            }
+        }
+        
         // If this is the currently tracked entry and tracking is active, recalculate elapsedSeconds
         const currentState = this.state.getTrackingState();
         if (currentState.isTracking && currentState.currentTimeEntryId === id) {
             // Get updated entry data from database to check if it's still active
-            const updatedEntry = await this.query(`SELECT start_time, end_time, duration FROM TimeEntry WHERE id = ?`, [id]);
+            // For active entries, we only need start_time (duration is not used, always calculated)
+            const updatedEntry = await this.query(`SELECT start_time, end_time FROM TimeEntry WHERE id = ?`, [id]);
             
             if (updatedEntry && updatedEntry.length > 0) {
                 const entry = updatedEntry[0];
                 
-                // Update oldTime in state when entry is edited
-                // If end_time was set/changed or duration changed, oldTime may have changed
-                if (input.end_time !== undefined || input.duration !== undefined) {
-                    // Recalculate oldTime (excludes active entries) after edit
-                    const newOldTime = await this.getCurrentTaskOldTime();
-                    this.state.updateTrackingState({ oldTime: newOldTime });
-                }
+                // REMOVED: oldTime update when entry is edited - no longer stored in state (calculated on demand)
+                // oldTime is only needed for display, not stored in RAM
                 
-                // If entry still has no end_time (still active), recalculate elapsedSeconds from start_time
+                // If entry still has no end_time (still active), update startTime in state
+                // elapsedSeconds is ALWAYS calculated from startTime and current time (never from duration)
                 if (!entry.end_time && entry.start_time) {
-                    const startDate = new Date(entry.start_time);
-                    const currentDate = new Date(TimeUtils.getCurrentTimestamp());
-                    const newElapsedSeconds = Math.floor((currentDate.getTime() - startDate.getTime()) / 1000);
-                    
-                    // Update tracking state with recalculated elapsed seconds
+                    // Update startTime in state (elapsedSeconds calculated from startTime)
                     this.state.updateTrackingState({
                         startTime: entry.start_time,
-                        elapsedSeconds: Math.max(0, newElapsedSeconds),
                     });
+                    
+                    // Get updated state with calculated elapsedSeconds (from startTime, not duration)
+                    const updatedState = this.state.getTrackingState();
                     
                     // Emit tracking updated event to refresh UI widget
                     this.events.emit(CoreEvents.TRACKING_UPDATED, {
                         taskId: currentState.currentTaskId,
-                        elapsedSeconds: Math.max(0, newElapsedSeconds),
-                        pomodoroRemaining: currentState.pomodoroRemaining,
+                        elapsedSeconds: updatedState.elapsedSeconds, // From startTime calculation
+                        pomodoroRemaining: updatedState.pomodoroRemaining,
                     });
-                } else if (entry.end_time && entry.duration) {
-                    // Entry was closed, but user might have edited it - update elapsedSeconds to match duration
-                    // This handles case where user edits a closed entry that was previously tracked
-                    this.state.updateTrackingState({
-                        elapsedSeconds: entry.duration,
-                    });
-                    
-                    // Emit tracking updated event to refresh UI widget
+                } else if (entry.end_time) {
+                    // Entry was closed - duration is now in DB, but tracking should be stopped
+                    // For closed entries, we can read duration from DB (but tracking is not active)
+                    // Note: For active tracking, we never read duration from DB
+                    const closedEntry = await this.query(`SELECT duration FROM TimeEntry WHERE id = ?`, [id]);
+                    const duration = closedEntry && closedEntry.length > 0 ? (closedEntry[0].duration || 0) : 0;
                     this.events.emit(CoreEvents.TRACKING_UPDATED, {
                         taskId: currentState.currentTaskId,
-                        elapsedSeconds: entry.duration,
+                        elapsedSeconds: duration,
                         pomodoroRemaining: currentState.pomodoroRemaining,
                     });
                 }
@@ -468,11 +493,13 @@ export class TimeTrackingService extends BaseService {
     }
     /**
      * Get current time entry (active tracking)
+     * Note: For active entries, duration is NOT used - time is calculated from startTime
      */
     async getCurrentTimeEntry() {
         const currentState = this.state.getTrackingState();
         // Scope to the current task instance to avoid unrelated NULL rows causing issues
-        const sql = `SELECT id, task_instance_id, start_time, end_time, duration, created_at
+        // Only select start_time - duration is not used for active entries (always 0)
+        const sql = `SELECT id, task_instance_id, start_time, end_time, created_at
                      FROM TimeEntry
                      WHERE end_time IS NULL AND task_instance_id = ?
                      ORDER BY id DESC LIMIT 1`;
@@ -491,62 +518,53 @@ export class TimeTrackingService extends BaseService {
 
         // Store when timer started for watchdog
         this.timerStartTime = Date.now();
+        
+        // OPTIMIZED: Cache startTime as timestamp to avoid Date creation every second
+        const tracking = this.state.state.tracking;
+        if (tracking.startTime) {
+            this._cachedStartTimestamp = typeof tracking.startTime === 'string' 
+                ? new Date(tracking.startTime).getTime() 
+                : tracking.startTime;
+        } else {
+            this._cachedStartTimestamp = null;
+        }
 
         this._timerToken = this._getScheduler().subscribe(() => {
-            const currentState = this.state.getTrackingState();
-            if (currentState.isTracking) {
-                // DISABLED: Recovery creates GDA objects that accumulate GWeakRef
-                // currentTimeEntryId should be set correctly on start() and never lost
-                // If it is lost, the entry will be closed on next start()
-                // This prevents frequent DB queries during tracking
-                //
-                // Original recovery code (commented out):
-                // const now = Date.now();
-                // if (!currentState.currentTimeEntryId && currentState.currentTaskInstanceId && 
-                //     !this._recoveryInProgress && 
-                //     (now - this._lastRecoveryAttempt) >= this._recoveryThrottleMs) {
-                //     this._lastRecoveryAttempt = now;
-                //     void this._recoverCurrentTimeEntryId().catch(error => {
-                //         Logger.debug(`[TimeTracking] Could not recover currentTimeEntryId: ${error.message}`);
-                //     });
-                // }
+            // OPTIMIZED: Direct access to state.tracking to avoid creating objects every second
+            // Compute elapsed time directly from startTime without creating state copies
+            const tracking = this.state.state.tracking; // Direct access, no spread operator
+            if (tracking.isTracking && this._cachedStartTimestamp) {
+                // Calculate elapsed time directly (no object creation, no Date parsing)
+                const now = Date.now();
+                const elapsedSeconds = Math.floor((now - this._cachedStartTimestamp) / 1000);
                 
-                const newElapsed = currentState.elapsedSeconds + 1;
-
-                // Update elapsed time
-                const updates = {
-                    elapsedSeconds: newElapsed,
-                };
-
-                // Pomodoro countdown logic
-                if (currentState.pomodoroMode) {
-                    // Auto-stop when elapsed time reaches duration
-                    if (newElapsed >= currentState.pomodoroDuration) {
-                        // Update state with final elapsed time BEFORE stopping
-                        this.state.updateTrackingState(updates);
-
+                // Pomodoro auto-stop check (calculated directly, no object creation)
+                if (tracking.pomodoroMode && tracking.pomodoroDuration > 0) {
+                    if (elapsedSeconds >= tracking.pomodoroDuration) {
+                        // Auto-stop when elapsed time reaches duration
                         this.stop().catch(error => {
                             Logger.error(`[TimeTracking] Error auto-stopping Pomodoro: ${error.message}`);
                         });
                         return;
                     }
-
-                    // Calculate remaining time for countdown
-                    // When elapsed = 1, remaining = 300 - 1 = 299 (show 4:59)
-                    // When elapsed = 299, remaining = 300 - 299 = 1 (show 0:01)
-                    const remaining = currentState.pomodoroDuration - newElapsed;
-                    updates.pomodoroRemaining = Math.max(0, remaining);
                 }
 
-                this.state.updateTrackingState(updates);
+                // Calculate pomodoro remaining if needed (without creating objects)
+                let pomodoroRemaining = 0;
+                if (tracking.pomodoroMode && tracking.pomodoroDuration > 0) {
+                    pomodoroRemaining = Math.max(0, tracking.pomodoroDuration - elapsedSeconds);
+                }
+
+                // Emit tracking updated event with minimal data (no object creation in getTrackingState)
+                // Only emit primitive values to prevent RAM growth
                 this.events.emit(CoreEvents.TRACKING_UPDATED, {
-                    taskId: currentState.currentTaskId,
-                    elapsedSeconds: newElapsed,
-                    pomodoroRemaining: updates.pomodoroRemaining,
+                    taskId: tracking.currentTaskId,
+                    elapsedSeconds: elapsedSeconds, // Calculated directly, not from getTrackingState()
+                    pomodoroRemaining: pomodoroRemaining, // Calculated directly
                 });
                 
                 // Watchdog: restart timer every 1 hour to prevent GWeakRef accumulation
-                const hoursRunning = (Date.now() - this.timerStartTime) / (1000 * 60 * 60);
+                const hoursRunning = (now - this.timerStartTime) / (1000 * 60 * 60);
                 if (hoursRunning >= 1) {
                     this.restartTimer();
                 }
@@ -556,18 +574,18 @@ export class TimeTrackingService extends BaseService {
     
     /**
      * Restart timer to prevent memory leaks from long-running intervals
+     * OPTIMIZED: Use direct state access to avoid object creation
      */
     restartTimer() {
-        const currentState = this.state.getTrackingState();
-        if (!currentState.isTracking) return;
+        // OPTIMIZED: Direct access to state.tracking to avoid object creation
+        const tracking = this.state.state.tracking;
+        if (!tracking.isTracking) return;
         
-        // Stop old timer
+        // Stop old timer (unsubscribe to prevent GWeakRef accumulation)
         this.stopTimer();
         
-        // Restart fresh timer
+        // Restart fresh timer (new subscription, old one is cleaned up)
         this.startTimer();
-        
-        // no-op log in release
     }
     /**
      * Stop internal timer
@@ -578,6 +596,8 @@ export class TimeTrackingService extends BaseService {
             this._timerToken = 0;
         }
         this.timerStartTime = null;
+        // OPTIMIZED: Clear cached timestamp to prevent memory leak
+        this._cachedStartTimestamp = null;
     }
 
     _getScheduler() {

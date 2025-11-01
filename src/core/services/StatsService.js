@@ -267,96 +267,76 @@ export class StatsService extends BaseService {
      * @param {Array} taskInstanceIds - Optional array of task instance IDs to filter
      * @returns {Object} { totalTime, activeProjects, trackedTasks, earningsByCurrency }
      */
+    /**
+     * Get statistics for a specific date range using SQL aggregation (Lazy Loading principle)
+     * Does NOT load all data into RAM - uses SQL aggregation queries instead
+     */
     async getStatsForPeriod(dateRange, taskInstanceIds = null) {
         const GLib = imports.gi.GLib;
 
-        const startTimestamp = dateRange.startDate.to_unix();
-        const endTimestamp = dateRange.endDate.to_unix();
+        // Convert dates to SQLite format (YYYY-MM-DD HH:MM:SS)
+        const startDateStr = dateRange.startDate.format('%Y-%m-%d %H:%M:%S');
+        const endDateStr = dateRange.endDate.format('%Y-%m-%d %H:%M:%S');
 
-        // Get all time entries
-        const allTimeEntries = await this.core.services.tracking.getAllTimeEntries();
+        // SQL aggregation query - NO data loaded into RAM
+        // Get aggregated statistics directly from database
+        let sql = `
+            SELECT 
+                COALESCE(SUM(te.duration), 0) as total_time,
+                COUNT(DISTINCT ti.id) as tracked_tasks,
+                COUNT(DISTINCT ti.project_id) as active_projects
+            FROM TimeEntry te
+            INNER JOIN TaskInstance ti ON te.task_instance_id = ti.id
+            WHERE te.end_time IS NOT NULL
+              AND te.duration > 0
+              AND te.end_time >= '${startDateStr}'
+              AND te.end_time <= '${endDateStr}'
+        `;
 
-        // Filter time entries by date range (using END TIME from database)
-        const filteredEntries = allTimeEntries.filter(entry => {
-            if (!entry.end_time || !entry.duration) return false;
+        // Add task instance filter if provided
+        if (taskInstanceIds && taskInstanceIds.length > 0) {
+            const idsStr = taskInstanceIds.join(',');
+            sql += ` AND ti.id IN (${idsStr})`;
+        }
 
-            // Filter by task instance IDs if provided
-            if (taskInstanceIds && !taskInstanceIds.includes(entry.task_instance_id)) {
-                return false;
-            }
+        const results = await this.query(sql);
+        const row = results[0] || {};
+        const totalTime = row.total_time || 0;
 
-            // Parse entry end_time from database
-            let entryEndDate;
-            const dateString = entry.end_time;
+        // Get earnings by currency using SQL aggregation (no RAM load)
+        // Note: client_rate and client_currency are in Client table, not TaskInstance
+        const earningsSql = `
+            SELECT 
+                c.currency as currency,
+                SUM(te.duration * c.rate / 3600.0) as earnings
+            FROM TimeEntry te
+            INNER JOIN TaskInstance ti ON te.task_instance_id = ti.id
+            INNER JOIN Client c ON ti.client_id = c.id
+            WHERE te.end_time IS NOT NULL
+              AND te.duration > 0
+              AND c.rate > 0
+              AND te.end_time >= '${startDateStr}'
+              AND te.end_time <= '${endDateStr}'
+        `;
 
-            // Check if date is in ISO8601 format (with T) or local format (YYYY-MM-DD HH:MM:SS)
-            if (dateString.includes('T')) {
-                // ISO8601 format - parse as UTC
-                entryEndDate = GLib.DateTime.new_from_iso8601(dateString, null);
-            } else {
-                // Local format YYYY-MM-DD HH:MM:SS - parse as local time
-                const parts = dateString.split(' ');
-                if (parts.length === 2) {
-                    const [datePart, timePart] = parts;
-                    const [year, month, day] = datePart.split('-').map(Number);
-                    const [hours, minutes, seconds] = timePart.split(':').map(Number);
+        let earningsFilter = '';
+        if (taskInstanceIds && taskInstanceIds.length > 0) {
+            const idsStr = taskInstanceIds.join(',');
+            earningsFilter = ` AND ti.id IN (${idsStr})`;
+        }
 
-                    entryEndDate = GLib.DateTime.new_local(
-                        year, month, day,
-                        hours || 0, minutes || 0, seconds || 0
-                    );
-                }
-            }
-
-            if (!entryEndDate) return false;
-
-            const entryEndTimestamp = entryEndDate.to_unix();
-
-            // Check if END TIME is within the period
-            return entryEndTimestamp >= startTimestamp && entryEndTimestamp <= endTimestamp;
-        });
-
-        // Calculate total time from filtered entries
-        let totalTime = 0;
-        filteredEntries.forEach(entry => {
-            totalTime += entry.duration || 0;
-        });
-
-        // Get unique task instances and projects
-        const taskInstanceSet = new Set();
-        const projectSet = new Set();
+        const earningsResults = await this.query(earningsSql + earningsFilter + ' GROUP BY c.currency');
         const earningsByCurrency = new Map();
-
-        // Get all task instances with client rates for lookup
-        const allTaskInstances = await this.core.services.taskInstances.getAllViews();
-        const taskInstanceMap = new Map();
-        allTaskInstances.forEach(ti => taskInstanceMap.set(ti.id, ti));
-
-        filteredEntries.forEach(entry => {
-            const taskInstance = taskInstanceMap.get(entry.task_instance_id);
-            if (!taskInstance) return;
-
-            taskInstanceSet.add(entry.task_instance_id);
-
-            if (taskInstance.project_id) {
-                projectSet.add(taskInstance.project_id);
-            }
-
-            // Calculate earnings if task has rate
-            if (taskInstance.client_rate && entry.duration) {
-                const hours = entry.duration / 3600;
-                const earnings = hours * taskInstance.client_rate;
-                const currency = taskInstance.client_currency || 'USD';
-
-                const currentEarnings = earningsByCurrency.get(currency) || 0;
-                earningsByCurrency.set(currency, currentEarnings + earnings);
+        earningsResults.forEach(row => {
+            if (row.currency && row.earnings) {
+                earningsByCurrency.set(row.currency, row.earnings);
             }
         });
 
         return {
             totalTime,
-            activeProjects: projectSet.size,
-            trackedTasks: taskInstanceSet.size,
+            activeProjects: row.active_projects || 0,
+            trackedTasks: row.tracked_tasks || 0,
             earningsByCurrency
         };
     }

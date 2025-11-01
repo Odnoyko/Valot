@@ -94,25 +94,12 @@ export class TasksPage {
         this._eventHandlers['task-updated'] = () => {
             this.loadTasks();
         };
-        this._eventHandlers['tracking-updated'] = (data) => {
-            // tracking-updated fires every second during tracking
-            // Time updates are handled by subscribeTick timer
-            
-            // If task name, project, or client changed, reload full list
-            // Note: taskId and elapsedSeconds are sent every second, but we ignore them
-            if (data && (data.taskName || data.projectId !== undefined || data.clientId !== undefined)) {
-                this.loadTasks();
-            } else {
-                // Otherwise, just update the currently tracking task row's duration
-                // Async call - result is ignored (updates happen in background)
-                this._updateTrackingTaskRow().catch(err => {
-                    // Silently ignore errors - UI update failures shouldn't crash the app
-                    if (typeof err !== 'undefined') {
-                        // Only log if error exists (avoid logging undefined)
-                    }
-                });
-            }
-        };
+        // DISABLED: tracking-updated handler removed - causes RAM growth
+        // Each handler call creates objects via getTrackingState() or processes data
+        // this._eventHandlers['tracking-updated'] = (data) => {
+        //     // tracking-updated fires every second during tracking
+        //     // Handler removed to prevent RAM growth
+        // };
         this._eventHandlers['project-updated'] = (data) => {
             this._onProjectUpdated(data);
         };
@@ -206,11 +193,7 @@ export class TasksPage {
             this._eventHandlers = {};
         }
 
-        // Stop tracking timer
-        if (this.trackingTimerToken) {
-            this.coreBridge?.unsubscribeTick(this.trackingTimerToken);
-            this.trackingTimerToken = 0;
-        }
+        // REMOVED: No timer to stop
 
         // Clear task name debounce timer
         if (this.taskNameDebounceTimer) {
@@ -284,6 +267,13 @@ export class TasksPage {
      * Lightweight cleanup - clears data but keeps UI structure
      */
     onHide() {
+        // REMOVED: No timer to stop
+        
+        // Cleanup tracking widget subscriptions
+        if (this.trackingWidget && typeof this.trackingWidget.cleanup === 'function') {
+            this.trackingWidget.cleanup();
+        }
+        
         // Clear data arrays (they will be reloaded when page is shown again)
         this.tasks = [];
         this.filteredTasks = [];
@@ -303,122 +293,8 @@ export class TasksPage {
     /**
      * Update time display for currently tracking task in real-time
      */
-    async _updateTrackingTimeDisplay() {
-        if (!this.coreBridge) return;
-
-        const trackingState = this.coreBridge.getTrackingState();
-        if (!trackingState.isTracking || !trackingState.currentTaskInstanceId) return;
-
-        // Find the task instance that is being tracked
-        const trackingTask = this.tasks.find(t =>
-            t.task_id === trackingState.currentTaskId &&
-            t.project_id === trackingState.currentProjectId &&
-            t.client_id === trackingState.currentClientId
-        );
-
-        if (!trackingTask) return;
-
-        try {
-            // Use cached oldTime from state (no database query)
-            // oldTime is updated only on start/stop/edit, not every second
-            const oldTime = trackingState.oldTime || 0;
-            const currentElapsed = trackingState.elapsedSeconds || 0;
-            const totalTime = oldTime + currentElapsed;
-
-            // Find the stack this task belongs to
-            const taskGroups = this._groupSimilarTasks(this.filteredTasks);
-            const taskGroup = taskGroups.find(group =>
-                group.tasks.some(t => t.id === trackingTask.id)
-            );
-
-            if (taskGroup) {
-                // Check if it's a stack (multiple tasks) or standalone task (single task)
-                if (taskGroup.tasks.length === 1) {
-                    // Standalone task - update TaskRowTemplate
-                    const taskTemplate = this.taskTemplates.get(trackingTask.id);
-                    if (taskTemplate) {
-                        const timeLabel = taskTemplate.getTimeLabel();
-                        const moneyLabel = taskTemplate.getMoneyLabel();
-                        const trackButton = taskTemplate.getTrackButton();
-
-                        if (timeLabel) {
-                            const hours = Math.floor(totalTime / 3600);
-                            const minutes = Math.floor((totalTime % 3600) / 60);
-                            const secs = totalTime % 60;
-                            const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-
-                            timeLabel.set_label('● ' + timeStr);
-                            timeLabel.remove_css_class('dim-label');
-                            if (!timeLabel.has_css_class('caption')) {
-                                timeLabel.add_css_class('caption');
-                            }
-
-                            // Update money
-                            if (moneyLabel && trackingTask.client_rate > 0) {
-                                const totalCost = (totalTime / 3600) * trackingTask.client_rate;
-                                const currencySymbol = getCurrencySymbol(trackingTask.client_currency || 'EUR');
-                                moneyLabel.set_label(`${currencySymbol}${totalCost.toFixed(2)}`);
-                                moneyLabel.set_visible(true);
-                                moneyLabel.remove_css_class('dim-label');
-                                if (!moneyLabel.has_css_class('caption')) {
-                                    moneyLabel.add_css_class('caption');
-                                }
-                            }
-
-                            // Update track button icon to stop
-                            if (trackButton) {
-                                trackButton.set_icon_name('media-playback-stop-symbolic');
-                                trackButton.set_tooltip_text(_('Stop tracking'));
-                            }
-                        }
-                    }
-                } else {
-                    // Stack - update TaskStackTemplate
-                    const stackTemplate = this.taskTemplates.get(`stack:${taskGroup.groupKey}`);
-                    if (stackTemplate) {
-                        const stackTimeLabel = stackTemplate.getTimeLabel();
-                        const stackMoneyLabel = stackTemplate.getMoneyLabel();
-                        const stackTrackButton = stackTemplate.getTrackButton();
-
-                        if (stackTimeLabel) {
-                            // Stack total time = all completed tasks + current tracking
-                            const stackTotalTime = taskGroup.totalDuration + currentElapsed;
-                            const hours = Math.floor(stackTotalTime / 3600);
-                            const minutes = Math.floor((stackTotalTime % 3600) / 60);
-                            const secs = stackTotalTime % 60;
-                            const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-
-                            stackTimeLabel.set_label('● ' + timeStr);
-                            stackTimeLabel.remove_css_class('dim-label');
-                            if (!stackTimeLabel.has_css_class('caption')) {
-                                stackTimeLabel.add_css_class('caption');
-                            }
-
-                            // Update stack money
-                            if (stackMoneyLabel && trackingTask.client_rate > 0) {
-                                const stackTotalCost = taskGroup.totalCost + ((currentElapsed / 3600) * trackingTask.client_rate);
-                                const currencySymbol = getCurrencySymbol(trackingTask.client_currency || 'EUR');
-                                stackMoneyLabel.set_label(`${currencySymbol}${stackTotalCost.toFixed(2)}`);
-                                stackMoneyLabel.set_visible(true);
-                                stackMoneyLabel.remove_css_class('dim-label');
-                                if (!stackMoneyLabel.has_css_class('caption')) {
-                                    stackMoneyLabel.add_css_class('caption');
-                                }
-                            }
-
-                            // Update track button icon to stop
-                            if (stackTrackButton) {
-                                stackTrackButton.set_icon_name('media-playback-stop-symbolic');
-                                stackTrackButton.set_tooltip_text(_('Stop tracking'));
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Error updating tracking time display:', error);
-        }
-    }
+    // REMOVED: _updateTrackingTimeDisplay()
+    // No real-time time updates in pages - only header widget shows time
 
     /**
      * Create and return the main widget for this page
@@ -649,9 +525,11 @@ export class TasksPage {
             this._onTrackingStopped(data);
         });
 
-        this.coreBridge.onUIEvent('tracking-updated', (data) => {
-            this._onTrackingUpdated(data);
-        });
+        // DISABLED: tracking-updated handler removed - causes RAM growth
+        // Handler calls getTrackingState() which creates objects every second
+        // this.coreBridge.onUIEvent('tracking-updated', (data) => {
+        //     this._onTrackingUpdated(data);
+        // });
 
         // Load initial state
         this._updateTrackingUIFromCore();
@@ -700,10 +578,10 @@ export class TasksPage {
                 this.trackButton.add_css_class('suggested-action');
             }
 
-            this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+            // DISABLED: Time updates in TasksPage (only header widget shows time)
+            // this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
 
-            // Start UI update timer
-            this._startTrackingUITimer();
+            // REMOVED: No timer needed
         } else {
             // Tracking idle - KEEP task name in input (don't clear it)
             this.taskNameEntry.set_sensitive(true);
@@ -728,7 +606,7 @@ export class TasksPage {
             this.actualTimeLabel.set_label('00:00:00');
 
             // Stop UI update timer
-            this._stopTrackingUITimer();
+            // REMOVED: No timer to stop
         }
     }
 
@@ -768,28 +646,8 @@ export class TasksPage {
         }
     }
 
-    /**
-     * UI update timer - refreshes time display from Core
-     */
-    _startTrackingUITimer() {
-        if (this.trackingTimerToken) return;
-
-        this.trackingTimerToken = this.coreBridge.subscribeTick(() => {
-            const state = this.coreBridge.getTrackingState();
-            if (state.isTracking) {
-                this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-            } else {
-                this._stopTrackingUITimer();
-            }
-        });
-    }
-
-    _stopTrackingUITimer() {
-        if (this.trackingTimerToken) {
-            this.coreBridge.unsubscribeTick(this.trackingTimerToken);
-            this.trackingTimerToken = 0;
-        }
-    }
+    // REMOVED: _startTrackingUITimer() and _stopTrackingUITimer()
+    // No separate timers needed - only header widget shows time
 
     _formatDuration(seconds) {
         const hours = Math.floor(seconds / 3600);
@@ -1332,8 +1190,7 @@ export class TasksPage {
         this._updatePaginationInfo();
         this._updateSelectionUI();
 
-        // Update tracking time display for currently tracking task
-        this._updateTrackingTimeDisplay();
+        // REMOVED: No real-time time updates - only header widget shows time
     }
 
     /**
@@ -1531,27 +1388,8 @@ export class TasksPage {
         return row;
     }
 
-    /**
-     * Update only the tracking task row's duration (called every second)
-     * Uses getCurrentTaskOldTime() to ensure accurate calculation after TimeEntry edits
-     */
-    async _updateTrackingTaskRow() {
-        const trackingState = this.coreBridge.getTrackingState();
-
-        // If not tracking or no reference, nothing to update
-        if (!trackingState.isTracking || !this.trackingTaskTimeLabel) {
-            return;
-        }
-
-        // Use cached oldTime from state (no database query)
-        // oldTime is updated only on start/stop/edit, not every second
-        const oldTime = trackingState.oldTime || 0;
-        const currentElapsed = trackingState.elapsedSeconds || 0;
-        const totalDuration = oldTime + currentElapsed;
-
-        // Update just the time label
-        this.trackingTaskTimeLabel.set_label(this._formatDurationHMS(totalDuration));
-    }
+    // REMOVED: _updateTrackingTaskRow()
+    // No real-time time updates in pages - only header widget shows time
 
     /**
      * Format duration in HH:MM:SS format

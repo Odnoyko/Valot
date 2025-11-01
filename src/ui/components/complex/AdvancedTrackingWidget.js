@@ -33,8 +33,7 @@ export class AdvancedTrackingWidget {
         this.currentProjectId = this.settings.get_int('last-project-id') || 1;
         this.currentClientId = this.settings.get_int('last-client-id') || 1;
 
-        // UI update timer (uses centralized TimerScheduler)
-        this.trackingUITimerToken = 0;
+        // REMOVED: trackingUITimerToken - no longer using separate timers
         this.taskNameDebounceTimer = null;
         this._blockTaskNameUpdate = false;
 
@@ -43,6 +42,12 @@ export class AdvancedTrackingWidget {
         this.pomodoroActivated = false; // Flag to prevent click after long press
         this.pendingPomodoroMode = false; // Flag for pending pomodoro start
         this.pomodoroConfigMonitor = null; // File monitor for config changes
+        
+        // OPTIMIZED: Cache UI state to prevent unnecessary updates
+        this._cachedPomodoroMode = false;
+        this._cachedTimeText = '';
+        this._cachedIconName = '';
+        this._cachedTooltipText = '';
 
         // Build widget
         this.widget = this._createWidget();
@@ -273,31 +278,71 @@ export class AdvancedTrackingWidget {
                 this.clientDropdown.setSelectedClient(state.currentClientId);
             }
 
-            // Change icon to stop
-            this.trackButton.set_icon_name('media-playback-stop-symbolic');
-
-            // Pomodoro mode UI
-            if (state.pomodoroMode) {
-                this.trackButton.set_tooltip_text(_('Stop Pomodoro'));
-                this.trackButton.remove_css_class('suggested-action');
-                this.trackButton.remove_css_class('destructive-action');
-                this.trackButton.add_css_class('pomodoro-active');
-
-                // Show countdown time
-                const remaining = state.pomodoroRemaining || 0;
-                this.actualTimeLabel.set_label('🍅 ' + this._formatDuration(remaining, true));
-            } else {
-                this.trackButton.set_tooltip_text(_('Stop tracking'));
-                this.trackButton.remove_css_class('pomodoro-active');
-                if (!this.trackButton.has_css_class('suggested-action')) {
-                    this.trackButton.add_css_class('suggested-action');
+            // OPTIMIZED: Only update button if Pomodoro mode changed
+            const isPomodoroMode = state.pomodoroMode || false;
+            const iconName = 'media-playback-stop-symbolic';
+            
+            // Update icon only if changed (prevents unnecessary redraws)
+            if (this._cachedIconName !== iconName) {
+                this.trackButton.set_icon_name(iconName);
+                this._cachedIconName = iconName;
+            }
+            
+            if (this._cachedPomodoroMode !== isPomodoroMode) {
+                if (isPomodoroMode) {
+                    // Pomodoro mode - update tooltip only if changed
+                    const tooltipText = _('Stop Pomodoro');
+                    if (this._cachedTooltipText !== tooltipText) {
+                        this.trackButton.set_tooltip_text(tooltipText);
+                        this._cachedTooltipText = tooltipText;
+                    }
+                    // Update CSS classes only if not already set (avoid unnecessary redraws)
+                    if (this.trackButton.has_css_class('suggested-action')) {
+                        this.trackButton.remove_css_class('suggested-action');
+                    }
+                    if (this.trackButton.has_css_class('destructive-action')) {
+                        this.trackButton.remove_css_class('destructive-action');
+                    }
+                    if (!this.trackButton.has_css_class('pomodoro-active')) {
+                        this.trackButton.add_css_class('pomodoro-active');
+                    }
+                } else {
+                    // Normal mode - update tooltip only if changed
+                    const tooltipText = _('Stop tracking');
+                    if (this._cachedTooltipText !== tooltipText) {
+                        this.trackButton.set_tooltip_text(tooltipText);
+                        this._cachedTooltipText = tooltipText;
+                    }
+                    // Update CSS classes only if not already set (avoid unnecessary redraws)
+                    if (this.trackButton.has_css_class('pomodoro-active')) {
+                        this.trackButton.remove_css_class('pomodoro-active');
+                    }
+                    if (!this.trackButton.has_css_class('suggested-action')) {
+                        this.trackButton.add_css_class('suggested-action');
+                    }
                 }
-
-                this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+                this._cachedPomodoroMode = isPomodoroMode;
             }
 
-            // Start UI update timer
-            this._startUITimer();
+            // Show initial time (will be updated by timer events)
+            // OPTIMIZED: Only set initial time, timer events will update it
+            if (isPomodoroMode) {
+                const remaining = state.pomodoroRemaining || 0;
+                const timeText = '🍅 ' + this._formatDuration(remaining, true);
+                if (this._cachedTimeText !== timeText) {
+                    this.actualTimeLabel.set_label(timeText);
+                    this._cachedTimeText = timeText;
+                }
+            } else {
+                const timeText = this._formatDuration(state.elapsedSeconds);
+                if (this._cachedTimeText !== timeText) {
+                    this.actualTimeLabel.set_label(timeText);
+                    this._cachedTimeText = timeText;
+                }
+            }
+
+            // No timer needed - listen to Core TRACKING_UPDATED events instead
+            // Time is already calculated in Core timer, we just show it
         } else {
             // Tracking idle - KEEP task name in input (don't clear it)
             this.taskNameEntry.set_sensitive(true);
@@ -311,23 +356,52 @@ export class AdvancedTrackingWidget {
                 this.clientDropdown.setSelectedClient(this.currentClientId);
             }
 
-            // Change icon to play, keep green
-            this.trackButton.set_icon_name('media-playback-start-symbolic');
-            this.trackButton.set_tooltip_text(_('Start tracking (Long press or P for Pomodoro)'));
-            this.trackButton.remove_css_class('pomodoro-active');
-            this.trackButton.remove_css_class('destructive-action');
+            // OPTIMIZED: Only update button if state changed
+            if (this._cachedPomodoroMode !== false) {
+                this._cachedPomodoroMode = false;
+            }
+            
+            // Change icon to play, keep green (only if not already set)
+            if (this._cachedIconName !== 'media-playback-start-symbolic') {
+                this.trackButton.set_icon_name('media-playback-start-symbolic');
+                this._cachedIconName = 'media-playback-start-symbolic';
+            }
+            
+            const tooltipText = _('Start tracking (Long press or P for Pomodoro)');
+            if (this._cachedTooltipText !== tooltipText) {
+                this.trackButton.set_tooltip_text(tooltipText);
+                this._cachedTooltipText = tooltipText;
+            }
+            
+            // Update CSS classes only if needed
+            if (this.trackButton.has_css_class('pomodoro-active')) {
+                this.trackButton.remove_css_class('pomodoro-active');
+            }
+            if (this.trackButton.has_css_class('destructive-action')) {
+                this.trackButton.remove_css_class('destructive-action');
+            }
             if (!this.trackButton.has_css_class('suggested-action')) {
                 this.trackButton.add_css_class('suggested-action');
             }
 
-            this.actualTimeLabel.set_label('00:00:00');
+            const timeText = '00:00:00';
+            if (this._cachedTimeText !== timeText) {
+                this.actualTimeLabel.set_label(timeText);
+                this._cachedTimeText = timeText;
+            }
 
-            // Stop UI update timer
-            this._stopUITimer();
+            // REMOVED: No timer to stop
         }
     }
 
     _onTrackingStarted(data) {
+        // OPTIMIZED: Clear cached UI state when starting new session
+        // This prevents memory leaks when starting new Pomodoro session
+        this._cachedPomodoroMode = null; // Force re-check
+        this._cachedTimeText = '';
+        this._cachedIconName = '';
+        this._cachedTooltipText = '';
+        
         // Force full UI refresh to synchronize with current state
         this._updateUIFromCore();
     }
@@ -338,15 +412,33 @@ export class AdvancedTrackingWidget {
     }
 
     _onTrackingUpdated(data) {
-        // tracking-updated fires every second during tracking
-        // We only update non-time UI elements if values actually changed
-        // Time updates are handled by subscribeTick timer
-
-        const state = this.coreBridge.getTrackingState();
+        // tracking-updated fires every second from Core timer
+        // Core timer calculates elapsedSeconds (currentTime - startTime), we just show it
+        // No calculation in UI, no RAM storage - just display Core timer result
+        // OPTIMIZED: Only update label text if it actually changed to prevent unnecessary redraws
+        
+        if (data && this.actualTimeLabel) {
+            let newTimeText = '';
+            if (data.pomodoroRemaining !== undefined && data.pomodoroRemaining > 0) {
+                // Pomodoro mode - show remaining time
+                newTimeText = '🍅 ' + this._formatDuration(data.pomodoroRemaining, true);
+            } else if (data.elapsedSeconds !== undefined) {
+                // Normal tracking mode - show elapsed time
+                newTimeText = this._formatDuration(data.elapsedSeconds);
+            }
+            
+            // OPTIMIZED: Only update label if text actually changed
+            if (newTimeText && newTimeText !== this._cachedTimeText) {
+                this.actualTimeLabel.set_label(newTimeText);
+                this._cachedTimeText = newTimeText;
+            }
+        }
 
         // Update task name if changed (e.g., from edit dialog)
         // Only update if entry doesn't have focus (user is not typing)
-        if (state.isTracking && data && data.taskName && !this.taskNameEntry.is_focus()) {
+        // DISABLED: getTrackingState() creates objects - use data from event instead
+        // const state = this.coreBridge.getTrackingState();
+        if (data && data.taskName && !this.taskNameEntry.is_focus()) {
             const currentText = this.taskNameEntry.get_text();
             if (currentText !== data.taskName) {
                 this._blockTaskNameUpdate = true;
@@ -356,20 +448,17 @@ export class AdvancedTrackingWidget {
             }
         }
 
-        // Update project dropdown ONLY if projectId actually changed
-        if (data && data.projectId !== undefined && data.projectId !== this.currentProjectId && this.projectDropdown) {
-            this.currentProjectId = data.projectId;
-            this.projectDropdown.setCurrentProject(data.projectId);
-        }
-
-        // Update client dropdown ONLY if clientId actually changed
-        if (data && data.clientId !== undefined && data.clientId !== this.currentClientId && this.clientDropdown) {
-            this.currentClientId = data.clientId;
-            this.clientDropdown.setSelectedClient(data.clientId);
-        }
-
-        // NOTE: Time updates are handled by subscribeTick timer (_startUITimer)
-        // to avoid updating UI elements unnecessarily every second
+        // DISABLED: Project/client updates in tracking-updated handler
+        // These updates should happen only on tracking-started, not every second
+        // if (data && data.projectId !== undefined && data.projectId !== this.currentProjectId && this.projectDropdown) {
+        //     this.currentProjectId = data.projectId;
+        //     this.projectDropdown.setCurrentProject(data.projectId);
+        // }
+        // 
+        // if (data && data.clientId !== undefined && data.clientId !== this.currentClientId && this.clientDropdown) {
+        //     this.currentClientId = data.clientId;
+        //     this.clientDropdown.setSelectedClient(data.clientId);
+        // }
     }
 
     async _toggleTracking(pomodoroMode = false) {
@@ -468,34 +557,8 @@ export class AdvancedTrackingWidget {
         }
     }
 
-    _startUITimer() {
-        if (this.trackingUITimerToken) return;
-        if (!this.coreBridge) return;
-
-        // Use centralized TimerScheduler instead of individual GLib.timeout_add
-        this.trackingUITimerToken = this.coreBridge.subscribeTick(() => {
-            const state = this.coreBridge?.getTrackingState();
-            if (state && state.isTracking && this.actualTimeLabel) {
-                // Update time display based on mode
-                if (state.pomodoroMode) {
-                    const remaining = state.pomodoroRemaining || 0;
-                    this.actualTimeLabel.set_label('🍅 ' + this._formatDuration(remaining, true));
-                } else {
-                    this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-                }
-            } else {
-                // Stop timer if not tracking
-                this._stopUITimer();
-            }
-        });
-    }
-
-    _stopUITimer() {
-        if (this.trackingUITimerToken && this.coreBridge) {
-            this.coreBridge.unsubscribeTick(this.trackingUITimerToken);
-            this.trackingUITimerToken = 0;
-        }
-    }
+    // REMOVED: _startUITimer() and _stopUITimer()
+    // No separate timers needed - listen to Core TRACKING_UPDATED events instead
 
     _formatDuration(seconds, useShortFormat = false) {
         const hours = Math.floor(seconds / 3600);
@@ -597,7 +660,7 @@ export class AdvancedTrackingWidget {
             this.clientDropdown = null;
         }
 
-        this._stopUITimer();
+        // REMOVED: No timer to stop
         if (this.taskNameDebounceTimer) {
             GLib.Source.remove(this.taskNameDebounceTimer);
             this.taskNameDebounceTimer = null;

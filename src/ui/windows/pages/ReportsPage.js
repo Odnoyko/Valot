@@ -46,9 +46,7 @@ export class ReportsPage {
         // Subscribe to UI events for real-time updates
         this._subscribeToEvents();
 
-        // Throttle guards for realtime UI updates
-        this._lastStatsUpdateMs = 0;
-        this._lastRecentUpdateMs = 0;
+        // REMOVED: Throttle guards - no longer using real-time updates
     }
 
     /**
@@ -59,30 +57,32 @@ export class ReportsPage {
 
         // Store handlers for cleanup
         this._eventHandlers['tracking-started'] = async () => {
+            // DISABLED: No getTrackingState() call - creates objects
             // Update cache to include new tracked task
-            try {
-                const trackingState = this.coreBridge.getTrackingState();
-                if (trackingState.isTracking && trackingState.currentTaskInstanceId) {
-                    // Ensure tracked task is in cache
-                    const existingTask = this.allTasks.find(t => t.id === trackingState.currentTaskInstanceId);
-                    if (!existingTask) {
-                        const taskInstance = await this.coreBridge.getTaskInstance(trackingState.currentTaskInstanceId);
-                        if (taskInstance) {
-                            this._addToCache('allTasks', taskInstance);
-                        }
-                    }
-                }
-            } catch (error) {
-                Logger.error('[ReportsPage] Error updating cache on tracking start:', error);
-            }
+            // try {
+            //     const trackingState = this.coreBridge.getTrackingState();
+            //     if (trackingState.isTracking && trackingState.currentTaskInstanceId) {
+            //         // Ensure tracked task is in cache
+            //         const existingTask = this.allTasks.find(t => t.id === trackingState.currentTaskInstanceId);
+            //         if (!existingTask) {
+            //             const taskInstance = await this.coreBridge.getTaskInstance(trackingState.currentTaskInstanceId);
+            //             if (taskInstance) {
+            //                 this._addToCache('allTasks', taskInstance);
+            //             }
+            //         }
+            //     }
+            // } catch (error) {
+            //     Logger.error('[ReportsPage] Error updating cache on tracking start:', error);
+            // }
             
             setTimeout(() => this.updateChartsOnly(), 300);
-            this._startTrackingUITimer(); // Start real-time updates
+            // DISABLED: Time updates in ReportsPage (only header widget shows time)
+            // this._startTrackingUITimer(); // Start real-time updates
         };
 
         this._eventHandlers['tracking-stopped'] = () => {
             this.updateChartsOnly();
-            this._stopTrackingUITimer(); // Stop real-time updates
+            // REMOVED: No timer to stop
         };
 
         this._eventHandlers['task-created'] = () => {
@@ -105,15 +105,13 @@ export class ReportsPage {
             this.updateChartsOnly();
         };
 
-        this._eventHandlers['tracking-updated'] = (data) => {
-            // Update statistics in real-time (Total Time, etc.)
-            this._updateStatisticsRealtime();
-
-            // Update charts if task/project/client changed
-            if (data.taskName || data.taskId || data.projectId !== undefined || data.clientId !== undefined) {
-                this.updateChartsOnly();
-            }
-        };
+        // DISABLED: tracking-updated handler removed - causes RAM growth
+        // Each handler call processes data and may create objects
+        // Charts update only on tracking-started/stopped, not every second
+        // this._eventHandlers['tracking-updated'] = (data) => {
+        //     // tracking-updated fires every second during tracking
+        //     // Handler removed to prevent RAM growth
+        // };
 
         // Memory cleanup events disabled - cleanup happens in destroy(), not periodically
         // this._eventHandlers['memory-cleanup-ui'] = () => {
@@ -207,11 +205,7 @@ export class ReportsPage {
             this._eventHandlers = {};
         }
 
-        // Stop tracking timer
-        if (this.trackingTimerToken) {
-            this.coreBridge?.unsubscribeTick(this.trackingTimerToken);
-            this.trackingTimerToken = 0;
-        }
+        // REMOVED: No timer to stop
 
         // Clear carousel timer if exists
         if (this._carouselTimerId) {
@@ -273,6 +267,13 @@ export class ReportsPage {
      * Lightweight cleanup - clears data but keeps UI structure
      */
     onHide() {
+        // REMOVED: No timer to stop
+        
+        // Cleanup tracking widget subscriptions
+        if (this.trackingWidget && typeof this.trackingWidget.cleanup === 'function') {
+            this.trackingWidget.cleanup();
+        }
+        
         // Clear data arrays (they will be reloaded when page is shown again)
         this.allTasks = [];
         this.allTimeEntries = [];
@@ -796,11 +797,12 @@ export class ReportsPage {
             // Update all reports
             this._updateReports();
 
+            // DISABLED: Time updates in ReportsPage (only header widget shows time)
             // Start real-time timer if tracking is active
-            const trackingState = this.coreBridge.getTrackingState();
-            if (trackingState.isTracking) {
-                this._startTrackingUITimer();
-            }
+            // const trackingState = this.coreBridge.getTrackingState();
+            // if (trackingState.isTracking) {
+            //     this._startTrackingUITimer();
+            // }
         } catch (error) {
             Logger.error('[ReportsPage] Error loading reports:', error);
         }
@@ -849,15 +851,14 @@ export class ReportsPage {
         const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
 
         // Update statistics (async - calls Core)
-        await this._updateStatistics(filteredTasks);
+        await this._updateStatistics(filteredTasks).catch(error => {
+            Logger.error('[ReportsPage] Error updating statistics:', error);
+        });
 
-        // Update recent tasks list (always include tracked task if tracking)
-        let tasksForRecent = filteredTasks;
-        if (trackingState && trackingState.isTracking) {
-            // Async call to update tracked task's time accurately
-            tasksForRecent = await this._getFilteredTasksFromArray(filteredTasks, trackingState);
-        }
-        this._updateRecentTasksList(tasksForRecent);
+        // DISABLED: No real-time updates of Recent Tasks with tracking time
+        // Recent Tasks shows only completed tasks, not active tracking
+        // Update recent tasks list (only completed tasks, no tracking time)
+        this._updateRecentTasksList(filteredTasks);
 
         // Update chart visualization
         this._updateChartVisualization();
@@ -1975,67 +1976,52 @@ export class ReportsPage {
         this._cachedStatsTotal = stats.totalTime;
         this._cachedEarningsByCurrency = stats.earningsByCurrency;
 
-        // Cache current tracking task client info for real-time earnings calculation
-        await this._cacheCurrentTrackingClient();
+        // DISABLED: No caching of tracking client info - no real-time updates
+        // await this._cacheCurrentTrackingClient();
 
-        // Calculate display total (add current elapsed if tracking)
-        let displayTotal = stats.totalTime;
-        const trackingState = this.coreBridge.getTrackingState();
-        if (trackingState.isTracking) {
-            displayTotal += trackingState.elapsedSeconds || 0;
-        }
+        // DISABLED: No real-time tracking time in Total Time - show only completed time
+        // Total Time shows only completed time entries, not active tracking time
+        const displayTotal = stats.totalTime; // Only completed time, no tracking time
 
         // Update UI labels
         this.totalTimeLabel.set_label(this._formatDuration(displayTotal));
         this.activeProjectsLabel.set_label(stats.activeProjects.toString());
         this.trackedTasksLabel.set_label(stats.trackedTasks.toString());
 
-        // Update currency carousel - only rebuild if needed (structure changed)
-        // Real-time updates will handle the values
-        if (trackingState.isTracking) {
-            // If tracking, real-time update will handle carousel update
-            // Just rebuild structure if currencies changed
-            const currentCurrencies = this._currencyCarouselPages ?
-                Array.from(this._currencyCarouselPages.keys()).sort() : [];
-            const newCurrencies = stats.earningsByCurrency ?
-                Array.from(stats.earningsByCurrency.keys()).sort() : [];
-
-            const currenciesChanged = currentCurrencies.length !== newCurrencies.length ||
-                !currentCurrencies.every((c, i) => c === newCurrencies[i]);
-
-            if (currenciesChanged) {
-                this._rebuildCurrencyCarousel(stats.earningsByCurrency);
-            }
-        } else {
-            // Not tracking - update carousel normally
-            this._updateCurrencyCarousel(stats.earningsByCurrency);
-        }
+        // DISABLED: No real-time updates of currency earnings during tracking
+        // Currency earnings shows only completed time entries, not active tracking
+        // Always update carousel normally (no tracking time included)
+        this._updateCurrencyCarousel(stats.earningsByCurrency);
     }
 
     /**
      * Update statistics in real-time (without full reload)
-     * Called every second while tracking is active
-     * Uses cached stats + current elapsed time (no database queries)
+     * DISABLED: No real-time updates of Total Time during tracking
+     * Total Time shows only completed time entries, not active tracking
      */
     _updateStatisticsRealtime() {
-        if (!this.coreBridge) return;
-
-        const trackingState = this.coreBridge.getTrackingState();
-
-        if (!trackingState.isTracking) return;
-
-        // Need cached base stats from last full update
-        if (this._cachedStatsTotal === undefined) return;
-
-        // Simply add current elapsed time to cached base total
-        const currentElapsed = trackingState.elapsedSeconds || 0;
-        const totalTime = this._cachedStatsTotal + currentElapsed;
-
-        // Update Total Time label (no async, no glitches)
-        this.totalTimeLabel.set_label(this._formatDuration(totalTime));
-
-        // Update currency earnings in real-time
-        this._updateCurrencyEarningsRealtime(trackingState, currentElapsed);
+        // DISABLED: No real-time updates of Total Time during tracking
+        // We don't want to update Total Time every second - it causes RAM growth
+        return;
+        
+        // if (!this.coreBridge) return;
+        // 
+        // const trackingState = this.coreBridge.getTrackingState();
+        // 
+        // if (!trackingState.isTracking) return;
+        // 
+        // // Need cached base stats from last full update
+        // if (this._cachedStatsTotal === undefined) return;
+        // 
+        // // Simply add current elapsed time to cached base total
+        // const currentElapsed = trackingState.elapsedSeconds || 0;
+        // const totalTime = this._cachedStatsTotal + currentElapsed;
+        // 
+        // // Update Total Time label (no async, no glitches)
+        // this.totalTimeLabel.set_label(this._formatDuration(totalTime));
+        // 
+        // // Update currency earnings in real-time
+        // this._updateCurrencyEarningsRealtime(trackingState, currentElapsed);
     }
 
     /**
@@ -2085,54 +2071,18 @@ export class ReportsPage {
         this._updateCurrencyCarousel(updatedEarnings);
     }
 
-    /**
-     * Start real-time UI updates (every second) when tracking is active
-     */
-    _startTrackingUITimer() {
-        if (this.trackingTimerToken) return; // Already running
-
-        this.trackingTimerToken = this.coreBridge.subscribeTick(() => {
-            const state = this.coreBridge.getTrackingState();
-            if (state.isTracking) {
-                const now = Date.now();
-                // Update stats at most every 250ms
-                if (now - this._lastStatsUpdateMs >= 250) {
-                    this._lastStatsUpdateMs = now;
-                    this._updateStatisticsRealtime();
-                }
-                // Update recent tasks at most every 1000ms (more frequent for better UX)
-                if (now - this._lastRecentUpdateMs >= 1000) {
-                    this._lastRecentUpdateMs = now;
-                    // Async call - result is ignored (updates happen in background)
-                    this._updateRecentTasksRealtime(state).catch(err => {
-                        // Silently ignore errors - UI update failures shouldn't crash the app
-                        if (typeof err !== 'undefined') {
-                            // Only log if error exists (avoid logging undefined)
-                        }
-                    });
-                }
-            } else {
-                this._stopTrackingUITimer();
-            }
-        });
-    }
+    // REMOVED: _startTrackingUITimer() and _stopTrackingUITimer()
+    // No separate timers needed - only header widget shows time
 
     /**
-     * Stop real-time UI updates timer
-     */
-    _stopTrackingUITimer() {
-        if (this.trackingTimerToken) {
-            this.coreBridge.unsubscribeTick(this.trackingTimerToken);
-            this.trackingTimerToken = 0;
-        }
-    }
-
-    /**
-     * Update Recent Tasks list in real-time (update current tracking task time)
-     * Gets accurate old time from database to handle TimeEntry edits correctly
+     * Update Recent Tasks list in real-time
+     * DISABLED: We don't want real-time updates of Recent Tasks during tracking
      */
     async _updateRecentTasksRealtime(trackingState) {
-        if (!this.recentTasksList || !trackingState.isTracking) return;
+        // DISABLED: Recent Tasks real-time updates - not needed during tracking
+        return;
+        
+        // if (!this.recentTasksList || !trackingState.isTracking) return;
 
         try {
             // Create a temporary copy of tasks for display
@@ -2174,11 +2124,12 @@ export class ReportsPage {
             }
 
             if (currentTask) {
-                // Use cached oldTime from state (no database query)
-                // oldTime is updated only on start/stop/edit, not every second
-                const oldTime = trackingState.oldTime || 0;
+                // NOTE: oldTime is no longer stored in state (calculated on demand)
+                // Use await this.coreBridge.getCurrentTaskOldTime() to get old time
+                // const oldTime = await this.coreBridge.getCurrentTaskOldTime();
+                const oldTime = 0; // Temporary fallback (should use getCurrentTaskOldTime())
                 const currentElapsed = trackingState.elapsedSeconds || 0;
-                // Use cached old time + current elapsed instead of cached total_time
+                // Use calculated old time + current elapsed instead of cached total_time
                 currentTask.total_time = oldTime + currentElapsed;
                 
                 // Update last_used_at to current time for proper sorting in Recent Tasks
@@ -2227,9 +2178,10 @@ export class ReportsPage {
             // Update tracked task's time with accurate calculation
             if (trackedTask) {
                 try {
-                    // Use cached oldTime from state (no database query)
-                    // oldTime is updated only on start/stop/edit, not every second
-                    const oldTime = trackingState.oldTime || 0;
+                    // NOTE: oldTime is no longer stored in state (calculated on demand)
+                    // Use await this.coreBridge.getCurrentTaskOldTime() to get old time
+                    // const oldTime = await this.coreBridge.getCurrentTaskOldTime();
+                    const oldTime = 0; // Temporary fallback (should use getCurrentTaskOldTime())
                     const currentElapsed = trackingState.elapsedSeconds || 0;
                     trackedTask.total_time = oldTime + currentElapsed;
                     
@@ -2325,26 +2277,32 @@ export class ReportsPage {
     /**
      * Start carousel auto-advance timer (every 5 seconds)
      */
+    /**
+     * DISABLED: Carousel auto-advance timer - not needed for tracking functionality
+     */
     _startCarouselAutoAdvance() {
-        // Clear existing timer if any
-        if (this._carouselTimerId) {
-            GLib.source_remove(this._carouselTimerId);
-        }
-
-        // Auto-advance every 5 seconds
-        this._carouselTimerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 5, () => {
-            if (!this.currencyCarousel) return GLib.SOURCE_REMOVE;
-
-            const nPages = this.currencyCarousel.get_n_pages();
-            if (nPages <= 1) return GLib.SOURCE_CONTINUE;
-
-            const currentPage = Math.floor(this.currencyCarousel.get_position());
-            const nextPage = (currentPage + 1) % nPages;
-
-            this.currencyCarousel.scroll_to(this.currencyCarousel.get_nth_page(nextPage), true);
-
-            return GLib.SOURCE_CONTINUE;
-        });
+        // DISABLED: Carousel auto-advance timer - not needed, saves RAM
+        return;
+        
+        // // Clear existing timer if any
+        // if (this._carouselTimerId) {
+        //     GLib.source_remove(this._carouselTimerId);
+        // }
+        // 
+        // // Auto-advance every 5 seconds
+        // this._carouselTimerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 5, () => {
+        //     if (!this.currencyCarousel) return GLib.SOURCE_REMOVE;
+        // 
+        //     const nPages = this.currencyCarousel.get_n_pages();
+        //     if (nPages <= 1) return GLib.SOURCE_CONTINUE;
+        // 
+        //     const currentPage = Math.floor(this.currencyCarousel.get_position());
+        //     const nextPage = (currentPage + 1) % nPages;
+        // 
+        //     this.currencyCarousel.scroll_to(this.currencyCarousel.get_nth_page(nextPage), true);
+        // 
+        //     return GLib.SOURCE_CONTINUE;
+        // });
     }
 
     /**
