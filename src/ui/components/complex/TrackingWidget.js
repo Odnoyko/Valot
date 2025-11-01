@@ -116,17 +116,22 @@ export class TrackingWidget {
             return;
         }
 
+        // Store event handlers for cleanup
+        this._coreEventHandlers = {
+            'tracking-started': (data) => {
+                this._onTrackingStarted(data);
+            },
+            'tracking-stopped': (data) => {
+                this._onTrackingStopped(data);
+            },
+            'tracking-updated': (data) => {
+                this._onTrackingUpdated(data);
+            }
+        };
+
         // Subscribe to Core events for synchronization
-        this.config.coreBridge.onUIEvent('tracking-started', (data) => {
-            this._onTrackingStarted(data);
-        });
-
-        this.config.coreBridge.onUIEvent('tracking-stopped', (data) => {
-            this._onTrackingStopped(data);
-        });
-
-        this.config.coreBridge.onUIEvent('tracking-updated', (data) => {
-            this._onTrackingUpdated(data);
+        Object.keys(this._coreEventHandlers).forEach(event => {
+            this.config.coreBridge.onUIEvent(event, this._coreEventHandlers[event]);
         });
 
     }
@@ -335,8 +340,15 @@ export class TrackingWidget {
      * Cleanup
      */
     cleanup() {
+        // Unsubscribe from CoreBridge events
+        if (this.config.coreBridge && this._coreEventHandlers) {
+            Object.keys(this._coreEventHandlers).forEach(event => {
+                this.config.coreBridge.offUIEvent(event, this._coreEventHandlers[event]);
+            });
+            this._coreEventHandlers = {};
+        }
+
         this._stopUIUpdateTimer();
-        // CoreBridge events are cleaned up by CoreBridge itself
     }
 
     /**

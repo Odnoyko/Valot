@@ -92,17 +92,22 @@ export const ValotCompactTracker = GObject.registerClass({
      * Setup event handlers
      */
     _setupEventHandlers() {
+        // Store event handlers for cleanup
+        this._eventHandlers = {
+            'tracking-started': (data) => {
+                this._onTrackingStarted(data);
+            },
+            'tracking-stopped': (data) => {
+                this._onTrackingStopped(data);
+            },
+            'tracking-updated': (data) => {
+                this._onTrackingUpdated(data);
+            }
+        };
+
         // Subscribe to tracking events
-        this.coreBridge.onUIEvent('tracking-started', (data) => {
-            this._onTrackingStarted(data);
-        });
-
-        this.coreBridge.onUIEvent('tracking-stopped', (data) => {
-            this._onTrackingStopped(data);
-        });
-
-        this.coreBridge.onUIEvent('tracking-updated', (data) => {
-            this._onTrackingUpdated(data);
+        Object.keys(this._eventHandlers).forEach(event => {
+            this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
         });
 
         // Handle close - minimize instead
@@ -110,6 +115,23 @@ export const ValotCompactTracker = GObject.registerClass({
             this.set_visible(false);
             return true; // Prevent actual close
         });
+
+        // Cleanup when window is destroyed
+        this.connect('destroy', () => {
+            this.cleanup();
+        });
+    }
+
+    /**
+     * Cleanup: unsubscribe from events
+     */
+    cleanup() {
+        if (this.coreBridge && this._eventHandlers) {
+            Object.keys(this._eventHandlers).forEach(event => {
+                this.coreBridge.offUIEvent(event, this._eventHandlers[event]);
+            });
+            this._eventHandlers = {};
+        }
     }
 
     /**

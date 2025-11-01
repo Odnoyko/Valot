@@ -75,6 +75,12 @@ export class CoreBridge {
         this.core.events.on('task:deleted', (data) => {
             this._notifyUI('task-deleted', data);
         });
+
+        // Memory cleanup event (from MemoryCleanupService)
+        // Memory cleanup events disabled - cleanup should happen on destroy, not periodically
+        // this.core.events.on('memory-cleanup-ui', () => {
+        //     this._notifyUI('memory-cleanup-ui');
+        // });
     }
 
     /**
@@ -85,6 +91,28 @@ export class CoreBridge {
             this.uiCallbacks.set(event, new Set());
         }
         this.uiCallbacks.get(event).add(callback);
+    }
+
+    /**
+     * Unregister UI callback
+     * @param {string} event - Event name
+     * @param {Function} callback - Callback function to remove
+     */
+    offUIEvent(event, callback) {
+        const callbacks = this.uiCallbacks.get(event);
+        if (callbacks) {
+            callbacks.delete(callback);
+            if (callbacks.size === 0) {
+                this.uiCallbacks.delete(event);
+            }
+        }
+    }
+
+    /**
+     * Clear all UI event callbacks (for cleanup)
+     */
+    clearUIEventCallbacks() {
+        this.uiCallbacks.clear();
     }
 
     /**
@@ -343,6 +371,19 @@ export class CoreBridge {
 
     async updateTaskInstance(instanceId, data) {
         return await this.core.services.taskInstances.update(instanceId, data);
+    }
+
+    /**
+     * Update TaskInstance with automatic tracking synchronization (if tracked)
+     * Logic is handled in Core - checks if instance is tracked and applies changes globally
+     * 
+     * @param {number} instanceId - TaskInstance ID
+     * @param {object} data - Update data (task_id, project_id, client_id, last_used_at, is_favorite, total_time)
+     * @param {string} newTaskName - Optional: new task name if task_id changed
+     * @returns {Promise<object>} Updated TaskInstance
+     */
+    async updateTaskInstanceWithTrackingSync(instanceId, data, newTaskName = null) {
+        return await this.core.services.taskInstances.updateWithTrackingSync(instanceId, data, newTaskName);
     }
 
     async updateTaskInstanceTotalTime(instanceId) {

@@ -50,6 +50,15 @@ export class TasksPage {
         this.currentProjectId = 1;
         this.currentClientId = 1;
 
+        // Store event handler references for cleanup
+        this._eventHandlers = {};
+        
+        // Store GTK signal handler IDs for cleanup
+        this._signalHandlerIds = [];
+        
+        // Store widget handler connections for cleanup (widget -> handlerId)
+        this._widgetConnections = new Map();
+
         // Subscribe to Core events for automatic updates
         this._subscribeToCore();
 
@@ -71,45 +80,203 @@ export class TasksPage {
     _subscribeToCore() {
         if (!this.coreBridge) return;
 
-        // Reload tasks when tracking starts/stops (creates new time entries)
-        this.coreBridge.onUIEvent('tracking-started', () => {
+        // Store handlers for cleanup
+        this._eventHandlers['tracking-started'] = () => {
             // Delay to ensure DB is updated
             setTimeout(() => this.loadTasks(), 300);
-        });
-
-        this.coreBridge.onUIEvent('tracking-stopped', () => {
+        };
+        this._eventHandlers['tracking-stopped'] = () => {
             this.loadTasks();
-        });
-
-        // Reload when tasks are created/updated
-        this.coreBridge.onUIEvent('task-created', () => {
+        };
+        this._eventHandlers['task-created'] = () => {
             this.loadTasks();
-        });
-
-        this.coreBridge.onUIEvent('task-updated', () => {
+        };
+        this._eventHandlers['task-updated'] = () => {
             this.loadTasks();
-        });
-
-        // Real-time tracking updates (every second)
-        this.coreBridge.onUIEvent('tracking-updated', (data) => {
-            this._updateTrackingTimeDisplay();
-
+        };
+        this._eventHandlers['tracking-updated'] = (data) => {
+            // tracking-updated fires every second during tracking
+            // Time updates are handled by subscribeTick timer
+            
             // If task name, project, or client changed, reload full list
             // Note: taskId and elapsedSeconds are sent every second, but we ignore them
             if (data && (data.taskName || data.projectId !== undefined || data.clientId !== undefined)) {
                 this.loadTasks();
             } else {
                 // Otherwise, just update the currently tracking task row's duration
-                this._updateTrackingTaskRow();
+                // Async call - result is ignored (updates happen in background)
+                this._updateTrackingTaskRow().catch(err => {
+                    // Silently ignore errors - UI update failures shouldn't crash the app
+                    if (typeof err !== 'undefined') {
+                        // Only log if error exists (avoid logging undefined)
+                    }
+                });
             }
-        });
-
-        // Subscribe to project updates to refresh colors/icons
-        this.coreBridge.onUIEvent('project-updated', (data) => {
+        };
+        this._eventHandlers['project-updated'] = (data) => {
             this._onProjectUpdated(data);
+        };
+
+        // Memory cleanup events disabled - cleanup happens in destroy(), not periodically
+        // this._eventHandlers['memory-cleanup-ui'] = () => {
+        //     this._cleanupUnusedUI();
+        // };
+
+        // Subscribe with stored handlers
+        Object.keys(this._eventHandlers).forEach(event => {
+            this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
         });
 
         // Dropdowns subscribe to Core events themselves, no need to update them here
+    }
+
+    /**
+     * Cleanup unused UI elements (called on destroy or when needed)
+     */
+    _cleanupUnusedUI() {
+        // Cleanup old task templates that are no longer in use
+        if (this.taskTemplates && this.taskTemplates.size > 100) {
+            // Keep only templates for current page + some buffer
+            const currentTaskIds = new Set(
+                this.filteredTasks
+                    .slice(this.currentTasksPage * this.tasksPerPage, (this.currentTasksPage + 1) * this.tasksPerPage)
+                    .flatMap(t => 'id' in t ? [t.id] : t.tasks?.map(tt => tt.id) || [])
+            );
+            const templatesToRemove = [];
+            
+            this.taskTemplates.forEach((template, key) => {
+                const taskId = typeof key === 'string' && key.startsWith('stack:') 
+                    ? null // Keep stack templates
+                    : key;
+                
+                if (taskId && !currentTaskIds.has(taskId)) {
+                    templatesToRemove.push(key);
+                }
+            });
+            
+            templatesToRemove.forEach(key => {
+                this.taskTemplates.delete(key);
+            });
+            
+            if (templatesToRemove.length > 0) {
+                Logger.debug('[TasksPage] Cleaned', templatesToRemove.length, 'unused task templates');
+            }
+        }
+        
+        // Limit arrays size to prevent memory growth
+        if (this.tasks && this.tasks.length > 500) {
+            // Keep only most recent 400 tasks
+            this.tasks = this.tasks.slice(-400);
+            Logger.debug('[TasksPage] Cleaned tasks array, kept 400 most recent');
+        }
+        
+        if (this.filteredTasks && this.filteredTasks.length > 300) {
+            // Keep only most recent 250 filtered tasks
+            this.filteredTasks = this.filteredTasks.slice(-250);
+            Logger.debug('[TasksPage] Cleaned filteredTasks array, kept 250 most recent');
+        }
+    }
+
+    /**
+     * Helper method to track GTK signal handler IDs for cleanup
+     * @param {GObject.Object} widget - Widget to connect to
+     * @param {string} signal - Signal name
+     * @param {Function} callback - Callback function
+     * @returns {number} Handler ID
+     */
+    _trackConnection(widget, signal, callback) {
+        const handlerId = widget.connect(signal, callback);
+        // Store widget reference and handler ID for cleanup
+        if (!this._widgetConnections.has(widget)) {
+            this._widgetConnections.set(widget, []);
+        }
+        this._widgetConnections.get(widget).push(handlerId);
+        return handlerId;
+    }
+
+    /**
+     * Cleanup: unsubscribe from events and clear references
+     */
+    destroy() {
+        // Unsubscribe from CoreBridge events
+        if (this.coreBridge && this._eventHandlers) {
+            Object.keys(this._eventHandlers).forEach(event => {
+                this.coreBridge.offUIEvent(event, this._eventHandlers[event]);
+            });
+            this._eventHandlers = {};
+        }
+
+        // Stop tracking timer
+        if (this.trackingTimerToken) {
+            this.coreBridge?.unsubscribeTick(this.trackingTimerToken);
+            this.trackingTimerToken = 0;
+        }
+
+        // Clear task name debounce timer
+        if (this.taskNameDebounceTimer) {
+            GLib.Source.remove(this.taskNameDebounceTimer);
+            this.taskNameDebounceTimer = null;
+        }
+
+        // Disconnect GTK signal handlers
+        // Disconnect tracked widget connections
+        if (this._widgetConnections.size > 0) {
+            this._widgetConnections.forEach((handlerIds, widget) => {
+                handlerIds.forEach(id => {
+                    try {
+                        if (widget && !widget.is_destroyed?.()) {
+                            widget.disconnect(id);
+                        }
+                    } catch (e) {
+                        // Widget may already be destroyed
+                    }
+                });
+            });
+            this._widgetConnections.clear();
+        }
+
+        // Remove GLib timers
+        if (this._signalHandlerIds.length > 0) {
+            this._signalHandlerIds.forEach(id => {
+                try {
+                    GLib.Source.remove(id);
+                } catch (e) {
+                    // Handler may already be removed
+                }
+            });
+            this._signalHandlerIds = [];
+        }
+
+        // Clear Maps to release widget references
+        this.taskRowMap.clear();
+        this.stackRowMap.clear();
+        this.taskTemplates.clear();
+        this.selectedTasks.clear();
+        this.selectedStacks.clear();
+        this.expandedStacks.clear();
+
+        // Cleanup unused UI before destroying
+        this._cleanupUnusedUI();
+        
+        // Clear arrays
+        this.tasks = [];
+        this.filteredTasks = [];
+
+        // Cleanup dropdowns if they exist
+        if (this.projectDropdown && typeof this.projectDropdown.destroy === 'function') {
+            this.projectDropdown.destroy();
+            this.projectDropdown = null;
+        }
+        if (this.clientDropdown && typeof this.clientDropdown.destroy === 'function') {
+            this.clientDropdown.destroy();
+            this.clientDropdown = null;
+        }
+
+        // Cleanup tracking widget if exists
+        if (this.trackingWidget && typeof this.trackingWidget.cleanup === 'function') {
+            this.trackingWidget.cleanup();
+            this.trackingWidget = null;
+        }
     }
 
     /**
@@ -131,8 +298,9 @@ export class TasksPage {
         if (!trackingTask) return;
 
         try {
-            // Get old completed time for this task instance
-            const oldTime = await this.coreBridge.getCurrentTaskOldTime();
+            // Use cached oldTime from state (no database query)
+            // oldTime is updated only on start/stop/edit, not every second
+            const oldTime = trackingState.oldTime || 0;
             const currentElapsed = trackingState.elapsedSeconds || 0;
             const totalTime = oldTime + currentElapsed;
 
@@ -324,7 +492,7 @@ export class TasksPage {
             updateSidebarButtonVisibility();
 
             // Listen for sidebar visibility changes
-            this.parentWindow.splitView.connect('notify::show-sidebar', updateSidebarButtonVisibility);
+            this._trackConnection(this.parentWindow.splitView, 'notify::show-sidebar', updateSidebarButtonVisibility);
         }
 
         // Tracking widget (title area)
@@ -559,11 +727,12 @@ export class TasksPage {
 
     /**
      * Core event: tracking updated (every second)
+     * NOTE: Time updates are handled by subscribeTick timer (_startTrackingUITimer)
+     * to avoid unnecessary UI redraws every second
      */
     _onTrackingUpdated(data) {
-        const state = this.coreBridge.getTrackingState();
-        this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-
+        // tracking-updated fires every second during tracking
+        // Time label updates are handled by subscribeTick timer
         // Don't auto-update task name from state - user might be editing it
         // Name updates only on Enter key (activate event)
     }
@@ -724,13 +893,21 @@ export class TasksPage {
             hexpand: true,
         });
 
-        this.taskSearch.connect('search-changed', () => {
-            const query = this.taskSearch.get_text();
-            this.currentTasksPage = 0;
-            this._filterTasks(query).catch(err => {
-                console.error('Error filtering tasks:', err);
+        // Debounce search to avoid excessive filtering
+        (async () => {
+            const { Debouncer } = await import('resource:///com/odnoyko/valot/core/utils/Debouncer.js');
+            const debouncedFilter = Debouncer.debounce((query) => {
+                this.currentTasksPage = 0;
+                this._filterTasks(query).catch(err => {
+                    Logger.error('[TasksPage] Error filtering tasks:', err);
+                });
+            }, 300); // 300ms debounce
+            
+            this.taskSearch.connect('search-changed', () => {
+                const query = this.taskSearch.get_text();
+                debouncedFilter(query);
             });
-        });
+        })();
 
         box.append(this.taskSearch);
 
@@ -1078,6 +1255,12 @@ export class TasksPage {
      * Update tasks display with grouping (original UI design)
      */
     _updateTasksDisplay() {
+        // Clear Maps before updating to prevent memory leaks from old widget references
+        // Only clear row maps, keep templates for a moment to avoid flickering
+        // Templates will be overwritten by new ones below
+        this.taskRowMap.clear();
+        this.stackRowMap.clear();
+        // Note: taskTemplates will be cleared gradually as new ones are created
         // Clear existing tasks
         let child = this.taskList.get_first_child();
         while (child) {
@@ -1329,8 +1512,9 @@ export class TasksPage {
 
     /**
      * Update only the tracking task row's duration (called every second)
+     * Uses getCurrentTaskOldTime() to ensure accurate calculation after TimeEntry edits
      */
-    _updateTrackingTaskRow() {
+    async _updateTrackingTaskRow() {
         const trackingState = this.coreBridge.getTrackingState();
 
         // If not tracking or no reference, nothing to update
@@ -1338,12 +1522,11 @@ export class TasksPage {
             return;
         }
 
-        // Get task instance to calculate total duration
-        const taskInstance = this.coreBridge.getTaskInstance(trackingState.taskInstanceId);
-        if (!taskInstance) return;
-
-        // Calculate total duration: existing duration + current elapsed time
-        const totalDuration = (taskInstance.duration || 0) + (trackingState.elapsedSeconds || 0);
+        // Use cached oldTime from state (no database query)
+        // oldTime is updated only on start/stop/edit, not every second
+        const oldTime = trackingState.oldTime || 0;
+        const currentElapsed = trackingState.elapsedSeconds || 0;
+        const totalDuration = oldTime + currentElapsed;
 
         // Update just the time label
         this.trackingTaskTimeLabel.set_label(this._formatDurationHMS(totalDuration));
@@ -1748,12 +1931,16 @@ export class TasksPage {
                                 }
                                 await this.loadTasks();
                             } catch (error) {
-                                console.error('Error restoring task instances:', error);
+                                Logger.error('[TasksPage] Error restoring task instances:', error);
+                                // Show user-friendly error message
+                                if (this.parentWindow && this.parentWindow.showToast) {
+                                    this.parentWindow.showToast(_('Failed to restore: some referenced items were deleted'));
+                                }
                             }
                         });
                     }
                 } catch (error) {
-                    console.error('Error deleting tasks:', error);
+                    Logger.error('[TasksPage] Error deleting tasks:', error);
                 }
             }
             dialog.close();

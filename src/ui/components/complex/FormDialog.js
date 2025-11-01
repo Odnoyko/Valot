@@ -541,6 +541,8 @@ export class FormDialog {
      * Close the dialog
      */
     close() {
+        // Clear event listeners to prevent memory leaks
+        this.eventListeners.clear();
         this.widget.close();
     }
 

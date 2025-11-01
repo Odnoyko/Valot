@@ -19,6 +19,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import { ProjectDropdown } from 'resource:///com/odnoyko/valot/ui/utils/projectDropdown.js';
 import { ClientDropdown } from 'resource:///com/odnoyko/valot/ui/utils/clientDropdown.js';
+import { Logger } from 'resource:///com/odnoyko/valot/core/utils/Logger.js';
 
 export class AdvancedTrackingWidget {
     constructor(coreBridge, parentWindow) {
@@ -32,8 +33,8 @@ export class AdvancedTrackingWidget {
         this.currentProjectId = this.settings.get_int('last-project-id') || 1;
         this.currentClientId = this.settings.get_int('last-client-id') || 1;
 
-        // UI update timer
-        this.trackingUITimer = null;
+        // UI update timer (uses centralized TimerScheduler)
+        this.trackingUITimerToken = 0;
         this.taskNameDebounceTimer = null;
         this._blockTaskNameUpdate = false;
 
@@ -218,17 +219,22 @@ export class AdvancedTrackingWidget {
             return;
         }
 
+        // Store event handlers for cleanup
+        this._coreEventHandlers = {
+            'tracking-started': (data) => {
+                this._onTrackingStarted(data);
+            },
+            'tracking-stopped': (data) => {
+                this._onTrackingStopped(data);
+            },
+            'tracking-updated': (data) => {
+                this._onTrackingUpdated(data);
+            }
+        };
+
         // Subscribe to Core events
-        this.coreBridge.onUIEvent('tracking-started', (data) => {
-            this._onTrackingStarted(data);
-        });
-
-        this.coreBridge.onUIEvent('tracking-stopped', (data) => {
-            this._onTrackingStopped(data);
-        });
-
-        this.coreBridge.onUIEvent('tracking-updated', (data) => {
-            this._onTrackingUpdated(data);
+        Object.keys(this._coreEventHandlers).forEach(event => {
+            this.coreBridge.onUIEvent(event, this._coreEventHandlers[event]);
         });
 
     }
@@ -332,21 +338,15 @@ export class AdvancedTrackingWidget {
     }
 
     _onTrackingUpdated(data) {
-        const state = this.coreBridge.getTrackingState();
+        // tracking-updated fires every second during tracking
+        // We only update non-time UI elements if values actually changed
+        // Time updates are handled by subscribeTick timer
 
-        // Update time display based on mode
-        if (state.pomodoroMode) {
-            // Show countdown in Pomodoro mode
-            const remaining = state.pomodoroRemaining || 0;
-            this.actualTimeLabel.set_label('🍅 ' + this._formatDuration(remaining, true));
-        } else {
-            // Show elapsed time in normal mode
-            this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-        }
+        const state = this.coreBridge.getTrackingState();
 
         // Update task name if changed (e.g., from edit dialog)
         // Only update if entry doesn't have focus (user is not typing)
-        if (state.isTracking && data.taskName && !this.taskNameEntry.is_focus()) {
+        if (state.isTracking && data && data.taskName && !this.taskNameEntry.is_focus()) {
             const currentText = this.taskNameEntry.get_text();
             if (currentText !== data.taskName) {
                 this._blockTaskNameUpdate = true;
@@ -356,17 +356,20 @@ export class AdvancedTrackingWidget {
             }
         }
 
-        // Update project dropdown if changed
-        if (data.projectId !== undefined && this.projectDropdown) {
+        // Update project dropdown ONLY if projectId actually changed
+        if (data && data.projectId !== undefined && data.projectId !== this.currentProjectId && this.projectDropdown) {
             this.currentProjectId = data.projectId;
             this.projectDropdown.setCurrentProject(data.projectId);
         }
 
-        // Update client dropdown if changed
-        if (data.clientId !== undefined && this.clientDropdown) {
+        // Update client dropdown ONLY if clientId actually changed
+        if (data && data.clientId !== undefined && data.clientId !== this.currentClientId && this.clientDropdown) {
             this.currentClientId = data.clientId;
             this.clientDropdown.setSelectedClient(data.clientId);
         }
+
+        // NOTE: Time updates are handled by subscribeTick timer (_startUITimer)
+        // to avoid updating UI elements unnecessarily every second
     }
 
     async _toggleTracking(pomodoroMode = false) {
@@ -422,7 +425,7 @@ export class AdvancedTrackingWidget {
 
             }
         } catch (error) {
-            console.error('Error toggling tracking:', error);
+            Logger.error('[AdvancedTrackingWidget] Error toggling tracking:', error);
         }
     }
 
@@ -441,7 +444,7 @@ export class AdvancedTrackingWidget {
             await this.coreBridge.updateCurrentTaskName(newName);
 
         } catch (error) {
-            console.error('Error updating task name:', error);
+            Logger.error('[AdvancedTrackingWidget] Error updating task name:', error);
         }
     }
 
@@ -461,16 +464,18 @@ export class AdvancedTrackingWidget {
 
 
         } catch (error) {
-            console.error('Error updating tracking context:', error);
+            Logger.error('[AdvancedTrackingWidget] Error updating tracking context:', error);
         }
     }
 
     _startUITimer() {
-        if (this.trackingUITimer) return;
+        if (this.trackingUITimerToken) return;
+        if (!this.coreBridge) return;
 
-        this.trackingUITimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+        // Use centralized TimerScheduler instead of individual GLib.timeout_add
+        this.trackingUITimerToken = this.coreBridge.subscribeTick(() => {
             const state = this.coreBridge?.getTrackingState();
-            if (state && state.isTracking) {
+            if (state && state.isTracking && this.actualTimeLabel) {
                 // Update time display based on mode
                 if (state.pomodoroMode) {
                     const remaining = state.pomodoroRemaining || 0;
@@ -478,18 +483,17 @@ export class AdvancedTrackingWidget {
                 } else {
                     this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
                 }
-                return true; // Continue
             } else {
-                this.trackingUITimer = null;
-                return false; // Stop
+                // Stop timer if not tracking
+                this._stopUITimer();
             }
         });
     }
 
     _stopUITimer() {
-        if (this.trackingUITimer) {
-            GLib.Source.remove(this.trackingUITimer);
-            this.trackingUITimer = null;
+        if (this.trackingUITimerToken && this.coreBridge) {
+            this.coreBridge.unsubscribeTick(this.trackingUITimerToken);
+            this.trackingUITimerToken = 0;
         }
     }
 
@@ -547,7 +551,7 @@ export class AdvancedTrackingWidget {
             // Setup file monitor to watch for changes
             this._setupConfigMonitor(file);
         } catch (error) {
-            console.error('Error loading Pomodoro config:', error);
+            Logger.error('[AdvancedTrackingWidget] Error loading Pomodoro config:', error);
             // Fallback to default
             this.pomodoroDuration = 1200; // 20 minutes
         }
@@ -570,11 +574,29 @@ export class AdvancedTrackingWidget {
                 }
             });
         } catch (error) {
-            console.error('Error setting up config monitor:', error);
+            Logger.error('[AdvancedTrackingWidget] Error setting up config monitor:', error);
         }
     }
 
     cleanup() {
+        // Unsubscribe from CoreBridge events
+        if (this.coreBridge && this._coreEventHandlers) {
+            Object.keys(this._coreEventHandlers).forEach(event => {
+                this.coreBridge.offUIEvent(event, this._coreEventHandlers[event]);
+            });
+            this._coreEventHandlers = {};
+        }
+
+        // Cleanup dropdowns
+        if (this.projectDropdown && typeof this.projectDropdown.destroy === 'function') {
+            this.projectDropdown.destroy();
+            this.projectDropdown = null;
+        }
+        if (this.clientDropdown && typeof this.clientDropdown.destroy === 'function') {
+            this.clientDropdown.destroy();
+            this.clientDropdown = null;
+        }
+
         this._stopUITimer();
         if (this.taskNameDebounceTimer) {
             GLib.Source.remove(this.taskNameDebounceTimer);

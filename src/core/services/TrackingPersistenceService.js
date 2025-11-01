@@ -1,0 +1,213 @@
+/**
+ * Tracking Persistence Service
+ * Handles periodic saving of tracking duration to JSON file (no database updates during tracking)
+ * After crash, saved time is synchronized when user starts tracking the same task again
+ * Uses JSON file cache instead of database to avoid GWeakRef accumulation
+ */
+import { BaseService } from './BaseService.js';
+import { CoreEvents } from '../events/CoreEvents.js';
+import { TimeUtils } from '../utils/TimeUtils.js';
+import { Logger } from '../utils/Logger.js';
+import { TrackingFileCache } from './TrackingFileCache.js';
+
+export class TrackingPersistenceService extends BaseService {
+    _persistTimerToken = 0;
+    _lastPersistTime = 0;
+    _persistIntervalSeconds = 60; // Save every 60 seconds
+    _eventHandlers = {}; // Store handlers for cleanup
+    _fileCache = null; // JSON file cache (no GDA objects)
+
+    constructor(core) {
+        super(core);
+        this._fileCache = new TrackingFileCache();
+    }
+
+    /**
+     * Initialize persistence service
+     * Should be called after Core is initialized
+     */
+    async initialize() {
+        // NO automatic recovery - just keep time in JSON file
+        // Time will be synchronized when user starts tracking again with same task/project/client
+        
+        // Subscribe to tracking events to manage persistence (store handlers for cleanup)
+        this._eventHandlers.trackingStarted = () => {
+            this.startPeriodicPersist();
+        };
+        this._eventHandlers.trackingStopped = () => {
+            this.stopPeriodicPersist();
+            // Clear cache when tracking stops normally (TimeEntry is already closed in TimeTrackingService.stop())
+            // If crash happened, time remains in JSON for next start
+            this._fileCache.clear();
+        };
+        
+        this.events.on(CoreEvents.TRACKING_STARTED, this._eventHandlers.trackingStarted);
+        this.events.on(CoreEvents.TRACKING_STOPPED, this._eventHandlers.trackingStopped);
+    }
+
+    /**
+     * Get saved tracking time from JSON file for specific task/project/client
+     * Returns time in seconds that can be added to new tracking session
+     * @param {number} taskId 
+     * @param {number|null} projectId 
+     * @param {number|null} clientId 
+     * @returns {number} Saved time in seconds (0 if not found or doesn't match)
+     */
+    getSavedTimeForTask(taskId, projectId, clientId) {
+        try {
+            const cachedState = this._fileCache.read();
+            
+            if (!cachedState || !cachedState.taskId) {
+                return 0; // No saved time
+            }
+            
+            // Check if saved time matches current task/project/client
+            const savedTaskId = cachedState.taskId;
+            const savedProjectId = cachedState.projectId;
+            const savedClientId = cachedState.clientId;
+            
+            if (savedTaskId === taskId && 
+                savedProjectId === projectId && 
+                savedClientId === clientId) {
+                
+                // Match! Calculate total saved time (including time since last persist)
+                const savedElapsedSeconds = cachedState.elapsedSeconds || 0;
+                const lastPersistTime = cachedState.lastPersistTime || Date.now();
+                const now = Date.now();
+                const timeSinceLastPersist = Math.floor((now - lastPersistTime) / 1000);
+                
+                // Return total saved time
+                const totalSavedTime = savedElapsedSeconds + timeSinceLastPersist;
+                
+                Logger.info(`[TrackingPersistence] Found saved time for task: ${totalSavedTime}s`);
+                return Math.max(0, totalSavedTime);
+            }
+            
+            return 0; // Task/project/client don't match
+        } catch (error) {
+            Logger.debug(`[TrackingPersistence] Error reading saved time: ${error.message}`);
+            return 0;
+        }
+    }
+
+    /**
+     * Clear saved time after it has been used
+     */
+    clearSavedTime() {
+        this._fileCache.clear();
+    }
+
+    /**
+     * Start periodic persistence of tracking duration
+     */
+    startPeriodicPersist() {
+        // Stop existing timer if any
+        this.stopPeriodicPersist();
+        
+        // Reset last persist time
+        this._lastPersistTime = Date.now();
+        
+        // Subscribe to scheduler for periodic saves
+        const scheduler = this.core.services.timerScheduler;
+        this._persistTimerToken = scheduler.subscribe(() => {
+            const currentState = this.state.getTrackingState();
+            
+            // Only persist if actively tracking
+            if (!currentState.isTracking || !currentState.currentTimeEntryId) {
+                return;
+            }
+            
+            // Check if enough time has passed (60 seconds)
+            const now = Date.now();
+            const timeSinceLastPersist = (now - this._lastPersistTime) / 1000;
+            
+            if (timeSinceLastPersist >= this._persistIntervalSeconds) {
+                this._lastPersistTime = now;
+                // Use void but also catch errors to prevent silent failures
+                void this.persistCurrentTracking().catch(error => {
+                    Logger.error(`[TrackingPersistence] Periodic persist failed: ${error.message}`);
+                });
+            }
+        });
+    }
+
+    /**
+     * Stop periodic persistence
+     */
+    stopPeriodicPersist() {
+        if (this._persistTimerToken) {
+            const scheduler = this.core.services.timerScheduler;
+            scheduler.unsubscribe(this._persistTimerToken);
+            this._persistTimerToken = 0;
+        }
+    }
+
+    /**
+     * Persist current tracking state to JSON file ONLY (no database updates)
+     * Database is updated only on start/stop, not periodically
+     */
+    async persistCurrentTracking() {
+        const currentState = this.state.getTrackingState();
+        
+        if (!currentState.isTracking || !currentState.currentTimeEntryId) {
+            // Clear cache if not tracking
+            this._fileCache.clear();
+            return;
+        }
+
+        try {
+            const elapsedSeconds = currentState.elapsedSeconds || 0;
+            
+            // Save to JSON file ONLY - no database updates during tracking
+            // Database is updated only when tracking starts (create TimeEntry) and stops (close TimeEntry)
+            const stateToSave = {
+                entryId: currentState.currentTimeEntryId,
+                taskInstanceId: currentState.currentTaskInstanceId,
+                taskId: currentState.currentTaskId,
+                taskName: currentState.currentTaskName,
+                projectId: currentState.currentProjectId,
+                clientId: currentState.currentClientId,
+                startTime: currentState.startTime,
+                elapsedSeconds: elapsedSeconds,
+                lastPersistTime: Date.now(),
+            };
+            this._fileCache.write(stateToSave);
+            
+            Logger.debug(`[TrackingPersistence] Saved to file: ${elapsedSeconds}s for entry ${currentState.currentTimeEntryId}`);
+        } catch (error) {
+            Logger.error(`[TrackingPersistence] Failed to persist tracking: ${error.message}`);
+        }
+    }
+
+
+    /**
+     * Cleanup on service shutdown
+     */
+    destroy() {
+        // Final save to file before shutdown (no database update)
+        const currentState = this.state.getTrackingState();
+        if (currentState.isTracking && currentState.currentTimeEntryId) {
+            // Save to file for crash recovery
+            void this.persistCurrentTracking().catch(error => {
+                Logger.error(`[TrackingPersistence] Final save on shutdown failed: ${error.message}`);
+            });
+        } else {
+            // Clear cache if not tracking
+            this._fileCache.clear();
+        }
+        
+        // Unsubscribe from timer
+        this.stopPeriodicPersist();
+        
+        // Remove event listeners to prevent memory leaks
+        if (this._eventHandlers.trackingStarted) {
+            this.events.off(CoreEvents.TRACKING_STARTED, this._eventHandlers.trackingStarted);
+            delete this._eventHandlers.trackingStarted;
+        }
+        if (this._eventHandlers.trackingStopped) {
+            this.events.off(CoreEvents.TRACKING_STOPPED, this._eventHandlers.trackingStopped);
+            delete this._eventHandlers.trackingStopped;
+        }
+    }
+}
+

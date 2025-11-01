@@ -52,7 +52,7 @@ export class GdaDatabaseBridge {
             await this._initSchema();
 
         } catch (error) {
-            console.error('❌ Database connection error:', error.message);
+            Logger.error('❌ Database connection error:', error);
             throw error;
         }
     }
@@ -164,7 +164,7 @@ export class GdaDatabaseBridge {
             await this._applyIndicesAndConstraints();
 
         } catch (error) {
-            console.error('❌ Schema initialization error:', error);
+            Logger.error('❌ Schema initialization error:', error);
             throw error;
         }
     }
@@ -288,11 +288,18 @@ export class GdaDatabaseBridge {
         }
 
         try {
-            let dataModel;
-            if (!params || params.length === 0) {
-                dataModel = this.connection.execute_select_command(sql);
-            } else {
-                dataModel = this._executeSelectPrepared(sql, params);
+            // ALWAYS use simple SQL with escaped params to avoid GDA object creation
+            // This prevents GWeakRef accumulation from prepared statements
+            let processedSql = sql;
+            if (params && params.length > 0) {
+                processedSql = this._escapeSqlParams(sql, params);
+            }
+            
+            let dataModel = null;
+            try {
+                dataModel = this.connection.execute_select_command(processedSql);
+            } finally {
+                // Note: dataModel will be cleared later in finally block after extraction
             }
 
             if (!dataModel) {
@@ -301,64 +308,116 @@ export class GdaDatabaseBridge {
 
             // Convert Gda.DataModel to array of objects
             const results = [];
-            const nRows = dataModel.get_n_rows();
-            const nCols = dataModel.get_n_columns();
+            try {
+                const nRows = dataModel.get_n_rows();
+                const nCols = dataModel.get_n_columns();
 
-            for (let i = 0; i < nRows; i++) {
-                const row = {};
-                for (let j = 0; j < nCols; j++) {
-                    const columnName = dataModel.get_column_name(j);
-                    let value;
-                    try {
-                        value = dataModel.get_value_at(j, i);
-                    } catch (e) {
-                        // If libgda throws for special NULL typed values, store null and continue
-                        row[columnName] = null;
-                        continue;
-                    }
-
-                    try {
-                        // Convert GDA value to JavaScript value
-                        if (value === null || value === undefined) {
+                for (let i = 0; i < nRows; i++) {
+                    const row = {};
+                    for (let j = 0; j < nCols; j++) {
+                        const columnName = dataModel.get_column_name(j);
+                        let value = null;
+                        try {
+                            value = dataModel.get_value_at(j, i);
+                        } catch (e) {
+                            // If libgda throws for special NULL typed values, store null and continue
+                            // This handles "Unhandled type 'null' in SQLite recordset" errors
                             row[columnName] = null;
-                        } else if (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') {
-                            // Already a JS primitive (happens when we use escaped params)
-                            row[columnName] = value;
-                        } else if (typeof value === 'object') {
-                            // Some GDA values expose helpers, guard all calls
-                            if (typeof value.is_null === 'function' && value.is_null()) {
+                            value = null; // Explicitly clear
+                            continue;
+                        }
+
+                        try {
+                            // Convert GDA value to JavaScript value
+                            if (value === null || value === undefined) {
                                 row[columnName] = null;
-                            } else if (typeof value.get_value_type === 'function') {
-                                const gType = value.get_value_type();
-                                if (gType === GLib.TYPE_INT64 || gType === GLib.TYPE_INT) {
-                                    row[columnName] = value.get_int();
-                                } else if (gType === GLib.TYPE_DOUBLE) {
-                                    row[columnName] = value.get_double();
-                                } else if (gType === GLib.TYPE_STRING) {
-                                    row[columnName] = value.get_string();
+                            } else if (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') {
+                                // Already a JS primitive (happens when we use escaped params)
+                                row[columnName] = value;
+                            } else if (typeof value === 'object') {
+                                // Some GDA values expose helpers, guard all calls
+                                // Check for NULL FIRST before accessing any methods
+                                if (typeof value.is_null === 'function') {
+                                    try {
+                                        if (value.is_null()) {
+                                            row[columnName] = null;
+                                            value = null; // Explicitly clear GDA object reference
+                                            continue;
+                                        }
+                                    } catch (nullCheckError) {
+                                        // If is_null() itself throws, treat as NULL
+                                        row[columnName] = null;
+                                        value = null; // Explicitly clear
+                                        continue;
+                                    }
+                                }
+                                
+                                // Only proceed if value is not NULL
+                                if (typeof value.get_value_type === 'function') {
+                                    try {
+                                        const gType = value.get_value_type();
+                                        let extractedValue = null;
+                                        if (gType === GLib.TYPE_INT64 || gType === GLib.TYPE_INT) {
+                                            extractedValue = value.get_int();
+                                        } else if (gType === GLib.TYPE_DOUBLE) {
+                                            extractedValue = value.get_double();
+                                        } else if (gType === GLib.TYPE_STRING) {
+                                            extractedValue = value.get_string();
+                                        } else {
+                                            // Best effort string fallback
+                                            extractedValue = (typeof value.get_string === 'function') ? value.get_string() : null;
+                                        }
+                                        row[columnName] = extractedValue;
+                                        // Explicitly clear GDA value object after extraction
+                                        value = null;
+                                    } catch (gTypeError) {
+                                        // If get_value_type or extraction methods throw, treat as NULL
+                                        row[columnName] = null;
+                                        value = null; // Explicitly clear
+                                    }
                                 } else {
-                                    // Best effort string fallback
-                                    row[columnName] = (typeof value.get_string === 'function') ? value.get_string() : null;
+                                    // Unknown object – best effort stringify (but be safe)
+                                    try {
+                                        row[columnName] = String(value);
+                                        value = null; // Explicitly clear after stringify
+                                    } catch (stringError) {
+                                        row[columnName] = null;
+                                        value = null; // Explicitly clear
+                                    }
                                 }
                             } else {
-                                // Unknown object – best effort stringify
-                                row[columnName] = String(value);
+                                // Fallback: convert to string
+                                try {
+                                    row[columnName] = String(value);
+                                    value = null; // Explicitly clear
+                                } catch (stringError) {
+                                    row[columnName] = null;
+                                    value = null; // Explicitly clear
+                                }
                             }
-                        } else {
-                            // Fallback: convert to string
-                            row[columnName] = String(value);
+                        } catch (e) {
+                            // Any failure decoding a cell → treat as NULL
+                            // This is critical for handling "Unhandled type 'null'" errors from libgda
+                            row[columnName] = null;
+                        } finally {
+                            // Always clear GDA value object reference to prevent accumulation
+                            value = null;
                         }
-                    } catch (e) {
-                        // Any failure decoding a cell → treat as NULL
-                        row[columnName] = null;
                     }
+                    results.push(row);
                 }
-                results.push(row);
+            } finally {
+                // CRITICAL: Explicitly clear dataModel immediately after extraction
+                // This is essential to prevent GWeakRef accumulation
+                // dataModel is a GDA.DataModel object that holds weak references
+                if (dataModel) {
+                    dataModel = null;
+                }
             }
 
             return results;
         } catch (error) {
-            console.error('❌ Query error:', sql, error);
+            Logger.error(`❌ Query error: ${sql}`, error);
             throw error;
         }
     }
@@ -373,104 +432,106 @@ export class GdaDatabaseBridge {
         }
 
         try {
-            // Execute (prepared when params provided)
-            const result = (params && params.length > 0)
-                ? this._executeNonSelectPrepared(sql, params)
-                : this.connection.execute_non_select_command(sql);
-
-            // For INSERT, get last insert rowid
-            if (sql.trim().toUpperCase().startsWith('INSERT')) {
-                const lastIdResult = this.connection.execute_select_command('SELECT last_insert_rowid() as id');
-                if (lastIdResult && lastIdResult.get_n_rows() > 0) {
-                    const value = lastIdResult.get_value_at(0, 0);
-
-                    if (value !== null && value !== undefined) {
-                        // After escaped params, GDA returns JS primitives
-                        if (typeof value === 'number') {
-                            return value;
-                        } else if (typeof value === 'string') {
-                            return parseInt(value) || result;
-                        } else if (typeof value === 'object' && typeof value.get_int === 'function') {
-                            // GDA Value object
-                            return value.get_int();
-                        } else {
-                            // Fallback
-                            return parseInt(String(value)) || result;
-                        }
-                    }
-                    return result;
-                }
+            // ALWAYS use simple SQL with escaped params to avoid GDA object creation
+            // This prevents GWeakRef accumulation from prepared statements
+            let processedSql = sql;
+            if (params && params.length > 0) {
+                processedSql = this._escapeSqlParams(sql, params);
+            }
+            
+            let result = null;
+            try {
+                result = this.connection.execute_non_select_command(processedSql);
+            } finally {
+                // Note: result is cleared after processing
             }
 
-            return result;
+            // For INSERT, get last insert rowid
+            // Use simple SQL to avoid GDA object creation
+            let insertId = null;
+            if (processedSql.trim().toUpperCase().startsWith('INSERT')) {
+                let lastIdModel = null;
+                try {
+                    lastIdModel = this.connection.execute_select_command('SELECT last_insert_rowid() as id');
+                    if (lastIdModel && lastIdModel.get_n_rows() > 0) {
+                        const value = lastIdModel.get_value_at(0, 0);
+                        
+                        // Extract value immediately and clear model
+                        if (value !== null && value !== undefined) {
+                            if (typeof value === 'number') {
+                                insertId = value;
+                            } else if (typeof value === 'string') {
+                                insertId = parseInt(value) || null;
+                            } else if (typeof value === 'object' && typeof value.get_int === 'function') {
+                                insertId = value.get_int();
+                                // Clear GDA value object immediately
+                                value = null;
+                            } else {
+                                insertId = parseInt(String(value)) || null;
+                            }
+                        }
+                    }
+                } finally {
+                    // CRITICAL: Clear dataModel immediately to prevent GWeakRef accumulation
+                    lastIdModel = null;
+                }
+            }
+            
+            // Clear result immediately after use (if it's a GDA object)
+            const finalResult = insertId !== null ? insertId : result;
+            result = null;
+            
+            return finalResult;
         } catch (error) {
-            console.error('❌ Execute error:', sql, error);
+            Logger.error(`❌ Execute error: ${sql}`, error);
             throw error;
         }
     }
 
     /**
-     * Execute a prepared SELECT using Gda.Statement and holders.
+     * @deprecated - NO LONGER USED
+     * This method creates GDA objects (stmt, prep, holders) which accumulate GWeakRef
+     * Use _escapeSqlParams + execute_select_command instead
      */
     _executeSelectPrepared(sql, params) {
-        try {
-            const stmt = this.connection.parse_sentence(sql, null, null);
-            const prep = this.connection.prepare_statement(stmt);
-            const holders = prep.get_parameters();
-            if (holders) {
-                for (let i = 0; i < params.length; i++) {
-                    const holder = holders.get_holder(i);
-                    if (!holder) continue;
-                    this._bindHolder(holder, params[i]);
-                }
-            }
-            return this.connection.statement_execute_select(prep, null);
-        } catch (e) {
-            // Fallback to manual substitution if prepare not supported
-            let processed = sql;
-            for (let i = 0; i < params.length; i++) {
-                const v = params[i];
-                const esc = (v === null || v === undefined) ? 'NULL' :
-                    (typeof v === 'number') ? String(v) :
-                    (typeof v === 'boolean') ? (v ? '1' : '0') :
-                    "'" + String(v).replace(/'/g, "''") + "'";
-                processed = processed.replace('?', esc);
-            }
-            return this.connection.execute_select_command(processed);
-        }
+        // Fallback to escaped SQL (never use prepared statements)
+        const processed = this._escapeSqlParams(sql, params);
+        return this.connection.execute_select_command(processed);
     }
 
     /**
-     * Execute a prepared non-SELECT statement.
+     * @deprecated - NO LONGER USED
+     * This method creates GDA objects (stmt, prep, holders) which accumulate GWeakRef
+     * Use _escapeSqlParams + execute_non_select_command instead
      */
     _executeNonSelectPrepared(sql, params) {
-        try {
-            const stmt = this.connection.parse_sentence(sql, null, null);
-            const prep = this.connection.prepare_statement(stmt);
-            const holders = prep.get_parameters();
-            if (holders) {
-                for (let i = 0; i < params.length; i++) {
-                    const holder = holders.get_holder(i);
-                    if (!holder) continue;
-                    this._bindHolder(holder, params[i]);
-                }
-            }
-            return this.connection.statement_execute_non_select(prep, null);
-        } catch (e) {
-            // Fallback to manual substitution
-            let processed = sql;
-            for (let i = 0; i < params.length; i++) {
-                const v = params[i];
-                const esc = (v === null || v === undefined) ? 'NULL' :
-                    (typeof v === 'number') ? String(v) :
-                    (typeof v === 'boolean') ? (v ? '1' : '0') :
-                    "'" + String(v).replace(/'/g, "''") + "'";
-                processed = processed.replace('?', esc);
-            }
-            return this.connection.execute_non_select_command(processed);
-        }
+        // Fallback to escaped SQL (never use prepared statements)
+        const processed = this._escapeSqlParams(sql, params);
+        return this.connection.execute_non_select_command(processed);
     }
 
+    /**
+     * Escape SQL parameters manually (avoids GDA object creation)
+     * This is safer for preventing GWeakRef accumulation than prepared statements
+     */
+    _escapeSqlParams(sql, params) {
+        let processed = sql;
+        for (let i = 0; i < params.length; i++) {
+            const v = params[i];
+            const esc = (v === null || v === undefined) ? 'NULL' :
+                (typeof v === 'number') ? String(v) :
+                (typeof v === 'boolean') ? (v ? '1' : '0') :
+                "'" + String(v).replace(/'/g, "''") + "'";
+            processed = processed.replace('?', esc);
+        }
+        return processed;
+    }
+
+    /**
+     * @deprecated - NO LONGER USED
+     * This method creates GDA objects (holder) which accumulate GWeakRef
+     * Use _escapeSqlParams instead
+     */
     _bindHolder(holder, value) {
         try {
             if (value === null || value === undefined) {
@@ -499,7 +560,7 @@ export class GdaDatabaseBridge {
         try {
             this.connection.begin_transaction(null, Gda.TransactionIsolation.REPEATABLE_READ);
         } catch (error) {
-            console.error('❌ Begin transaction error:', error);
+            Logger.error('❌ Begin transaction error:', error);
             throw error;
         }
     }
@@ -515,7 +576,7 @@ export class GdaDatabaseBridge {
         try {
             this.connection.commit_transaction(null);
         } catch (error) {
-            console.error('❌ Commit error:', error);
+            Logger.error('❌ Commit error:', error);
             throw error;
         }
     }
@@ -531,22 +592,26 @@ export class GdaDatabaseBridge {
         try {
             this.connection.rollback_transaction(null);
         } catch (error) {
-            console.error('❌ Rollback error:', error);
+            Logger.error('❌ Rollback error:', error);
             throw error;
         }
     }
 
     /**
-     * Close database connection
+     * Close database connection and clean up all references
      */
     async close() {
         if (this.connection) {
             try {
+                // Explicitly close the connection
                 this.connection.close();
+            } catch (error) {
+                Logger.error('❌ Close error:', error);
+            } finally {
+                // Always clear references to help GC and prevent GWeakRef accumulation
                 this.connection = null;
                 this.isConnected_ = false;
-            } catch (error) {
-                console.error('❌ Close error:', error);
+                this.dbPath = null;
             }
         }
     }

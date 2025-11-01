@@ -9,6 +9,7 @@ import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
 import { createRecoloredSVG } from 'resource:///com/odnoyko/valot/ui/utils/svgRecolor.js';
+import { Logger } from 'resource:///com/odnoyko/valot/core/utils/Logger.js';
 
 export class DatabaseMigrationDialog {
     constructor(parent, oldDbPath, options = {}) {
@@ -257,7 +258,7 @@ export class DatabaseMigrationDialog {
             setTimeout(() => {
                 // Handle async callback with error catching
                 Promise.resolve(this.onChoiceMade(choice)).catch(error => {
-                    console.error('Migration error:', error);
+                    Logger.error('[DatabaseMigration] Migration error:', error);
                     this.showError(error.message || 'Unknown error occurred');
                 });
             }, 400);

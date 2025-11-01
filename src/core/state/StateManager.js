@@ -21,6 +21,8 @@ export class StateManager {
                 currentTimeEntryId: null,
                 startTime: null,
                 elapsedSeconds: 0,
+                oldTime: 0, // Cached completed time (excludes active entry) - updated only on start/stop/edit
+                savedTimeFromCrash: 0, // Time saved in JSON from previous crash - added to duration on stop
                 pomodoroMode: false,
                 pomodoroDuration: 0,
                 pomodoroRemaining: 0,

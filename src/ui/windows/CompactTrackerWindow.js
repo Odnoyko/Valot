@@ -27,6 +27,11 @@ export const CompactTrackerWindow = GObject.registerClass({
 
         // Set minimal size after UI is built
         this.set_size_request(500, -1);
+
+        // Cleanup when window is destroyed
+        this.connect('destroy', () => {
+            this.cleanup();
+        });
     }
 
     setShiftMode(shiftMode) {
@@ -66,6 +71,16 @@ export const CompactTrackerWindow = GObject.registerClass({
 
         windowHandle.set_child(mainBox);
         this.set_content(windowHandle);
+    }
+
+    /**
+     * Cleanup: cleanup tracking widget
+     */
+    cleanup() {
+        if (this.trackingWidget && typeof this.trackingWidget.cleanup === 'function') {
+            this.trackingWidget.cleanup();
+            this.trackingWidget = null;
+        }
     }
 
     _onCloseOpen() {

@@ -6,6 +6,7 @@ import { AdvancedTrackingWidget } from 'resource:///com/odnoyko/valot/ui/compone
 import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/data/currencies.js';
 import { ReportExporter } from 'resource:///com/odnoyko/valot/ui/utils/export/reportExporter.js';
 import { PDFExportPreferencesDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/PDFExportPreferencesDialog.js';
+import { Logger } from 'resource:///com/odnoyko/valot/core/utils/Logger.js';
 
 /**
  * Reports Page - Restored UI from main branch
@@ -30,6 +31,18 @@ export class ReportsPage {
         this.allProjects = [];
         this.allClients = [];
 
+        // Store event handler references for cleanup
+        this._eventHandlers = {};
+        
+        // Store GTK signal handler IDs for cleanup (GLib timers)
+        this._signalHandlerIds = [];
+        
+        // Store widget handler connections for cleanup (widget -> handlerId)
+        this._widgetConnections = new Map();
+
+        // Maximum cache size to prevent memory leaks
+        this._maxCacheSize = 1000;
+
         // Subscribe to UI events for real-time updates
         this._subscribeToEvents();
 
@@ -44,41 +57,55 @@ export class ReportsPage {
     _subscribeToEvents() {
         if (!this.coreBridge) return;
 
-        // Reload when tracking starts/stops (creates new time entries)
-        this.coreBridge.onUIEvent('tracking-started', () => {
+        // Store handlers for cleanup
+        this._eventHandlers['tracking-started'] = async () => {
+            // Update cache to include new tracked task
+            try {
+                const trackingState = this.coreBridge.getTrackingState();
+                if (trackingState.isTracking && trackingState.currentTaskInstanceId) {
+                    // Ensure tracked task is in cache
+                    const existingTask = this.allTasks.find(t => t.id === trackingState.currentTaskInstanceId);
+                    if (!existingTask) {
+                        const taskInstance = await this.coreBridge.getTaskInstance(trackingState.currentTaskInstanceId);
+                        if (taskInstance) {
+                            this._addToCache('allTasks', taskInstance);
+                        }
+                    }
+                }
+            } catch (error) {
+                Logger.error('[ReportsPage] Error updating cache on tracking start:', error);
+            }
+            
             setTimeout(() => this.updateChartsOnly(), 300);
             this._startTrackingUITimer(); // Start real-time updates
-        });
+        };
 
-        this.coreBridge.onUIEvent('tracking-stopped', () => {
+        this._eventHandlers['tracking-stopped'] = () => {
             this.updateChartsOnly();
             this._stopTrackingUITimer(); // Stop real-time updates
-        });
+        };
 
-        // Reload when tasks are created/updated/deleted
-        this.coreBridge.onUIEvent('task-created', () => {
+        this._eventHandlers['task-created'] = () => {
             this.updateChartsOnly();
-        });
+        };
 
-        this.coreBridge.onUIEvent('task-updated', () => {
+        this._eventHandlers['task-updated'] = () => {
             this.updateChartsOnly();
-        });
+        };
 
-        this.coreBridge.onUIEvent('tasks-deleted', () => {
+        this._eventHandlers['tasks-deleted'] = () => {
             this.updateChartsOnly();
-        });
+        };
 
-        // Reload when projects/clients are updated
-        this.coreBridge.onUIEvent('project-updated', () => {
+        this._eventHandlers['project-updated'] = () => {
             this.updateChartsOnly();
-        });
+        };
 
-        this.coreBridge.onUIEvent('client-updated', () => {
+        this._eventHandlers['client-updated'] = () => {
             this.updateChartsOnly();
-        });
+        };
 
-        // Update on tracking changes (task name, project, client changes)
-        this.coreBridge.onUIEvent('tracking-updated', (data) => {
+        this._eventHandlers['tracking-updated'] = (data) => {
             // Update statistics in real-time (Total Time, etc.)
             this._updateStatisticsRealtime();
 
@@ -86,7 +113,159 @@ export class ReportsPage {
             if (data.taskName || data.taskId || data.projectId !== undefined || data.clientId !== undefined) {
                 this.updateChartsOnly();
             }
+        };
+
+        // Memory cleanup events disabled - cleanup happens in destroy(), not periodically
+        // this._eventHandlers['memory-cleanup-ui'] = () => {
+        //     this._cleanupUnusedUI();
+        // };
+
+        // Subscribe with stored handlers
+        Object.keys(this._eventHandlers).forEach(event => {
+            this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
         });
+    }
+
+    /**
+     * Helper method to track GTK signal handler IDs for cleanup
+     * @param {GObject.Object} widget - Widget to connect to
+     * @param {string} signal - Signal name
+     * @param {Function} callback - Callback function
+     * @returns {number} Handler ID
+     */
+    _trackConnection(widget, signal, callback) {
+        const handlerId = widget.connect(signal, callback);
+        // Store widget reference and handler ID for cleanup
+        if (!this._widgetConnections.has(widget)) {
+            this._widgetConnections.set(widget, []);
+        }
+        this._widgetConnections.get(widget).push(handlerId);
+        return handlerId;
+    }
+
+    /**
+     * Add item to cache with size limit to prevent memory leaks
+     */
+    _addToCache(arrayName, item) {
+        const array = this[arrayName];
+        if (!array) return;
+
+        // Check if item already exists (by id if available)
+        if (item.id) {
+            const existing = array.find(a => a.id === item.id);
+            if (existing) {
+                // Update existing item
+                Object.assign(existing, item);
+                return;
+            }
+        }
+
+        array.push(item);
+
+        // Limit cache size - keep only most recent items
+        if (array.length > this._maxCacheSize) {
+            // Remove oldest items (FIFO)
+            array.splice(0, array.length - this._maxCacheSize);
+        }
+    }
+
+    /**
+     * Cleanup unused UI elements (called on destroy or when needed)
+     */
+    _cleanupUnusedUI() {
+        // Use existing _addToCache logic which already limits size
+        // But we can force cleanup if arrays are too large
+        if (this.allTasks && this.allTasks.length > this._maxCacheSize) {
+            // Keep only most recent items
+            const toRemove = this.allTasks.length - this._maxCacheSize;
+            this.allTasks.splice(0, toRemove);
+            Logger.debug('[ReportsPage] Cleaned', toRemove, 'old tasks from cache');
+        }
+        
+        if (this.allProjects && this.allProjects.length > this._maxCacheSize) {
+            const toRemove = this.allProjects.length - this._maxCacheSize;
+            this.allProjects.splice(0, toRemove);
+            Logger.debug('[ReportsPage] Cleaned', toRemove, 'old projects from cache');
+        }
+        
+        if (this.allClients && this.allClients.length > this._maxCacheSize) {
+            const toRemove = this.allClients.length - this._maxCacheSize;
+            this.allClients.splice(0, toRemove);
+            Logger.debug('[ReportsPage] Cleaned', toRemove, 'old clients from cache');
+        }
+    }
+
+    /**
+     * Cleanup: unsubscribe from events and clear references
+     */
+    destroy() {
+        // Unsubscribe from CoreBridge events
+        if (this.coreBridge && this._eventHandlers) {
+            Object.keys(this._eventHandlers).forEach(event => {
+                this.coreBridge.offUIEvent(event, this._eventHandlers[event]);
+            });
+            this._eventHandlers = {};
+        }
+
+        // Stop tracking timer
+        if (this.trackingTimerToken) {
+            this.coreBridge?.unsubscribeTick(this.trackingTimerToken);
+            this.trackingTimerToken = 0;
+        }
+
+        // Clear carousel timer if exists
+        if (this._carouselTimerId) {
+            GLib.source_remove(this._carouselTimerId);
+            this._carouselTimerId = 0;
+        }
+
+        // Disconnect GTK signal handlers
+        // Disconnect tracked widget connections
+        if (this._widgetConnections && this._widgetConnections.size > 0) {
+            this._widgetConnections.forEach((handlerIds, widget) => {
+                handlerIds.forEach(id => {
+                    try {
+                        if (widget && !widget.is_destroyed?.()) {
+                            widget.disconnect(id);
+                        }
+                    } catch (e) {
+                        // Widget may already be destroyed
+                    }
+                });
+            });
+            this._widgetConnections.clear();
+        }
+
+        // Remove GLib timers
+        if (this._signalHandlerIds.length > 0) {
+            this._signalHandlerIds.forEach(id => {
+                try {
+                    GLib.Source.remove(id);
+                } catch (e) {
+                    // Handler may already be removed
+                }
+            });
+            this._signalHandlerIds = [];
+        }
+
+        // Cleanup unused UI before destroying
+        this._cleanupUnusedUI();
+        
+        // Clear arrays to release memory
+        this.allTasks = [];
+        this.allProjects = [];
+        this.allClients = [];
+
+        // Clear currency carousel pages map
+        if (this._currencyCarouselPages) {
+            this._currencyCarouselPages.clear();
+        }
+
+        // Cleanup tracking widget if exists
+        if (this.trackingWidget && typeof this.trackingWidget.cleanup === 'function') {
+            this.trackingWidget.cleanup();
+            this.trackingWidget = null;
+        }
     }
 
     /**
@@ -105,7 +284,7 @@ export class ReportsPage {
 
         // Subscribe to sidebar visibility changes
         if (this.parentWindow && this.parentWindow.splitView) {
-            this.parentWindow.splitView.connect('notify::show-sidebar', () => {
+            this._trackConnection(this.parentWindow.splitView, 'notify::show-sidebar', () => {
                 this._updateSidebarToggleButton();
             });
         }
@@ -186,7 +365,7 @@ export class ReportsPage {
             if (this.parentWindow?.application) {
                 this.parentWindow.application._launchCompactTracker(shiftPressed);
             } else {
-                console.error('❌ No application reference!');
+                Logger.error('[ReportsPage] No application reference!');
             }
         });
 
@@ -580,10 +759,18 @@ export class ReportsPage {
     async loadReports() {
         try {
             // Load all data from Core
-            this.allTasks = await this.coreBridge.getAllTaskInstances() || [];
-            this.allTimeEntries = await this.coreBridge.getAllTimeEntries() || [];
-            this.allProjects = await this.coreBridge.getAllProjects() || [];
-            this.allClients = await this.coreBridge.getAllClients() || [];
+            // Limit array sizes to prevent RAM growth (keep only most recent)
+            const allTaskInstances = await this.coreBridge.getAllTaskInstances() || [];
+            this.allTasks = allTaskInstances.slice(-this._maxCacheSize);
+            
+            const allTimeEntries = await this.coreBridge.getAllTimeEntries() || [];
+            this.allTimeEntries = allTimeEntries.slice(-this._maxCacheSize);
+            
+            const allProjects = await this.coreBridge.getAllProjects() || [];
+            this.allProjects = allProjects.slice(-this._maxCacheSize);
+            
+            const allClients = await this.coreBridge.getAllClients() || [];
+            this.allClients = allClients.slice(-this._maxCacheSize);
 
             // Initialize report exporter with current data
             this.reportExporter = new ReportExporter(this.allTasks, this.allProjects, this.allClients);
@@ -600,7 +787,7 @@ export class ReportsPage {
                 this._startTrackingUITimer();
             }
         } catch (error) {
-            console.error('Error loading reports:', error);
+            Logger.error('[ReportsPage] Error loading reports:', error);
         }
     }
 
@@ -642,12 +829,20 @@ export class ReportsPage {
      */
     async _updateReports() {
         const filteredTasks = this._getFilteredTasks();
+        
+        // Get tracking state to include tracked task in Recent Tasks
+        const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
 
         // Update statistics (async - calls Core)
         await this._updateStatistics(filteredTasks);
 
-        // Update recent tasks list
-        this._updateRecentTasksList(filteredTasks);
+        // Update recent tasks list (always include tracked task if tracking)
+        let tasksForRecent = filteredTasks;
+        if (trackingState && trackingState.isTracking) {
+            // Async call to update tracked task's time accurately
+            tasksForRecent = await this._getFilteredTasksFromArray(filteredTasks, trackingState);
+        }
+        this._updateRecentTasksList(tasksForRecent);
 
         // Update chart visualization
         this._updateChartVisualization();
@@ -1415,11 +1610,15 @@ export class ReportsPage {
 
     /**
      * Filter tasks by time period
+     * Always includes tasks from current week/month when filtering by month/year
      */
     _filterByPeriod(tasks, period) {
         const now = GLib.DateTime.new_now_local();
 
         let startDate, endDate;
+        let currentWeekStart = null, currentWeekEnd = null;
+        let currentMonthStart = null, currentMonthEnd = null;
+        
         switch (period) {
             case 'week': {
                 // Current week (Monday to Sunday)
@@ -1442,7 +1641,7 @@ export class ReportsPage {
                 break;
             }
             case 'month': {
-                // Last 4 weeks
+                // Last 4 weeks (28 days)
                 startDate = now.add_days(-28);
                 startDate = GLib.DateTime.new_local(
                     startDate.get_year(),
@@ -1451,6 +1650,24 @@ export class ReportsPage {
                     0, 0, 0
                 );
                 endDate = now;
+                
+                // Also track current week boundaries for inclusion
+                const dayOfWeek = now.get_day_of_week();
+                const daysToMonday = dayOfWeek - 1;
+                const monday = now.add_days(-daysToMonday);
+                currentWeekStart = GLib.DateTime.new_local(
+                    monday.get_year(),
+                    monday.get_month(),
+                    monday.get_day_of_month(),
+                    0, 0, 0
+                );
+                const sunday = monday.add_days(6);
+                currentWeekEnd = GLib.DateTime.new_local(
+                    sunday.get_year(),
+                    sunday.get_month(),
+                    sunday.get_day_of_month(),
+                    23, 59, 59
+                );
                 break;
             }
             case 'year': {
@@ -1463,6 +1680,41 @@ export class ReportsPage {
                     0, 0, 0
                 );
                 endDate = now;
+                
+                // Also track current week and current month boundaries for inclusion
+                const dayOfWeek = now.get_day_of_week();
+                const daysToMonday = dayOfWeek - 1;
+                const monday = now.add_days(-daysToMonday);
+                currentWeekStart = GLib.DateTime.new_local(
+                    monday.get_year(),
+                    monday.get_month(),
+                    monday.get_day_of_month(),
+                    0, 0, 0
+                );
+                const sunday = monday.add_days(6);
+                currentWeekEnd = GLib.DateTime.new_local(
+                    sunday.get_year(),
+                    sunday.get_month(),
+                    sunday.get_day_of_month(),
+                    23, 59, 59
+                );
+                
+                // Current month
+                currentMonthStart = GLib.DateTime.new_local(
+                    now.get_year(),
+                    now.get_month(),
+                    1,
+                    0, 0, 0
+                );
+                // Last day of current month
+                const nextMonth = currentMonthStart.add_months(1);
+                const lastDay = nextMonth.add_days(-1);
+                currentMonthEnd = GLib.DateTime.new_local(
+                    lastDay.get_year(),
+                    lastDay.get_month(),
+                    lastDay.get_day_of_month(),
+                    23, 59, 59
+                );
                 break;
             }
             case 'custom': {
@@ -1480,6 +1732,10 @@ export class ReportsPage {
 
         const startTimestamp = startDate.to_unix();
         const endTimestamp = endDate ? endDate.to_unix() : null;
+        const currentWeekStartTimestamp = currentWeekStart ? currentWeekStart.to_unix() : null;
+        const currentWeekEndTimestamp = currentWeekEnd ? currentWeekEnd.to_unix() : null;
+        const currentMonthStartTimestamp = currentMonthStart ? currentMonthStart.to_unix() : null;
+        const currentMonthEndTimestamp = currentMonthEnd ? currentMonthEnd.to_unix() : null;
 
         return tasks.filter(task => {
             if (!task.last_used_at) return false;
@@ -1493,10 +1749,28 @@ export class ReportsPage {
             if (!taskDate) return false;
 
             const taskTimestamp = taskDate.to_unix();
+            
+            // Check if task falls in main period range
+            let inPeriod = false;
             if (endTimestamp) {
-                return taskTimestamp >= startTimestamp && taskTimestamp <= endTimestamp;
+                inPeriod = taskTimestamp >= startTimestamp && taskTimestamp <= endTimestamp;
+            } else {
+                inPeriod = taskTimestamp >= startTimestamp;
             }
-            return taskTimestamp >= startTimestamp;
+            
+            // If not in main period, check if it's in current week (for month/year) or current month (for year)
+            if (!inPeriod) {
+                if (currentWeekStartTimestamp && currentWeekEndTimestamp) {
+                    // Include tasks from current week when filtering by month or year
+                    inPeriod = taskTimestamp >= currentWeekStartTimestamp && taskTimestamp <= currentWeekEndTimestamp;
+                }
+                if (!inPeriod && currentMonthStartTimestamp && currentMonthEndTimestamp) {
+                    // Include tasks from current month when filtering by year
+                    inPeriod = taskTimestamp >= currentMonthStartTimestamp && taskTimestamp <= currentMonthEndTimestamp;
+                }
+            }
+            
+            return inPeriod;
         });
     }
 
@@ -1811,10 +2085,16 @@ export class ReportsPage {
                     this._lastStatsUpdateMs = now;
                     this._updateStatisticsRealtime();
                 }
-                // Update recent tasks at most every 2000ms (heavier)
-                if (now - this._lastRecentUpdateMs >= 2000) {
+                // Update recent tasks at most every 1000ms (more frequent for better UX)
+                if (now - this._lastRecentUpdateMs >= 1000) {
                     this._lastRecentUpdateMs = now;
-                    this._updateRecentTasksRealtime(state);
+                    // Async call - result is ignored (updates happen in background)
+                    this._updateRecentTasksRealtime(state).catch(err => {
+                        // Silently ignore errors - UI update failures shouldn't crash the app
+                        if (typeof err !== 'undefined') {
+                            // Only log if error exists (avoid logging undefined)
+                        }
+                    });
                 }
             } else {
                 this._stopTrackingUITimer();
@@ -1834,41 +2114,119 @@ export class ReportsPage {
 
     /**
      * Update Recent Tasks list in real-time (update current tracking task time)
-     * Uses cached tasks + current elapsed time (no database queries)
+     * Gets accurate old time from database to handle TimeEntry edits correctly
      */
-    _updateRecentTasksRealtime(trackingState) {
+    async _updateRecentTasksRealtime(trackingState) {
         if (!this.recentTasksList || !trackingState.isTracking) return;
-        if (!this.allTasks || this.allTasks.length === 0) return;
 
         try {
             // Create a temporary copy of tasks for display
-            const tasksForDisplay = this.allTasks.map(t => ({...t}));
+            const tasksForDisplay = (this.allTasks || []).map(t => ({...t}));
 
             // Find current tracking task instance in the copy
-            const currentTask = tasksForDisplay.find(t =>
-                t.task_id === trackingState.currentTaskId &&
-                t.project_id === trackingState.currentProjectId &&
-                t.client_id === trackingState.currentClientId
-            );
+            // Try by TaskInstance ID first (most reliable), then by combination
+            let currentTask = null;
+            
+            if (trackingState.currentTaskInstanceId) {
+                // First try: find by TaskInstance ID
+                currentTask = tasksForDisplay.find(t => t.id === trackingState.currentTaskInstanceId);
+            }
+            
+            // Second try: find by combination (task_id + project_id + client_id)
+            if (!currentTask) {
+                currentTask = tasksForDisplay.find(t =>
+                    t.task_id === trackingState.currentTaskId &&
+                    t.project_id === trackingState.currentProjectId &&
+                    t.client_id === trackingState.currentClientId
+                );
+            }
+
+            // If tracked task is not in cache, fetch it from Core
+            if (!currentTask && trackingState.currentTaskInstanceId) {
+                try {
+                    const taskInstance = await this.coreBridge.getTaskInstance(trackingState.currentTaskInstanceId);
+                    if (taskInstance) {
+                        // Add to cache and display copy
+                        this._addToCache('allTasks', taskInstance);
+                        if (!tasksForDisplay.find(t => t.id === taskInstance.id)) {
+                            tasksForDisplay.push({...taskInstance});
+                        }
+                        currentTask = tasksForDisplay.find(t => t.id === taskInstance.id);
+                    }
+                } catch (error) {
+                    Logger.error('[ReportsPage] Error fetching tracked task:', error);
+                }
+            }
 
             if (currentTask) {
-                // Add current elapsed time to task total_time
-                currentTask.total_time = (currentTask.total_time || 0) + trackingState.elapsedSeconds;
+                // Use cached oldTime from state (no database query)
+                // oldTime is updated only on start/stop/edit, not every second
+                const oldTime = trackingState.oldTime || 0;
+                const currentElapsed = trackingState.elapsedSeconds || 0;
+                // Use cached old time + current elapsed instead of cached total_time
+                currentTask.total_time = oldTime + currentElapsed;
+                
+                // Update last_used_at to current time for proper sorting in Recent Tasks
+                // This ensures tracked task appears at the top of the list
+                const { TimeUtils } = await import('resource:///com/odnoyko/valot/core/utils/TimeUtils.js');
+                currentTask.last_used_at = TimeUtils.getCurrentTimestamp();
             }
 
             // Apply filters and update Recent Tasks list (using temporary copy)
-            const filteredTasks = this._getFilteredTasksFromArray(tasksForDisplay);
+            // Pass trackingState to ensure tracked task is always included
+            const filteredTasks = await this._getFilteredTasksFromArray(tasksForDisplay, trackingState);
             this._updateRecentTasksList(filteredTasks);
         } catch (error) {
-            console.error('[ReportsPage] Error updating recent tasks realtime:', error);
+            Logger.error('[ReportsPage] Error updating recent tasks realtime:', error);
+            // Fallback: try to show at least something
+            if (this.allTasks && this.allTasks.length > 0) {
+                try {
+                    const filteredTasks = await this._getFilteredTasksFromArray(this.allTasks, trackingState);
+                    this._updateRecentTasksList(filteredTasks);
+                } catch (fallbackError) {
+                    // Last resort: show filtered tasks without tracked task update
+                    const filteredTasks = this._getFilteredTasksFromArraySync(this.allTasks, trackingState);
+                    this._updateRecentTasksList(filteredTasks);
+                }
+            }
         }
     }
 
     /**
      * Get filtered tasks from provided array (used for real-time updates with temp data)
+     * Always includes currently tracked task even if it doesn't match filters
+     * Updates tracked task's total_time with accurate calculation
      */
-    _getFilteredTasksFromArray(tasksArray) {
+    async _getFilteredTasksFromArray(tasksArray, trackingState = null) {
         let filtered = [...tasksArray];
+        
+        // Remember tracked task before filtering (if provided)
+        let trackedTask = null;
+        if (trackingState && trackingState.isTracking) {
+            trackedTask = tasksArray.find(t =>
+                t.task_id === trackingState.currentTaskId &&
+                t.project_id === trackingState.currentProjectId &&
+                t.client_id === trackingState.currentClientId
+            );
+            
+            // Update tracked task's time with accurate calculation
+            if (trackedTask) {
+                try {
+                    // Use cached oldTime from state (no database query)
+                    // oldTime is updated only on start/stop/edit, not every second
+                    const oldTime = trackingState.oldTime || 0;
+                    const currentElapsed = trackingState.elapsedSeconds || 0;
+                    trackedTask.total_time = oldTime + currentElapsed;
+                    
+                    // Update last_used_at for proper sorting
+                    const { TimeUtils } = await import('resource:///com/odnoyko/valot/core/utils/TimeUtils.js');
+                    trackedTask.last_used_at = TimeUtils.getCurrentTimestamp();
+                } catch (error) {
+                    // Fallback: use cached total_time + elapsedSeconds
+                    trackedTask.total_time = (trackedTask.total_time || 0) + (trackingState.elapsedSeconds || 0);
+                }
+            }
+        }
 
         // Filter by project
         if (this.chartFilters.projectId) {
@@ -1882,6 +2240,69 @@ export class ReportsPage {
 
         // Filter by period
         filtered = this._filterByPeriod(filtered, this.chartFilters.period);
+        
+        // Always include currently tracked task if it exists and not already in list
+        if (trackedTask) {
+            const isTrackedTaskInList = filtered.some(t =>
+                t.task_id === trackedTask.task_id &&
+                t.project_id === trackedTask.project_id &&
+                t.client_id === trackedTask.client_id
+            );
+            if (!isTrackedTaskInList) {
+                // Add tracked task to list even if it doesn't match filters
+                filtered.push(trackedTask);
+            }
+        }
+
+        return filtered;
+    }
+
+    /**
+     * Synchronous version of _getFilteredTasksFromArray for fallback
+     * Doesn't update tracked task time (uses cached values)
+     */
+    _getFilteredTasksFromArraySync(tasksArray, trackingState = null) {
+        let filtered = [...tasksArray];
+        
+        // Remember tracked task before filtering (if provided)
+        let trackedTask = null;
+        if (trackingState && trackingState.isTracking) {
+            trackedTask = tasksArray.find(t =>
+                t.task_id === trackingState.currentTaskId &&
+                t.project_id === trackingState.currentProjectId &&
+                t.client_id === trackingState.currentClientId
+            );
+            
+            // Use cached total_time + elapsedSeconds as fallback
+            if (trackedTask) {
+                trackedTask.total_time = (trackedTask.total_time || 0) + (trackingState.elapsedSeconds || 0);
+            }
+        }
+
+        // Filter by project
+        if (this.chartFilters.projectId) {
+            filtered = filtered.filter(t => t.project_id === this.chartFilters.projectId);
+        }
+
+        // Filter by client
+        if (this.chartFilters.clientId) {
+            filtered = filtered.filter(t => t.client_id === this.chartFilters.clientId);
+        }
+
+        // Filter by period
+        filtered = this._filterByPeriod(filtered, this.chartFilters.period);
+        
+        // Always include currently tracked task if it exists and not already in list
+        if (trackedTask) {
+            const isTrackedTaskInList = filtered.some(t =>
+                t.task_id === trackedTask.task_id &&
+                t.project_id === trackedTask.project_id &&
+                t.client_id === trackedTask.client_id
+            );
+            if (!isTrackedTaskInList) {
+                filtered.push(trackedTask);
+            }
+        }
 
         return filtered;
     }
@@ -2042,6 +2463,9 @@ export class ReportsPage {
         // Show top 10 recent tasks
         const recentTasks = sortedTasks.slice(0, 10);
 
+        // Get tracking state once for all tasks
+        const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+
         recentTasks.forEach(task => {
             const row = new Adw.ActionRow({
                 title: task.task_name || _('Unnamed Task'),
@@ -2063,9 +2487,34 @@ export class ReportsPage {
             }
             row.set_subtitle(subtitleParts.join(' • '));
 
-            // Time suffix
+            // Time suffix - always get fresh tracking state for accurate time display
+            const currentTrackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+            let displayTime = task.total_time || 0;
+            
+            // If this is the tracked task, ensure time includes current elapsedSeconds
+            if (currentTrackingState && currentTrackingState.isTracking) {
+                const isTracked = task.task_id === currentTrackingState.currentTaskId &&
+                                 task.project_id === currentTrackingState.currentProjectId &&
+                                 task.client_id === currentTrackingState.currentClientId;
+                
+                if (isTracked) {
+                    // Always use fresh elapsedSeconds from tracking state
+                    // task.total_time should already include oldTime + elapsedSeconds from _getFilteredTasksFromArray
+                    // But if it's still 0 or too low, add elapsedSeconds directly
+                    const currentElapsed = currentTrackingState.elapsedSeconds || 0;
+                    
+                    // If total_time seems outdated (less than current elapsed), recalculate
+                    // This handles case where async update hasn't completed yet
+                    if (displayTime === 0 || displayTime < currentElapsed) {
+                        // Use elapsedSeconds directly as minimum
+                        displayTime = currentElapsed;
+                    }
+                    // Otherwise task.total_time already has the correct value (oldTime + elapsedSeconds)
+                }
+            }
+            
             const timeLabel = new Gtk.Label({
-                label: this._formatDuration(task.total_time || 0),
+                label: this._formatDuration(displayTime),
                 css_classes: ['dim-label'],
                 valign: Gtk.Align.CENTER,
             });
@@ -2143,7 +2592,7 @@ export class ReportsPage {
      */
     async _exportPDF() {
         if (!this.reportExporter) {
-            console.error('Report exporter not initialized');
+            Logger.error('[ReportsPage] Report exporter not initialized');
             return;
         }
 
@@ -2161,7 +2610,7 @@ export class ReportsPage {
             prefsDialog.present(this.parentWindow);
 
         } catch (error) {
-            console.error('Error exporting PDF:', error);
+            Logger.error('[ReportsPage] Error exporting PDF:', error);
             if (this.parentWindow && this.parentWindow.showToast) {
                 this.parentWindow.showToast(_('PDF export failed'));
             }
@@ -2188,7 +2637,7 @@ export class ReportsPage {
             // Update all reports
             this._updateReports();
         } catch (error) {
-            console.error('Error updating charts:', error);
+            Logger.error('[ReportsPage] Error updating charts:', error);
         }
     }
 }

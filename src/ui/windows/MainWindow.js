@@ -62,6 +62,9 @@ export const ValotMainWindow = GObject.registerClass({
         // Setup global keyboard shortcuts using application-level accelerators
         this._setupGlobalKeyboardShortcuts();
 
+        // Store event handlers for cleanup
+        this._eventHandlers = {};
+
         // Subscribe to Core events for sidebar updates
         this._subscribeToCore();
 
@@ -70,6 +73,11 @@ export const ValotMainWindow = GObject.registerClass({
 
         // Handle window close - check if tracking is active
         this.connect('close-request', () => this._onCloseRequest());
+        
+        // Cleanup when window is actually destroyed (not just close-request)
+        this.connect('destroy', () => {
+            this.cleanup();
+        });
     }
 
     /**
@@ -675,49 +683,88 @@ export const ValotMainWindow = GObject.registerClass({
     _subscribeToCore() {
         if (!this.coreBridge) return;
 
-        // Update sidebar on tracking start/stop
-        this.coreBridge.onUIEvent('tracking-started', () => {
+        // Store handlers for cleanup
+        this._eventHandlers['tracking-started'] = () => {
             this._updateSidebarStats();
-        });
+        };
 
-        this.coreBridge.onUIEvent('tracking-stopped', () => {
+        this._eventHandlers['tracking-stopped'] = () => {
             this._updateSidebarStats();
 
             // Update reports page chart if it's loaded
             if (this.reportsPageInstance && this.reportsPageInstance.updateChartsOnly) {
                 this.reportsPageInstance.updateChartsOnly();
             }
-        });
+        };
 
-        // Real-time updates every second while tracking
-        this.coreBridge.onUIEvent('tracking-updated', () => {
+        this._eventHandlers['tracking-updated'] = () => {
             this._updateSidebarStatsRealtime();
-        });
+        };
 
-        // Update sidebar when tasks are updated/deleted (affects This Week stats)
-        this.coreBridge.onUIEvent('task-updated', () => {
+        this._eventHandlers['task-updated'] = () => {
             this._updateSidebarStats();
-        });
+        };
 
-        this.coreBridge.onUIEvent('task-deleted', () => {
+        this._eventHandlers['task-deleted'] = () => {
             this._updateSidebarStats();
-        });
+        };
 
-        this.coreBridge.onUIEvent('tasks-deleted', () => {
-            this._updateSidebarStats();
-            this._refreshAllPages();
-        });
-
-        this.coreBridge.onUIEvent('projects-deleted', () => {
+        this._eventHandlers['tasks-deleted'] = () => {
             this._updateSidebarStats();
             this._refreshAllPages();
-        });
+        };
 
-        this.coreBridge.onUIEvent('clients-deleted', () => {
+        this._eventHandlers['projects-deleted'] = () => {
             this._updateSidebarStats();
             this._refreshAllPages();
-        });
+        };
 
+        this._eventHandlers['clients-deleted'] = () => {
+            this._updateSidebarStats();
+            this._refreshAllPages();
+        };
+
+        // Subscribe with stored handlers
+        Object.keys(this._eventHandlers).forEach(event => {
+            this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
+        });
+    }
+
+    /**
+     * Cleanup: unsubscribe from events and cleanup pages
+     */
+    cleanup() {
+        // Unsubscribe from CoreBridge events
+        if (this.coreBridge && this._eventHandlers) {
+            Object.keys(this._eventHandlers).forEach(event => {
+                this.coreBridge.offUIEvent(event, this._eventHandlers[event]);
+            });
+            this._eventHandlers = {};
+        }
+
+        // Cleanup pages
+        if (this.tasksPageInstance && typeof this.tasksPageInstance.destroy === 'function') {
+            this.tasksPageInstance.destroy();
+            this.tasksPageInstance = null;
+        }
+        if (this.projectsPageInstance && typeof this.projectsPageInstance.destroy === 'function') {
+            this.projectsPageInstance.destroy();
+            this.projectsPageInstance = null;
+        }
+        if (this.clientsPageInstance && typeof this.clientsPageInstance.destroy === 'function') {
+            this.clientsPageInstance.destroy();
+            this.clientsPageInstance = null;
+        }
+        if (this.reportsPageInstance && typeof this.reportsPageInstance.destroy === 'function') {
+            this.reportsPageInstance.destroy();
+            this.reportsPageInstance = null;
+        }
+
+        // Cleanup gesture controller if exists
+        if (this.gestureController && typeof this.gestureController.cleanup === 'function') {
+            this.gestureController.cleanup();
+            this.gestureController = null;
+        }
     }
 
     /**

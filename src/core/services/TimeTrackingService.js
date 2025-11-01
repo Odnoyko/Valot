@@ -1,12 +1,15 @@
 import { BaseService } from './BaseService.js';
-import { TimerScheduler } from './TimerScheduler.js';
 import { CoreEvents } from '../events/CoreEvents.js';
 import { TimeUtils } from '../utils/TimeUtils.js';
+import { Logger } from '../utils/Logger.js';
 export class TimeTrackingService extends BaseService {
     trackingTimer = null;
     _timerToken = 0;
     lastUsedProjectId = null;
     lastUsedClientId = null;
+    _recoveryInProgress = false;
+    _lastRecoveryAttempt = 0;
+    _recoveryThrottleMs = 30000; // Only attempt recovery once per 30 seconds
     timerStartTime = null;
     constructor(core) {
         super(core);
@@ -56,13 +59,60 @@ export class TimeTrackingService extends BaseService {
 
         // Get task name for state
         const task = await this.core.services.tasks.getById(taskId);
-        // Always create a NEW unique time entry for this instance
+        
+        // Check if there's saved time from previous crash for this task/project/client
+        const persistenceService = this.core.services.persistence;
+        const savedTimeFromCrash = persistenceService ? persistenceService.getSavedTimeForTask(taskId, validProjectId, validClientId) : 0;
+        
+        // Close any abandoned active entries for this task/project/client combination (from previous crashes)
+        // This ensures no orphaned entries remain in database
+        // Find all task instances with same task/project/client and close their active entries
+        try {
+            const taskInstances = await this.query(
+                `SELECT id FROM TaskInstance 
+                 WHERE task_id = ? AND project_id = ? AND client_id = ?`,
+                [taskId, validProjectId, validClientId]
+            );
+            
+            if (taskInstances.length > 0) {
+                const instanceIds = taskInstances.map(ti => ti.id);
+                const placeholders = instanceIds.map(() => '?').join(',');
+                
+                await this.execute(
+                    `UPDATE TimeEntry 
+                     SET end_time = datetime('now'), 
+                         duration = CASE 
+                             WHEN duration > 0 THEN duration 
+                             ELSE CAST((julianday('now') - julianday(start_time)) * 86400 AS INTEGER)
+                         END
+                     WHERE task_instance_id IN (${placeholders}) AND end_time IS NULL`,
+                    instanceIds
+                );
+            }
+        } catch (error) {
+            // Non-critical - continue even if cleanup fails
+            Logger.debug(`[TimeTracking] Could not close abandoned entries: ${error.message}`);
+        }
+        
+        // Always create a NEW unique time entry for this instance (starts at 0)
         const startTime = TimeUtils.getCurrentTimestamp();
         const entryId = await this.createTimeEntry({
             task_instance_id: taskInstance.id,
             start_time: startTime,
         });
+        
+        // If there's saved time from crash, we'll add it when user stops tracking
+        // For now, clear it from JSON and track it separately
+        if (savedTimeFromCrash > 0) {
+            persistenceService.clearSavedTime();
+            Logger.info(`[TimeTracking] Found ${savedTimeFromCrash}s saved from crash, will be added on stop`);
+        }
+        
+        // Get old completed time (excludes active entry) - cache it in state to avoid frequent DB queries
+        const oldTime = await this.getCurrentTaskOldTime();
+        
         // Update state (use validated IDs)
+        // savedTimeFromCrash is stored separately - will be added to duration when stopping
         const trackingState = {
             isTracking: true,
             currentTaskId: taskId,
@@ -71,7 +121,9 @@ export class TimeTrackingService extends BaseService {
             currentProjectId: validProjectId,
             currentClientId: validClientId,
             startTime: startTime,
-            elapsedSeconds: 0,
+            elapsedSeconds: 0, // Always start from 0 - saved time will be added on stop
+            savedTimeFromCrash: savedTimeFromCrash, // Store saved time separately
+            oldTime: oldTime, // Cache old time to avoid frequent DB queries
             pomodoroMode: pomodoroMode,
             pomodoroDuration: pomodoroDuration,
             pomodoroRemaining: pomodoroDuration,
@@ -91,6 +143,13 @@ export class TimeTrackingService extends BaseService {
             startTime,
             timeEntryId: entryId,
         });
+        
+        // Force cache sync for critical operations
+        if (this.core.services?.cache) {
+            await this.core.services.cache.flush().catch(err => {
+                Logger.warn('TimeTracking', 'Failed to flush cache after start:', err);
+            });
+        }
     }
     /**
      * Stop tracking
@@ -103,31 +162,70 @@ export class TimeTrackingService extends BaseService {
         // Stop timer
         this.stopTimer();
         const endTime = TimeUtils.getCurrentTimestamp();
-        const duration = currentState.elapsedSeconds;
+        
+        // Calculate total duration: current elapsed + saved time from crash
+        const savedTimeFromCrash = currentState.savedTimeFromCrash || 0;
+        const duration = currentState.elapsedSeconds + savedTimeFromCrash;
         // Prefer the stored open TimeEntry ID to avoid NULL queries
+        let entryUpdated = false;
         if (currentState.currentTimeEntryId) {
-            // Fetch task_instance_id for cache update
-            const row = await this.query(`SELECT task_instance_id FROM TimeEntry WHERE id = ?`, [currentState.currentTimeEntryId]);
-            if (row && row.length > 0) {
-                const instanceId = row[0].task_instance_id || currentState.currentTaskInstanceId;
-                await this.updateTimeEntry(currentState.currentTimeEntryId, {
-                    end_time: endTime,
-                    duration: duration,
-                });
-                if (instanceId) {
+            try {
+                // Fetch task_instance_id for cache update
+                const row = await this.query(`SELECT task_instance_id FROM TimeEntry WHERE id = ?`, [currentState.currentTimeEntryId]);
+                if (row && row.length > 0 && row[0].task_instance_id) {
+                    const instanceId = row[0].task_instance_id;
+                    await this.updateTimeEntry(currentState.currentTimeEntryId, {
+                        end_time: endTime,
+                        duration: duration,
+                    });
                     await this.core.services.taskInstances.updateTotalTime(instanceId);
+                    // Update oldTime in state after total_time is recalculated
+                    const newOldTime = await this.getCurrentTaskOldTime();
+                    this.state.updateTrackingState({ oldTime: newOldTime });
+                    entryUpdated = true;
                 }
+            } catch (error) {
+                Logger.warn(`[TimeTracking] Failed to update entry ${currentState.currentTimeEntryId}: ${error.message}`);
+                // Fall through to recovery logic
             }
-        } else {
-            // Fallback to legacy lookup (scoped to current instance)
-            const timeEntry = await this.getCurrentTimeEntry();
-            if (timeEntry) {
-                await this.updateTimeEntry(timeEntry.id, {
-                    end_time: endTime,
-                    duration: duration,
-                });
-                await this.core.services.taskInstances.updateTotalTime(timeEntry.task_instance_id);
+        }
+        
+        // Fallback: if currentTimeEntryId is missing or update failed, find entry by task_instance_id
+        if (!entryUpdated && currentState.currentTaskInstanceId) {
+            try {
+                // Direct query to find active entry for this instance (safer than getCurrentTimeEntry)
+                const rows = await this.query(
+                    `SELECT id, task_instance_id FROM TimeEntry 
+                     WHERE task_instance_id = ? AND end_time IS NULL 
+                     ORDER BY id DESC LIMIT 1`,
+                    [currentState.currentTaskInstanceId]
+                );
+                
+                if (rows && rows.length > 0 && rows[0].id) {
+                    const entryId = rows[0].id;
+                    const instanceId = rows[0].task_instance_id;
+                    await this.updateTimeEntry(entryId, {
+                        end_time: endTime,
+                        duration: duration,
+                    });
+                    await this.core.services.taskInstances.updateTotalTime(instanceId);
+                    entryUpdated = true;
+                    
+                    // Update state with found entry ID for consistency
+                    this.state.updateTrackingState({
+                        currentTimeEntryId: entryId,
+                    });
+                }
+            } catch (error) {
+                Logger.error(`[TimeTracking] Failed to find/update entry for instance ${currentState.currentTaskInstanceId}: ${error.message}`);
+                // At this point, we've exhausted recovery options - entry might be lost
+                // But we still need to reset state to prevent stuck tracking
             }
+        }
+        
+        // If entry still wasn't updated, log warning but continue with state reset
+        if (!entryUpdated) {
+            Logger.warn(`[TimeTracking] Could not update TimeEntry on stop - entry may be lost. Duration: ${duration}s`);
         }
         const trackingData = {
             taskId: currentState.currentTaskId,
@@ -147,12 +245,21 @@ export class TimeTrackingService extends BaseService {
             currentClientId: null,
             startTime: null,
             elapsedSeconds: 0,
+            oldTime: 0, // Reset oldTime when tracking stops
+            savedTimeFromCrash: 0, // Reset saved time when tracking stops
             pomodoroMode: false,
             pomodoroDuration: 0,
             pomodoroRemaining: 0,
             currentTimeEntryId: null,
         });
         this.events.emit(CoreEvents.TRACKING_STOPPED, trackingData);
+        
+        // Force cache sync for critical operations
+        if (this.core.services?.cache) {
+            await this.core.services.cache.flush().catch(err => {
+                Logger.warn('TimeTracking', 'Failed to flush cache after stop:', err);
+            });
+        }
     }
     /**
      * Update current tracking task name
@@ -282,6 +389,7 @@ export class TimeTrackingService extends BaseService {
     }
     /**
      * Update a time entry
+     * If this is the currently tracked entry, recalculates elapsedSeconds and updates tracking state
      */
     async updateTimeEntry(id, input) {
         const updates = [];
@@ -303,6 +411,59 @@ export class TimeTrackingService extends BaseService {
         params.push(id);
         const sql = `UPDATE TimeEntry SET ${updates.join(', ')} WHERE id = ?`;
         await this.execute(sql, params);
+        
+        // If this is the currently tracked entry and tracking is active, recalculate elapsedSeconds
+        const currentState = this.state.getTrackingState();
+        if (currentState.isTracking && currentState.currentTimeEntryId === id) {
+            // Get updated entry data from database to check if it's still active
+            const updatedEntry = await this.query(`SELECT start_time, end_time, duration FROM TimeEntry WHERE id = ?`, [id]);
+            
+            if (updatedEntry && updatedEntry.length > 0) {
+                const entry = updatedEntry[0];
+                
+                // Update oldTime in state when entry is edited
+                // If end_time was set/changed or duration changed, oldTime may have changed
+                if (input.end_time !== undefined || input.duration !== undefined) {
+                    // Recalculate oldTime (excludes active entries) after edit
+                    const newOldTime = await this.getCurrentTaskOldTime();
+                    this.state.updateTrackingState({ oldTime: newOldTime });
+                }
+                
+                // If entry still has no end_time (still active), recalculate elapsedSeconds from start_time
+                if (!entry.end_time && entry.start_time) {
+                    const startDate = new Date(entry.start_time);
+                    const currentDate = new Date(TimeUtils.getCurrentTimestamp());
+                    const newElapsedSeconds = Math.floor((currentDate.getTime() - startDate.getTime()) / 1000);
+                    
+                    // Update tracking state with recalculated elapsed seconds
+                    this.state.updateTrackingState({
+                        startTime: entry.start_time,
+                        elapsedSeconds: Math.max(0, newElapsedSeconds),
+                    });
+                    
+                    // Emit tracking updated event to refresh UI widget
+                    this.events.emit(CoreEvents.TRACKING_UPDATED, {
+                        taskId: currentState.currentTaskId,
+                        elapsedSeconds: Math.max(0, newElapsedSeconds),
+                        pomodoroRemaining: currentState.pomodoroRemaining,
+                    });
+                } else if (entry.end_time && entry.duration) {
+                    // Entry was closed, but user might have edited it - update elapsedSeconds to match duration
+                    // This handles case where user edits a closed entry that was previously tracked
+                    this.state.updateTrackingState({
+                        elapsedSeconds: entry.duration,
+                    });
+                    
+                    // Emit tracking updated event to refresh UI widget
+                    this.events.emit(CoreEvents.TRACKING_UPDATED, {
+                        taskId: currentState.currentTaskId,
+                        elapsedSeconds: entry.duration,
+                        pomodoroRemaining: currentState.pomodoroRemaining,
+                    });
+                }
+            }
+        }
+        
         this.events.emit(CoreEvents.TIME_ENTRY_UPDATED, { id, ...input });
     }
     /**
@@ -334,6 +495,22 @@ export class TimeTrackingService extends BaseService {
         this._timerToken = this._getScheduler().subscribe(() => {
             const currentState = this.state.getTrackingState();
             if (currentState.isTracking) {
+                // DISABLED: Recovery creates GDA objects that accumulate GWeakRef
+                // currentTimeEntryId should be set correctly on start() and never lost
+                // If it is lost, the entry will be closed on next start()
+                // This prevents frequent DB queries during tracking
+                //
+                // Original recovery code (commented out):
+                // const now = Date.now();
+                // if (!currentState.currentTimeEntryId && currentState.currentTaskInstanceId && 
+                //     !this._recoveryInProgress && 
+                //     (now - this._lastRecoveryAttempt) >= this._recoveryThrottleMs) {
+                //     this._lastRecoveryAttempt = now;
+                //     void this._recoverCurrentTimeEntryId().catch(error => {
+                //         Logger.debug(`[TimeTracking] Could not recover currentTimeEntryId: ${error.message}`);
+                //     });
+                // }
+                
                 const newElapsed = currentState.elapsedSeconds + 1;
 
                 // Update elapsed time
@@ -349,7 +526,7 @@ export class TimeTrackingService extends BaseService {
                         this.state.updateTrackingState(updates);
 
                         this.stop().catch(error => {
-                            console.error('Error auto-stopping Pomodoro:', error);
+                            Logger.error(`[TimeTracking] Error auto-stopping Pomodoro: ${error.message}`);
                         });
                         return;
                     }
@@ -404,10 +581,57 @@ export class TimeTrackingService extends BaseService {
     }
 
     _getScheduler() {
-        if (!this._sharedScheduler) {
-            this._sharedScheduler = new TimerScheduler(1);
+        // Use shared scheduler from CoreAPI
+        return this.core.services.timerScheduler;
+    }
+
+    /**
+     * Attempt to recover currentTimeEntryId if it's been lost from state
+     * Called periodically by timer to prevent loss after long-running sessions
+     * THROTTLED to prevent GWeakRef accumulation
+     */
+    async _recoverCurrentTimeEntryId() {
+        // Prevent parallel recovery attempts
+        if (this._recoveryInProgress) {
+            return;
         }
-        return this._sharedScheduler;
+        
+        this._recoveryInProgress = true;
+        
+        try {
+            const currentState = this.state.getTrackingState();
+            
+            // Double-check conditions after acquiring lock
+            if (!currentState.isTracking || !currentState.currentTaskInstanceId) {
+                return; // Not tracking or missing instance ID
+            }
+            
+            if (currentState.currentTimeEntryId) {
+                return; // Already has entry ID (another recovery might have set it)
+            }
+            
+            // Find active entry for current instance
+            const rows = await this.query(
+                `SELECT id FROM TimeEntry 
+                 WHERE task_instance_id = ? AND end_time IS NULL 
+                 ORDER BY id DESC LIMIT 1`,
+                [currentState.currentTaskInstanceId]
+            );
+            
+            if (rows && rows.length > 0 && rows[0].id) {
+                // Restore currentTimeEntryId to state
+                this.state.updateTrackingState({
+                    currentTimeEntryId: rows[0].id,
+                });
+                Logger.debug(`[TimeTracking] Recovered currentTimeEntryId: ${rows[0].id}`);
+            }
+        } catch (error) {
+            // Don't throw - this is a recovery attempt that can fail silently
+            // Error is logged at debug level in caller
+            Logger.debug(`[TimeTracking] Recovery attempt failed: ${error.message}`);
+        } finally {
+            this._recoveryInProgress = false;
+        }
     }
     /**
      * Get all time entries

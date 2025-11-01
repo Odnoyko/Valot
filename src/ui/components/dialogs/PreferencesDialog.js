@@ -32,6 +32,34 @@ export const PreferencesDialog = GObject.registerClass({
             this.application = parent.application;
         }
 
+        // Track resources for cleanup
+        this._timerIds = [];
+        this._currencyDialog = null;
+        
+        // Cache currency rows to avoid unnecessary redraws
+        this._currencyRowsMap = new Map(); // currency code -> row widget
+        this._hiddenRowsMap = new Map();   // currency code -> row widget
+        this._lastCurrencyState = null;    // Cache last state to detect changes
+        
+        // Cache extension rows to avoid unnecessary redraws
+        this._extensionRowsMap = new Map(); // extension id -> row widget
+        this._lastExtensionsState = null;   // Cache last extensions state
+        
+        // Set hide_on_close to prevent destruction (reuse window)
+        this.hide_on_close = true;
+        
+        // Connect to close-request to hide instead of destroy
+        this.connect('close-request', () => {
+            this._cleanupTimers(); // Only cleanup timers, keep widgets
+            this.hide();
+            return true; // Prevent default destroy behavior
+        });
+        
+        // Only cleanup widgets on actual destroy (if window is ever destroyed)
+        this.connect('destroy', () => {
+            this._cleanup();
+        });
+
         this._setupPages();
     }
 
@@ -562,11 +590,12 @@ export const PreferencesDialog = GObject.registerClass({
             copyButton.icon_name = 'emblem-ok-symbolic';
             copyButton.add_css_class('success');
             
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
+            const timerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
                 copyButton.icon_name = 'edit-copy-symbolic';
                 copyButton.remove_css_class('success');
                 return false;
             });
+            this._timerIds.push(timerId);
         });
 
         commandBox.append(commandLabel);
@@ -999,74 +1028,140 @@ export const PreferencesDialog = GObject.registerClass({
     }
     
     _refreshCurrencyList() {
-        // Completely rebuild the currency group to avoid widget management issues
-        const parent = this.currencyGroup.get_parent();
-        if (parent) {
-            parent.remove(this.currencyGroup);
-        }
-        
-        // Recreate the currency group
-        this.currencyGroup = new Adw.PreferencesGroup({
-            title: _('Currency Settings'),
-            description: _('Manage available currencies for client billing'),
+        // Check if currency state actually changed (avoid unnecessary icon redraws)
+        const currentState = JSON.stringify({
+            visible: [...this.currencySettings.visible].sort(),
+            hidden: [...this.currencySettings.hidden].sort(),
+            custom: this.currencySettings.custom.map(c => ({ code: c.code, hidden: c.hidden }))
         });
         
-        // Add header suffix with Add Currency button
-        const addButton = new Gtk.Button({
-            icon_name: 'list-add-symbolic',
-            css_classes: ['flat'],
-            valign: Gtk.Align.CENTER,
-        });
-        addButton.connect('clicked', () => this._showAddCurrencyDialog());
-        this.currencyGroup.set_header_suffix(addButton);
-        
-        // Re-add to parent
-        if (parent) {
-            parent.insert_child_after(this.currencyGroup, null);
+        // If state hasn't changed, don't redraw icons - just return
+        if (this._lastCurrencyState === currentState) {
+            return;
         }
         
-        // Clear hidden currencies - recreate the expander
-        if (this.hiddenExpanderRow && this.hiddenExpanderRow.get_parent()) {
-            this.hiddenGroup.remove(this.hiddenExpanderRow);
+        this._lastCurrencyState = currentState;
+        
+        // Only recreate widgets if they don't exist (first time or after destroy)
+        if (!this.currencyGroup || !this.currencyGroup.get_parent()) {
+            // First time setup - create groups
+            const clientsPage = this.get_pages().find(p => p.get_title() === _('Clients'));
+            if (clientsPage) {
+                // Setup currency groups (reuse existing or create new)
+                if (!this.currencyGroup) {
+                    this.currencyGroup = new Adw.PreferencesGroup({
+                        title: _('Currency Settings'),
+                        description: _('Manage available currencies for client billing'),
+                    });
+                    
+                    const addButton = new Gtk.Button({
+                        icon_name: 'list-add-symbolic',
+                        css_classes: ['flat'],
+                        valign: Gtk.Align.CENTER,
+                    });
+                    addButton.connect('clicked', () => this._showAddCurrencyDialog());
+                    this.currencyGroup.set_header_suffix(addButton);
+                    
+                    clientsPage.add(this.currencyGroup);
+                }
+                
+                if (!this.hiddenGroup) {
+                    this.hiddenGroup = new Adw.PreferencesGroup({
+                        title: _('Hidden Currencies'),
+                        description: _('Click to unhide currencies'),
+                    });
+                    
+                    this.hiddenExpanderRow = new Adw.ExpanderRow({
+                        title: _('Hidden'),
+                        subtitle: _('0 currencies hidden'),
+                    });
+                    this.hiddenGroup.add(this.hiddenExpanderRow);
+                    clientsPage.add(this.hiddenGroup);
+                }
+            }
         }
-        this.hiddenExpanderRow = new Adw.ExpanderRow({
-            title: _('Hidden'),
-            subtitle: _('0 currencies hidden'),
-        });
-        this.hiddenGroup.add(this.hiddenExpanderRow);
         
         const allCurrencies = getAllCurrencies();
         
-        // Add visible currencies
+        // Collect current currency codes
+        const visibleCodes = new Set([
+            ...this.currencySettings.visible,
+            ...this.currencySettings.custom.filter(c => !c.hidden).map(c => c.code)
+        ]);
+        const hiddenCodes = new Set([
+            ...this.currencySettings.hidden,
+            ...this.currencySettings.custom.filter(c => c.hidden).map(c => c.code)
+        ]);
+        
+        // Remove rows for currencies that are no longer visible/hidden
+        for (const [code, row] of this._currencyRowsMap.entries()) {
+            if (!visibleCodes.has(code)) {
+                try {
+                    if (row.get_parent()) {
+                        row.get_parent().remove(row);
+                    }
+                } catch (e) {
+                    // Already removed
+                }
+                this._currencyRowsMap.delete(code);
+            }
+        }
+        
+        for (const [code, row] of this._hiddenRowsMap.entries()) {
+            if (!hiddenCodes.has(code)) {
+                try {
+                    if (row.get_parent()) {
+                        row.get_parent().remove(row);
+                    }
+                } catch (e) {
+                    // Already removed
+                }
+                this._hiddenRowsMap.delete(code);
+            }
+        }
+        
+        // Add new visible currencies (only if not already in map - avoid recreating icons)
         [...this.currencySettings.visible, ...this.currencySettings.custom.filter(c => !c.hidden)].forEach(code => {
-            let currency;
-            if (typeof code === 'string') {
-                currency = allCurrencies.find(c => c.code === code) || { code, symbol: getCurrencySymbol(code), name: code };
-            } else {
-                currency = code; // Custom currency object
+            const currencyCode = typeof code === 'string' ? code : code.code;
+            if (!this._currencyRowsMap.has(currencyCode)) {
+                let currency;
+                if (typeof code === 'string') {
+                    currency = allCurrencies.find(c => c.code === code) || { code, symbol: getCurrencySymbol(code), name: code };
+                } else {
+                    currency = code;
+                }
+                const row = this._createCurrencyRow(currency, false);
+                this._currencyRowsMap.set(currencyCode, row);
             }
-            
-            this._createCurrencyRow(currency, false);
         });
         
-        // Add hidden currencies to expander
+        // Add new hidden currencies (only if not already in map - avoid recreating icons)
         [...this.currencySettings.hidden, ...this.currencySettings.custom.filter(c => c.hidden)].forEach(code => {
-            let currency;
-            if (typeof code === 'string') {
-                currency = allCurrencies.find(c => c.code === code) || { code, symbol: getCurrencySymbol(code), name: code };
-            } else {
-                currency = code; // Custom currency object
+            const currencyCode = typeof code === 'string' ? code : (code.code || code);
+            if (!this._hiddenRowsMap.has(currencyCode)) {
+                let currency;
+                if (typeof code === 'string') {
+                    currency = allCurrencies.find(c => c.code === code) || { code, symbol: getCurrencySymbol(code), name: code };
+                } else {
+                    currency = code;
+                }
+                const row = this._createHiddenCurrencyRow(currency);
+                this._hiddenRowsMap.set(currencyCode, row);
             }
-            
-            this._createHiddenCurrencyRow(currency);
         });
         
-        // Add button is now in the header, no need to add it here
+        // Update hidden count subtitle (only if changed)
+        const hiddenCount = hiddenCodes.size;
+        const expectedSubtitle = _('%d currencies hidden').format(hiddenCount);
+        if (this.hiddenExpanderRow.get_subtitle() !== expectedSubtitle) {
+            this.hiddenExpanderRow.set_subtitle(expectedSubtitle);
+        }
         
-        // Update hidden count
-        const hiddenCount = this.currencySettings.hidden.length + this.currencySettings.custom.filter(c => c.hidden).length;
-        this.hiddenExpanderRow.set_subtitle(_('%d currencies hidden').format(hiddenCount));
-        this.hiddenGroup.set_visible(hiddenCount > 0);
+        // Update visibility (only if changed)
+        const shouldBeVisible = hiddenCount > 0;
+        if (shouldBeVisible !== this.hiddenGroup.get_visible()) {
+            this.hiddenGroup.set_visible(shouldBeVisible);
+        }
     }
     
     _createCurrencyRow(currency, isCustom = false) {
@@ -1111,6 +1206,9 @@ export const PreferencesDialog = GObject.registerClass({
         
         // Add row to group 
         this.currencyGroup.add(row);
+        
+        // Return row for caching
+        return row;
     }
     
     _createHiddenCurrencyRow(currency) {
@@ -1154,10 +1252,24 @@ export const PreferencesDialog = GObject.registerClass({
         }
         
         this.hiddenExpanderRow.add_row(row);
+        
+        // Return row for caching
+        return row;
     }
     
     _showAddCurrencyDialog() {
-        CurrencyDialog.show({
+        // Close previous currency dialog if exists
+        if (this._currencyDialog) {
+            try {
+                if (this._currencyDialog.close) {
+                    this._currencyDialog.close();
+                }
+            } catch (e) {
+                // Already closed
+            }
+        }
+        
+        this._currencyDialog = CurrencyDialog.show({
             mode: 'create',
             transient_for: this,
             onCurrencySave: (currencyData) => {
@@ -1180,7 +1292,18 @@ export const PreferencesDialog = GObject.registerClass({
     }
     
     _editCurrency(currency) {
-        CurrencyDialog.show({
+        // Close previous currency dialog if exists
+        if (this._currencyDialog) {
+            try {
+                if (this._currencyDialog.close) {
+                    this._currencyDialog.close();
+                }
+            } catch (e) {
+                // Already closed
+            }
+        }
+        
+        this._currencyDialog = CurrencyDialog.show({
             mode: 'edit',
             currency: currency,
             transient_for: this,
@@ -1488,9 +1611,30 @@ export const PreferencesDialog = GObject.registerClass({
     }
 
     static show(parent = null) {
+        // Reuse existing dialog if available (prevent memory leaks)
+        // Check if parent window has a cached preferences dialog
+        if (parent && parent._preferencesDialog) {
+            const existingDialog = parent._preferencesDialog;
+            // Check if dialog still exists and is not destroyed
+            if (existingDialog && !existingDialog.is_destroyed?.()) {
+                existingDialog.present();
+                return existingDialog;
+            }
+        }
+        
+        // Create new dialog only if it doesn't exist
         const dialog = new PreferencesDialog({
             transient_for: parent,
         });
+        
+        // Set hide_on_close to prevent destruction
+        dialog.hide_on_close = true;
+        
+        // Cache dialog reference in parent window
+        if (parent) {
+            parent._preferencesDialog = dialog;
+        }
+        
         dialog.present();
         return dialog;
     }
@@ -1735,7 +1879,7 @@ export const PreferencesDialog = GObject.registerClass({
             }
 
             // Close dialog after 1 second
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+            const timerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
                 try {
                 migrationDialog.close();
                 } catch (e) {
@@ -1743,6 +1887,7 @@ export const PreferencesDialog = GObject.registerClass({
                 }
                 return GLib.SOURCE_REMOVE;
             });
+            this._timerIds.push(timerId);
 
         } catch (error) {
             console.error('Error merging database:', error);
@@ -1946,10 +2091,28 @@ export const PreferencesDialog = GObject.registerClass({
     }
 
     /**
-     * Refresh extensions list in UI
+     * Refresh extensions list in UI (only if extensions actually changed)
      */
     _refreshExtensionsList() {
-        // Recreate the extensions page
+        const app = this.get_transient_for()?.application;
+        if (!app || !app.extensionManager) return;
+        
+        // Check if extensions state actually changed
+        const extensions = app.extensionManager.getAllExtensions();
+        const currentState = JSON.stringify(extensions.map(e => ({
+            id: e.id,
+            active: e.active,
+            source: e.source
+        })).sort((a, b) => a.id.localeCompare(b.id)));
+        
+        // If state hasn't changed, don't recreate icons - just return
+        if (this._lastExtensionsState === currentState) {
+            return;
+        }
+        
+        this._lastExtensionsState = currentState;
+        
+        // Only recreate if state actually changed
         if (this.extensionsPage) {
             this.remove(this.extensionsPage);
         }
@@ -2027,6 +2190,63 @@ export const PreferencesDialog = GObject.registerClass({
             }
         } catch (error) {
             console.error('Error loading available extensions:', error);
+        }
+    }
+    
+    /**
+     * Cleanup timers when dialog is hidden (but keep widgets for reuse)
+     */
+    _cleanupTimers() {
+        // Remove all GLib timers
+        this._timerIds.forEach(timerId => {
+            try {
+                GLib.Source.remove(timerId);
+            } catch (e) {
+                // Timer may already be removed
+            }
+        });
+        this._timerIds = [];
+        
+        // Close currency dialog if open
+        if (this._currencyDialog) {
+            try {
+                if (this._currencyDialog.close) {
+                    this._currencyDialog.close();
+                }
+            } catch (e) {
+                // Already closed
+            }
+            this._currencyDialog = null;
+        }
+    }
+    
+    /**
+     * Full cleanup when dialog is actually destroyed
+     */
+    _cleanup() {
+        // Cleanup timers first
+        this._cleanupTimers();
+        
+        // Clear currency row caches
+        this._currencyRowsMap.clear();
+        this._hiddenRowsMap.clear();
+        this._lastCurrencyState = null;
+        
+        // Clear extension row caches
+        this._extensionRowsMap.clear();
+        this._lastExtensionsState = null;
+        
+        // Clear references to prevent memory leaks
+        this.currencyGroup = null;
+        this.hiddenGroup = null;
+        this.hiddenExpanderRow = null;
+        this.extensionsPage = null;
+        this.application = null;
+        
+        // Clear parent window's cache
+        const parent = this.get_transient_for();
+        if (parent && parent._preferencesDialog === this) {
+            parent._preferencesDialog = null;
         }
     }
 });

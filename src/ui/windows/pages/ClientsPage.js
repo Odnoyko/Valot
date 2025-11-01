@@ -23,6 +23,15 @@ export class ClientsPage {
         this.currentClientsPage = 0;
         this.clientsPerPage = 10;
 
+        // Store event handler references for cleanup
+        this._eventHandlers = {};
+        
+        // Store GTK signal handler IDs for cleanup (GLib timers)
+        this._signalHandlerIds = [];
+        
+        // Store widget handler connections for cleanup (widget -> handlerId)
+        this._widgetConnections = new Map();
+
         // Subscribe to Core events for automatic updates
         this._subscribeToCore();
     }
@@ -33,22 +42,52 @@ export class ClientsPage {
     _subscribeToCore() {
         if (!this.coreBridge) return;
 
-        // Reload when clients are created/updated/deleted
-        this.coreBridge.onUIEvent('client-created', () => {
+        // Store handlers for cleanup
+        this._eventHandlers['client-created'] = () => {
             this.loadClients();
-        });
+        };
+        this._eventHandlers['client-updated'] = () => {
+            this.loadClients();
+        };
+        this._eventHandlers['client-deleted'] = () => {
+            this.loadClients();
+        };
+        this._eventHandlers['clients-deleted'] = () => {
+            this.loadClients();
+        };
+        this._eventHandlers['tracking-started'] = () => {
+            setTimeout(() => this.loadClients(), 300);
+        };
+        this._eventHandlers['tracking-stopped'] = () => {
+            this.loadClients();
+        };
+        this._eventHandlers['tracking-updated'] = () => {
+            // tracking-updated fires every second during tracking
+            // Time label updates are handled by subscribeTick timer (_startTrackingUITimer)
+            // to avoid unnecessary UI redraws every second
+        };
 
-        this.coreBridge.onUIEvent('client-updated', () => {
-            this.loadClients();
+        // Subscribe with stored handlers
+        Object.keys(this._eventHandlers).forEach(event => {
+            this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
         });
+    }
 
-        this.coreBridge.onUIEvent('client-deleted', () => {
-            this.loadClients();
-        });
-
-        this.coreBridge.onUIEvent('clients-deleted', () => {
-            this.loadClients();
-        });
+    /**
+     * Helper method to track GTK signal handler IDs for cleanup
+     * @param {GObject.Object} widget - Widget to connect to
+     * @param {string} signal - Signal name
+     * @param {Function} callback - Callback function
+     * @returns {number} Handler ID
+     */
+    _trackConnection(widget, signal, callback) {
+        const handlerId = widget.connect(signal, callback);
+        // Store widget reference and handler ID for cleanup
+        if (!this._widgetConnections.has(widget)) {
+            this._widgetConnections.set(widget, []);
+        }
+        this._widgetConnections.get(widget).push(handlerId);
+        return handlerId;
     }
 
     /**
@@ -105,7 +144,7 @@ export class ClientsPage {
             updateSidebarButtonVisibility();
 
             // Listen for sidebar visibility changes
-            this.parentWindow.splitView.connect('notify::show-sidebar', updateSidebarButtonVisibility);
+            this._trackConnection(this.parentWindow.splitView, 'notify::show-sidebar', updateSidebarButtonVisibility);
         }
 
         // Tracking widget (title area)
@@ -411,10 +450,18 @@ export class ClientsPage {
             hexpand: true,
         });
 
-        this.clientSearch.connect('search-changed', () => {
-            const query = this.clientSearch.get_text();
-            this._filterClients(query);
-        });
+        // Debounce search to avoid excessive filtering
+        (async () => {
+            const { Debouncer } = await import('resource:///com/odnoyko/valot/core/utils/Debouncer.js');
+            const debouncedFilter = Debouncer.debounce((query) => {
+                this._filterClients(query);
+            }, 300); // 300ms debounce
+            
+            this.clientSearch.connect('search-changed', () => {
+                const query = this.clientSearch.get_text();
+                debouncedFilter(query);
+            });
+        })();
 
         box.append(this.clientSearch);
 
@@ -1414,6 +1461,67 @@ export class ClientsPage {
     _focusSearch() {
         if (this.clientSearch) {
             this.clientSearch.grab_focus();
+        }
+    }
+
+    /**
+     * Cleanup: unsubscribe from events and clear references
+     */
+    destroy() {
+        // Unsubscribe from CoreBridge events
+        if (this.coreBridge && this._eventHandlers) {
+            Object.keys(this._eventHandlers).forEach(event => {
+                this.coreBridge.offUIEvent(event, this._eventHandlers[event]);
+            });
+            this._eventHandlers = {};
+        }
+
+        // Stop tracking timer
+        if (this.trackingTimerToken) {
+            this.coreBridge?.unsubscribeTick(this.trackingTimerToken);
+            this.trackingTimerToken = 0;
+        }
+
+        // Disconnect GTK signal handlers
+        // Disconnect tracked widget connections
+        if (this._widgetConnections && this._widgetConnections.size > 0) {
+            this._widgetConnections.forEach((handlerIds, widget) => {
+                handlerIds.forEach(id => {
+                    try {
+                        if (widget && !widget.is_destroyed?.()) {
+                            widget.disconnect(id);
+                        }
+                    } catch (e) {
+                        // Widget may already be destroyed
+                    }
+                });
+            });
+            this._widgetConnections.clear();
+        }
+
+        // Remove GLib timers
+        if (this._signalHandlerIds.length > 0) {
+            this._signalHandlerIds.forEach(id => {
+                try {
+                    GLib.Source.remove(id);
+                } catch (e) {
+                    // Handler may already be removed
+                }
+            });
+            this._signalHandlerIds = [];
+        }
+
+        // Clear Maps/Sets to release references
+        this.selectedClients.clear();
+
+        // Clear arrays
+        this.clients = [];
+        this.filteredClients = [];
+
+        // Cleanup tracking widget if exists
+        if (this.trackingWidget && typeof this.trackingWidget.cleanup === 'function') {
+            this.trackingWidget.cleanup();
+            this.trackingWidget = null;
         }
     }
 }

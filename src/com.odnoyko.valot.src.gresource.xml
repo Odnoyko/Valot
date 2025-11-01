@@ -107,6 +107,10 @@
     <file>core/services/TaskService.js</file>
     <file>core/services/TimerScheduler.js</file>
     <file>core/services/TimeTrackingService.js</file>
+    <file>core/services/TrackingPersistenceService.js</file>
+    <file>core/services/TrackingFileCache.js</file>
+    <file>core/services/CacheService.js</file>
+    <file>core/services/MemoryCleanupService.js</file>
 
     <!-- Core Models -->
     <file>core/models/Client.js</file>
@@ -132,6 +136,7 @@
     <file>core/utils/DateFilters.js</file>
     <file>core/utils/ValidationUtils.js</file>
     <file>core/utils/Logger.js</file>
+    <file>core/utils/Debouncer.js</file>
 
     <!-- Extensions -->
     <file>extensions/ExtensionManager.js</file>

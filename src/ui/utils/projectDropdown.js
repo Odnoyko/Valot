@@ -14,6 +14,8 @@ export class ProjectDropdown {
         this.onProjectSelected = onProjectSelected;
         this.isUpdatingSelection = false;
 
+        // Store event handlers for cleanup
+        this._eventHandlers = {};
 
         this.dropdown = this._createSearchableDropdown();
 
@@ -38,9 +40,57 @@ export class ProjectDropdown {
     _subscribeToCore() {
         if (!this.coreBridge) return;
 
-        this.coreBridge.onUIEvent('project-created', () => this._loadProjects());
-        this.coreBridge.onUIEvent('project-updated', () => this._loadProjects());
-        this.coreBridge.onUIEvent('project-deleted', () => this._loadProjects());
+        // Store handlers for cleanup
+        this._eventHandlers['project-created'] = () => this._loadProjects();
+        this._eventHandlers['project-updated'] = () => this._loadProjects();
+        this._eventHandlers['project-deleted'] = () => this._loadProjects();
+
+        // Subscribe with stored handlers
+        Object.keys(this._eventHandlers).forEach(event => {
+            this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
+        });
+    }
+
+    /**
+     * Cleanup: unsubscribe from events
+     */
+    destroy() {
+        // Close and destroy popover before destroying button
+        if (this.popover) {
+            try {
+                if (!this.popover.is_destroyed?.()) {
+                    this.popover.popdown();
+                    this.popover.unparent();
+                    this.popover.destroy();
+                }
+            } catch (e) {
+                // Popover may already be destroyed
+            }
+            this.popover = null;
+        }
+        
+        // Destroy button
+        if (this.dropdownButton) {
+            try {
+                if (!this.dropdownButton.is_destroyed?.()) {
+                    this.dropdownButton.destroy();
+                }
+            } catch (e) {
+                // Button may already be destroyed
+            }
+            this.dropdownButton = null;
+        }
+        
+        // Unsubscribe from events
+        if (this.coreBridge && this._eventHandlers) {
+            Object.keys(this._eventHandlers).forEach(event => {
+                this.coreBridge.offUIEvent(event, this._eventHandlers[event]);
+            });
+            this._eventHandlers = {};
+        }
+        
+        // Clear data
+        this.projects = [];
     }
 
     _createSearchableDropdown() {

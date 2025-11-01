@@ -53,47 +53,75 @@ export class ReportService extends BaseService {
     }
     /**
      * Fetch related projects, clients, tasks, and instances
+     * Optimized to use batch queries instead of N+1 queries
      */
     async fetchRelatedData(entries) {
-        // Get unique task instance IDs from entries
-        const instanceIds = new Set(entries.map(e => e.task_instance_id));
+        if (!entries || entries.length === 0) {
+            return { projects: new Map(), clients: new Map(), tasks: new Map(), instances: new Map() };
+        }
+
+        // Get unique IDs from entries
+        const instanceIds = [...new Set(entries.map(e => e.task_instance_id).filter(id => id))];
+        if (instanceIds.length === 0) {
+            return { projects: new Map(), clients: new Map(), tasks: new Map(), instances: new Map() };
+        }
+
         const projects = new Map();
         const clients = new Map();
         const tasks = new Map();
         const instances = new Map();
-        // Fetch instances first
-        for (const id of instanceIds) {
-            const instance = await this.core.services.taskInstances.getById(id);
-            if (instance) {
-                instances.set(String(id), instance);
-                // Fetch related task
-                const task = await this.core.services.tasks.getById(instance.task_id);
-                if (task) {
-                    tasks.set(String(instance.task_id), task);
-                }
-                // Fetch related project
-                if (instance.project_id) {
-                    const project = await this.core.services.projects.getById(instance.project_id);
-                    if (project) {
-                        projects.set(String(instance.project_id), project);
-                        // Fetch client through project
-                        if (project.client_id) {
-                            const client = await this.core.services.clients.getById(project.client_id);
-                            if (client) {
-                                clients.set(String(project.client_id), client);
-                            }
-                        }
-                    }
-                }
-                // Fetch direct client (if instance has client_id)
-                if (instance.client_id) {
-                    const client = await this.core.services.clients.getById(instance.client_id);
-                    if (client) {
-                        clients.set(String(instance.client_id), client);
-                    }
-                }
-            }
+
+        // Batch fetch all instances at once
+        const instanceIdsStr = instanceIds.join(',');
+        const instancesSql = `SELECT * FROM TaskInstance WHERE id IN (${instanceIdsStr})`;
+        const instancesResults = await this.query(instancesSql);
+        instancesResults.forEach(row => {
+            instances.set(String(row.id), row);
+        });
+
+        // Collect unique IDs for batch queries
+        const taskIds = new Set();
+        const projectIds = new Set();
+        const clientIds = new Set();
+
+        instancesResults.forEach(instance => {
+            if (instance.task_id) taskIds.add(instance.task_id);
+            if (instance.project_id) projectIds.add(instance.project_id);
+            if (instance.client_id) clientIds.add(instance.client_id);
+        });
+
+        // Batch fetch all tasks
+        if (taskIds.size > 0) {
+            const taskIdsStr = [...taskIds].join(',');
+            const tasksSql = `SELECT * FROM Task WHERE id IN (${taskIdsStr})`;
+            const tasksResults = await this.query(tasksSql);
+            tasksResults.forEach(row => {
+                tasks.set(String(row.id), row);
+            });
         }
+
+        // Batch fetch all projects
+        if (projectIds.size > 0) {
+            const projectIdsStr = [...projectIds].join(',');
+            const projectsSql = `SELECT * FROM Project WHERE id IN (${projectIdsStr})`;
+            const projectsResults = await this.query(projectsSql);
+            projectsResults.forEach(row => {
+                projects.set(String(row.id), row);
+                // Collect client IDs from projects
+                if (row.client_id) clientIds.add(row.client_id);
+            });
+        }
+
+        // Batch fetch all clients
+        if (clientIds.size > 0) {
+            const clientIdsStr = [...clientIds].join(',');
+            const clientsSql = `SELECT * FROM Client WHERE id IN (${clientIdsStr})`;
+            const clientsResults = await this.query(clientsSql);
+            clientsResults.forEach(row => {
+                clients.set(String(row.id), row);
+            });
+        }
+
         return { projects, clients, tasks, instances };
     }
     /**

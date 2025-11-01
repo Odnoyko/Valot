@@ -6,11 +6,21 @@ export class TimerScheduler {
         this._sourceId = 0;
         this._nextToken = 1;
         this._subscribers = new Map(); // token -> callback
+        this._tickCount = 0; // Global tick counter
+    }
+    
+    /**
+     * Get current tick count
+     */
+    getTickCount() {
+        return this._tickCount;
     }
 
     start() {
         if (this._sourceId) return;
         this._sourceId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, this.intervalSeconds, () => {
+            this._tickCount++;
+            
             // Snapshot to avoid mutation during iteration
             const callbacks = Array.from(this._subscribers.values());
             for (const cb of callbacks) {

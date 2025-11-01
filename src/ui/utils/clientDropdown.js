@@ -13,6 +13,8 @@ export class ClientDropdown {
         this.onClientSelected = onClientSelected;
         this.isUpdatingSelection = false;
 
+        // Store event handlers for cleanup
+        this._eventHandlers = {};
 
         this.dropdown = this._createSearchableDropdown();
 
@@ -37,9 +39,57 @@ export class ClientDropdown {
     _subscribeToCore() {
         if (!this.coreBridge) return;
 
-        this.coreBridge.onUIEvent('client-created', () => this._loadClients());
-        this.coreBridge.onUIEvent('client-updated', () => this._loadClients());
-        this.coreBridge.onUIEvent('client-deleted', () => this._loadClients());
+        // Store handlers for cleanup
+        this._eventHandlers['client-created'] = () => this._loadClients();
+        this._eventHandlers['client-updated'] = () => this._loadClients();
+        this._eventHandlers['client-deleted'] = () => this._loadClients();
+
+        // Subscribe with stored handlers
+        Object.keys(this._eventHandlers).forEach(event => {
+            this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
+        });
+    }
+
+    /**
+     * Cleanup: unsubscribe from events
+     */
+    destroy() {
+        // Close and destroy popover before destroying button
+        if (this.popover) {
+            try {
+                if (!this.popover.is_destroyed?.()) {
+                    this.popover.popdown();
+                    this.popover.unparent();
+                    this.popover.destroy();
+                }
+            } catch (e) {
+                // Popover may already be destroyed
+            }
+            this.popover = null;
+        }
+        
+        // Destroy button
+        if (this.dropdownButton) {
+            try {
+                if (!this.dropdownButton.is_destroyed?.()) {
+                    this.dropdownButton.destroy();
+                }
+            } catch (e) {
+                // Button may already be destroyed
+            }
+            this.dropdownButton = null;
+        }
+        
+        // Unsubscribe from events
+        if (this.coreBridge && this._eventHandlers) {
+            Object.keys(this._eventHandlers).forEach(event => {
+                this.coreBridge.offUIEvent(event, this._eventHandlers[event]);
+            });
+            this._eventHandlers = {};
+        }
+        
+        // Clear data
+        this.clients = [];
     }
 
     _createSearchableDropdown() {
@@ -285,10 +335,16 @@ export class ClientDropdown {
      * Set selected client by ID
      */
     setSelectedClient(clientId) {
+        // Only update if value actually changed to avoid unnecessary UI redraws
+        if (clientId === this.currentClientId) return;
+
         this.isUpdatingSelection = true;
         this.currentClientId = clientId;
         this._updateTooltip(this.dropdownButton);
-        this._populateClientList();
+        // Only repopulate list if dropdown is visible (open) - otherwise just update button
+        if (this.popover && this.popover.get_visible()) {
+            this._populateClientList();
+        }
         this.isUpdatingSelection = false;
     }
 
