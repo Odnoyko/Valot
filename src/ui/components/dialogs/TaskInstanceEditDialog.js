@@ -11,23 +11,104 @@ import { ProjectDropdown } from 'resource:///com/odnoyko/valot/ui/utils/projectD
 import { ClientDropdown } from 'resource:///com/odnoyko/valot/ui/utils/clientDropdown.js';
 import { TimeUtils } from 'resource:///com/odnoyko/valot/core/utils/TimeUtils.js';
 
+// Single reusable dialog instance
+let REUSABLE_DIALOG = null;
+
 export class TaskInstanceEditDialog {
     constructor(taskInstance, parent, coreBridge) {
-        this.taskInstance = taskInstance;
-        this.parent = parent; // TasksPage or other page
+        // Store references
+        this.parent = parent;
         this.coreBridge = coreBridge;
 
-        // Selected values
+        // Signal handler IDs for cleanup
+        this._handlerIds = [];
+
+        // Track if dialog is initialized
+        this._isInitialized = false;
+
+        // Initialize default dates (will be updated in setTaskInstance)
+        this.startDate = new Date();
+        this.endDate = new Date();
+        this.selectedProjectId = 1;
+        this.selectedClientId = 1;
+
+        // Create UI template (one time, reused)
+        this._createDialog();
+
+        // Fill with data if provided
+        if (taskInstance) {
+            this._initPromise = this.setTaskInstance(taskInstance);
+        } else {
+            this._initPromise = Promise.resolve();
+        }
+    }
+
+    /**
+     * Static factory: reuse single dialog instance, just refill with new data
+     * Keeps only 1 dialog in RAM, always reusable
+     */
+    static async show(taskInstance, parent, coreBridge) {
+        // Reuse existing dialog if available
+        if (REUSABLE_DIALOG && REUSABLE_DIALOG._isInitialized) {
+            // Just refill with new data and show
+            await REUSABLE_DIALOG._updateData(taskInstance, parent, coreBridge);
+            REUSABLE_DIALOG._isInUse = true;
+            await REUSABLE_DIALOG.present(parent.parentWindow || parent);
+            return REUSABLE_DIALOG;
+        }
+
+        // Create new dialog (only once, then always reuse)
+        REUSABLE_DIALOG = new TaskInstanceEditDialog(taskInstance, parent, coreBridge);
+        await REUSABLE_DIALOG._initPromise;
+        REUSABLE_DIALOG._isInUse = true;
+        await REUSABLE_DIALOG.present(parent.parentWindow || parent);
+        return REUSABLE_DIALOG;
+    }
+
+    /**
+     * Static method to close all open instances
+     */
+    static closeAll() {
+        if (!REUSABLE_DIALOG || !REUSABLE_DIALOG.dialog) return;
+        
+        // Check if dialog is destroyed
+        if (REUSABLE_DIALOG.dialog.is_destroyed?.()) {
+            REUSABLE_DIALOG._isInUse = false;
+            return;
+        }
+        
+        // Only close if dialog is actually in use (was presented)
+        // Adw.AlertDialog doesn't have is_presented property, so we use _isInUse
+        if (REUSABLE_DIALOG._isInUse) {
+            try {
+                // Adw.AlertDialog will throw if trying to close when not presented
+                // Wrapping in try-catch to prevent critical errors
+                REUSABLE_DIALOG.dialog.close();
+            } catch (e) {
+                // Dialog may already be closed or not presented - ignore error
+                // This is expected behavior when dialog was already closed by user
+            }
+            REUSABLE_DIALOG._isInUse = false;
+        }
+    }
+
+    /**
+     * Set task instance data (Core logic - fills UI with data)
+     * This is the data filling method, separate from UI creation
+     */
+    async setTaskInstance(taskInstance) {
+        // Cleanup old handlers before updating
+        this._cleanupHandlers();
+
+        // Store task instance
+        this.taskInstance = taskInstance;
+
+        // Update selected values
         this.selectedProjectId = taskInstance.project_id || 1;
         this.selectedClientId = taskInstance.client_id || 1;
 
-        // Load time entries and create dialog
-        this._initPromise = this._init();
-    }
-
-    async _init() {
         // Get time entries for this instance
-        const timeEntries = await this.coreBridge.getTimeEntriesByInstance(this.taskInstance.id);
+        const timeEntries = await this.coreBridge.getTimeEntriesByInstance(taskInstance.id);
 
         // Get latest time entry (last one)
         this.latestEntry = timeEntries.length > 0 ? timeEntries[0] : null;
@@ -61,69 +142,232 @@ export class TaskInstanceEditDialog {
             this.latestEntry?.end_time || this.endDate
         );
 
-        this._createDialog();
+        // Fill UI with data
+        this._fillUI();
+
+        this._isInitialized = true;
     }
 
+    /**
+     * Update dialog data for reuse (Core logic)
+     * Reuses all UI elements, only updates data
+     */
+    async _updateData(taskInstance, parent, coreBridge) {
+        // Update references
+        this.parent = parent;
+        this.coreBridge = coreBridge;
+
+        // Fill with new data (uses setTaskInstance which handles cleanup)
+        await this.setTaskInstance(taskInstance);
+
+        // Recreate dialog only if it was destroyed by GTK
+        // All UI widgets are preserved and reused
+        if (!this.dialog || this.dialog.is_destroyed?.()) {
+            this._createDialog();
+        } else {
+            // Dialog still exists - just update data
+            this._fillUI();
+        }
+    }
+
+    /**
+     * Fill UI widgets with current data (called after setTaskInstance)
+     */
+    _fillUI() {
+        if (!this.dialog || !this.taskInstance) return;
+
+        // Update dialog heading
+        this.dialog.heading = _('Edit Task ');
+
+        // Update duration label
+        if (this.durationLabel) {
+            this.durationLabel.set_label(TimeUtils.formatDuration(this.taskInstance.total_time || 0));
+        }
+
+        // Update task name entry
+        if (this.nameEntry) {
+            this.nameEntry.set_text(this.taskInstance.task_name || '');
+        }
+
+        // Update dropdowns (reuse existing, only update selection)
+        this._updateDropdowns();
+
+        // Update date/time labels
+        this._updateDateTimeButtonLabels();
+    }
+
+    /**
+     * Update dropdowns with current selection (reuse existing, don't recreate)
+     */
+    _updateDropdowns() {
+        // Find inlineRow in dialog
+        const form = this.dialog?.get_extra_child();
+        if (!form) return;
+        
+        const inlineRow = form.get_first_child()?.get_next_sibling()?.get_next_sibling();
+        if (!inlineRow) return;
+
+        // Always reuse dropdowns - never recreate
+        if (this.projectDropdown) {
+            // Update selection without recreating (widget stays the same)
+            this.projectDropdown.setCurrentProject(this.selectedProjectId);
+        } else {
+            // Create dropdown only once (first time ever)
+            this.projectDropdown = new ProjectDropdown(
+                this.coreBridge,
+                this.selectedProjectId,
+                (selectedProject) => {
+                    this.selectedProjectId = selectedProject.id;
+                }
+            );
+            // Add to row only if not already there
+            const widget = this.projectDropdown.getWidget();
+            if (widget && !widget.get_parent()) {
+                inlineRow.append(widget);
+            }
+        }
+
+        // Always reuse client dropdown - never recreate
+        if (this.clientDropdown) {
+            // Update selection without recreating (widget stays the same)
+            this.clientDropdown.setSelectedClient(this.selectedClientId);
+        } else {
+            // Create dropdown only once (first time ever)
+            this.clientDropdown = new ClientDropdown(
+                this.coreBridge,
+                this.selectedClientId,
+                (selectedClient) => {
+                    this.selectedClientId = selectedClient.id;
+                }
+            );
+            // Add to row only if not already there
+            const widget = this.clientDropdown.getWidget();
+            if (widget && !widget.get_parent()) {
+                inlineRow.append(widget);
+            }
+        }
+    }
+
+    /**
+     * Cleanup handlers (called before updating data)
+     * Disconnects all stored signal handler IDs
+     */
+    _cleanupHandlers() {
+        // Disconnect all signal handlers
+        this._handlerIds.forEach(handlerId => {
+            try {
+                if (this.dialog && typeof this.dialog.disconnect === 'function') {
+                    this.dialog.disconnect(handlerId);
+                }
+            } catch (e) {
+                // Handler may already be disconnected or dialog destroyed
+            }
+        });
+        this._handlerIds = [];
+    }
+
+
     _createDialog() {
+        // Create new dialog (GTK destroys it on close, so we recreate)
         this.dialog = new Adw.AlertDialog({
             heading: _('Edit Task '),
         });
 
-        const form = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            width_request: 350,
-        });
+        // Reuse existing widgets if available (not destroyed)
+        // Only create new widgets if they don't exist or were destroyed
+        let form = this._form;
+        if (!form || form.is_destroyed?.()) {
+            form = new Gtk.Box({
+                orientation: Gtk.Orientation.VERTICAL,
+                width_request: 350,
+            });
+            this._form = form;
+        }
 
-        // Subtitle with task name
-        const subtitleLabel = new Gtk.Label({
-            label: _('Duration'),
-            css_classes: ['subtitle'],
-            halign: Gtk.Align.CENTER,
-        });
+        // Subtitle with task name (static label, create once)
+        if (!this._subtitleLabel || this._subtitleLabel.is_destroyed?.()) {
+            this._subtitleLabel = new Gtk.Label({
+                label: _('Duration'),
+                css_classes: ['subtitle'],
+                halign: Gtk.Align.CENTER,
+            });
+        }
 
-        // Duration counter (use Core TimeUtils for formatting)
-        this.durationLabel = new Gtk.Label({
-            label: TimeUtils.formatDuration(this.taskInstance.total_time || 0),
-            halign: Gtk.Align.CENTER,
-            css_classes: ['duration_counter'],
-        });
+        // Duration counter (reuse if exists)
+        if (!this.durationLabel || this.durationLabel.is_destroyed?.()) {
+            this.durationLabel = new Gtk.Label({
+                label: TimeUtils.formatDuration(0),
+                halign: Gtk.Align.CENTER,
+                css_classes: ['duration_counter'],
+            });
+        }
 
-        // Inline row: name + project + client
-        const inlineRow = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 10,
-            margin_bottom: 15,
-        });
+        // Inline row: name + project + client (reuse if exists)
+        let inlineRow = this._inlineRow;
+        if (!inlineRow || inlineRow.is_destroyed?.()) {
+            inlineRow = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 10,
+                margin_bottom: 15,
+            });
+            this._inlineRow = inlineRow;
+        }
 
-        // Task name entry
-        this.nameEntry = new Gtk.Entry({
-            text: this.taskInstance.task_name || '',
-            placeholder_text: _('Task name....'),
-            hexpand: true,
-        });
-
-        // Project dropdown
-        this.projectDropdown = new ProjectDropdown(
-            this.coreBridge,
-            this.selectedProjectId,
-            (selectedProject) => {
-                this.selectedProjectId = selectedProject.id;
+        // Task name entry (reuse if exists)
+        if (!this.nameEntry || this.nameEntry.is_destroyed?.()) {
+            this.nameEntry = new Gtk.Entry({
+                text: '',
+                placeholder_text: _('Task name....'),
+                hexpand: true,
+            });
+            // Add to row only if not already there
+            if (!this.nameEntry.get_parent()) {
+                inlineRow.append(this.nameEntry);
             }
-        );
+        }
 
-        // Client dropdown
-        this.clientDropdown = new ClientDropdown(
-            this.coreBridge,
-            this.selectedClientId,
-            (selectedClient) => {
-                this.selectedClientId = selectedClient.id;
-            }
-        );
+        // Build date/time structure (reuse if exists)
+        let dateTimeContainer = this._dateTimeContainer;
+        if (!dateTimeContainer || dateTimeContainer.is_destroyed?.()) {
+            dateTimeContainer = this._buildDateTimeContainer();
+            this._dateTimeContainer = dateTimeContainer;
+        }
 
-        inlineRow.append(this.nameEntry);
-        inlineRow.append(this.projectDropdown.getWidget());
-        inlineRow.append(this.clientDropdown.getWidget());
+        // Build form structure only if form is empty (first time)
+        if (!form.get_first_child()) {
+            form.append(this._subtitleLabel);
+            form.append(this.durationLabel);
+            form.append(inlineRow);
+            form.append(dateTimeContainer);
+        }
 
+        this.dialog.set_extra_child(form);
+        this.dialog.add_response('cancel', _('Cancel'));
+        this.dialog.add_response('save', _('Save Changes'));
+        this.dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
+
+        // Store handler ID for cleanup (only if not already connected)
+        if (this._handlerIds.length === 0) {
+            this._handlerIds.push(
+                this.dialog.connect('response', async (dialog, response) => {
+                    if (response === 'save') {
+                        await this._saveChanges();
+                    }
+                    // Mark as not in use (dialog will be destroyed by GTK automatically)
+                    this._isInUse = false;
+                    // Note: dialog is destroyed by GTK, but UI widgets may be preserved
+                    // Check if widgets still exist on next open
+                    // Clear only data references, keep UI widgets for reuse
+                    this._clearReferences();
+                })
+            );
+        }
+    }
+
+    /**
+     * Build date/time container with buttons (reuse buttons if available)
+     */
+    _buildDateTimeContainer() {
         // DateTime container (horizontal) - contains Start and End
         const dateTimeContainer = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
@@ -147,127 +391,131 @@ export class TaskInstanceEditDialog {
             orientation: Gtk.Orientation.HORIZONTAL,
         });
 
-        // Time button with icon inside
-        const startTimeButtonBox = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 6,
-        });
+        // Reuse or create start time button
+        if (!this.startTimeButton || this.startTimeButton.is_destroyed?.()) {
+            const startTimeButtonBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 6,
+            });
 
-        const startTimeIcon = new Gtk.Image({
-            icon_name: 'preferences-system-time-symbolic',
-            pixel_size: 12,
-        });
+            const startTimeIcon = new Gtk.Image({
+                icon_name: 'preferences-system-time-symbolic',
+                pixel_size: 12,
+            });
 
-        const startTimeLabel = new Gtk.Label({
-            label: this.startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
-        });
+            this.startTimeLabel = new Gtk.Label({
+                label: this.startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
+            });
 
-        startTimeButtonBox.append(startTimeIcon);
-        startTimeButtonBox.append(startTimeLabel);
+            startTimeButtonBox.append(startTimeIcon);
+            startTimeButtonBox.append(this.startTimeLabel);
 
-        this.startTimeButton = new Gtk.Button({
-            child: startTimeButtonBox,
-            css_classes: ['flat'],
-        });
+            this.startTimeButton = new Gtk.Button({
+                child: startTimeButtonBox,
+                css_classes: ['flat'],
+            });
 
-        this.startTimeLabel = startTimeLabel; // Сохраняем ссылку для обновления
+            this.startTimeButton.connect('clicked', () => {
+                this._showTimePicker(this.startDate, (hours, minutes) => {
+                    const currentDuration = this.endDate.getTime() - this.startDate.getTime();
+                    this.startDate.setHours(hours);
+                    this.startDate.setMinutes(minutes);
+                    this.startDate.setSeconds(0);
+                    this.endDate = new Date(this.startDate.getTime() + currentDuration);
+                    this._onDateTimeChanged();
+                    this._updateDateTimeButtonLabels();
+                }, 'start');
+            });
 
-        this.startTimeButton.connect('clicked', () => {
-            this._showTimePicker(this.startDate, (hours, minutes) => {
-                // Calculate current duration
-                const currentDuration = this.endDate.getTime() - this.startDate.getTime();
-
-                // Set new start time
-                this.startDate.setHours(hours);
-                this.startDate.setMinutes(minutes);
-                this.startDate.setSeconds(0);
-
-                // Recalculate end time to preserve duration
-                this.endDate = new Date(this.startDate.getTime() + currentDuration);
-
-                this._onDateTimeChanged();
-                this._updateDateTimeButtonLabels();
-            }, 'start');
-        });
-
-        // Add scroll controller for start time button (use Core for logic)
-        const startTimeScrollController = new Gtk.EventControllerScroll({
-            flags: Gtk.EventControllerScrollFlags.VERTICAL,
-        });
-        startTimeScrollController.connect('scroll', (controller, dx, dy) => {
-            const minutesDelta = dy > 0 ? -1 : 1; // Scroll down = decrease, up = increase
-            const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, minutesDelta, 'minutes');
-            this.startDate = adjusted.startDate;
-            this.endDate = adjusted.endDate;
-            this._onDateTimeChanged();
-            return true;
-        });
-        this.startTimeButton.add_controller(startTimeScrollController);
-
-        // Date button with icon inside
-        const startDateButtonBox = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 6,
-        });
-
-        const startDateIcon = new Gtk.Image({
-            icon_name: 'x-office-calendar-symbolic',
-            pixel_size: 12,
-        });
-
-        const startDateLabel = new Gtk.Label({
-            label: this.startDate.toLocaleDateString('de-DE'),
-        });
-
-        startDateButtonBox.append(startDateIcon);
-        startDateButtonBox.append(startDateLabel);
-
-        this.startDateButton = new Gtk.Button({
-            child: startDateButtonBox,
-            css_classes: ['flat'],
-        });
-
-        this.startDateLabel = startDateLabel; // Сохраняем ссылку для обновления
-
-        this.startDateButton.connect('clicked', () => {
-            this._showDatePicker(this.startDate, (selectedDate) => {
-                // Preserve current time when changing date
-                const newDate = new Date(
-                    selectedDate.get_year(),
-                    selectedDate.get_month() - 1,
-                    selectedDate.get_day_of_month(),
-                    this.startDate.getHours(),
-                    this.startDate.getMinutes(),
-                    this.startDate.getSeconds()
-                );
-
-                // Use Core logic to adjust start date (preserves duration or moves both dates)
-                const adjusted = TimeUtils.adjustStartDateTime(
-                    this.startDate,
-                    this.endDate,
-                    Math.floor((newDate.getTime() - this.startDate.getTime()) / (1000 * 60)),
-                    'minutes'
-                );
+            // Add scroll controller for start time button
+            const startTimeScrollController = new Gtk.EventControllerScroll({
+                flags: Gtk.EventControllerScrollFlags.VERTICAL,
+            });
+            startTimeScrollController.connect('scroll', (controller, dx, dy) => {
+                const minutesDelta = dy > 0 ? -1 : 1;
+                const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, minutesDelta, 'minutes');
                 this.startDate = adjusted.startDate;
                 this.endDate = adjusted.endDate;
                 this._onDateTimeChanged();
-                this.startDateLabel.set_label(this.startDate.toLocaleDateString('de-DE'));
+                return true;
             });
-        });
+            this.startTimeButton.add_controller(startTimeScrollController);
+        } else {
+            // Button exists - just update label
+            if (this.startTimeLabel) {
+                this.startTimeLabel.set_label(this.startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
+            }
+        }
 
-        // Add scroll controller for start date button (use Core for logic)
-        const startDateScrollController = new Gtk.EventControllerScroll({
-            flags: Gtk.EventControllerScrollFlags.VERTICAL,
-        });
-        startDateScrollController.connect('scroll', (controller, dx, dy) => {
-            const daysDelta = dy > 0 ? -1 : 1; // Scroll down = decrease, up = increase
-            const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, daysDelta, 'days');
-            this.startDate = adjusted.startDate;
-            this.endDate = adjusted.endDate;
-            this._onDateTimeChanged();
-            return true;
-        });
-        this.startDateButton.add_controller(startDateScrollController);
+        // Reuse or create start date button
+        if (!this.startDateButton || this.startDateButton.is_destroyed?.()) {
+            const startDateButtonBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 6,
+            });
+
+            const startDateIcon = new Gtk.Image({
+                icon_name: 'x-office-calendar-symbolic',
+                pixel_size: 12,
+            });
+
+            this.startDateLabel = new Gtk.Label({
+                label: this.startDate.toLocaleDateString('de-DE'),
+            });
+
+            startDateButtonBox.append(startDateIcon);
+            startDateButtonBox.append(this.startDateLabel);
+
+            this.startDateButton = new Gtk.Button({
+                child: startDateButtonBox,
+                css_classes: ['flat'],
+            });
+
+            this.startDateButton.connect('clicked', () => {
+                this._showDatePicker(this.startDate, (selectedDate) => {
+                    // Preserve current time when changing date
+                    const newDate = new Date(
+                        selectedDate.get_year(),
+                        selectedDate.get_month() - 1,
+                        selectedDate.get_day_of_month(),
+                        this.startDate.getHours(),
+                        this.startDate.getMinutes(),
+                        this.startDate.getSeconds()
+                    );
+
+                    // Use Core logic to adjust start date (preserves duration or moves both dates)
+                    const adjusted = TimeUtils.adjustStartDateTime(
+                        this.startDate,
+                        this.endDate,
+                        Math.floor((newDate.getTime() - this.startDate.getTime()) / (1000 * 60)),
+                        'minutes'
+                    );
+                    this.startDate = adjusted.startDate;
+                    this.endDate = adjusted.endDate;
+                    this._onDateTimeChanged();
+                    this.startDateLabel.set_label(this.startDate.toLocaleDateString('de-DE'));
+                });
+            });
+
+            // Add scroll controller for start date button (use Core for logic)
+            const startDateScrollController = new Gtk.EventControllerScroll({
+                flags: Gtk.EventControllerScrollFlags.VERTICAL,
+            });
+            startDateScrollController.connect('scroll', (controller, dx, dy) => {
+                const daysDelta = dy > 0 ? -1 : 1; // Scroll down = decrease, up = increase
+                const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, daysDelta, 'days');
+                this.startDate = adjusted.startDate;
+                this.endDate = adjusted.endDate;
+                this._onDateTimeChanged();
+                return true;
+            });
+            this.startDateButton.add_controller(startDateScrollController);
+        } else {
+            // Button exists - just update label
+            if (this.startDateLabel) {
+                this.startDateLabel.set_label(this.startDate.toLocaleDateString('de-DE'));
+            }
+        }
 
         startButtonsBox.append(this.startTimeButton);
         startButtonsBox.append(this.startDateButton);
@@ -292,131 +540,146 @@ export class TaskInstanceEditDialog {
             orientation: Gtk.Orientation.HORIZONTAL,
         });
 
-        // Time button with icon inside
-        const endTimeButtonBox = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 6,
-        });
-
-        const endTimeIcon = new Gtk.Image({
-            icon_name: 'preferences-system-time-symbolic',
-            pixel_size: 12,
-        });
-
-        const endTimeLabel = new Gtk.Label({
-            label: this.endDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
-        });
-
-        endTimeButtonBox.append(endTimeIcon);
-        endTimeButtonBox.append(endTimeLabel);
-
-        this.endTimeButton = new Gtk.Button({
-            child: endTimeButtonBox,
-            css_classes: ['flat'],
-        });
-
-        this.endTimeLabel = endTimeLabel; // Сохраняем ссылку для обновления
-
-        this.endTimeButton.connect('clicked', () => {
-            this._showTimePicker(this.endDate, (hours, minutes) => {
-                // Create new end date with proposed time
-                const proposedEndDate = new Date(this.endDate);
-                proposedEndDate.setHours(hours);
-                proposedEndDate.setMinutes(minutes);
-                proposedEndDate.setSeconds(0);
-
-                // Check if this would create negative duration
-                if (proposedEndDate.getTime() >= this.startDate.getTime()) {
-                    // Valid: duration is not negative
-                    this.endDate = proposedEndDate;
-                    this._onDateTimeChanged();
-                    this._updateDateTimeButtonLabels();
-                }
-                // If negative duration: do nothing (ignore the change)
-            }, 'end');
-        });
-
-        // Add scroll controller for end time button (use Core for logic)
-        const endTimeScrollController = new Gtk.EventControllerScroll({
-            flags: Gtk.EventControllerScrollFlags.VERTICAL,
-        });
-        endTimeScrollController.connect('scroll', (controller, dx, dy) => {
-            const minutesDelta = dy > 0 ? -1 : 1; // Scroll down = decrease, up = increase
-            const newEndDate = TimeUtils.adjustEndDateTime(this.startDate, this.endDate, minutesDelta, 'minutes');
-            if (newEndDate !== null) {
-                this.endDate = newEndDate;
-                this._onDateTimeChanged();
-            }
-            return true;
-        });
-        this.endTimeButton.add_controller(endTimeScrollController);
-
-        // Date button with icon inside
-        const endDateButtonBox = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 6,
-        });
-
-        const endDateIcon = new Gtk.Image({
-            icon_name: 'x-office-calendar-symbolic',
-            pixel_size: 12,
-        });
-
-        const endDateLabel = new Gtk.Label({
-            label: this.endDate.toLocaleDateString('de-DE'),
-        });
-
-        endDateButtonBox.append(endDateIcon);
-        endDateButtonBox.append(endDateLabel);
-
-        this.endDateButton = new Gtk.Button({
-            child: endDateButtonBox,
-            css_classes: ['flat'],
-        });
-
-        this.endDateLabel = endDateLabel; // Сохраняем ссылку для обновления
-
-        this.endDateButton.connect('clicked', () => {
-            this._showDatePicker(this.endDate, (selectedDate) => {
-                // Preserve current time when changing date
-                const newDate = new Date(
-                    selectedDate.get_year(),
-                    selectedDate.get_month() - 1,
-                    selectedDate.get_day_of_month(),
-                    this.endDate.getHours(),
-                    this.endDate.getMinutes(),
-                    this.endDate.getSeconds()
-                );
-
-                // Use Core logic to adjust end date (prevents negative duration)
-                const minutesDelta = Math.floor((newDate.getTime() - this.endDate.getTime()) / (1000 * 60));
-                const adjustedEndDate = TimeUtils.adjustEndDateTime(this.startDate, this.endDate, minutesDelta, 'minutes');
-
-                if (adjustedEndDate !== null) {
-                    this.endDate = adjustedEndDate;
-                    this._onDateTimeChanged();
-                    this.endDateLabel.set_label(this.endDate.toLocaleDateString('de-DE'));
-                }
+        // Reuse or create end time button
+        if (!this.endTimeButton || this.endTimeButton.is_destroyed?.()) {
+            const endTimeButtonBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 6,
             });
-        });
 
-        // Add scroll controller for end date button (use Core for logic)
-        const endDateScrollController = new Gtk.EventControllerScroll({
-            flags: Gtk.EventControllerScrollFlags.VERTICAL,
-        });
-        endDateScrollController.connect('scroll', (controller, dx, dy) => {
-            const daysDelta = dy > 0 ? -1 : 1; // Scroll down = decrease, up = increase
-            const newEndDate = TimeUtils.adjustEndDateTime(this.startDate, this.endDate, daysDelta, 'days');
-            if (newEndDate !== null) {
-                this.endDate = newEndDate;
-                this._onDateTimeChanged();
+            const endTimeIcon = new Gtk.Image({
+                icon_name: 'preferences-system-time-symbolic',
+                pixel_size: 12,
+            });
+
+            this.endTimeLabel = new Gtk.Label({
+                label: this.endDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
+            });
+
+            endTimeButtonBox.append(endTimeIcon);
+            endTimeButtonBox.append(this.endTimeLabel);
+
+            this.endTimeButton = new Gtk.Button({
+                child: endTimeButtonBox,
+                css_classes: ['flat'],
+            });
+
+            this.endTimeButton.connect('clicked', () => {
+                this._showTimePicker(this.endDate, (hours, minutes) => {
+                    // Create new end date with proposed time
+                    const proposedEndDate = new Date(this.endDate);
+                    proposedEndDate.setHours(hours);
+                    proposedEndDate.setMinutes(minutes);
+                    proposedEndDate.setSeconds(0);
+
+                    // Check if this would create negative duration
+                    if (proposedEndDate.getTime() >= this.startDate.getTime()) {
+                        // Valid: duration is not negative
+                        this.endDate = proposedEndDate;
+                        this._onDateTimeChanged();
+                        this._updateDateTimeButtonLabels();
+                    }
+                    // If negative duration: do nothing (ignore the change)
+                }, 'end');
+            });
+
+            // Add scroll controller for end time button
+            const endTimeScrollController = new Gtk.EventControllerScroll({
+                flags: Gtk.EventControllerScrollFlags.VERTICAL,
+            });
+            endTimeScrollController.connect('scroll', (controller, dx, dy) => {
+                const minutesDelta = dy > 0 ? -1 : 1;
+                const newEndDate = TimeUtils.adjustEndDateTime(this.startDate, this.endDate, minutesDelta, 'minutes');
+                if (newEndDate !== null) {
+                    this.endDate = newEndDate;
+                    this._onDateTimeChanged();
+                }
+                return true;
+            });
+            this.endTimeButton.add_controller(endTimeScrollController);
+        } else {
+            // Button exists - just update label
+            if (this.endTimeLabel) {
+                this.endTimeLabel.set_label(this.endDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
             }
-            return true;
-        });
-        this.endDateButton.add_controller(endDateScrollController);
+        }
 
-        endButtonsBox.append(this.endTimeButton);
-        endButtonsBox.append(this.endDateButton);
+        // Reuse or create end date button
+        if (!this.endDateButton || this.endDateButton.is_destroyed?.()) {
+            const endDateButtonBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 6,
+            });
+
+            const endDateIcon = new Gtk.Image({
+                icon_name: 'x-office-calendar-symbolic',
+                pixel_size: 12,
+            });
+
+            this.endDateLabel = new Gtk.Label({
+                label: this.endDate.toLocaleDateString('de-DE'),
+            });
+
+            endDateButtonBox.append(endDateIcon);
+            endDateButtonBox.append(this.endDateLabel);
+
+            this.endDateButton = new Gtk.Button({
+                child: endDateButtonBox,
+                css_classes: ['flat'],
+            });
+
+            this.endDateButton.connect('clicked', () => {
+                this._showDatePicker(this.endDate, (selectedDate) => {
+                    // Preserve current time when changing date
+                    const newDate = new Date(
+                        selectedDate.get_year(),
+                        selectedDate.get_month() - 1,
+                        selectedDate.get_day_of_month(),
+                        this.endDate.getHours(),
+                        this.endDate.getMinutes(),
+                        this.endDate.getSeconds()
+                    );
+
+                    // Use Core logic to adjust end date (prevents negative duration)
+                    const minutesDelta = Math.floor((newDate.getTime() - this.endDate.getTime()) / (1000 * 60));
+                    const adjustedEndDate = TimeUtils.adjustEndDateTime(this.startDate, this.endDate, minutesDelta, 'minutes');
+
+                    if (adjustedEndDate !== null) {
+                        this.endDate = adjustedEndDate;
+                        this._onDateTimeChanged();
+                        this.endDateLabel.set_label(this.endDate.toLocaleDateString('de-DE'));
+                    }
+                });
+            });
+
+            // Add scroll controller for end date button
+            const endDateScrollController = new Gtk.EventControllerScroll({
+                flags: Gtk.EventControllerScrollFlags.VERTICAL,
+            });
+            endDateScrollController.connect('scroll', (controller, dx, dy) => {
+                const daysDelta = dy > 0 ? -1 : 1;
+                const newEndDate = TimeUtils.adjustEndDateTime(this.startDate, this.endDate, daysDelta, 'days');
+                if (newEndDate !== null) {
+                    this.endDate = newEndDate;
+                    this._onDateTimeChanged();
+                }
+                return true;
+            });
+            this.endDateButton.add_controller(endDateScrollController);
+        } else {
+            // Button exists - just update label
+            if (this.endDateLabel) {
+                this.endDateLabel.set_label(this.endDate.toLocaleDateString('de-DE'));
+            }
+        }
+
+        // Add buttons to box (only if not already there)
+        if (!this.endTimeButton.get_parent()) {
+            endButtonsBox.append(this.endTimeButton);
+        }
+        if (!this.endDateButton.get_parent()) {
+            endButtonsBox.append(this.endDateButton);
+        }
 
         endColumn.append(endLabel);
         endColumn.append(endButtonsBox);
@@ -424,22 +687,7 @@ export class TaskInstanceEditDialog {
         dateTimeContainer.append(startColumn);
         dateTimeContainer.append(endColumn);
 
-        form.append(subtitleLabel);
-        form.append(this.durationLabel);
-        form.append(inlineRow);
-        form.append(dateTimeContainer);
-
-        this.dialog.set_extra_child(form);
-        this.dialog.add_response('cancel', _('Cancel'));
-        this.dialog.add_response('save', _('Save Changes'));
-        this.dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
-
-        this.dialog.connect('response', async (dialog, response) => {
-            if (response === 'save') {
-                await this._saveChanges();
-            }
-            dialog.close();
-        });
+        return dateTimeContainer;
     }
 
     /**
@@ -976,20 +1224,76 @@ export class TaskInstanceEditDialog {
     }
 
     /**
-     * Cleanup: destroy dialog and cleanup dropdowns
+     * Clear references (for reuse)
+     * Keep UI widgets and dropdowns - they will be reused
+     * Only clear data references
+     */
+    _clearReferences() {
+        // DON'T destroy dropdowns - they will be reused
+        // Just update their selection will be done in _updateDropdowns()
+        
+        // Clear only data references (not UI widgets - they are reused)
+        this.taskInstance = null;
+        this.latestEntry = null;
+        this.startDate = null;
+        this.endDate = null;
+        this.originalDuration = null;
+        // Keep: parent, coreBridge, nameEntry, durationLabel, buttons, dropdowns (for reuse)
+    }
+
+    /**
+     * Full cleanup: destroy dropdowns and clear all references
+     * Used when removing from pool or final cleanup
      */
     cleanup() {
-        if (this.projectDropdown && typeof this.projectDropdown.destroy === 'function') {
-            this.projectDropdown.destroy();
+        // Cleanup dropdowns
+        if (this.projectDropdown) {
+            try {
+                if (typeof this.projectDropdown.destroy === 'function') {
+                    this.projectDropdown.destroy();
+                }
+            } catch (e) {
+                // Already destroyed
+            }
             this.projectDropdown = null;
         }
-        if (this.clientDropdown && typeof this.clientDropdown.destroy === 'function') {
-            this.clientDropdown.destroy();
+        
+        if (this.clientDropdown) {
+            try {
+                if (typeof this.clientDropdown.destroy === 'function') {
+                    this.clientDropdown.destroy();
+                }
+            } catch (e) {
+                // Already destroyed
+            }
             this.clientDropdown = null;
         }
-        if (this.dialog) {
-            this.dialog.close();
-            this.dialog = null;
-        }
+        
+        // Clear all references
+        this.taskInstance = null;
+        this.parent = null;
+        this.coreBridge = null;
+        this.latestEntry = null;
+        this.nameEntry = null;
+        this.durationLabel = null;
+        this.startTimeButton = null;
+        this.startTimeLabel = null;
+        this.startDateButton = null;
+        this.startDateLabel = null;
+        this.endTimeButton = null;
+        this.endTimeLabel = null;
+        this.endDateButton = null;
+        this.endDateLabel = null;
+        this.startDate = null;
+        this.endDate = null;
+        this.originalDuration = null;
+        
+        // Reset state
+        this._isInUse = false;
+        this._isInitialized = false;
+        
+        // Note: this.dialog (Adw.AlertDialog) will be destroyed by GTK automatically
+        // after close(), so we don't need to explicitly destroy it in normal cleanup
+        this.dialog = null;
     }
 }

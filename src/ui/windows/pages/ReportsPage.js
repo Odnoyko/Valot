@@ -269,6 +269,21 @@ export class ReportsPage {
     }
 
     /**
+     * Called when page is hidden (navigated away from)
+     * Lightweight cleanup - clears data but keeps UI structure
+     */
+    onHide() {
+        // Clear data arrays (they will be reloaded when page is shown again)
+        this.allTasks = [];
+        this.allTimeEntries = [];
+        this.allProjects = [];
+        this.allClients = [];
+        
+        // Clear report exporter reference
+        this.reportExporter = null;
+    }
+
+    /**
      * Create and return the main widget for this page
      */
     getWidget() {

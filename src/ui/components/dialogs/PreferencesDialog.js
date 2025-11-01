@@ -49,15 +49,19 @@ export const PreferencesDialog = GObject.registerClass({
         this.hide_on_close = true;
         
         // Connect to close-request to hide instead of destroy
-        this.connect('close-request', () => {
-            this._cleanupTimers(); // Only cleanup timers, keep widgets
+        this._closeRequestHandlerId = this.connect('close-request', () => {
+            // Cleanup only JS structures (timers, dialogs, references)
+            // GTK widgets will be preserved for reuse
+            this._cleanupTimers();
+            this._clearJSReferences();
             this.hide();
             return true; // Prevent default destroy behavior
         });
         
-        // Only cleanup widgets on actual destroy (if window is ever destroyed)
-        this.connect('destroy', () => {
-            this._cleanup();
+        // Full cleanup only on actual destroy (if window is ever destroyed)
+        this._destroyHandlerId = this.connect('destroy', () => {
+            this._cleanupTimers();
+            this._clearJSReferences();
         });
 
         this._setupPages();
@@ -1094,31 +1098,54 @@ export const PreferencesDialog = GObject.registerClass({
         ]);
         
         // Remove rows for currencies that are no longer visible/hidden
+        // Collect entries to delete first to avoid modification during iteration
+        const currencyRowsToDelete = [];
+        const hiddenRowsToDelete = [];
+        
         for (const [code, row] of this._currencyRowsMap.entries()) {
             if (!visibleCodes.has(code)) {
-                try {
-                    if (row.get_parent()) {
-                        row.get_parent().remove(row);
-                    }
-                } catch (e) {
-                    // Already removed
-                }
-                this._currencyRowsMap.delete(code);
+                currencyRowsToDelete.push([code, row]);
             }
         }
         
         for (const [code, row] of this._hiddenRowsMap.entries()) {
             if (!hiddenCodes.has(code)) {
-                try {
-                    if (row.get_parent()) {
-                        row.get_parent().remove(row);
-                    }
-                } catch (e) {
-                    // Already removed
-                }
-                this._hiddenRowsMap.delete(code);
+                hiddenRowsToDelete.push([code, row]);
             }
         }
+        
+        // Remove rows from groups (GTK will handle cleanup)
+        currencyRowsToDelete.forEach(([code, row]) => {
+            try {
+                if (row && !row.is_destroyed?.()) {
+                    // Remove from parent - GTK will handle the rest
+                    const parent = row.get_parent();
+                    if (parent && parent.remove) {
+                        parent.remove(row);
+                    }
+                    // Row will be destroyed by GTK automatically
+                }
+            } catch (e) {
+                // Ignore errors
+            }
+            this._currencyRowsMap.delete(code);
+        });
+        
+        hiddenRowsToDelete.forEach(([code, row]) => {
+            try {
+                if (row && !row.is_destroyed?.()) {
+                    // Remove from parent - GTK will handle the rest
+                    const parent = row.get_parent();
+                    if (parent && parent.remove) {
+                        parent.remove(row);
+                    }
+                    // Row will be destroyed by GTK automatically
+                }
+            } catch (e) {
+                // Ignore errors
+            }
+            this._hiddenRowsMap.delete(code);
+        });
         
         // Add new visible currencies (only if not already in map - avoid recreating icons)
         [...this.currencySettings.visible, ...this.currencySettings.custom.filter(c => !c.hidden)].forEach(code => {
@@ -1367,7 +1394,7 @@ export const PreferencesDialog = GObject.registerClass({
     }
 
     /**
-     * Setup Extensions Page (dynamically, only if extensions exist)
+     * Setup Extensions Page (creates page structure if needed)
      */
     _setupExtensionsPage() {
         // Build-time gate: completely hide extensions UI when disabled
@@ -1378,8 +1405,6 @@ export const PreferencesDialog = GObject.registerClass({
         const settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
         const experimentalEnabled = settings.get_boolean('experimental-features');
         
-        // console.warn('_setupExtensionsPage: experimentalEnabled =', experimentalEnabled);
-        
         if (!experimentalEnabled) {
             // Don't create extensions page if experimental features are disabled
             return;
@@ -1388,104 +1413,171 @@ export const PreferencesDialog = GObject.registerClass({
         // Use stored application reference or get from transient_for
         const app = this.application || this.get_transient_for()?.application;
         
-        // Always create extensions page when experimental features are enabled
-        const extensionsPage = new Adw.PreferencesPage({
-            title: _('Extensions'),
-            icon_name: 'application-x-addon-symbolic',
-        });
-        
-        // Store reference for dynamic visibility
-        this.extensionsPage = extensionsPage;
-
-        const extensionsGroup = new Adw.PreferencesGroup({
-            title: _('Installed Extensions'),
-            description: _('Manage addons and plugins'),
-        });
-
-        // Create header box with Reload (left) and Add (right) buttons
-        const headerBox = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 6,
-        });
-        
-        // Reload button (left)
-        const reloadButton = new Gtk.Button({
-            icon_name: 'view-refresh-symbolic',
-            css_classes: ['flat'],
-            tooltip_text: _('Reload Extensions'),
-        });
-        
-        reloadButton.connect('clicked', () => {
-            if (app && app.extensionManager) {
-                this._reloadExtensionsList();
-            }
-        });
-        
-        // Add button (right)
-        const addButton = new Gtk.Button({
-            icon_name: 'list-add-symbolic',
-            css_classes: ['flat'],
-            tooltip_text: _('Add Extension'),
-        });
-        
-        addButton.connect('clicked', () => {
-            if (app && app.extensionManager) {
-                this._showAddExtensionDialog(app);
-            }
-        });
-        
-        headerBox.append(reloadButton);
-        headerBox.append(addButton);
-        
-        extensionsGroup.set_header_suffix(headerBox);
-
-        // Separate extensions by source
-        if (app && app.extensionManager) {
-            const extensions = app.extensionManager.getAllExtensions();
-            const development = extensions.filter(ext => ext.source && ext.source.includes('development'));
-            const user = extensions.filter(ext => !ext.source || (!ext.source.includes('development') && !ext.source.includes('flatpak')));
-            const flatpak = extensions.filter(ext => ext.source && ext.source.includes('flatpak'));
+        // Create extensions page only if it doesn't exist
+        if (!this.extensionsPage) {
+            const extensionsPage = new Adw.PreferencesPage({
+                title: _('Extensions'),
+                icon_name: 'application-x-addon-symbolic',
+            });
             
-            // Add development extensions group if any exist
-            if (development.length > 0) {
-                const devGroup = new Adw.PreferencesGroup({
+            // Store reference
+            this.extensionsPage = extensionsPage;
+
+            // Create main extensions group with header buttons
+            const extensionsGroup = new Adw.PreferencesGroup({
+                title: _('Installed Extensions'),
+                description: _('Manage addons and plugins'),
+            });
+
+            // Create header box with Reload (left) and Add (right) buttons
+            const headerBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 6,
+            });
+            
+            const reloadButton = new Gtk.Button({
+                icon_name: 'view-refresh-symbolic',
+                css_classes: ['flat'],
+                tooltip_text: _('Reload Extensions'),
+            });
+            
+            reloadButton.connect('clicked', () => {
+                if (app && app.extensionManager) {
+                    this._reloadExtensionsList();
+                }
+            });
+            
+            const addButton = new Gtk.Button({
+                icon_name: 'list-add-symbolic',
+                css_classes: ['flat'],
+                tooltip_text: _('Add Extension'),
+            });
+            
+            addButton.connect('clicked', () => {
+                if (app && app.extensionManager) {
+                    this._showAddExtensionDialog(app);
+                }
+            });
+            
+            headerBox.append(reloadButton);
+            headerBox.append(addButton);
+            
+            extensionsGroup.set_header_suffix(headerBox);
+            extensionsPage.add(extensionsGroup);
+            
+            // Add Available Extensions group (structure only)
+            const availableGroup = new Adw.PreferencesGroup({
+                title: _('Available Extensions'),
+                description: _('Extensions available for download from GitLab'),
+            });
+            
+            extensionsPage.add(availableGroup);
+            this.add(extensionsPage);
+        }
+        
+        // Populate with current data
+        this._populateExtensionsPage(this.extensionsPage, app);
+    }
+    
+    /**
+     * Populate extensions page with current extension data
+     * Updates content without recreating the page structure
+     */
+    _populateExtensionsPage(extensionsPage, app) {
+        if (!app || !app.extensionManager) return;
+        
+        // Find existing groups (keep structure, update content)
+        const extensionsGroup = extensionsPage.get_children().find(child => {
+            if (child instanceof Adw.PreferencesGroup) {
+                const title = child.get_title();
+                return title === _('Installed Extensions');
+            }
+            return false;
+        });
+        
+        const availableGroup = extensionsPage.get_children().find(child => {
+            if (child instanceof Adw.PreferencesGroup) {
+                const title = child.get_title();
+                return title === _('Available Extensions');
+            }
+            return false;
+        });
+        
+        // Remove old extension rows from groups (keep groups, update rows)
+        const allGroups = extensionsPage.get_children().filter(child => child instanceof Adw.PreferencesGroup);
+        allGroups.forEach(group => {
+            // Remove all rows (GTK will handle cleanup)
+            const rows = [];
+            let row = group.get_first_child();
+            while (row) {
+                const next = row.get_next_sibling();
+                rows.push(row);
+                row = next;
+            }
+            rows.forEach(row => {
+                try {
+                    group.remove(row);
+                } catch (e) {
+                    // Already removed
+                }
+            });
+        });
+        
+        // Get current extensions
+        const extensions = app.extensionManager.getAllExtensions();
+        const development = extensions.filter(ext => ext.source && ext.source.includes('development'));
+        const user = extensions.filter(ext => !ext.source || (!ext.source.includes('development') && !ext.source.includes('flatpak')));
+        const flatpak = extensions.filter(ext => ext.source && ext.source.includes('flatpak'));
+        
+        // Add development extensions group if any exist
+        if (development.length > 0) {
+            let devGroup = extensionsPage.get_children().find(child => {
+                if (child instanceof Adw.PreferencesGroup) {
+                    return child.get_title() === _('Development Extensions');
+                }
+                return false;
+            });
+            
+            if (!devGroup) {
+                devGroup = new Adw.PreferencesGroup({
                     title: _('Development Extensions'),
                     description: _('Extensions from development environment'),
                 });
-                development.forEach(ext => devGroup.add(this._createExtensionRow(ext, app)));
                 extensionsPage.add(devGroup);
             }
             
-            // Add user extensions (merge with old extensionsGroup header)
+            development.forEach(ext => devGroup.add(this._createExtensionRow(ext, app)));
+        }
+        
+        // Add user extensions to main group
+        if (extensionsGroup) {
             user.forEach(ext => extensionsGroup.add(this._createExtensionRow(ext, app)));
+        }
+        
+        // Add Flatpak extensions group if any exist
+        if (flatpak.length > 0) {
+            let flatpakGroup = extensionsPage.get_children().find(child => {
+                if (child instanceof Adw.PreferencesGroup) {
+                    return child.get_title() === _('System Extensions');
+                }
+                return false;
+            });
             
-            // Add Flatpak extensions group if any exist
-            if (flatpak.length > 0) {
-                const flatpakGroup = new Adw.PreferencesGroup({
+            if (!flatpakGroup) {
+                flatpakGroup = new Adw.PreferencesGroup({
                     title: _('System Extensions'),
                     description: _('Extensions installed via Flatpak'),
                 });
-                flatpak.forEach(ext => flatpakGroup.add(this._createExtensionRow(ext, app)));
                 extensionsPage.add(flatpakGroup);
             }
+            
+            flatpak.forEach(ext => flatpakGroup.add(this._createExtensionRow(ext, app)));
         }
-
-        extensionsPage.add(extensionsGroup);
         
-        // Add Available Extensions group (loaded on demand)
-        const availableGroup = new Adw.PreferencesGroup({
-            title: _('Available Extensions'),
-            description: _('Extensions available for download from GitLab'),
-        });
-        
-        // Load available extensions on page open
-        if (app && app.extensionManager) {
+        // Load available extensions (async)
+        if (availableGroup) {
             this._loadAndDisplayAvailableExtensions(app, availableGroup);
         }
-        
-        extensionsPage.add(availableGroup);
-        this.add(extensionsPage);
-        // console.warn('_setupExtensionsPage: Page added to preferences dialog');
     }
     
     /**
@@ -1626,9 +1718,6 @@ export const PreferencesDialog = GObject.registerClass({
         const dialog = new PreferencesDialog({
             transient_for: parent,
         });
-        
-        // Set hide_on_close to prevent destruction
-        dialog.hide_on_close = true;
         
         // Cache dialog reference in parent window
         if (parent) {
@@ -1984,10 +2073,15 @@ export const PreferencesDialog = GObject.registerClass({
                 this._setupExtensionsPage();
             }
         } else {
-            // Remove extensions page if present
+            // Hide extensions page if present (don't destroy - preserve for reuse)
             if (this.extensionsPage) {
-                this.remove(this.extensionsPage);
-                this.extensionsPage = null;
+                try {
+                    this.remove(this.extensionsPage);
+                    // Page is hidden but not destroyed - can be reused
+                    // Don't set to null - keep reference for reuse
+                } catch (e) {
+                    // Ignore if already removed
+                }
             }
         }
     }
@@ -2113,10 +2207,14 @@ export const PreferencesDialog = GObject.registerClass({
         this._lastExtensionsState = currentState;
         
         // Only recreate if state actually changed
+        // Don't destroy the page - just update its content
         if (this.extensionsPage) {
-            this.remove(this.extensionsPage);
+            // Update existing page content (preserve page structure)
+            this._populateExtensionsPage(this.extensionsPage, app);
+        } else {
+            // Create page only if it doesn't exist
+            this._setupExtensionsPage();
         }
-        this._setupExtensionsPage();
     }
     
     /**
@@ -2194,7 +2292,7 @@ export const PreferencesDialog = GObject.registerClass({
     }
     
     /**
-     * Cleanup timers when dialog is hidden (but keep widgets for reuse)
+     * Cleanup timers (used before destroy)
      */
     _cleanupTimers() {
         // Remove all GLib timers
@@ -2221,32 +2319,74 @@ export const PreferencesDialog = GObject.registerClass({
     }
     
     /**
-     * Full cleanup when dialog is actually destroyed
+     * Clear only JS references (not GTK widgets - they are preserved for reuse)
+     * GTK widgets are managed by GTK itself and will be destroyed automatically when needed
      */
-    _cleanup() {
-        // Cleanup timers first
-        this._cleanupTimers();
+    _clearJSReferences() {
+        // Clear only JS Maps - these are just JS-frameworks, not GTK-widgets
+        // GTK widgets (rows, groups, pages) are preserved for reuse
+        this._currencyRowsMap?.clear();
+        this._currencyRowsMap = new Map();
         
-        // Clear currency row caches
-        this._currencyRowsMap.clear();
-        this._hiddenRowsMap.clear();
+        this._hiddenRowsMap?.clear();
+        this._hiddenRowsMap = new Map();
+        
+        this._extensionRowsMap?.clear();
+        this._extensionRowsMap = new Map();
+        
+        // Clear state caches
         this._lastCurrencyState = null;
-        
-        // Clear extension row caches
-        this._extensionRowsMap.clear();
         this._lastExtensionsState = null;
         
-        // Clear references to prevent memory leaks
-        this.currencyGroup = null;
-        this.hiddenGroup = null;
-        this.hiddenExpanderRow = null;
-        this.extensionsPage = null;
-        this.application = null;
+        // Clear currency dialog reference if exists
+        if (this._currencyDialog) {
+            try {
+                if (this._currencyDialog.close) {
+                    this._currencyDialog.close();
+                }
+            } catch (e) {
+                // Already closed
+            }
+            this._currencyDialog = null;
+        }
         
-        // Clear parent window's cache
-        const parent = this.get_transient_for();
-        if (parent && parent._preferencesDialog === this) {
-            parent._preferencesDialog = null;
+        // Note: We DO NOT destroy or clear GTK widgets (currencyGroup, hiddenGroup, etc.)
+        // They will be reused when dialog is shown again via hide()
+    }
+    
+    /**
+     * Disconnect all signal handlers to prevent memory leaks
+     */
+    _disconnectAllSignals() {
+        try {
+            if (this._closeRequestHandlerId) {
+                this.disconnect(this._closeRequestHandlerId);
+                this._closeRequestHandlerId = null;
+            }
+        } catch (e) {}
+        
+        try {
+            if (this._destroyHandlerId) {
+                this.disconnect(this._destroyHandlerId);
+                this._destroyHandlerId = null;
+            }
+        } catch (e) {}
+        
+        // Try to disconnect any other handlers
+        try {
+            // Get all connected handlers (if possible)
+            const handlers = this.list_handlers?.();
+            if (handlers) {
+                handlers.forEach(handlerId => {
+                    try {
+                        this.disconnect(handlerId);
+                    } catch (e) {
+                        // Ignore errors
+                    }
+                });
+            }
+        } catch (e) {
+            // list_handlers might not be available
         }
     }
 });

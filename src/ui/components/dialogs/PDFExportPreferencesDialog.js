@@ -46,6 +46,13 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
         this._buildInterface();
         this._connectSignals();
         
+        // Connect to close-request to cleanup before destroy
+        this.connect('close-request', () => {
+            // Cleanup resources before destroy
+            this.parentWindow = null;
+            this.reportExporter = null;
+            return false; // Allow default destroy to unload from memory
+        });
     }
 
     _buildInterface() {
@@ -543,7 +550,7 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
             // Start the export
             await this.reportExporter.exportReport(this.parentWindow);
             
-            // Close the dialog after successful export
+            // Close the dialog after successful export (will be destroyed)
             this.close();
 
         } catch (error) {
@@ -555,6 +562,8 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
      * Show the preferences dialog
      */
     static show(parentWindow, reportExporter) {
+        // Always create new dialog to ensure fresh instance and memory cleanup
+        // Destroying old dialogs frees memory completely
         const dialog = new PDFExportPreferencesDialog(parentWindow, reportExporter);
         dialog.present(parentWindow);
         return dialog;

@@ -280,6 +280,27 @@ export class TasksPage {
     }
 
     /**
+     * Called when page is hidden (navigated away from)
+     * Lightweight cleanup - clears data but keeps UI structure
+     */
+    onHide() {
+        // Clear data arrays (they will be reloaded when page is shown again)
+        this.tasks = [];
+        this.filteredTasks = [];
+        
+        // Clear Maps to release references (but keep structure)
+        this.taskRowMap.clear();
+        this.stackRowMap.clear();
+        this.taskTemplates.clear();
+        this.selectedTasks.clear();
+        this.selectedStacks.clear();
+        
+        // Reset tracking task references
+        this.trackingTaskTimeLabel = null;
+        this.trackingTaskId = null;
+    }
+
+    /**
      * Update time display for currently tracking task in real-time
      */
     async _updateTrackingTimeDisplay() {
@@ -2033,9 +2054,8 @@ export class TasksPage {
                 return;
             }
 
-            // Show edit dialog - pass TasksPage as parent so it can call loadTasks()
-            const dialog = new TaskInstanceEditDialog(taskInstance, this, this.coreBridge);
-            await dialog.present(this.parentWindow);
+            // Show edit dialog using pool (reuses existing or creates new)
+            await TaskInstanceEditDialog.show(taskInstance, this, this.coreBridge);
 
         } catch (error) {
             console.error('Error opening edit dialog:', error);

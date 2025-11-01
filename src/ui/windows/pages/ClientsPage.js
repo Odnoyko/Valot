@@ -1524,4 +1524,15 @@ export class ClientsPage {
             this.trackingWidget = null;
         }
     }
+
+    /**
+     * Called when page is hidden (navigated away from)
+     * Lightweight cleanup - clears data but keeps UI structure
+     */
+    onHide() {
+        // Clear data arrays
+        this.clients = [];
+        this.filteredClients = [];
+        this.selectedClients.clear();
+    }
 }

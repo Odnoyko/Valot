@@ -1339,4 +1339,21 @@ export class ProjectsPage {
             this.trackingWidget = null;
         }
     }
+
+    /**
+     * Called when page is hidden (navigated away from)
+     * Lightweight cleanup - clears data but keeps UI structure
+     */
+    onHide() {
+        // Clear data arrays
+        this.projects = [];
+        this.filteredProjects = [];
+        this.selectedProjects.clear();
+        
+        // Clear time labels map
+        this.projectTimeLabels.clear();
+        
+        // Reset tracking references
+        this.lastTrackingProjectId = null;
+    }
 }

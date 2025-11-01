@@ -59,6 +59,9 @@ export const ValotMainWindow = GObject.registerClass({
         // Load pages
         this._loadPages();
 
+        // Track previous page for cleanup on navigation
+        this._previousPageTag = null;
+
         // Setup global keyboard shortcuts using application-level accelerators
         this._setupGlobalKeyboardShortcuts();
 
@@ -624,6 +627,11 @@ export const ValotMainWindow = GObject.registerClass({
 
         const pageTag = visiblePage.get_tag();
 
+        // Cleanup previous page (close dialogs and clear data)
+        if (this._previousPageTag && this._previousPageTag !== pageTag) {
+            this._cleanupPreviousPage(this._previousPageTag);
+        }
+
         // Refresh tracking widget on the current page
         let pageInstance = null;
         switch (pageTag) {
@@ -645,6 +653,70 @@ export const ValotMainWindow = GObject.registerClass({
         if (pageInstance && pageInstance.trackingWidget && pageInstance.trackingWidget.refresh) {
             pageInstance.trackingWidget.refresh();
         }
+
+        // Store current page as previous for next navigation
+        this._previousPageTag = pageTag;
+    }
+
+    /**
+     * Cleanup previous page: close dialogs and clear data
+     */
+    _cleanupPreviousPage(pageTag) {
+        let pageInstance = null;
+        switch (pageTag) {
+            case 'tasks':
+                pageInstance = this.tasksPageInstance;
+                break;
+            case 'projects':
+                pageInstance = this.projectsPageInstance;
+                break;
+            case 'clients':
+                pageInstance = this.clientsPageInstance;
+                break;
+            case 'reports':
+                pageInstance = this.reportsPageInstance;
+                break;
+        }
+
+        if (!pageInstance) return;
+
+        // Close all open dialogs
+        this._closeAllDialogs();
+
+        // Call onHide() if page has it (lightweight cleanup - clears data, keeps UI)
+        if (pageInstance && typeof pageInstance.onHide === 'function') {
+            pageInstance.onHide();
+        }
+    }
+
+    /**
+     * Close all open dialogs (TaskInstanceEditDialog, ProjectDialog, etc.)
+     */
+    _closeAllDialogs() {
+        // Close TaskInstanceEditDialog if open
+        try {
+            // Use dynamic import to avoid loading module if not needed
+            import('resource:///com/odnoyko/valot/ui/components/dialogs/TaskInstanceEditDialog.js').then(module => {
+                if (module.TaskInstanceEditDialog && module.TaskInstanceEditDialog.closeAll) {
+                    module.TaskInstanceEditDialog.closeAll();
+                }
+            }).catch(() => {
+                // Module not loaded or no closeAll method - ignore
+            });
+        } catch (e) {
+            // Ignore errors
+        }
+
+        // Close PreferencesDialog if open
+        try {
+            if (PreferencesDialog._instance && PreferencesDialog._instance.dialog) {
+                PreferencesDialog._instance.dialog.close();
+            }
+        } catch (e) {
+            // Dialog not open - ignore
+        }
+
+        // TODO: Close other dialogs (ProjectDialog, ClientDialog, etc.) if they have static close methods
     }
 
     /**

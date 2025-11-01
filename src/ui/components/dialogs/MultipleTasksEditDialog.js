@@ -113,6 +113,8 @@ export class MultipleTasksEditDialog {
             if (response === 'save') {
                 this._saveChanges();
             }
+            // Cleanup dropdowns and resources before closing
+            this.cleanup();
         });
     }
 
@@ -200,20 +202,44 @@ export class MultipleTasksEditDialog {
     }
 
     /**
-     * Cleanup: destroy dialog and cleanup dropdowns
+     * Cleanup: cleanup dropdowns and clear references
+     * Note: Adw.AlertDialog closes automatically after response,
+     * so we only cleanup JS resources (dropdowns, references)
+     * GTK widgets will be destroyed by GTK automatically
      */
     cleanup() {
-        if (this.projectDropdown && typeof this.projectDropdown.destroy === 'function') {
-            this.projectDropdown.destroy();
+        // Cleanup dropdowns (they have their own cleanup logic)
+        if (this.projectDropdown) {
+            try {
+                if (typeof this.projectDropdown.destroy === 'function') {
+                    this.projectDropdown.destroy();
+                }
+            } catch (e) {
+                // Already destroyed
+            }
             this.projectDropdown = null;
         }
-        if (this.clientDropdown && typeof this.clientDropdown.destroy === 'function') {
-            this.clientDropdown.destroy();
+        
+        if (this.clientDropdown) {
+            try {
+                if (typeof this.clientDropdown.destroy === 'function') {
+                    this.clientDropdown.destroy();
+                }
+            } catch (e) {
+                // Already destroyed
+            }
             this.clientDropdown = null;
         }
-        if (this.dialog) {
-            this.dialog.close();
-            this.dialog = null;
-        }
+        
+        // Clear all references to allow GC
+        this.taskInstances = null;
+        this.parent = null;
+        this.coreBridge = null;
+        this.nameEntry = null;
+        this.durationLabel = null;
+        
+        // Note: this.dialog (Adw.AlertDialog) will be destroyed by GTK automatically
+        // after close(), so we don't need to explicitly destroy it
+        this.dialog = null;
     }
 }
