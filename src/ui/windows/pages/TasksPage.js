@@ -626,12 +626,11 @@ export class TasksPage {
 
     /**
      * Core event: tracking updated (every second)
-     * NOTE: Time updates are handled by subscribeTick timer (_startTrackingUITimer)
-     * to avoid unnecessary UI redraws every second
+     * NOTE: Time updates come from global TimeTrackingService timer via tracking-updated event
+     * UI components subscribe to events, not create separate timers
      */
     _onTrackingUpdated(data) {
-        // tracking-updated fires every second during tracking
-        // Time label updates are handled by subscribeTick timer
+        // tracking-updated fires every second during tracking from global timer
         // Don't auto-update task name from state - user might be editing it
         // Name updates only on Enter key (activate event)
     }

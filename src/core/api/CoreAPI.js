@@ -11,7 +11,6 @@ import { StatsService } from '../services/StatsService.js';
 import { TrackingPersistenceService } from '../services/TrackingPersistenceService.js';
 import { TimerScheduler } from '../services/TimerScheduler.js';
 import { CacheService } from '../services/CacheService.js';
-// import { MemoryCleanupService } from '../services/MemoryCleanupService.js'; // Disabled: cleanup every 30s masks problems, need proper resource management instead
 /**
  * Core API
  * Main interface for interacting with the application core
@@ -61,14 +60,6 @@ export class CoreAPI {
         this.services.persistence = new TrackingPersistenceService(this);
         await this.services.persistence.initialize();
         
-        // Memory cleanup service disabled:
-        // Frequent cleanup (every 30s) masks memory leaks instead of fixing them.
-        // Proper resource management (destroy/unsubscribe) should prevent RAM growth.
-        // this.services.memoryCleanup = new MemoryCleanupService(this);
-        // this.services.timerScheduler.subscribe(() => {
-        //     this.services.memoryCleanup.onTick();
-        // });
-        
         this.events.emit(CoreEvents.DATABASE_CONNECTED);
         this.events.emit(CoreEvents.CORE_INITIALIZED);
         this.initialized = true;
@@ -95,11 +86,6 @@ export class CoreAPI {
         if (this.services?.timerScheduler) {
             this.services.timerScheduler.stop();
         }
-        
-        // Memory cleanup service disabled
-        // if (this.services?.memoryCleanup) {
-        //     this.services.memoryCleanup.destroy();
-        // }
         
         // Final cache sync and cleanup
         if (this.services?.cache) {

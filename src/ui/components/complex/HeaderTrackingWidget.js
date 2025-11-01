@@ -301,8 +301,8 @@ export class HeaderTrackingWidget {
 
     /**
      * Core event: tracking timer updated
-     * NOTE: Time updates are handled by subscribeTick timer (_startUIUpdateTimer)
-     * to avoid unnecessary UI redraws every second
+     * NOTE: Time updates come from global TimeTrackingService timer via tracking-updated event
+     * UI components subscribe to events, not create separate timers
      */
     _onTrackingUpdated(data) {
         // tracking-updated fires every second from Core timer

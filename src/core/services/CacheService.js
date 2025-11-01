@@ -47,8 +47,6 @@ export class CacheService {
         this.maxTimeEntriesCache = 2000;      // Max completed time entries (can have many)
         
         // Sync configuration
-        this.syncInterval = 5000; // Sync to DB every 5 seconds
-        this.syncTimerId = null;
         this.syncInProgress = false;
         
         // Statistics
@@ -412,38 +410,6 @@ export class CacheService {
     // ==================== Sync Methods ====================
     
     /**
-     * Start periodic sync to DB
-     * DISABLED: We don't want periodic sync timer - sync on demand only
-     */
-    startPeriodicSync() {
-        // DISABLED: Periodic sync timer - sync on demand via flush() only
-        return;
-        
-        // if (this.syncTimerId) return;
-        // 
-        // this.syncTimerId = GLib.timeout_add_seconds(
-        //     GLib.PRIORITY_DEFAULT,
-        //     Math.floor(this.syncInterval / 1000),
-        //     () => {
-        //         this.syncToDB().catch(err => {
-        //             Logger.error('Cache', 'Periodic sync error:', err);
-        //         });
-        //         return true; // Continue timer
-        //     }
-        // );
-    }
-    
-    /**
-     * Stop periodic sync
-     */
-    stopPeriodicSync() {
-        if (this.syncTimerId) {
-            GLib.Source.remove(this.syncTimerId);
-            this.syncTimerId = null;
-        }
-    }
-    
-    /**
      * Sync all dirty changes to DB (write-back)
      */
     async syncToDB() {
@@ -707,27 +673,6 @@ export class CacheService {
     }
     
     /**
-     * Get cache statistics
-     */
-    getStats() {
-        return {
-            ...this.stats,
-            cacheSize: {
-                tasks: this.tasks.size,
-                projects: this.projects.size,
-                clients: this.clients.size,
-                taskInstances: this.taskInstances.size,
-            },
-            dirtyCount: {
-                tasks: this.dirtyTasks.size,
-                projects: this.dirtyProjects.size,
-                clients: this.dirtyClients.size,
-                taskInstances: this.dirtyTaskInstances.size,
-            },
-        };
-    }
-    
-    /**
      * Clear all caches
      */
     clear() {
@@ -750,8 +695,6 @@ export class CacheService {
      * Cleanup on shutdown
      */
     destroy() {
-        this.stopPeriodicSync();
-        
         // Final sync before shutdown
         this.flush().catch(err => {
             Logger.error('Cache', 'Final sync on shutdown failed:', err);

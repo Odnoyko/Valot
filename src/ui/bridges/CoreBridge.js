@@ -75,12 +75,6 @@ export class CoreBridge {
         this.core.events.on('task:deleted', (data) => {
             this._notifyUI('task-deleted', data);
         });
-
-        // Memory cleanup event (from MemoryCleanupService)
-        // Memory cleanup events disabled - cleanup should happen on destroy, not periodically
-        // this.core.events.on('memory-cleanup-ui', () => {
-        //     this._notifyUI('memory-cleanup-ui');
-        // });
     }
 
     /**
@@ -138,7 +132,7 @@ export class CoreBridge {
         }
     }
 
-    // ==================== Tick Scheduler API ====================
+    // ==================== Timer Scheduler API ====================
 
     subscribeTick(callback) {
         return this.core.getScheduler().subscribe(callback);

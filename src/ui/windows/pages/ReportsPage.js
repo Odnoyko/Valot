@@ -2071,9 +2071,6 @@ export class ReportsPage {
         this._updateCurrencyCarousel(updatedEarnings);
     }
 
-    // REMOVED: _startTrackingUITimer() and _stopTrackingUITimer()
-    // No separate timers needed - only header widget shows time
-
     /**
      * Update Recent Tasks list in real-time
      * DISABLED: We don't want real-time updates of Recent Tasks during tracking
@@ -2081,81 +2078,6 @@ export class ReportsPage {
     async _updateRecentTasksRealtime(trackingState) {
         // DISABLED: Recent Tasks real-time updates - not needed during tracking
         return;
-        
-        // if (!this.recentTasksList || !trackingState.isTracking) return;
-
-        try {
-            // Create a temporary copy of tasks for display
-            const tasksForDisplay = (this.allTasks || []).map(t => ({...t}));
-
-            // Find current tracking task instance in the copy
-            // Try by TaskInstance ID first (most reliable), then by combination
-            let currentTask = null;
-            
-            if (trackingState.currentTaskInstanceId) {
-                // First try: find by TaskInstance ID
-                currentTask = tasksForDisplay.find(t => t.id === trackingState.currentTaskInstanceId);
-            }
-            
-            // Second try: find by combination (task_id + project_id + client_id)
-            if (!currentTask) {
-                currentTask = tasksForDisplay.find(t =>
-                    t.task_id === trackingState.currentTaskId &&
-                    t.project_id === trackingState.currentProjectId &&
-                    t.client_id === trackingState.currentClientId
-                );
-            }
-
-            // If tracked task is not in cache, fetch it from Core
-            if (!currentTask && trackingState.currentTaskInstanceId) {
-                try {
-                    const taskInstance = await this.coreBridge.getTaskInstance(trackingState.currentTaskInstanceId);
-                    if (taskInstance) {
-                        // Add to cache and display copy
-                        this._addToCache('allTasks', taskInstance);
-                        if (!tasksForDisplay.find(t => t.id === taskInstance.id)) {
-                            tasksForDisplay.push({...taskInstance});
-                        }
-                        currentTask = tasksForDisplay.find(t => t.id === taskInstance.id);
-                    }
-                } catch (error) {
-                    Logger.error('[ReportsPage] Error fetching tracked task:', error);
-                }
-            }
-
-            if (currentTask) {
-                // NOTE: oldTime is no longer stored in state (calculated on demand)
-                // Use await this.coreBridge.getCurrentTaskOldTime() to get old time
-                // const oldTime = await this.coreBridge.getCurrentTaskOldTime();
-                const oldTime = 0; // Temporary fallback (should use getCurrentTaskOldTime())
-                const currentElapsed = trackingState.elapsedSeconds || 0;
-                // Use calculated old time + current elapsed instead of cached total_time
-                currentTask.total_time = oldTime + currentElapsed;
-                
-                // Update last_used_at to current time for proper sorting in Recent Tasks
-                // This ensures tracked task appears at the top of the list
-                const { TimeUtils } = await import('resource:///com/odnoyko/valot/core/utils/TimeUtils.js');
-                currentTask.last_used_at = TimeUtils.getCurrentTimestamp();
-            }
-
-            // Apply filters and update Recent Tasks list (using temporary copy)
-            // Pass trackingState to ensure tracked task is always included
-            const filteredTasks = await this._getFilteredTasksFromArray(tasksForDisplay, trackingState);
-            this._updateRecentTasksList(filteredTasks);
-        } catch (error) {
-            Logger.error('[ReportsPage] Error updating recent tasks realtime:', error);
-            // Fallback: try to show at least something
-            if (this.allTasks && this.allTasks.length > 0) {
-                try {
-                    const filteredTasks = await this._getFilteredTasksFromArray(this.allTasks, trackingState);
-                    this._updateRecentTasksList(filteredTasks);
-                } catch (fallbackError) {
-                    // Last resort: show filtered tasks without tracked task update
-                    const filteredTasks = this._getFilteredTasksFromArraySync(this.allTasks, trackingState);
-                    this._updateRecentTasksList(filteredTasks);
-                }
-            }
-        }
     }
 
     /**
@@ -2275,34 +2197,11 @@ export class ReportsPage {
     }
 
     /**
-     * Start carousel auto-advance timer (every 5 seconds)
-     */
-    /**
      * DISABLED: Carousel auto-advance timer - not needed for tracking functionality
      */
     _startCarouselAutoAdvance() {
         // DISABLED: Carousel auto-advance timer - not needed, saves RAM
         return;
-        
-        // // Clear existing timer if any
-        // if (this._carouselTimerId) {
-        //     GLib.source_remove(this._carouselTimerId);
-        // }
-        // 
-        // // Auto-advance every 5 seconds
-        // this._carouselTimerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 5, () => {
-        //     if (!this.currencyCarousel) return GLib.SOURCE_REMOVE;
-        // 
-        //     const nPages = this.currencyCarousel.get_n_pages();
-        //     if (nPages <= 1) return GLib.SOURCE_CONTINUE;
-        // 
-        //     const currentPage = Math.floor(this.currencyCarousel.get_position());
-        //     const nextPage = (currentPage + 1) % nPages;
-        // 
-        //     this.currencyCarousel.scroll_to(this.currencyCarousel.get_nth_page(nextPage), true);
-        // 
-        //     return GLib.SOURCE_CONTINUE;
-        // });
     }
 
     /**

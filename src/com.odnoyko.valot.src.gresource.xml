@@ -110,7 +110,6 @@
     <file>core/services/TrackingPersistenceService.js</file>
     <file>core/services/TrackingFileCache.js</file>
     <file>core/services/CacheService.js</file>
-    <file>core/services/MemoryCleanupService.js</file>
 
     <!-- Core Models -->
     <file>core/models/Client.js</file>

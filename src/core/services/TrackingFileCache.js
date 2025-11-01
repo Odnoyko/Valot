@@ -105,16 +105,5 @@ export class TrackingFileCache {
         }
     }
 
-    /**
-     * Check if cache file exists
-     */
-    exists() {
-        try {
-            const file = Gio.File.new_for_path(this.cacheFile);
-            return file.query_exists(null);
-        } catch (error) {
-            return false;
-        }
-    }
 }
 

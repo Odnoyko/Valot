@@ -116,35 +116,6 @@ export class TrackingPersistenceService extends BaseService {
     startPeriodicPersist() {
         // DISABLED: Periodic persistence timer - time calculated from startTime, not stored
         return;
-        
-        // // Stop existing timer if any
-        // this.stopPeriodicPersist();
-        // 
-        // // Reset last persist time
-        // this._lastPersistTime = Date.now();
-        // 
-        // // Subscribe to scheduler for periodic saves
-        // const scheduler = this.core.services.timerScheduler;
-        // this._persistTimerToken = scheduler.subscribe(() => {
-        //     const currentState = this.state.getTrackingState();
-        //     
-        //     // Only persist if actively tracking
-        //     if (!currentState.isTracking || !currentState.currentTimeEntryId) {
-        //         return;
-        //     }
-        //     
-        //     // Check if enough time has passed (60 seconds)
-        //     const now = Date.now();
-        //     const timeSinceLastPersist = (now - this._lastPersistTime) / 1000;
-        //     
-        //     if (timeSinceLastPersist >= this._persistIntervalSeconds) {
-        //         this._lastPersistTime = now;
-        //         // Use void but also catch errors to prevent silent failures
-        //         void this.persistCurrentTracking().catch(error => {
-        //             Logger.error(`[TrackingPersistence] Periodic persist failed: ${error.message}`);
-        //         });
-        //     }
-        // });
     }
 
     /**

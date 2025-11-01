@@ -489,28 +489,6 @@ export class GdaDatabaseBridge {
     }
 
     /**
-     * @deprecated - NO LONGER USED
-     * This method creates GDA objects (stmt, prep, holders) which accumulate GWeakRef
-     * Use _escapeSqlParams + execute_select_command instead
-     */
-    _executeSelectPrepared(sql, params) {
-        // Fallback to escaped SQL (never use prepared statements)
-        const processed = this._escapeSqlParams(sql, params);
-        return this.connection.execute_select_command(processed);
-    }
-
-    /**
-     * @deprecated - NO LONGER USED
-     * This method creates GDA objects (stmt, prep, holders) which accumulate GWeakRef
-     * Use _escapeSqlParams + execute_non_select_command instead
-     */
-    _executeNonSelectPrepared(sql, params) {
-        // Fallback to escaped SQL (never use prepared statements)
-        const processed = this._escapeSqlParams(sql, params);
-        return this.connection.execute_non_select_command(processed);
-    }
-
-    /**
      * Escape SQL parameters manually (avoids GDA object creation)
      * This is safer for preventing GWeakRef accumulation than prepared statements
      */
@@ -525,28 +503,6 @@ export class GdaDatabaseBridge {
             processed = processed.replace('?', esc);
         }
         return processed;
-    }
-
-    /**
-     * @deprecated - NO LONGER USED
-     * This method creates GDA objects (holder) which accumulate GWeakRef
-     * Use _escapeSqlParams instead
-     */
-    _bindHolder(holder, value) {
-        try {
-            if (value === null || value === undefined) {
-                holder.set_value(null);
-            } else if (typeof value === 'number') {
-                holder.set_value(value);
-            } else if (typeof value === 'boolean') {
-                holder.set_value(value ? 1 : 0);
-            } else {
-                holder.set_value(String(value));
-            }
-        } catch (e) {
-            // Best-effort fallback
-            holder.set_value(String(value));
-        }
     }
 
     /**
