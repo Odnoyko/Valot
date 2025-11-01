@@ -107,6 +107,9 @@ export class ProjectDropdown {
             valign: Gtk.Align.CENTER
         });
 
+        // Create icon widget once and reuse it (prevents "snapshot symbolic icon" messages)
+        this._iconWidget = null;
+
         // Update button appearance with current project
         this._updateButtonAppearance();
 
@@ -197,8 +200,35 @@ export class ProjectDropdown {
             icon: 'folder-symbolic'
         };
 
-        // Create icon widget (can be emoji or symbolic icon)
-        const iconWidget = createProjectIconWidget(currentProject, 16);
+        // Reuse existing icon widget or create it once
+        if (!this._iconWidget || this._iconWidget.is_destroyed?.()) {
+            // First creation: create widget once
+            this._iconWidget = createProjectIconWidget(currentProject, 16);
+            this.dropdownButton.set_child(this._iconWidget);
+        } else {
+            // Update existing widget instead of creating new one
+            const child = this.dropdownButton.get_child();
+            if (child !== this._iconWidget) {
+                // Widget was replaced, restore reference
+                this._iconWidget = child;
+            }
+
+            // Update icon if it's a Gtk.Image (not emoji label)
+            if (this._iconWidget instanceof Gtk.Image) {
+                if (currentProject.icon && !currentProject.icon.startsWith('emoji:')) {
+                    // Update icon using set_from_icon_name (reuses widget, avoids snapshot)
+                    this._iconWidget.set_from_icon_name(currentProject.icon);
+                }
+            } else if (this._iconWidget instanceof Gtk.Label && currentProject.icon?.startsWith('emoji:')) {
+                // Update emoji label
+                const emoji = currentProject.icon.substring(6);
+                this._iconWidget.set_label(emoji);
+            } else {
+                // Type mismatch - need to recreate (rare case: switching between emoji and icon)
+                this._iconWidget = createProjectIconWidget(currentProject, 16);
+                this.dropdownButton.set_child(this._iconWidget);
+            }
+        }
 
         // Get icon color (auto, white, black based on background)
         const iconColor = this._getProjectIconColor(currentProject);
@@ -226,7 +256,6 @@ export class ProjectDropdown {
 
         this.dropdownButton.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
         this.dropdownButton.add_css_class('project-dropdown-button');
-        this.dropdownButton.set_child(iconWidget);
         this.dropdownButton.set_tooltip_text(`Project: ${currentProject.name}`);
     }
 

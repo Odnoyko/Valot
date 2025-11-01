@@ -2047,8 +2047,20 @@ export class TasksPage {
             // Dynamically import dialog
             const { TaskInstanceEditDialog } = await import('resource:///com/odnoyko/valot/ui/components/dialogs/TaskInstanceEditDialog.js');
 
-            // Get full task instance data
-            const taskInstance = this.filteredTasks.find(t => t.id === instanceId);
+            // Get full task instance data - try filteredTasks first, then Core
+            let taskInstance = this.filteredTasks.find(t => t.id === instanceId);
+            
+            if (!taskInstance && this.coreBridge) {
+                // Not found in filtered list - try to get from Core
+                try {
+                    taskInstance = await this.coreBridge.getTaskInstance(instanceId);
+                } catch (e) {
+                    // Task instance might have been deleted
+                    console.error('Task instance not found in Core:', instanceId);
+                    return;
+                }
+            }
+            
             if (!taskInstance) {
                 console.error('Task instance not found:', instanceId);
                 return;

@@ -27,9 +27,15 @@ export class ProjectsPage {
 
         // Map to store time labels for real-time updates
         this.projectTimeLabels = new Map(); // projectId -> timeLabel widget
+        
+        // Map to store project rows for reuse (projectId -> row widget)
+        this.projectRowMap = new Map(); // projectId -> Gtk.ListBoxRow
 
         // Track last tracking project to reset its time when switching
         this.lastTrackingProjectId = null;
+        
+        // Cache last displayed projects to avoid unnecessary redraws
+        this._lastDisplayedProjects = [];
 
         // Store event handler references for cleanup
         this._eventHandlers = {};
@@ -645,20 +651,21 @@ export class ProjectsPage {
 
     /**
      * Update projects display (ORIGINAL UI from main branch)
+     * Optimized to reuse rows and avoid recreating icon widgets
      */
     _updateProjectsDisplay() {
-        // Clear existing projects
-        let child = this.projectList.get_first_child();
-        while (child) {
-            const next = child.get_next_sibling();
-            this.projectList.remove(child);
-            child = next;
-        }
-
-        // Clear time labels map
-        this.projectTimeLabels.clear();
-
         if (!this.filteredProjects || this.filteredProjects.length === 0) {
+            // Clear all rows
+            let child = this.projectList.get_first_child();
+            while (child) {
+                const next = child.get_next_sibling();
+                this.projectList.remove(child);
+                child = next;
+            }
+            this.projectTimeLabels.clear();
+            this.projectRowMap.clear();
+            this._lastDisplayedProjects = [];
+            
             this._showEmptyState();
             this._updatePaginationInfo();
             this._updateSelectionUI();
@@ -676,14 +683,178 @@ export class ProjectsPage {
         const end = Math.min(start + this.projectsPerPage, this.filteredProjects.length);
         const projectsToShow = this.filteredProjects.slice(start, end);
 
-        // Render each project (SAME UI as main branch)
-        projectsToShow.forEach(project => {
-            const row = this._createProjectRow(project);
-            this.projectList.append(row);
-        });
+        // Check if displayed projects changed (by ID only, to detect adds/removes/reorders)
+        const currentIds = projectsToShow.map(p => p.id).join(',');
+        const lastIds = this._lastDisplayedProjects.map(p => p.id).join(',');
+        const projectsChanged = currentIds !== lastIds;
+
+        if (projectsChanged) {
+            // Projects list changed - need to rebuild rows
+            // Clear existing rows from list (but keep in map for potential reuse)
+            let child = this.projectList.get_first_child();
+            while (child) {
+                const next = child.get_next_sibling();
+                this.projectList.remove(child);
+                child = next;
+            }
+
+            // Remove rows for projects that are no longer displayed
+            const currentProjectIds = new Set(projectsToShow.map(p => p.id));
+            for (const [projectId, row] of this.projectRowMap.entries()) {
+                if (!currentProjectIds.has(projectId)) {
+                    // Row is no longer needed - remove from map
+                    this.projectRowMap.delete(projectId);
+                    this.projectTimeLabels.delete(projectId);
+                }
+            }
+
+            // Add or reuse rows for current projects
+            projectsToShow.forEach(project => {
+                let row = this.projectRowMap.get(project.id);
+                if (row) {
+                    // Reuse existing row - just update data
+                    this._updateProjectRowData(row, project);
+                } else {
+                    // Create new row
+                    row = this._createProjectRow(project);
+                    this.projectRowMap.set(project.id, row);
+                }
+                this.projectList.append(row);
+            });
+
+            this._lastDisplayedProjects = [...projectsToShow];
+        } else {
+            // Projects list didn't change - just update data in existing rows
+            projectsToShow.forEach(project => {
+                const row = this.projectRowMap.get(project.id);
+                if (row) {
+                    this._updateProjectRowData(row, project);
+                }
+            });
+        }
 
         this._updatePaginationInfo();
         this._updateSelectionUI();
+    }
+    
+    /**
+     * Update existing project row data without recreating widgets
+     */
+    _updateProjectRowData(row, project) {
+        const mainBox = row.get_child();
+        if (!mainBox) return;
+
+        // Update project name (index 1: settingsButton, 2: nameLabel, 3: timeLabel)
+        const nameLabel = mainBox.get_first_child()?.get_next_sibling();
+        if (nameLabel && nameLabel instanceof Gtk.Label) {
+            nameLabel.set_label(project.name);
+        }
+
+        // Update time label (index 3)
+        const timeLabel = mainBox.get_last_child();
+        if (timeLabel && timeLabel instanceof Gtk.Label) {
+            const totalTime = project.total_time || 0;
+            timeLabel.set_label(this._formatDurationHMS(totalTime));
+            this.projectTimeLabels.set(project.id, timeLabel);
+        }
+
+        // Update settings button icon and color (first child)
+        const settingsButton = mainBox.get_first_child();
+        if (settingsButton && settingsButton instanceof Gtk.Button) {
+            const iconWidget = settingsButton.get_child();
+            if (iconWidget && !iconWidget.is_destroyed?.()) {
+                // Update icon widget without recreating it
+                this._updateProjectIconWidget(iconWidget, project);
+            }
+
+            // Update CSS color
+            const iconColor = this._getProjectIconColor(project);
+            const provider = new Gtk.CssProvider();
+            provider.load_from_string(
+                `.project-settings-button {
+                    background-color: ${project.color};
+                    border-radius: 6px;
+                    color: ${iconColor};
+                    min-width: 40px;
+                    min-height: 40px;
+                    padding: 0;
+                }
+                .project-settings-button:hover {
+                    filter: brightness(1.1);
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                .emoji-icon {
+                    font-size: 18px;
+                }`
+            );
+            settingsButton.get_style_context().remove_all_providers();
+            settingsButton.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+        }
+
+        // Update selection styling
+        if (this.selectedProjects.has(project.id)) {
+            row.add_css_class('selected-project');
+        } else {
+            row.remove_css_class('selected-project');
+        }
+    }
+    
+    /**
+     * Update existing icon widget without recreating it
+     */
+    _updateProjectIconWidget(iconWidget, project) {
+        if (!project.icon) {
+            // Empty icon - should be empty box
+            if (!(iconWidget instanceof Gtk.Box)) {
+                // Type changed - need to recreate
+                const parent = iconWidget.get_parent();
+                if (parent) {
+                    parent.remove(iconWidget);
+                    const newWidget = new Gtk.Box({
+                        width_request: 20,
+                        height_request: 20,
+                    });
+                    parent.set_child(newWidget);
+                }
+            }
+            return;
+        }
+
+        if (project.icon.startsWith('emoji:')) {
+            const emoji = project.icon.substring(6);
+            if (iconWidget instanceof Gtk.Label) {
+                // Reuse Label - just update emoji
+                iconWidget.set_label(emoji);
+            } else {
+                // Type changed - need to recreate
+                const parent = iconWidget.get_parent();
+                if (parent) {
+                    parent.remove(iconWidget);
+                    const newWidget = new Gtk.Label({
+                        label: emoji,
+                        css_classes: ['emoji-icon'],
+                    });
+                    parent.set_child(newWidget);
+                }
+            }
+        } else {
+            // Symbolic icon
+            if (iconWidget instanceof Gtk.Image) {
+                // Reuse Image - just update icon_name
+                iconWidget.set_from_icon_name(project.icon);
+            } else {
+                // Type changed - need to recreate
+                const parent = iconWidget.get_parent();
+                if (parent) {
+                    parent.remove(iconWidget);
+                    const newWidget = new Gtk.Image({
+                        icon_name: project.icon,
+                        pixel_size: 20,
+                    });
+                    parent.set_child(newWidget);
+                }
+            }
+        }
     }
 
     /**
@@ -1352,6 +1523,10 @@ export class ProjectsPage {
         
         // Clear time labels map
         this.projectTimeLabels.clear();
+        
+        // Clear project rows map
+        this.projectRowMap.clear();
+        this._lastDisplayedProjects = [];
         
         // Reset tracking references
         this.lastTrackingProjectId = null;
