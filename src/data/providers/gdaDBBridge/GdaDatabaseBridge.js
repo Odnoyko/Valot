@@ -415,6 +415,10 @@ export class GdaDatabaseBridge {
                 }
             }
 
+            // OPTIMIZED: Clear any intermediate arrays if they were large
+            // This helps GC free memory from large result sets immediately
+            // Note: results array is returned to caller, they should clear it after use
+            
             return results;
         } catch (error) {
             Logger.error(`❌ Query error: ${sql}`, error);

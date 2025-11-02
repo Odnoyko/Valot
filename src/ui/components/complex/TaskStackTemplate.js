@@ -42,37 +42,20 @@ export class TaskStackTemplate {
     }
 
     _createStackWidget() {
-        // Check if any task in this stack is currently being tracked
-        // Must match unique combination of task + project + client
-        const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : { isTracking: false };
-        const isCurrentlyTracking = trackingState.isTracking &&
-            this.group.tasks.some(t =>
-                t.task_id === trackingState.currentTaskId &&
-                t.project_id === trackingState.currentProjectId &&
-                t.client_id === trackingState.currentClientId
-            );
-
         // Get project color from latest task
         const groupProjectName = this.group.latestTask.project_name || 'No Project';
         const groupClientName = this.group.latestTask.client_name || 'No Client';
         const groupDotColor = this.group.latestTask.project_color || '#9a9996';
 
-        // Create group subtitle with colored dot (SAME UI)
-        const groupSubtitle = isCurrentlyTracking
-            ? `<span foreground="${groupDotColor}">●</span> ${groupProjectName} • ${groupClientName} • <b>Currently Tracking</b>`
-            : `<span foreground="${groupDotColor}">●</span> ${groupProjectName} • ${groupClientName}`;
+        // Create group subtitle with colored dot (same for all)
+        const groupSubtitle = `<span foreground="${groupDotColor}">●</span> ${groupProjectName} • ${groupClientName}`;
 
-        // Create main expander row (SAME UI)
+        // Create main expander row (same for all)
         const groupRow = new Adw.ExpanderRow({
             title: `${this._escapeMarkup(this.group.baseName)} (${this.group.tasks.length} entries)`,
             subtitle: groupSubtitle,
             use_markup: true
         });
-
-        // Apply tracking state styling (SAME UI)
-        if (isCurrentlyTracking) {
-            groupRow.add_css_class('tracking-active');
-        }
 
         // Add group suffix box with time and track button
         const groupSuffixBox = this._createGroupSuffixBox();
@@ -92,19 +75,9 @@ export class TaskStackTemplate {
         this.timeLabel = null;
         this.moneyLabel = null;
 
-        // Check tracking state from Core
-        // Must match unique combination of task + project + client
-        const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : { isTracking: false };
-        const isCurrentlyTracking = trackingState.isTracking &&
-            this.group.tasks.some(t =>
-                t.task_id === trackingState.currentTaskId &&
-                t.project_id === trackingState.currentProjectId &&
-                t.client_id === trackingState.currentClientId
-            );
-
-        // Prepare time text (show total time even when tracking)
+        // Prepare time text (same for all)
         if (this.group.totalDuration > 0) {
-            timeText = (isCurrentlyTracking ? '● ' : '') + this._formatDuration(this.group.totalDuration);
+            timeText = this._formatDuration(this.group.totalDuration);
         }
 
         // Prepare money text (WidgetFactory shows money BEFORE time automatically)
@@ -114,8 +87,8 @@ export class TaskStackTemplate {
             moneyText = `${currencySymbol}${this.group.totalCost.toFixed(2)}`;
         }
 
-        // Use accent color for time when tracking
-        const timeCssClasses = isCurrentlyTracking ? ['caption'] : ['caption', 'dim-label'];
+        // Use dim-label for all tasks
+        const timeCssClasses = ['caption', 'dim-label'];
 
         // Create suffix box (SAME UI)
         const { suffixBox, timeLabel, moneyLabel, trackButton } = WidgetFactory.createTaskSuffixBox({
@@ -162,7 +135,6 @@ export class TaskStackTemplate {
                             }
                         }
                     } catch (error) {
-                        console.error('Error toggling tracking:', error);
                     }
                 }
             }
@@ -173,20 +145,10 @@ export class TaskStackTemplate {
         this.moneyLabel = moneyLabel;
         this.trackButton = trackButton;
 
-        // Set track button icon based on tracking state
+        // Set track button icon (always show start, tracking state handled elsewhere)
         if (trackButton) {
-            if (isCurrentlyTracking) {
-                trackButton.set_icon_name('media-playback-stop-symbolic');
-                trackButton.set_tooltip_text(_('Stop tracking'));
-            } else {
-                trackButton.set_icon_name('media-playback-start-symbolic');
-                trackButton.set_tooltip_text(_('Start tracking'));
-            }
-        }
-
-        // Add accent color to money label when tracking
-        if (isCurrentlyTracking && moneyLabel) {
-            moneyLabel.remove_css_class('dim-label');
+            trackButton.set_icon_name('media-playback-start-symbolic');
+            trackButton.set_tooltip_text(_('Start tracking'));
         }
 
         return suffixBox;
@@ -198,27 +160,14 @@ export class TaskStackTemplate {
 
         // Add individual task rows to the stack
         this.group.tasks.forEach(task => {
-            // Check if THIS SPECIFIC task instance is currently being tracked
-            // Must match task instance ID, not just task_id
-            const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : { isTracking: false };
-            const isCurrentlyTracking = trackingState.isTracking &&
-                trackingState.currentTaskInstanceId === task.id;
-
-            // Format date for subtitle
+            // Format date for subtitle (same for all tasks)
             const dateText = this._formatDate(task.last_used_at);
 
             const taskRow = new Adw.ActionRow({
                 title: this._escapeMarkup(task.task_name),
-                subtitle: isCurrentlyTracking
-                    ? `<b>Currently Tracking</b> • ${dateText}`
-                    : dateText,
+                subtitle: dateText,
                 use_markup: true
             });
-
-            // Apply tracking state styling
-            if (isCurrentlyTracking) {
-                taskRow.add_css_class('tracking-active');
-            }
 
             // Apply selection styling if task is selected
             if (this.parentWindow.selectedTasks && this.parentWindow.selectedTasks.has(task.id)) {
@@ -233,34 +182,29 @@ export class TaskStackTemplate {
             });
 
             // Add time display (cost • duration) for individual tasks
-            if (!isCurrentlyTracking && task.total_time > 0) {
-                const cost = (task.total_time / 3600) * (task.client_rate || 0);
-                const currency = task.client_currency || 'EUR';
-                const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
+            // Always show time label, even if 0 (will be updated when time is added)
+            const cost = (task.total_time / 3600) * (task.client_rate || 0);
+            const currency = task.client_currency || 'EUR';
+            const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
 
-                let labelText = this._formatDuration(task.total_time);
+            let labelText = this._formatDuration(task.total_time || 0);
 
-                // If has cost, show: $0.01 • 00:00:01
-                if (cost > 0) {
-                    labelText = `${currencySymbol}${cost.toFixed(2)} • ${this._formatDuration(task.total_time)}`;
-                }
-
-                const taskTimeLabel = new Gtk.Label({
-                    label: labelText,
-                    css_classes: ['caption', 'dim-label'],
-                    halign: Gtk.Align.END
-                });
-
-                taskSuffixBox.append(taskTimeLabel);
-            } else if (isCurrentlyTracking) {
-                // Show active indicator for currently tracking task within stack
-                const activeLabel = new Gtk.Label({
-                    label: `● Tracked`,
-                    css_classes: ['caption'],
-                    halign: Gtk.Align.END
-                });
-                taskSuffixBox.append(activeLabel);
+            // If has cost, show: $0.01 • 00:00:01
+            if (cost > 0) {
+                labelText = `${currencySymbol}${cost.toFixed(2)} • ${this._formatDuration(task.total_time || 0)}`;
             }
+
+            const taskTimeLabel = new Gtk.Label({
+                label: labelText,
+                css_classes: ['caption', 'dim-label'],
+                halign: Gtk.Align.END
+            });
+            
+            // Store reference to label for later updates
+            taskRow.taskTimeLabel = taskTimeLabel;
+            taskRow.taskInstanceId = task.id;
+
+            taskSuffixBox.append(taskTimeLabel);
 
             taskRow.add_suffix(taskSuffixBox);
 
@@ -318,21 +262,11 @@ export class TaskStackTemplate {
         });
         this.group.latestTask.project_color = newColor;
 
-        // Recreate subtitle with new color
+        // Recreate subtitle with new color (same for all)
         const groupProjectName = this.group.latestTask.project_name || 'No Project';
         const groupClientName = this.group.latestTask.client_name || 'No Client';
 
-        const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : { isTracking: false };
-        const isCurrentlyTracking = trackingState.isTracking &&
-            this.group.tasks.some(t =>
-                t.task_id === trackingState.currentTaskId &&
-                t.project_id === trackingState.currentProjectId &&
-                t.client_id === trackingState.currentClientId
-            );
-
-        const groupSubtitle = isCurrentlyTracking
-            ? `<span foreground="${newColor}">●</span> ${groupProjectName} • ${groupClientName} • <b>Currently Tracking</b>`
-            : `<span foreground="${newColor}">●</span> ${groupProjectName} • ${groupClientName}`;
+        const groupSubtitle = `<span foreground="${newColor}">●</span> ${groupProjectName} • ${groupClientName}`;
 
         // Update subtitle in widget
         this.widget.set_subtitle(groupSubtitle);
@@ -350,5 +284,246 @@ export class TaskStackTemplate {
                 }
             });
         }
+    }
+
+    /**
+     * Update tracking state (icon)
+     * Called when tracking starts/stops to update UI without recreating widget
+     */
+    updateTrackingState() {
+        if (!this.coreBridge || !this.trackButton) return;
+
+        const trackingState = this.coreBridge.getTrackingState();
+        const isTrackingThisStack = trackingState.isTracking &&
+            this.group.tasks.some(t =>
+                t.task_id === trackingState.currentTaskId &&
+                t.project_id === trackingState.currentProjectId &&
+                t.client_id === trackingState.currentClientId
+            );
+
+        // Update button icon
+        if (isTrackingThisStack) {
+            this.trackButton.set_icon_name('media-playback-stop-symbolic');
+            this.trackButton.set_tooltip_text(_('Stop tracking'));
+        } else {
+            this.trackButton.set_icon_name('media-playback-start-symbolic');
+            this.trackButton.set_tooltip_text(_('Start tracking'));
+        }
+    }
+
+    /**
+     * Update time for stack group (recalculates from all tasks)
+     * OPTIMIZED: Updates time label without recreating widget
+     */
+    updateTime(ignoreParam) {
+        if (!this.timeLabel) return;
+        
+        // OPTIMIZED: Always recalculate group totalDuration and totalCost from all tasks (ignore parameter)
+        this.group.totalDuration = this.group.tasks.reduce((sum, t) => sum + (t.total_time || 0), 0);
+        this.group.totalCost = this.group.tasks.reduce((sum, t) => {
+            const taskCost = ((t.total_time || 0) / 3600) * (t.client_rate || 0);
+            return sum + taskCost;
+        }, 0);
+        
+        // Check tracking state (same as single task)
+        const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : { isTracking: false };
+        const isTrackingThisStack = trackingState.isTracking &&
+            this.group.tasks.some(t =>
+                t.task_id === trackingState.currentTaskId &&
+                t.project_id === trackingState.currentProjectId &&
+                t.client_id === trackingState.currentClientId
+            );
+        
+        // Prepare time text (same as single task)
+        let timeText = '';
+        if (isTrackingThisStack) {
+            timeText = '● ' + this._formatDuration(this.group.totalDuration);
+            // Remove dim-label to show green color
+            if (this.timeLabel.has_css_class('dim-label')) {
+                this.timeLabel.remove_css_class('dim-label');
+            }
+        } else if (this.group.totalDuration > 0) {
+            timeText = this._formatDuration(this.group.totalDuration);
+            // Add dim-label if not tracking
+            if (!this.timeLabel.has_css_class('dim-label')) {
+                this.timeLabel.add_css_class('dim-label');
+            }
+        } else {
+            timeText = this._formatDuration(0);
+        }
+        
+        this.timeLabel.set_text(timeText);
+        
+        // CRITICAL: Update money label (currency) based on new totalCost
+        if (this.moneyLabel) {
+            if (this.group.totalCost > 0) {
+                // Use currency from latest task (all tasks in stack should have same currency)
+                const currency = this.group.latestTask.client_currency || 'EUR';
+                const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
+                const moneyText = `${currencySymbol}${this.group.totalCost.toFixed(2)}`;
+                this.moneyLabel.set_text(moneyText);
+                
+                // Update CSS classes based on tracking state
+                if (isTrackingThisStack) {
+                    // Remove dim-label to show normal color when tracking
+                    if (this.moneyLabel.has_css_class('dim-label')) {
+                        this.moneyLabel.remove_css_class('dim-label');
+                    }
+                } else {
+                    // Add dim-label if not tracking
+                    if (!this.moneyLabel.has_css_class('dim-label')) {
+                        this.moneyLabel.add_css_class('dim-label');
+                    }
+                }
+            } else {
+                // No cost - clear money label
+                this.moneyLabel.set_text('');
+            }
+        }
+    }
+
+    /**
+     * Update time for individual task in stack
+     * OPTIMIZED: Updates time labels in childRows without recreating widgets
+     */
+    updateTaskTime(taskInstanceId, newTotalTime) {
+        if (!this.childRows || this.childRows.length === 0) return;
+
+        // Find task in group to get task reference
+        const task = this.group.tasks.find(t => t.id === taskInstanceId);
+        if (!task) return;
+
+        // CRITICAL: Validate newTotalTime
+        if (newTotalTime === undefined || newTotalTime === null || isNaN(newTotalTime)) {
+            newTotalTime = 0;
+        }
+        
+        // Ensure newTotalTime is a number
+        newTotalTime = Number(newTotalTime);
+
+        // Update task object
+        task.total_time = newTotalTime;
+
+        // Update group time (same as single task updateTime)
+        this.updateTime(newTotalTime);
+
+        // Find corresponding childRow and update its time label
+        const taskIndex = this.group.tasks.findIndex(t => t.id === taskInstanceId);
+        if (taskIndex >= 0 && taskIndex < this.childRows.length) {
+            const taskRow = this.childRows[taskIndex];
+            
+        // CRITICAL: Check tracking state to remove green dot after stop
+        const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : { isTracking: false };
+        const isCurrentlyTracking = trackingState.isTracking &&
+            trackingState.currentTaskId === task.task_id &&
+            trackingState.currentProjectId === task.project_id &&
+            trackingState.currentClientId === task.client_id;
+        
+            
+            // OPTIMIZED: Use stored reference to time label (faster than traversing DOM)
+            if (taskRow.taskTimeLabel) {
+                const cost = (newTotalTime / 3600) * (task.client_rate || 0);
+                const currency = task.client_currency || 'EUR';
+                const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
+
+                let labelText = this._formatDuration(newTotalTime);
+
+                // If has cost, show: $0.01 • 00:00:01
+                if (cost > 0) {
+                    labelText = `${currencySymbol}${cost.toFixed(2)} • ${this._formatDuration(newTotalTime)}`;
+                }
+
+                taskRow.taskTimeLabel.set_text(labelText);
+                
+                // CRITICAL: Update CSS classes based on tracking state (remove green dot after stop)
+                if (isCurrentlyTracking) {
+                    // Remove dim-label to show green color
+                    if (taskRow.taskTimeLabel.has_css_class('dim-label')) {
+                        taskRow.taskTimeLabel.remove_css_class('dim-label');
+                    }
+                } else {
+                    // Add dim-label if not tracking (removes green dot)
+                    if (!taskRow.taskTimeLabel.has_css_class('dim-label')) {
+                        taskRow.taskTimeLabel.add_css_class('dim-label');
+                    }
+                }
+            } else {
+                // Fallback: Find suffix box and time label
+                const suffixBox = taskRow.get_suffix();
+                if (suffixBox) {
+                    // Find time label in suffix box
+                    let timeLabel = suffixBox.get_first_child();
+                    while (timeLabel) {
+                        if (timeLabel instanceof Gtk.Label && timeLabel.get_css_classes().includes('dim-label')) {
+                            // Store reference for future updates
+                            taskRow.taskTimeLabel = timeLabel;
+                            
+                            // Update time label text
+                            const cost = (newTotalTime / 3600) * (task.client_rate || 0);
+                            const currency = task.client_currency || 'EUR';
+                            const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
+
+                            let labelText = this._formatDuration(newTotalTime);
+
+                            // If has cost, show: $0.01 • 00:00:01
+                            if (cost > 0) {
+                                labelText = `${currencySymbol}${cost.toFixed(2)} • ${this._formatDuration(newTotalTime)}`;
+                            }
+
+                            timeLabel.set_text(labelText);
+                            
+                            // CRITICAL: Update CSS classes based on tracking state (remove green dot after stop)
+                            if (isCurrentlyTracking) {
+                                // Remove dim-label to show green color
+                                if (timeLabel.has_css_class('dim-label')) {
+                                    timeLabel.remove_css_class('dim-label');
+                                }
+                            } else {
+                                // Add dim-label if not tracking (removes green dot)
+                                if (!timeLabel.has_css_class('dim-label')) {
+                                    timeLabel.add_css_class('dim-label');
+                                }
+                            }
+                            break;
+                        }
+                        timeLabel = timeLabel.get_next_sibling();
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Cleanup: destroy widget and clear references to free RAM
+     */
+    destroy() {
+        if (this.widget) {
+            try {
+                if (typeof this.widget.destroy === 'function') {
+                    this.widget.destroy();
+                }
+            } catch (e) {
+                // Widget may already be destroyed
+            }
+            this.widget = null;
+        }
+        
+        // Destroy child rows
+        if (this.childRows) {
+            this.childRows.forEach(row => {
+                try {
+                    if (row && typeof row.destroy === 'function') {
+                        row.destroy();
+                    }
+                } catch (e) {
+                    // Row may already be destroyed
+                }
+            });
+            this.childRows = [];
+        }
+        
+        this.group = null;
+        this.parentWindow = null;
+        this.coreBridge = null;
     }
 }

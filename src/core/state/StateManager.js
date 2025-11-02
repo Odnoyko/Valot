@@ -42,9 +42,10 @@ export class StateManager {
     }
     /**
      * Get current state
+     * OPTIMIZED: Return direct reference to prevent object creation
      */
     getState() {
-        return { ...this.state };
+        return this.state; // Direct reference - no object creation
     }
     /**
      * Get tracking state
@@ -137,36 +138,68 @@ export class StateManager {
     }
     /**
      * Update tracking state
-     * OPTIMIZED: Invalidates cache when state is updated
+     * OPTIMIZED: Direct property updates, no spread operators
      */
     updateTrackingState(update) {
-        this.state.tracking = {
-            ...this.state.tracking,
-            ...update,
-        };
-        // Invalidate cache - next getTrackingState() will recreate object
-        // This ensures cache is always fresh after state changes
+        // Direct property updates - no object creation
+        const tracking = this.state.tracking;
+        if (update.isTracking !== undefined) tracking.isTracking = update.isTracking;
+        if (update.currentTaskId !== undefined) tracking.currentTaskId = update.currentTaskId;
+        if (update.currentTaskName !== undefined) tracking.currentTaskName = update.currentTaskName;
+        if (update.currentProjectId !== undefined) tracking.currentProjectId = update.currentProjectId;
+        if (update.currentClientId !== undefined) tracking.currentClientId = update.currentClientId;
+        if (update.currentTaskInstanceId !== undefined) tracking.currentTaskInstanceId = update.currentTaskInstanceId;
+        if (update.currentTimeEntryId !== undefined) tracking.currentTimeEntryId = update.currentTimeEntryId;
+        if (update.startTime !== undefined) tracking.startTime = update.startTime;
+        if (update.savedTimeFromCrash !== undefined) tracking.savedTimeFromCrash = update.savedTimeFromCrash;
+        if (update.pomodoroMode !== undefined) tracking.pomodoroMode = update.pomodoroMode;
+        if (update.pomodoroDuration !== undefined) tracking.pomodoroDuration = update.pomodoroDuration;
+        if (update.pomodoroRemaining !== undefined) tracking.pomodoroRemaining = update.pomodoroRemaining;
+        
+        // CRITICAL: Invalidate and clear ALL cache to free RAM
+        // This ensures no stale cached objects remain in memory
+        if (this._cachedTrackingState) {
+            // Clear all properties from cached state object
+            const cached = this._cachedTrackingState;
+            cached.isTracking = null;
+            cached.currentTaskId = null;
+            cached.currentTaskName = null;
+            cached.currentProjectId = null;
+            cached.currentClientId = null;
+            cached.currentTaskInstanceId = null;
+            cached.currentTimeEntryId = null;
+            cached.startTime = null;
+            cached.savedTimeFromCrash = null;
+            cached.pomodoroMode = null;
+            cached.pomodoroDuration = null;
+            cached.pomodoroRemaining = null;
+            cached.elapsedSeconds = null;
+        }
         this._cachedTrackingState = null;
         this._lastStateHash = null;
         this._lastElapsedUpdate = 0;
         this._cachedStartTimestamp = null;
-        this.events.emit('state:tracking-updated', this.state.tracking);
+        
+        // Emit event with direct reference (no object creation)
+        this.events.emit('state:tracking-updated', tracking);
     }
     /**
      * Get UI state
+     * OPTIMIZED: Return direct reference
      */
     getUIState() {
-        return { ...this.state.ui };
+        return this.state.ui; // Direct reference - no object creation
     }
     /**
      * Update UI state
+     * OPTIMIZED: Direct property updates
      */
     updateUIState(update) {
-        this.state.ui = {
-            ...this.state.ui,
-            ...update,
-        };
-        this.events.emit('state:ui-updated', this.state.ui);
+        const ui = this.state.ui;
+        if (update.currentPage !== undefined) ui.currentPage = update.currentPage;
+        if (update.sidebarVisible !== undefined) ui.sidebarVisible = update.sidebarVisible;
+        if (update.compactMode !== undefined) ui.compactMode = update.compactMode;
+        this.events.emit('state:ui-updated', ui);
     }
     /**
      * Reset state to initial

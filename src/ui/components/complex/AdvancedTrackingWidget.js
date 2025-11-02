@@ -48,6 +48,7 @@ export class AdvancedTrackingWidget {
         this._cachedTimeText = '';
         this._cachedIconName = '';
         this._cachedTooltipText = '';
+        this._isTracking = false; // Cache tracking state - avoid getTrackingState() calls
 
         // Build widget
         this.widget = this._createWidget();
@@ -72,12 +73,13 @@ export class AdvancedTrackingWidget {
         });
 
         // Auto-update task name while typing (if tracking)
+        // OPTIMIZED: Use cached _isTracking flag - no getTrackingState() call
         this.taskNameEntry.connect('changed', () => {
             // Don't trigger update during programmatic changes
             if (this._blockTaskNameUpdate) return;
 
-            const state = this.coreBridge?.getTrackingState();
-            if (!state || !state.isTracking) return;
+            // Use cached flag - avoid object creation
+            if (!this._isTracking) return;
 
             // Clear previous timer
             if (this.taskNameDebounceTimer) {
@@ -248,6 +250,9 @@ export class AdvancedTrackingWidget {
         if (!this.coreBridge) return;
 
         const state = this.coreBridge.getTrackingState();
+        
+        // Update cached tracking flag
+        this._isTracking = state.isTracking || false;
 
         if (state.isTracking) {
             // Tracking active - allow editing!
@@ -407,6 +412,43 @@ export class AdvancedTrackingWidget {
     }
 
     _onTrackingStopped(data) {
+        // CRITICAL: Clear tracking flag FIRST to prevent tracking-updated events from updating UI
+        this._isTracking = false;
+        
+        // OPTIMIZED: Clear all cached UI state to free RAM after tracking stops
+        this._cachedPomodoroMode = false;
+        this._cachedTimeText = '';
+        this._cachedIconName = '';
+        this._cachedTooltipText = '';
+        
+        // CRITICAL: Immediately update time label to 00:00:00 and button to start icon
+        // Don't wait for _updateUIFromCore() which might use stale cached state
+        if (this.actualTimeLabel) {
+            const timeText = '00:00:00';
+            this.actualTimeLabel.set_label(timeText);
+            this._cachedTimeText = timeText;
+        }
+        
+        if (this.trackButton) {
+            this.trackButton.set_icon_name('media-playback-start-symbolic');
+            this._cachedIconName = 'media-playback-start-symbolic';
+            
+            const tooltipText = _('Start tracking (Long press or P for Pomodoro)');
+            this.trackButton.set_tooltip_text(tooltipText);
+            this._cachedTooltipText = tooltipText;
+            
+            // Update CSS classes
+            if (this.trackButton.has_css_class('pomodoro-active')) {
+                this.trackButton.remove_css_class('pomodoro-active');
+            }
+            if (this.trackButton.has_css_class('destructive-action')) {
+                this.trackButton.remove_css_class('destructive-action');
+            }
+            if (!this.trackButton.has_css_class('suggested-action')) {
+                this.trackButton.add_css_class('suggested-action');
+            }
+        }
+        
         // Force full UI refresh to synchronize with current state
         this._updateUIFromCore();
     }
@@ -416,6 +458,11 @@ export class AdvancedTrackingWidget {
         // Core timer calculates elapsedSeconds (currentTime - startTime), we just show it
         // No calculation in UI, no RAM storage - just display Core timer result
         // OPTIMIZED: Only update label text if it actually changed to prevent unnecessary redraws
+        
+        // CRITICAL: Don't update if tracking is stopped (prevent updates after stop)
+        if (!this._isTracking) {
+            return;
+        }
         
         if (data && this.actualTimeLabel) {
             let newTimeText = '';

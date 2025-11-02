@@ -335,17 +335,19 @@ export class TaskInstanceService extends BaseService {
 
     /**
      * Map to view
+     * OPTIMIZED: Direct property assignment, no spread operator to avoid object duplication
      */
     mapToView(row) {
-        return {
-            ...this.mapToModel(row),
-            task_name: row.task_name,
-            project_name: row.project_name || null,
-            project_color: row.project_color || null,
-            client_name: row.client_name || null,
-            client_rate: row.client_rate || 0,
-            client_currency: row.client_currency || 'EUR',
-            entry_count: row.entry_count || 0,
-        };
+        // Get base model (creates one object)
+        const model = this.mapToModel(row);
+        // Add view properties directly to same object (no spread, no new object)
+        model.task_name = row.task_name;
+        model.project_name = row.project_name || null;
+        model.project_color = row.project_color || null;
+        model.client_name = row.client_name || null;
+        model.client_rate = row.client_rate || 0;
+        model.client_currency = row.client_currency || 'EUR';
+        model.entry_count = row.entry_count || 0;
+        return model; // Return same object, not a copy
     }
 }

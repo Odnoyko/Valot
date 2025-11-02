@@ -57,32 +57,15 @@ export class ReportsPage {
 
         // Store handlers for cleanup
         this._eventHandlers['tracking-started'] = async () => {
-            // DISABLED: No getTrackingState() call - creates objects
-            // Update cache to include new tracked task
-            // try {
-            //     const trackingState = this.coreBridge.getTrackingState();
-            //     if (trackingState.isTracking && trackingState.currentTaskInstanceId) {
-            //         // Ensure tracked task is in cache
-            //         const existingTask = this.allTasks.find(t => t.id === trackingState.currentTaskInstanceId);
-            //         if (!existingTask) {
-            //             const taskInstance = await this.coreBridge.getTaskInstance(trackingState.currentTaskInstanceId);
-            //             if (taskInstance) {
-            //                 this._addToCache('allTasks', taskInstance);
-            //             }
-            //         }
-            //     }
-            // } catch (error) {
-            //     Logger.error('[ReportsPage] Error updating cache on tracking start:', error);
-            // }
-            
-            setTimeout(() => this.updateChartsOnly(), 300);
-            // DISABLED: Time updates in ReportsPage (only header widget shows time)
-            // this._startTrackingUITimer(); // Start real-time updates
+            // OPTIMIZED: Don't update charts - creates new objects from getAllTaskInstances/getAllTimeEntries
+            // Charts don't need real-time updates, only when user manually refreshes
+            // setTimeout(() => this.updateChartsOnly(), 300); // DISABLED - causes RAM growth
         };
 
         this._eventHandlers['tracking-stopped'] = () => {
-            this.updateChartsOnly();
-            // REMOVED: No timer to stop
+            // OPTIMIZED: Don't update charts - creates new objects from getAllTaskInstances/getAllTimeEntries
+            // Charts don't need real-time updates, only when user manually refreshes
+            // this.updateChartsOnly(); // DISABLED - causes RAM growth
         };
 
         this._eventHandlers['task-created'] = () => {

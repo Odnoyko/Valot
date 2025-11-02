@@ -168,11 +168,15 @@ export class CacheService {
     /**
      * Get task by ID (from cache)
      */
+    /**
+     * Get task by ID (from cache)
+     * OPTIMIZED: Return direct reference - no object creation
+     */
     getTask(id) {
         const task = this.tasks.get(id);
         if (task) {
             this.stats.cacheHits++;
-            return { ...task }; // Return copy to prevent mutations
+            return task; // Direct reference - no object creation
         }
         this.stats.cacheMisses++;
         return null;
@@ -180,12 +184,13 @@ export class CacheService {
     
     /**
      * Get task by name (from cache)
+     * OPTIMIZED: Return direct reference
      */
     getTaskByName(name) {
         const task = this.taskByName.get(name);
         if (task) {
             this.stats.cacheHits++;
-            return { ...task };
+            return task; // Direct reference
         }
         this.stats.cacheMisses++;
         return null;
@@ -193,19 +198,21 @@ export class CacheService {
     
     /**
      * Get all tasks (from cache)
+     * OPTIMIZED: Return direct array reference
      */
     getAllTasks() {
-        return Array.from(this.tasks.values()).map(t => ({ ...t }));
+        return Array.from(this.tasks.values()); // Direct references - no map/spread
     }
     
     /**
      * Get project by ID (from cache)
+     * OPTIMIZED: Return direct reference
      */
     getProject(id) {
         const project = this.projects.get(id);
         if (project) {
             this.stats.cacheHits++;
-            return { ...project };
+            return project; // Direct reference
         }
         this.stats.cacheMisses++;
         return null;
@@ -213,19 +220,21 @@ export class CacheService {
     
     /**
      * Get all projects (from cache)
+     * OPTIMIZED: Return direct array reference
      */
     getAllProjects() {
-        return Array.from(this.projects.values()).map(p => ({ ...p }));
+        return Array.from(this.projects.values()); // Direct references
     }
     
     /**
      * Get client by ID (from cache)
+     * OPTIMIZED: Return direct reference
      */
     getClient(id) {
         const client = this.clients.get(id);
         if (client) {
             this.stats.cacheHits++;
-            return { ...client };
+            return client; // Direct reference
         }
         this.stats.cacheMisses++;
         return null;
@@ -233,19 +242,21 @@ export class CacheService {
     
     /**
      * Get all clients (from cache)
+     * OPTIMIZED: Return direct array reference
      */
     getAllClients() {
-        return Array.from(this.clients.values()).map(c => ({ ...c }));
+        return Array.from(this.clients.values()); // Direct references
     }
     
     /**
      * Get task instance by ID (from cache)
+     * OPTIMIZED: Return direct reference
      */
     getTaskInstance(id) {
         const instance = this.taskInstances.get(id);
         if (instance) {
             this.stats.cacheHits++;
-            return { ...instance };
+            return instance; // Direct reference
         }
         this.stats.cacheMisses++;
         return null;
@@ -253,13 +264,14 @@ export class CacheService {
     
     /**
      * Find task instance by combination (from cache)
+     * OPTIMIZED: Return direct reference
      */
     findTaskInstanceByCombo(taskId, projectId, clientId) {
         const key = this._getComboKey(taskId, projectId, clientId);
         const instance = this.instanceByCombo.get(key);
         if (instance) {
             this.stats.cacheHits++;
-            return { ...instance };
+            return instance; // Direct reference
         }
         this.stats.cacheMisses++;
         return null;
@@ -268,8 +280,12 @@ export class CacheService {
     /**
      * Get all task instances (from cache)
      */
+    /**
+     * Get all task instances (from cache)
+     * OPTIMIZED: Return direct array reference
+     */
     getAllTaskInstances() {
-        return Array.from(this.taskInstances.values()).map(i => ({ ...i }));
+        return Array.from(this.taskInstances.values()); // Direct references - no map/spread
     }
     
     // ==================== Cache Write Methods ====================
@@ -289,8 +305,10 @@ export class CacheService {
             this.tasks.delete(oldestId);
         }
         
-        this.tasks.set(task.id, { ...task });
-        this.taskByName.set(task.name, this.tasks.get(task.id));
+        // OPTIMIZED: Store direct reference - no object copy
+        // Object is already created by caller, no need to copy
+        this.tasks.set(task.id, task);
+        this.taskByName.set(task.name, task);
         this.dirtyTasks.add(task.id);
     }
     
@@ -318,7 +336,8 @@ export class CacheService {
             this.projects.delete(oldestId);
         }
         
-        this.projects.set(project.id, { ...project });
+        // OPTIMIZED: Store direct reference - no object copy
+        this.projects.set(project.id, project);
         this.dirtyProjects.add(project.id);
     }
     
@@ -342,7 +361,8 @@ export class CacheService {
             this.clients.delete(oldestId);
         }
         
-        this.clients.set(client.id, { ...client });
+        // OPTIMIZED: Store direct reference - no object copy
+        this.clients.set(client.id, client);
         this.dirtyClients.add(client.id);
     }
     
@@ -373,11 +393,12 @@ export class CacheService {
             this.taskInstances.delete(oldestId);
         }
         
-        this.taskInstances.set(instance.id, { ...instance });
+        // OPTIMIZED: Store direct reference - no object copy
+        this.taskInstances.set(instance.id, instance);
         
         // Update combo index
         const comboKey = this._getComboKey(instance.task_id, instance.project_id, instance.client_id);
-        this.instanceByCombo.set(comboKey, this.taskInstances.get(instance.id));
+        this.instanceByCombo.set(comboKey, instance);
         
         // Remove old combo index if combination changed
         if (oldInstance && 
@@ -484,6 +505,11 @@ export class CacheService {
                 
                 this.dirtyTasks.delete(id);
                 this.stats.dbWrites++;
+                
+                // OPTIMIZED: Clear from cache after sync - data is in DB now
+                // Only keep recently accessed items (keep for 5 minutes of activity)
+                // For now, just remove from dirty - cache will be cleared by size limits
+                // Objects stay in cache for fast reads, but no extra copies created
             } catch (error) {
                 Logger.error('Cache', `Failed to sync task ${id}:`, error);
             }

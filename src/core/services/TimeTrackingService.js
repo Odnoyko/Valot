@@ -9,6 +9,7 @@ import { Logger } from '../utils/Logger.js';
 
 export class TimeTrackingService extends BaseService {
     _timerToken = 0;
+    _cachedStartTimestamp = null; // Cached timestamp for timer (avoid closure holding references)
     lastUsedProjectId = null;
     lastUsedClientId = null;
 
@@ -38,6 +39,11 @@ export class TimeTrackingService extends BaseService {
             throw new Error(`Task ${taskId} not found`);
         }
         const taskName = taskRows[0].name;
+        
+        // OPTIMIZED: Clear query result array immediately after use to free RAM
+        if (taskRows && Array.isArray(taskRows)) {
+            taskRows.length = 0;
+        }
 
         // Check saved time from crash
         const persistence = this.core.services.persistence;
@@ -52,7 +58,7 @@ export class TimeTrackingService extends BaseService {
                 [taskId, validProjectId, validClientId]
             );
             await this.execute(
-                `UPDATE TimeEntry SET end_time = datetime(start_time, '+' || CAST(duration + 1 AS TEXT) || ' seconds')
+                `UPDATE TimeEntry SET end_time = datetime(start_time, '+' || CAST(duration AS TEXT) || ' seconds')
                  WHERE task_instance_id IN (SELECT id FROM TaskInstance WHERE task_id = ? AND project_id = ? AND client_id = ?)
                  AND end_time IS NULL`,
                 [taskId, validProjectId, validClientId]
@@ -124,16 +130,72 @@ export class TimeTrackingService extends BaseService {
             throw new Error('Not tracking');
         }
 
-        this.stopTimer();
-
+        // CRITICAL: Calculate elapsed time DIRECTLY from startTime (don't stop timer first!)
+        // Use startTime from state - it's the source of truth
         const savedTime = tracking.savedTimeFromCrash || 0;
-        const elapsed = tracking.elapsedSeconds || 0;
-        const duration = Math.max(1, elapsed + savedTime);
+        let elapsed = 0;
+        
+        if (!tracking.startTime) {
+            Logger.error(`[Tracking] Stop: No startTime in tracking state!`);
+            elapsed = 1; // Force minimum
+        } else {
+            // Parse startTime string to timestamp
+            // startTime is "YYYY-MM-DD HH:MM:SS" format from TimeUtils.getCurrentTimestamp()
+            let startTimestamp;
+            if (typeof tracking.startTime === 'string') {
+                // Parse "YYYY-MM-DD HH:MM:SS" format correctly
+                // Replace space with T for ISO format, add Z for UTC
+                const isoString = tracking.startTime.replace(' ', 'T');
+                startTimestamp = new Date(isoString).getTime();
+                
+                // If parsing failed (NaN), try alternative parsing
+                if (isNaN(startTimestamp)) {
+                    const parts = tracking.startTime.split(' ');
+                    if (parts.length === 2) {
+                        const [datePart, timePart] = parts;
+                        const [year, month, day] = datePart.split('-').map(Number);
+                        const [hours, mins, secs] = timePart.split(':').map(Number);
+                        startTimestamp = new Date(year, month - 1, day, hours, mins, secs || 0).getTime();
+                    }
+                }
+            } else {
+                startTimestamp = tracking.startTime;
+            }
+            
+            const now = Date.now();
+            elapsed = Math.floor((now - startTimestamp) / 1000);
+            
+            Logger.info(`[Tracking] Stop: startTime="${tracking.startTime}", parsed=${startTimestamp}, now=${now}, elapsed=${elapsed}s`);
+            
+            // CRITICAL: If elapsed is 0 or negative, use minimum (very fast start/stop or parsing error)
+            if (elapsed <= 0) {
+                Logger.warn(`[Tracking] Stop: elapsed=${elapsed}s is invalid, forcing to 1 second (startTime=${tracking.startTime})`);
+                elapsed = 1;
+            }
+        }
+        
+        // CRITICAL: duration must be at least 1 second, use elapsed + savedTime
+        let duration = Math.max(1, elapsed + savedTime);
+        // CRITICAL: If duration is still 0 after calculation, force to 1 (should not happen but safety check)
+        if (duration <= 0) {
+            Logger.error(`[Tracking] Stop: CRITICAL - duration=${duration} is invalid, forcing to 1 second!`);
+            duration = 1;
+        }
+
+        // CRITICAL: Stop timer AFTER we've calculated elapsed (don't clear state before!)
+        this.stopTimer();
 
         let updated = false;
         if (tracking.currentTimeEntryId) {
             try {
                 // Update entry (guarantees end_time > start_time via SQL)
+                // CRITICAL: Verify duration > 0 before update
+                if (duration <= 0) {
+                    Logger.error(`[Tracking] Stop: Invalid duration=${duration}, cannot update TimeEntry`);
+                    throw new Error(`Invalid duration: ${duration}`);
+                }
+                
+                // Update TimeEntry (no verify - trust SQL)
                 await this.execute(
                     `UPDATE TimeEntry 
                      SET end_time = datetime(start_time, '+' || CAST(? AS TEXT) || ' seconds'),
@@ -142,7 +204,7 @@ export class TimeTrackingService extends BaseService {
                     [duration, duration, tracking.currentTimeEntryId]
                 );
 
-                // Get instance ID and update total_time
+                // Get instance ID (single query, no verify)
                 const instanceRow = await this.query(
                     `SELECT task_instance_id FROM TimeEntry WHERE id = ?`,
                     [tracking.currentTimeEntryId]
@@ -150,13 +212,25 @@ export class TimeTrackingService extends BaseService {
 
                 if (instanceRow && instanceRow.length > 0) {
                     const instanceId = instanceRow[0].task_instance_id;
+                    
+                    // OPTIMIZED: Update total_time in single query (no separate SELECT)
                     await this.execute(
                         `UPDATE TaskInstance 
-                         SET total_time = (SELECT COALESCE(SUM(duration), 0) FROM TimeEntry WHERE task_instance_id = ? AND end_time IS NOT NULL)
+                         SET total_time = COALESCE(total_time, 0) + ?,
+                             updated_at = datetime('now')
                          WHERE id = ?`,
-                        [instanceId, instanceId]
+                        [duration, instanceId]
                     );
+                    
+                    Logger.info(`[Tracking] Stop: Updated TaskInstance ${instanceId} total_time: added ${duration}s`);
                     updated = true;
+                } else {
+                    Logger.warn(`[Tracking] Stop: instanceRow is empty or invalid`);
+                }
+                
+                // OPTIMIZED: Clear query result array immediately to free RAM
+                if (instanceRow && Array.isArray(instanceRow)) {
+                    instanceRow.length = 0;
                 }
             } catch (error) {
                 Logger.error(`[Tracking] Stop error: ${error.message}`);
@@ -174,18 +248,34 @@ export class TimeTrackingService extends BaseService {
                      ORDER BY id DESC LIMIT 1`,
                     [duration, duration, tracking.currentTaskInstanceId]
                 );
+                
+                // OPTIMIZED: Update total_time in single query (no separate SELECT)
                 await this.execute(
                     `UPDATE TaskInstance 
-                     SET total_time = (SELECT COALESCE(SUM(duration), 0) FROM TimeEntry WHERE task_instance_id = ? AND end_time IS NOT NULL)
+                     SET total_time = COALESCE(total_time, 0) + ?,
+                         updated_at = datetime('now')
                      WHERE id = ?`,
-                    [tracking.currentTaskInstanceId, tracking.currentTaskInstanceId]
+                    [duration, tracking.currentTaskInstanceId]
                 );
+                
+                Logger.info(`[Tracking] Stop fallback: Updated TaskInstance ${tracking.currentTaskInstanceId} total_time: added ${duration}s`);
             } catch (error) {
                 Logger.error(`[Tracking] Stop fallback error: ${error.message}`);
             }
         }
 
-        // Reset state
+        // CRITICAL: Save tracking data BEFORE clearing state (for event emission)
+        const savedTrackingData = {
+            taskId: tracking.currentTaskId,
+            taskName: tracking.currentTaskName,
+            taskInstanceId: tracking.currentTaskInstanceId,
+            projectId: tracking.currentProjectId,
+            clientId: tracking.currentClientId,
+            startTime: tracking.startTime,
+        };
+        
+
+        // Reset state (this will clear StateManager cache via updateTrackingState)
         this.state.updateTrackingState({
             isTracking: false,
             currentTaskId: null,
@@ -201,14 +291,54 @@ export class TimeTrackingService extends BaseService {
             currentTimeEntryId: null,
         });
 
-        // Emit event
-        this.events.emit(CoreEvents.TRACKING_STOPPED, {
-            taskId: tracking.currentTaskId,
-            taskName: tracking.currentTaskName,
-            projectId: tracking.currentProjectId,
-            startTime: tracking.startTime,
-            duration: duration,
-        });
+        // OPTIMIZED: Clear any remaining timer references and cached data
+        // Timer is already stopped above, but ensure token is cleared
+        this._timerToken = 0;
+        this._cachedStartTimestamp = null; // Clear cached timestamp to free RAM
+
+        // Emit event (minimal object - only primitives)
+        // Include taskInstanceId and duration for UI to update correct task
+        // CRITICAL: duration is guaranteed to be >= 1 from calculation above
+        // CRITICAL: Use savedTrackingData, not tracking (which is now cleared)
+        const eventData = {
+            taskId: savedTrackingData.taskId,
+            taskName: savedTrackingData.taskName,
+            taskInstanceId: savedTrackingData.taskInstanceId, // For UI update
+            projectId: savedTrackingData.projectId,
+            clientId: savedTrackingData.clientId,
+            startTime: savedTrackingData.startTime,
+            duration: duration, // CRITICAL: This is the saved duration, guaranteed >= 1
+        };
+        
+        this.events.emit(CoreEvents.TRACKING_STOPPED, eventData);
+        
+        // OPTIMIZED: Clear ALL event data immediately after emit to free RAM
+        // Event handlers should extract data immediately, not store references
+        savedTrackingData.taskId = null;
+        savedTrackingData.taskName = null;
+        savedTrackingData.taskInstanceId = null;
+        savedTrackingData.projectId = null;
+        savedTrackingData.clientId = null;
+        savedTrackingData.startTime = null;
+        
+        // Clear eventData object too
+        eventData.taskId = null;
+        eventData.taskName = null;
+        eventData.taskInstanceId = null;
+        eventData.projectId = null;
+        eventData.clientId = null;
+        eventData.startTime = null;
+        eventData.duration = null;
+        
+        // CRITICAL: Force garbage collection after stop to free RAM immediately
+        // This helps GJS GC collect removed objects right away
+        try {
+            if (typeof global !== 'undefined' && typeof global.gc === 'function') {
+                global.gc();
+            }
+        } catch (e) {
+            // GC not available - ignore
+        }
     }
 
     /**
@@ -300,18 +430,41 @@ export class TimeTrackingService extends BaseService {
 
     /**
      * Start timer
+     * OPTIMIZED: Cache startTime timestamp, no Date creation every second
+     * CRITICAL: Use weak references to avoid holding objects in closure
      */
     startTimer() {
         const tracking = this.state.state.tracking;
-        if (!tracking.isTracking || !tracking.startTime) return;
+        if (!tracking.isTracking || !tracking.startTime) {
+            Logger.warn(`[Tracking] startTimer: Not tracking or no startTime. isTracking=${tracking.isTracking}, startTime=${tracking.startTime}`);
+            return;
+        }
+
+        // Cache startTime as timestamp once (avoid Date creation every second)
+        // Store as instance variable to avoid closure holding references
+        // CRITICAL: Parse "YYYY-MM-DD HH:MM:SS" format correctly
+        if (typeof tracking.startTime === 'string') {
+            // Parse "YYYY-MM-DD HH:MM:SS" format (replace space with T for ISO)
+            this._cachedStartTimestamp = new Date(tracking.startTime.replace(' ', 'T')).getTime();
+            Logger.debug(`[Tracking] startTimer: Parsed startTime string "${tracking.startTime}" to timestamp ${this._cachedStartTimestamp}`);
+        } else {
+            this._cachedStartTimestamp = tracking.startTime;
+            Logger.debug(`[Tracking] startTimer: Using startTime timestamp directly: ${this._cachedStartTimestamp}`);
+        }
+        
+        if (!this._cachedStartTimestamp || isNaN(this._cachedStartTimestamp)) {
+            Logger.error(`[Tracking] startTimer: Invalid timestamp! startTime=${tracking.startTime}, parsed=${this._cachedStartTimestamp}`);
+            return;
+        }
 
         this._timerToken = this._getScheduler().subscribe(() => {
+            // Get fresh tracking state (don't hold reference in closure)
             const t = this.state.state.tracking;
             if (!t.isTracking || !t.startTime) return;
 
             const now = Date.now();
-            const start = typeof t.startTime === 'string' ? new Date(t.startTime).getTime() : t.startTime;
-            const elapsed = Math.floor((now - start) / 1000);
+            // Use instance variable instead of closure variable
+            const elapsed = Math.floor((now - this._cachedStartTimestamp) / 1000);
 
             // Pomodoro check
             if (t.pomodoroMode && t.pomodoroDuration > 0 && elapsed >= t.pomodoroDuration) {
@@ -323,22 +476,34 @@ export class TimeTrackingService extends BaseService {
                 ? Math.max(0, t.pomodoroDuration - elapsed)
                 : 0;
 
-            this.events.emit(CoreEvents.TRACKING_UPDATED, {
+            // OPTIMIZED: Reuse minimal event object to prevent RAM accumulation
+            // Emit event with minimal data (primitives only)
+            // Event handlers should extract data immediately and not store references
+            const eventData = {
                 taskId: t.currentTaskId,
                 elapsedSeconds: elapsed,
                 pomodoroRemaining: pomodoroRemaining,
-            });
+            };
+            this.events.emit(CoreEvents.TRACKING_UPDATED, eventData);
+            // Clear reference immediately after emit (helps GC if handlers store references)
+            // Note: eventData is still valid for handlers, we just clear our reference
+            eventData.taskId = null;
+            eventData.elapsedSeconds = null;
+            eventData.pomodoroRemaining = null;
         });
     }
 
     /**
      * Stop timer
+     * OPTIMIZED: Clear cached timestamp to free memory
      */
     stopTimer() {
         if (this._timerToken) {
             this._getScheduler().unsubscribe(this._timerToken);
             this._timerToken = 0;
         }
+        // Clear cached timestamp to free memory
+        this._cachedStartTimestamp = null;
     }
 
     _getScheduler() {

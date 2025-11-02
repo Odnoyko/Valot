@@ -61,10 +61,13 @@ export class ProjectsPage {
 
         // Store handlers for cleanup
         this._eventHandlers['tracking-started'] = () => {
-            setTimeout(() => this.loadProjects(), 300);
+            // OPTIMIZED: Don't reload projects - tracking doesn't change project list
+            // Reloading creates new objects every time, causing RAM growth
+            // setTimeout(() => this.loadProjects(), 300); // DISABLED
         };
         this._eventHandlers['tracking-stopped'] = () => {
-            this.loadProjects();
+            // OPTIMIZED: Don't reload projects - stopping tracking doesn't change projects
+            // this.loadProjects(); // DISABLED - causes RAM growth
         };
         // DISABLED: tracking-updated handler removed - causes RAM growth
         // Handler was empty but still registered, causing unnecessary processing

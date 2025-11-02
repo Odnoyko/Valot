@@ -56,10 +56,13 @@ export class ClientsPage {
             this.loadClients();
         };
         this._eventHandlers['tracking-started'] = () => {
-            setTimeout(() => this.loadClients(), 300);
+            // OPTIMIZED: Don't reload clients - tracking doesn't change client list
+            // Reloading creates new objects every time, causing RAM growth
+            // setTimeout(() => this.loadClients(), 300); // DISABLED
         };
         this._eventHandlers['tracking-stopped'] = () => {
-            this.loadClients();
+            // OPTIMIZED: Don't reload clients - stopping tracking doesn't change clients
+            // this.loadClients(); // DISABLED - causes RAM growth
         };
         // DISABLED: tracking-updated handler removed - causes RAM growth
         // Handler was empty but still registered, causing unnecessary processing
