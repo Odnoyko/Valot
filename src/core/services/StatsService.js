@@ -1,29 +1,22 @@
 /**
- * Statistics Service
- * Provides quick statistics for UI (sidebar, dashboards)
+ * Statistics Service - Simplified
+ * Direct SQL aggregation, minimal object creation
  */
 import { BaseService } from './BaseService.js';
 
-/**
- * Stats Service
- * Handles statistics calculations for UI components
- */
 export class StatsService extends BaseService {
     constructor(coreAPI) {
         super(coreAPI);
     }
 
     /**
-     * Get This Week statistics (Monday to Sunday)
-     * Returns total time and task count for current week
-     * Calculates based on time entries within the week, not task.total_time
+     * Get This Week statistics (direct SQL)
      */
     async getThisWeekStats() {
         const GLib = imports.gi.GLib;
         const now = GLib.DateTime.new_now_local();
 
-        // Calculate week boundaries (Monday to Sunday)
-        const dayOfWeek = now.get_day_of_week(); // 1=Monday, 7=Sunday
+        const dayOfWeek = now.get_day_of_week();
         const daysToMonday = dayOfWeek - 1;
         const monday = now.add_days(-daysToMonday);
 
@@ -42,125 +35,78 @@ export class StatsService extends BaseService {
             23, 59, 59
         );
 
-        const startTimestamp = startDate.to_unix();
-        const endTimestamp = endDate.to_unix();
+        const startStr = startDate.format('%Y-%m-%d %H:%M:%S');
+        const endStr = endDate.format('%Y-%m-%d %H:%M:%S');
 
-        // Get all time entries within this week (filter by END TIME from database)
-        const allTimeEntries = await this.core.services.tracking.getAllTimeEntries();
-
-        let totalTime = 0;
-        const taskInstanceSet = new Set();
-        let matchedCount = 0;
-
-        allTimeEntries.forEach(entry => {
-            if (!entry.end_time || !entry.duration) return;
-
-            // Parse entry end_time from database
-            let entryEndDate;
-            const dateString = entry.end_time;
-
-            // Check if date is in ISO8601 format (with T) or local format (YYYY-MM-DD HH:MM:SS)
-            if (dateString.includes('T')) {
-                // ISO8601 format - parse as UTC
-                entryEndDate = GLib.DateTime.new_from_iso8601(dateString, null);
-            } else {
-                // Local format YYYY-MM-DD HH:MM:SS - parse as local time
-                const parts = dateString.split(' ');
-                if (parts.length === 2) {
-                    const [datePart, timePart] = parts;
-                    const [year, month, day] = datePart.split('-').map(Number);
-                    const [hours, minutes, seconds] = timePart.split(':').map(Number);
-
-                    entryEndDate = GLib.DateTime.new_local(
-                        year, month, day,
-                        hours || 0, minutes || 0, seconds || 0
-                    );
-                }
-            }
-
-            if (!entryEndDate) return;
-
-            const entryEndTimestamp = entryEndDate.to_unix();
-
-            // Check if END TIME is within this week
-            if (entryEndTimestamp >= startTimestamp && entryEndTimestamp <= endTimestamp) {
-                totalTime += entry.duration || 0;
-                taskInstanceSet.add(entry.task_instance_id);
-                matchedCount++;
-            }
-        });
+        // SQL aggregation - no object creation
+        const rows = await this.query(`
+            SELECT 
+                COALESCE(SUM(duration), 0) as total_time,
+                COUNT(DISTINCT task_instance_id) as task_count
+            FROM TimeEntry
+            WHERE end_time IS NOT NULL
+              AND duration > 0
+              AND end_time >= ?
+              AND end_time <= ?
+        `, [startStr, endStr]);
 
         return {
-            totalTime,
-            taskCount: taskInstanceSet.size
+            totalTime: rows[0]?.total_time || 0,
+            taskCount: rows[0]?.task_count || 0
         };
     }
 
     /**
-     * Get top projects with time tracking
-     * Returns array of projects sorted by time (descending)
+     * Get top projects with time (direct SQL)
      */
     async getProjectsWithTime(limit = 5) {
-        // Get all projects
-        const projects = await this.core.services.projects.getAll();
+        const rows = await this.query(`
+            SELECT 
+                p.id,
+                p.name,
+                p.icon,
+                p.color,
+                COALESCE(SUM(te.duration), 0) as total_time
+            FROM Project p
+            LEFT JOIN TaskInstance ti ON ti.project_id = p.id
+            LEFT JOIN TimeEntry te ON te.task_instance_id = ti.id AND te.end_time IS NOT NULL
+            GROUP BY p.id
+            HAVING total_time > 0
+            ORDER BY total_time DESC
+            LIMIT ?
+        `, [limit]);
 
-        // Get all task instances to calculate project times
-        const taskInstances = await this.core.services.taskInstances.getAll();
-
-        // Calculate time per project
-        const projectTimes = new Map();
-        taskInstances.forEach(task => {
-            const projectId = task.project_id || 1;
-            const currentTime = projectTimes.get(projectId) || 0;
-            projectTimes.set(projectId, currentTime + (task.total_time || 0));
-        });
-
-        // Map projects with their time
-        const projectsWithTime = projects.map(project => ({
-            id: project.id,
-            name: project.name,
-            icon: project.icon,
-            color: project.color,
-            totalTime: projectTimes.get(project.id) || 0,
+        return rows.map(row => ({
+            id: row.id,
+            name: row.name,
+            icon: row.icon,
+            color: row.color,
+            totalTime: row.total_time || 0,
         }));
-
-        // Filter projects with time > 0, sort by time, and limit
-        return projectsWithTime
-            .filter(p => p.totalTime > 0)
-            .sort((a, b) => b.totalTime - a.totalTime)
-            .slice(0, limit);
     }
 
     /**
-     * Get all projects with calculated total_time
-     * Returns all projects with their total tracked time
+     * Get all projects with time (direct SQL)
      */
     async getAllProjectsWithTime() {
-        // Get all projects
-        const projects = await this.core.services.projects.getAll();
+        const rows = await this.query(`
+            SELECT 
+                p.*,
+                COALESCE(SUM(te.duration), 0) as total_time
+            FROM Project p
+            LEFT JOIN TaskInstance ti ON ti.project_id = p.id
+            LEFT JOIN TimeEntry te ON te.task_instance_id = ti.id AND te.end_time IS NOT NULL
+            GROUP BY p.id
+        `);
 
-        // Get all task instances to calculate project times
-        const taskInstances = await this.core.services.taskInstances.getAll();
-
-        // Calculate time per project
-        const projectTimes = new Map();
-        taskInstances.forEach(task => {
-            // Only count tasks that actually have this project assigned
-            if (!task.project_id) return;
-
-            const currentTime = projectTimes.get(task.project_id) || 0;
-            projectTimes.set(task.project_id, currentTime + (task.total_time || 0));
-        });
-
-        // Add total_time to each project
-        return projects.map(project => ({
-            ...project,
-            total_time: projectTimes.get(project.id) || 0,
+        return rows.map(row => ({
+            ...row,
+            total_time: row.total_time || 0,
         }));
     }
 
     /**
-     * Get Today statistics
+     * Get Today statistics (direct SQL)
      */
     async getTodayStats() {
         const GLib = imports.gi.GLib;
@@ -180,32 +126,28 @@ export class StatsService extends BaseService {
             23, 59, 59
         );
 
-        const startTimestamp = startDate.to_unix();
-        const endTimestamp = endDate.to_unix();
+        const startStr = startDate.format('%Y-%m-%d %H:%M:%S');
+        const endStr = endDate.format('%Y-%m-%d %H:%M:%S');
 
-        const taskInstances = await this.core.services.taskInstances.getAll();
+        const rows = await this.query(`
+            SELECT 
+                COALESCE(SUM(duration), 0) as total_time,
+                COUNT(DISTINCT task_instance_id) as task_count
+            FROM TimeEntry
+            WHERE end_time IS NOT NULL
+              AND duration > 0
+              AND end_time >= ?
+              AND end_time <= ?
+        `, [startStr, endStr]);
 
-        let totalTime = 0;
-        let taskCount = 0;
-
-        taskInstances.forEach(task => {
-            if (!task.last_used_at) return;
-
-            const taskDate = GLib.DateTime.new_from_iso8601(task.last_used_at, null);
-            if (!taskDate) return;
-
-            const taskTimestamp = taskDate.to_unix();
-            if (taskTimestamp >= startTimestamp && taskTimestamp <= endTimestamp) {
-                totalTime += task.total_time || 0;
-                taskCount++;
-            }
-        });
-
-        return { totalTime, taskCount };
+        return {
+            totalTime: rows[0]?.total_time || 0,
+            taskCount: rows[0]?.task_count || 0
+        };
     }
 
     /**
-     * Get This Month statistics
+     * Get This Month statistics (direct SQL)
      */
     async getThisMonthStats() {
         const GLib = imports.gi.GLib;
@@ -218,7 +160,6 @@ export class StatsService extends BaseService {
             0, 0, 0
         );
 
-        // Get last day of month
         const nextMonth = now.add_months(1);
         const firstDayNextMonth = GLib.DateTime.new_local(
             nextMonth.get_year(),
@@ -235,76 +176,62 @@ export class StatsService extends BaseService {
             23, 59, 59
         );
 
-        const startTimestamp = startDate.to_unix();
-        const endTimestamp = endDate.to_unix();
+        const startStr = startDate.format('%Y-%m-%d %H:%M:%S');
+        const endStr = endDate.format('%Y-%m-%d %H:%M:%S');
 
-        const taskInstances = await this.core.services.taskInstances.getAll();
+        const rows = await this.query(`
+            SELECT 
+                COALESCE(SUM(duration), 0) as total_time,
+                COUNT(DISTINCT task_instance_id) as task_count
+            FROM TimeEntry
+            WHERE end_time IS NOT NULL
+              AND duration > 0
+              AND end_time >= ?
+              AND end_time <= ?
+        `, [startStr, endStr]);
 
-        let totalTime = 0;
-        let taskCount = 0;
-
-        taskInstances.forEach(task => {
-            if (!task.last_used_at) return;
-
-            const taskDate = GLib.DateTime.new_from_iso8601(task.last_used_at, null);
-            if (!taskDate) return;
-
-            const taskTimestamp = taskDate.to_unix();
-            if (taskTimestamp >= startTimestamp && taskTimestamp <= endTimestamp) {
-                totalTime += task.total_time || 0;
-                taskCount++;
-            }
-        });
-
-        return { totalTime, taskCount };
+        return {
+            totalTime: rows[0]?.total_time || 0,
+            taskCount: rows[0]?.task_count || 0
+        };
     }
 
     /**
-     * Get statistics for a specific date range based on time entries
-     * Returns totalTime, activeProjects, trackedTasks, and earnings by currency
-     *
-     * @param {Object} dateRange - { startDate: GLib.DateTime, endDate: GLib.DateTime }
-     * @param {Array} taskInstanceIds - Optional array of task instance IDs to filter
-     * @returns {Object} { totalTime, activeProjects, trackedTasks, earningsByCurrency }
-     */
-    /**
-     * Get statistics for a specific date range using SQL aggregation (Lazy Loading principle)
-     * Does NOT load all data into RAM - uses SQL aggregation queries instead
+     * Get statistics for period (direct SQL aggregation)
      */
     async getStatsForPeriod(dateRange, taskInstanceIds = null) {
         const GLib = imports.gi.GLib;
 
-        // Convert dates to SQLite format (YYYY-MM-DD HH:MM:SS)
         const startDateStr = dateRange.startDate.format('%Y-%m-%d %H:%M:%S');
         const endDateStr = dateRange.endDate.format('%Y-%m-%d %H:%M:%S');
 
-        // SQL aggregation query - NO data loaded into RAM
-        // Get aggregated statistics directly from database
-        let sql = `
+        // Build WHERE clause with parameterized query
+        let whereClause = `WHERE te.end_time IS NOT NULL AND te.duration > 0
+              AND te.end_time >= ? AND te.end_time <= ?`;
+        const params = [startDateStr, endDateStr];
+
+        if (taskInstanceIds && taskInstanceIds.length > 0) {
+            const placeholders = taskInstanceIds.map(() => '?').join(',');
+            whereClause += ` AND ti.id IN (${placeholders})`;
+            params.push(...taskInstanceIds);
+        }
+
+        // Main stats query
+        const statsSql = `
             SELECT 
                 COALESCE(SUM(te.duration), 0) as total_time,
                 COUNT(DISTINCT ti.id) as tracked_tasks,
                 COUNT(DISTINCT ti.project_id) as active_projects
             FROM TimeEntry te
             INNER JOIN TaskInstance ti ON te.task_instance_id = ti.id
-            WHERE te.end_time IS NOT NULL
-              AND te.duration > 0
-              AND te.end_time >= '${startDateStr}'
-              AND te.end_time <= '${endDateStr}'
+            ${whereClause}
         `;
 
-        // Add task instance filter if provided
-        if (taskInstanceIds && taskInstanceIds.length > 0) {
-            const idsStr = taskInstanceIds.join(',');
-            sql += ` AND ti.id IN (${idsStr})`;
-        }
-
-        const results = await this.query(sql);
-        const row = results[0] || {};
+        const statsRows = await this.query(statsSql, params);
+        const row = statsRows[0] || {};
         const totalTime = row.total_time || 0;
 
-        // Get earnings by currency using SQL aggregation (no RAM load)
-        // Note: client_rate and client_currency are in Client table, not TaskInstance
+        // Earnings query
         const earningsSql = `
             SELECT 
                 c.currency as currency,
@@ -312,22 +239,14 @@ export class StatsService extends BaseService {
             FROM TimeEntry te
             INNER JOIN TaskInstance ti ON te.task_instance_id = ti.id
             INNER JOIN Client c ON ti.client_id = c.id
-            WHERE te.end_time IS NOT NULL
-              AND te.duration > 0
+            ${whereClause}
               AND c.rate > 0
-              AND te.end_time >= '${startDateStr}'
-              AND te.end_time <= '${endDateStr}'
+            GROUP BY c.currency
         `;
 
-        let earningsFilter = '';
-        if (taskInstanceIds && taskInstanceIds.length > 0) {
-            const idsStr = taskInstanceIds.join(',');
-            earningsFilter = ` AND ti.id IN (${idsStr})`;
-        }
-
-        const earningsResults = await this.query(earningsSql + earningsFilter + ' GROUP BY c.currency');
+        const earningsRows = await this.query(earningsSql, params);
         const earningsByCurrency = new Map();
-        earningsResults.forEach(row => {
+        earningsRows.forEach(row => {
             if (row.currency && row.earnings) {
                 earningsByCurrency.set(row.currency, row.earnings);
             }
@@ -342,59 +261,23 @@ export class StatsService extends BaseService {
     }
 
     /**
-     * Get task instance IDs that have time entries with end_time in the specified period
-     * Used for filtering tasks in UI by period
-     *
-     * @param {Object} dateRange - { startDate: GLib.DateTime, endDate: GLib.DateTime }
-     * @returns {Array<number>} Array of task instance IDs
+     * Get task instance IDs for period (direct SQL)
      */
     async getTaskInstanceIdsForPeriod(dateRange) {
         const GLib = imports.gi.GLib;
 
-        const startTimestamp = dateRange.startDate.to_unix();
-        const endTimestamp = dateRange.endDate.to_unix();
+        const startStr = dateRange.startDate.format('%Y-%m-%d %H:%M:%S');
+        const endStr = dateRange.endDate.format('%Y-%m-%d %H:%M:%S');
 
-        // Get all time entries
-        const allTimeEntries = await this.core.services.tracking.getAllTimeEntries();
+        const rows = await this.query(`
+            SELECT DISTINCT task_instance_id
+            FROM TimeEntry
+            WHERE end_time IS NOT NULL
+              AND duration > 0
+              AND end_time >= ?
+              AND end_time <= ?
+        `, [startStr, endStr]);
 
-        const taskInstanceIds = new Set();
-
-        allTimeEntries.forEach(entry => {
-            if (!entry.end_time || !entry.duration) return;
-
-            // Parse entry end_time from database
-            let entryEndDate;
-            const dateString = entry.end_time;
-
-            // Check if date is in ISO8601 format (with T) or local format (YYYY-MM-DD HH:MM:SS)
-            if (dateString.includes('T')) {
-                // ISO8601 format - parse as UTC
-                entryEndDate = GLib.DateTime.new_from_iso8601(dateString, null);
-            } else {
-                // Local format YYYY-MM-DD HH:MM:SS - parse as local time
-                const parts = dateString.split(' ');
-                if (parts.length === 2) {
-                    const [datePart, timePart] = parts;
-                    const [year, month, day] = datePart.split('-').map(Number);
-                    const [hours, minutes, seconds] = timePart.split(':').map(Number);
-
-                    entryEndDate = GLib.DateTime.new_local(
-                        year, month, day,
-                        hours || 0, minutes || 0, seconds || 0
-                    );
-                }
-            }
-
-            if (!entryEndDate) return;
-
-            const entryEndTimestamp = entryEndDate.to_unix();
-
-            // Check if END TIME is within the period
-            if (entryEndTimestamp >= startTimestamp && entryEndTimestamp <= endTimestamp) {
-                taskInstanceIds.add(entry.task_instance_id);
-            }
-        });
-
-        return Array.from(taskInstanceIds);
+        return rows.map(row => row.task_instance_id);
     }
 }
