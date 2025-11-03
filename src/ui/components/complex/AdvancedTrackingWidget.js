@@ -29,11 +29,15 @@ export class AdvancedTrackingWidget {
         // Initialize GSettings for persistence
         this.settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
 
-        // Current selections - restore from GSettings (Core will validate)
+        // Current selections - restore from GSettings
+        // IDs will be validated on first tracking start (Core validates them)
         this.currentProjectId = this.settings.get_int('last-project-id') || 1;
         this.currentClientId = this.settings.get_int('last-client-id') || 1;
         this.taskNameDebounceTimer = null;
         this._blockTaskNameUpdate = false;
+        
+        // Validate project/client IDs on initialization (async)
+        this._validateStoredIds();
 
         // Pomodoro configuration
         this.pomodoroDuration = 1200; // Default 20 minutes in seconds
@@ -184,6 +188,53 @@ export class AdvancedTrackingWidget {
         return box;
     }
 
+    /**
+     * Validate stored project/client IDs from GSettings
+     * If they don't exist in DB (e.g. after import), reset to defaults
+     */
+    async _validateStoredIds() {
+        if (!this.coreBridge) return;
+
+        try {
+            // Validate project
+            if (this.currentProjectId && this.currentProjectId !== 1) {
+                const projects = await this.coreBridge.getAllProjects();
+                const projectExists = projects && projects.some(p => p.id === this.currentProjectId);
+                if (!projectExists) {
+                    console.warn(`[AdvancedTrackingWidget] Stored project ID ${this.currentProjectId} not found, resetting to default (1)`);
+                    this.currentProjectId = 1;
+                    this.settings.set_int('last-project-id', 1);
+                }
+            }
+
+            // Validate client
+            if (this.currentClientId && this.currentClientId !== 1) {
+                const clients = await this.coreBridge.getAllClients();
+                const clientExists = clients && clients.some(c => c.id === this.currentClientId);
+                if (!clientExists) {
+                    console.warn(`[AdvancedTrackingWidget] Stored client ID ${this.currentClientId} not found, resetting to default (1)`);
+                    this.currentClientId = 1;
+                    this.settings.set_int('last-client-id', 1);
+                }
+            }
+
+            // Reload dropdowns with validated IDs
+            if (this.projectDropdown && typeof this.projectDropdown._loadProjects === 'function') {
+                this.projectDropdown._loadProjects();
+            }
+            if (this.clientDropdown && typeof this.clientDropdown._loadClients === 'function') {
+                this.clientDropdown._loadClients();
+            }
+        } catch (error) {
+            console.error('[AdvancedTrackingWidget] Error validating stored IDs:', error);
+            // Reset to defaults on error
+            this.currentProjectId = 1;
+            this.currentClientId = 1;
+            this.settings.set_int('last-project-id', 1);
+            this.settings.set_int('last-client-id', 1);
+        }
+    }
+
     _setupProjectDropdown() {
         this.projectDropdown = new ProjectDropdown(
             this.coreBridge,
@@ -237,6 +288,17 @@ export class AdvancedTrackingWidget {
             },
             'tracking-updated': (data) => {
                 this._onTrackingUpdated(data);
+            },
+            // IMPORTANT: Refresh dropdowns after database import/replace
+            'project-updated': () => {
+                if (this.projectDropdown && typeof this.projectDropdown._loadProjects === 'function') {
+                    this.projectDropdown._loadProjects();
+                }
+            },
+            'client-updated': () => {
+                if (this.clientDropdown && typeof this.clientDropdown._loadClients === 'function') {
+                    this.clientDropdown._loadClients();
+                }
             }
         };
 
@@ -347,6 +409,17 @@ export class AdvancedTrackingWidget {
         this._cachedTimeText = '';
         this._cachedIconName = '';
         this._cachedTooltipText = '';
+        
+        // Update local project/client IDs with validated values from Core
+        // This fixes stale IDs from GSettings after import
+        if (data && data.projectId !== undefined) {
+            this.currentProjectId = data.projectId;
+            this.settings.set_int('last-project-id', data.projectId);
+        }
+        if (data && data.clientId !== undefined) {
+            this.currentClientId = data.clientId;
+            this.settings.set_int('last-client-id', data.clientId);
+        }
         
         // Animate duration from 0 to initial value (smooth start)
         if (this.durationAnimator && data && data.elapsedSeconds !== undefined) {
@@ -645,6 +718,10 @@ export class AdvancedTrackingWidget {
             });
             this._coreEventHandlers = {};
         }
+        
+        // NOTE: Do NOT destroy dropdowns here - AdvancedTrackingWidget lives for page lifetime
+        // Dropdowns will be cleaned up when widget is finally destroyed by GTK
+        // However, ensure popovers are properly unparented in dropdown destroy() methods
         
         if (this.taskNameDebounceTimer) {
             GLib.Source.remove(this.taskNameDebounceTimer);

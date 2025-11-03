@@ -275,7 +275,6 @@ export class TrackingWidget {
     _subscribeToGlobalTimer() {
         // CRITICAL: Check if already subscribed to prevent memory leak
         if (this._isSubscribedToGlobalTimer) {
-            console.log('[TrackingWidget] Already subscribed to GlobalTimer, skipping');
             return;
         }
 
@@ -287,7 +286,6 @@ export class TrackingWidget {
             }
         });
 
-        console.log('[TrackingWidget] Subscribed to GlobalTimer (once)');
     }
 
     _formatDuration(seconds) {

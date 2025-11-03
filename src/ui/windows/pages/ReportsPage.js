@@ -41,6 +41,9 @@ export class ReportsPage {
 
         // Maximum cache size to prevent memory leaks
         this._maxCacheSize = 1000;
+        
+        // Flag to prevent multiple simultaneous loadReports() calls
+        this._isLoadingReports = false;
 
         // Subscribe to UI events for real-time updates
         this._subscribeToEvents();
@@ -53,22 +56,27 @@ export class ReportsPage {
      */
     _subscribeToEvents() {
         if (!this.coreBridge) return;
+        
         // Reload when tracking starts/stops (creates new time entries)
-        this.coreBridge.onUIEvent('tracking-started', () => {
-            this.updateChartsOnly();
-            this._subscribeToGlobalTimer(); // Subscribe to real-time updates
-        });
-
-        this.coreBridge.onUIEvent('tracking-stopped', () => {
-            // Restore original total_time for all tasks (clean up cache from real-time updates)
-            if (this.allTasks && this.allTasks.length > 0) {
-                this.allTasks.forEach(task => {
-                    if (task._originalTotalTime !== undefined) {
-                        task.total_time = task._originalTotalTime;
-                        delete task._originalTotalTime; // Clean up cache property
-                    }
-                });
+        this._eventHandlers['tracking-started'] = (data) => {
+            
+            // Check if tracking is in current period filter
+            if (data && data.startTime) {
+                this._checkIfTrackingIsInPeriod(data.startTime);
             }
+            
+            // Cache client info for real-time income calculations
+            if (data && data.clientId) {
+                this._cacheTrackingClientFromData(data.clientId);
+            }
+            
+            this.updateChartsOnly();
+        };
+
+        this._eventHandlers['tracking-stopped'] = () => {
+            // Clear tracking state
+            this._isTrackingInPeriod = false;
+            this._cachedTrackingClient = null;
 
             // Clean up realtime earnings Map cache
             if (this._realtimeEarningsMap) {
@@ -80,32 +88,63 @@ export class ReportsPage {
             this._cachedCurrentCurrencies = null;
 
             this.updateChartsOnly();
-            // UI updates will stop automatically when tracking stops
-        });
+        };
+        
+        // OPTIMIZED: Real-time statistics updates - only update labels, no object creation
+        this._eventHandlers['tracking-updated'] = (data) => {
+            if (!data || data.elapsedSeconds === undefined) {
+                return;
+            }
+            
+            
+            // Only update if tracking is in current period filter
+            if (!this._isTrackingInPeriod) {
+                return;
+            }
+            
+            // OPTIMIZED: Update only labels, no getTrackingState() call, no DB queries
+            this._updateStatisticsRealtimeFromData(data);
+        };
 
-        this._eventHandlers['task-updated'] = () => {
-            this.updateChartsOnly();
+        this._eventHandlers['task-updated'] = async () => {
+            if (!this._isLoadingReports) {
+                this._isLoadingReports = true;
+                try {
+                    await this.loadReports();
+                } finally {
+                    this._isLoadingReports = false;
+                }
+            } else {
+            }
         };
 
         this._eventHandlers['tasks-deleted'] = () => {
             this.updateChartsOnly();
         };
 
-        this._eventHandlers['project-updated'] = () => {
-            this.updateChartsOnly();
+        this._eventHandlers['project-updated'] = async () => {
+            if (!this._isLoadingReports) {
+                this._isLoadingReports = true;
+                try {
+                    await this.loadReports();
+                } finally {
+                    this._isLoadingReports = false;
+                }
+            } else {
+            }
         };
 
-        this._eventHandlers['client-updated'] = () => {
-            this.updateChartsOnly();
+        this._eventHandlers['client-updated'] = async () => {
+            if (!this._isLoadingReports) {
+                this._isLoadingReports = true;
+                try {
+                    await this.loadReports();
+                } finally {
+                    this._isLoadingReports = false;
+                }
+            } else {
+            }
         };
-
-        // DISABLED: tracking-updated handler removed - causes RAM growth
-        // Each handler call processes data and may create objects
-        // Charts update only on tracking-started/stopped, not every second
-        // this._eventHandlers['tracking-updated'] = (data) => {
-        //     // tracking-updated fires every second during tracking
-        //     // Handler removed to prevent RAM growth
-        // };
 
         // Memory cleanup events disabled - cleanup happens in destroy(), not periodically
         // this._eventHandlers['memory-cleanup-ui'] = () => {
@@ -171,19 +210,16 @@ export class ReportsPage {
             // Keep only most recent items
             const toRemove = this.allTasks.length - this._maxCacheSize;
             this.allTasks.splice(0, toRemove);
-            console.log('[ReportsPage] Cleaned', toRemove, 'old tasks from cache');
         }
         
         if (this.allProjects && this.allProjects.length > this._maxCacheSize) {
             const toRemove = this.allProjects.length - this._maxCacheSize;
             this.allProjects.splice(0, toRemove);
-            console.log('[ReportsPage] Cleaned', toRemove, 'old projects from cache');
         }
         
         if (this.allClients && this.allClients.length > this._maxCacheSize) {
             const toRemove = this.allClients.length - this._maxCacheSize;
             this.allClients.splice(0, toRemove);
-            console.log('[ReportsPage] Cleaned', toRemove, 'old clients from cache');
         }
     }
 
@@ -791,11 +827,15 @@ export class ReportsPage {
             // Update all reports
             this._updateReports();
 
-            // DISABLED: Time updates in ReportsPage (only header widget shows time)
-            // Start real-time timer if tracking is active
+            // Check if tracking is active and in current period
             const trackingState = this.coreBridge.getTrackingState();
-            if (trackingState.isTracking) {
-                this._subscribeToGlobalTimer();
+            
+            if (trackingState.isTracking && trackingState.startTime) {
+                this._checkIfTrackingIsInPeriod(trackingState.startTime);
+                if (trackingState.currentClientId) {
+                    this._cacheTrackingClientFromData(trackingState.currentClientId);
+                }
+            } else {
             }
         } catch (error) {
             console.error('[ReportsPage] Error loading reports:', error);
@@ -1969,6 +2009,7 @@ export class ReportsPage {
         // Cache the base stats total and earnings for real-time updates
         this._cachedStatsTotal = stats.totalTime;
         this._cachedEarningsByCurrency = stats.earningsByCurrency;
+        
 
         // DISABLED: No caching of tracking client info - no real-time updates
         // await this._cacheCurrentTrackingClient();
@@ -1990,32 +2031,28 @@ export class ReportsPage {
 
     /**
      * Update statistics in real-time (without full reload)
-     * DISABLED: No real-time updates of Total Time during tracking
-     * Total Time shows only completed time entries, not active tracking
+     * OPTIMIZED: NO getTrackingState() call, uses data from tracking-updated event
      */
-    _updateStatisticsRealtime() {
-        // DISABLED: No real-time updates of Total Time during tracking
-        // We don't want to update Total Time every second - it causes RAM growth
-        return;
+    _updateStatisticsRealtimeFromData(data) {
+        if (!data || data.elapsedSeconds === undefined) return;
         
-        // if (!this.coreBridge) return;
-        // 
-        // const trackingState = this.coreBridge.getTrackingState();
-        // 
-        // if (!trackingState.isTracking) return;
-        // 
-        // // Need cached base stats from last full update
-        // if (this._cachedStatsTotal === undefined) return;
-        // 
-        // // Simply add current elapsed time to cached base total
-        // const currentElapsed = trackingState.elapsedSeconds || 0;
-        // const totalTime = this._cachedStatsTotal + currentElapsed;
-        // 
-        // // Update Total Time label (no async, no glitches)
-        // this.totalTimeLabel.set_label(this._formatDuration(totalTime));
-        // 
-        // // Update currency earnings in real-time
-        // this._updateCurrencyEarningsRealtime(trackingState, currentElapsed);
+        // Need cached base stats from last full update
+        if (this._cachedStatsTotal === undefined) {
+            return;
+        }
+        
+        
+        // OPTIMIZED: Simply add current elapsed time to cached base total
+        // NO object creation, NO getTrackingState() call
+        const currentElapsed = data.elapsedSeconds;
+        const totalTime = this._cachedStatsTotal + currentElapsed;
+        
+        
+        // Update Total Time label (no async, no glitches)
+        this.totalTimeLabel.set_label(this._formatDuration(totalTime));
+        
+        // Update currency earnings in real-time
+        this._updateCurrencyEarningsRealtimeFromData(currentElapsed);
     }
 
     /**
@@ -2047,8 +2084,9 @@ export class ReportsPage {
      * Update currency earnings in real-time
      * Calculates current task earnings and adds to cached base
      * OPTIMIZED: Reuse Map instead of creating new one every second
+     * NO getTrackingState() call - uses cached client data
      */
-    _updateCurrencyEarningsRealtime(trackingState, currentElapsed) {
+    _updateCurrencyEarningsRealtimeFromData(currentElapsed) {
         if (!this._cachedEarningsByCurrency) return;
         if (!this._cachedTrackingClient || !this._cachedTrackingClient.rate) return;
 
@@ -2084,22 +2122,51 @@ export class ReportsPage {
     }
 
     /**
-     * Subscribe to GlobalTimer ticks for real-time UI updates
+     * Check if tracking start time is in current period filter
      */
-    _subscribeToGlobalTimer() {
-        // Subscribe to tracking updates for real-time statistics
-        if (this._isSubscribedToGlobalTimer) {
+    _checkIfTrackingIsInPeriod(startTime) {
+        
+        if (!this._currentDateRange) {
+            this._isTrackingInPeriod = false;
             return;
         }
-        this._isSubscribedToGlobalTimer = true;
         
-        this.coreBridge.onUIEvent('tracking-updated', (data) => {
-            const state = this.coreBridge.getTrackingState();
-            if (state.isTracking) {
-                this._updateStatisticsRealtime();
-                this._updateRecentTasksRealtime(state);
+        try {
+            // Convert "2025-11-03 18:53:35" to ISO 8601 format with timezone
+            // GLib requires full ISO 8601 with zone: "2025-11-03T18:53:35Z"
+            const isoStartTime = startTime.replace(' ', 'T') + 'Z';
+            const startDateTime = GLib.DateTime.new_from_iso8601(isoStartTime, null);
+            if (!startDateTime) {
+                this._isTrackingInPeriod = false;
+                return;
             }
-        });
+            
+            const { startDate, endDate } = this._currentDateRange;
+            this._isTrackingInPeriod = startDateTime.compare(startDate) >= 0 && 
+                                        startDateTime.compare(endDate) <= 0;
+        } catch (error) {
+            console.error('[ReportsPage] Error checking if tracking is in period:', error);
+            this._isTrackingInPeriod = false;
+        }
+    }
+    
+    /**
+     * Cache tracking client info for real-time income calculations
+     * NO getTrackingState() call - uses data from event
+     */
+    async _cacheTrackingClientFromData(clientId) {
+        if (!clientId) {
+            this._cachedTrackingClient = null;
+            return;
+        }
+        
+        try {
+            const client = await this.coreBridge.getClient(clientId);
+            this._cachedTrackingClient = client;
+        } catch (error) {
+            console.error('[ReportsPage] Error caching tracking client:', error);
+            this._cachedTrackingClient = null;
+        }
     }
 
     /**

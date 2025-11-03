@@ -393,7 +393,6 @@ export class ClientsPage {
     _subscribeToGlobalTimer() {
         // CRITICAL: Check if already subscribed to prevent memory leak
         if (this._isSubscribedToGlobalTimer) {
-            console.log('[ClientsPage] Already subscribed to GlobalTimer, skipping');
             return;
         }
 
@@ -405,7 +404,6 @@ export class ClientsPage {
             }
         });
 
-        console.log('[ClientsPage] Subscribed to GlobalTimer (once)');
     }
 
     _formatDuration(seconds) {

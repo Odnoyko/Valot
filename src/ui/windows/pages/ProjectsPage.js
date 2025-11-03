@@ -90,7 +90,6 @@ export class ProjectsPage {
             
             // Check if project changed during tracking
             if (data.projectId !== undefined && data.projectId !== this._trackingProjectId) {
-                console.log('[ProjectsPage] Project changed during tracking, reloading to get updated times');
                 // CRITICAL: Clear tracking state before reload to prevent reset in loadProjects()
                 this._trackingProjectId = null;
                 this._trackingProjectBaseTime = 0;
@@ -103,7 +102,6 @@ export class ProjectsPage {
                         // Set new tracking project and base time
                         this._trackingProjectId = data.projectId;
                         this._trackingProjectBaseTime = newProject.total_time || 0;
-                        console.log(`[ProjectsPage] Now tracking project ${data.projectId}, base time: ${this._trackingProjectBaseTime}s`);
                     }
                 }).catch(err => {
                     console.error('[ProjectsPage] Error reloading projects after project change:', err);

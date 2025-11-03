@@ -22,11 +22,6 @@ export class DatabaseImport {
         this.importDb = null; // Import database connection (read from here)
         this.importConnection = null;
 
-        console.log('🔧 DatabaseImport initialized');
-        console.log('  App DB connection:', this.appDb ? 'EXISTS' : 'NULL');
-        console.log('  App DB type:', this.appDb?.constructor?.name);
-        console.log('  App DB has connection:', this.appDb?.connection ? 'YES' : 'NO');
-        console.log('  App DB is connected:', this.appDb?.isConnected_);
     }
 
     /**
@@ -36,7 +31,6 @@ export class DatabaseImport {
      * @returns {Promise<{clientsAdded: number, projectsAdded: number, tasksAdded: number, entriesAdded: number}>}
      */
     async replaceData(importPath, progressCallback = null) {
-        console.log('🔄 DATABASE IMPORT: REPLACE MODE');
 
         try {
             // Step 1: Open import database
@@ -46,13 +40,11 @@ export class DatabaseImport {
             // Step 2: Detect schema
             this._updateProgress(progressCallback, 2, 7, 'Checking database version...');
             const isOldSchema = await this._isOldSchema();
-            console.log(`📋 Import DB schema: ${isOldSchema ? 'OLD (0.8.x)' : 'NEW (0.9.0+)'}`);
 
             // Step 3: Clear current database
             this._updateProgress(progressCallback, 3, 7, 'Clearing current database...');
 
             // BEGIN TRANSACTION
-            console.log('🔒 Starting transaction...');
             await this.appDb.execute('BEGIN IMMEDIATE');
 
             try {
@@ -62,15 +54,12 @@ export class DatabaseImport {
                 const result = await this._importDataWithoutTransaction(isOldSchema, progressCallback, 4);
 
                 // COMMIT
-                console.log('💾 Committing transaction...');
                 await this.appDb.execute('COMMIT');
-                console.log('✅ Transaction committed');
 
                 // Step 7: Finalize
                 this._updateProgress(progressCallback, 7, 7, 'Complete');
                 await this._closeImportDatabase();
 
-                console.log('✅ Replace complete:', result);
                 return result;
 
             } catch (error) {
@@ -98,7 +87,6 @@ export class DatabaseImport {
      * @returns {Promise<{clientsAdded: number, projectsAdded: number, tasksAdded: number, entriesAdded: number}>}
      */
     async mergeData(importPath, progressCallback = null) {
-        console.log('🔄 DATABASE IMPORT: MERGE MODE');
 
         try {
             // Step 1: Open import database
@@ -108,7 +96,6 @@ export class DatabaseImport {
             // Step 2: Detect schema
             this._updateProgress(progressCallback, 2, 6, 'Checking database version...');
             const isOldSchema = await this._isOldSchema();
-            console.log(`📋 Import DB schema: ${isOldSchema ? 'OLD (0.8.x)' : 'NEW (0.9.0+)'}`);
 
             // Step 3-5: Import data (skip clearing)
             const result = await this._importData(isOldSchema, progressCallback, 3);
@@ -117,7 +104,6 @@ export class DatabaseImport {
             this._updateProgress(progressCallback, 6, 6, 'Complete');
             await this._closeImportDatabase();
 
-            console.log('✅ Merge complete:', result);
             return result;
 
         } catch (error) {
@@ -131,7 +117,6 @@ export class DatabaseImport {
      * Clear all data from current database (except default Client and Project)
      */
     async _clearAllData() {
-        console.log('🗑️  Clearing all data from current database...');
 
         await this.appDb.execute('DELETE FROM TimeEntry');
         await this.appDb.execute('DELETE FROM TaskInstance');
@@ -139,7 +124,6 @@ export class DatabaseImport {
         await this.appDb.execute('DELETE FROM Project WHERE id != 1');
         await this.appDb.execute('DELETE FROM Client WHERE id != 1');
 
-        console.log('✅ Current database cleared');
     }
 
     /**
@@ -152,16 +136,13 @@ export class DatabaseImport {
      */
     async _importData(isOldSchema, progressCallback, startStep) {
         // BEGIN TRANSACTION
-        console.log('🔒 Starting transaction...');
         await this.appDb.execute('BEGIN IMMEDIATE');
 
         try {
             const result = await this._importDataWithoutTransaction(isOldSchema, progressCallback, startStep);
 
             // COMMIT TRANSACTION
-            console.log('💾 Committing transaction...');
             await this.appDb.execute('COMMIT');
-            console.log('✅ Transaction committed');
 
             return result;
 
@@ -232,7 +213,6 @@ export class DatabaseImport {
      * Verify import by counting records
      */
     async _verifyImport() {
-        console.log('🔍 Verifying import...');
 
         const clientCount = await this.appDb.query('SELECT COUNT(*) as count FROM Client');
         const projectCount = await this.appDb.query('SELECT COUNT(*) as count FROM Project');
@@ -240,12 +220,6 @@ export class DatabaseImport {
         const taskInstanceCount = await this.appDb.query('SELECT COUNT(*) as count FROM TaskInstance');
         const timeEntryCount = await this.appDb.query('SELECT COUNT(*) as count FROM TimeEntry');
 
-        console.log('📊 Current database state:');
-        console.log(`  Clients: ${clientCount[0].count}`);
-        console.log(`  Projects: ${projectCount[0].count}`);
-        console.log(`  Tasks: ${taskCount[0].count}`);
-        console.log(`  TaskInstances: ${taskInstanceCount[0].count}`);
-        console.log(`  TimeEntries: ${timeEntryCount[0].count}`);
     }
 
     /**
@@ -256,7 +230,6 @@ export class DatabaseImport {
         const clients = await this.importDb.query('SELECT * FROM Client WHERE id != 1');
         const idMap = new Map();
 
-        console.log(`📥 Importing ${clients.length} clients...`);
 
         for (const client of clients) {
             // Check if exists
@@ -266,19 +239,16 @@ export class DatabaseImport {
             );
 
             if (existing.length > 0) {
-                console.log(`♻️  Client exists: ${client.name} (id=${existing[0].id})`);
                 idMap.set(client.id, existing[0].id);
             } else {
                 const newId = await this.appDb.execute(
                     'INSERT INTO Client (name, rate, currency) VALUES (?, ?, ?)',
                     [client.name, client.rate || 0.0, client.currency || 'USD']
                 );
-                console.log(`✅ Created Client: ${client.name} (new_id=${newId})`);
                 idMap.set(client.id, newId);
             }
         }
 
-        console.log(`✅ Clients import complete. Total mapped: ${idMap.size}`);
         return idMap;
     }
 
@@ -291,7 +261,6 @@ export class DatabaseImport {
         const projects = await this.importDb.query('SELECT * FROM Project WHERE id != 1');
         const idMap = new Map();
 
-        console.log(`📥 Importing ${projects.length} projects...`);
 
         for (const project of projects) {
             const newClientId = project.client_id ? clientIdMap.get(project.client_id) || null : null;
@@ -324,7 +293,6 @@ export class DatabaseImport {
         const tasks = await this.importDb.query('SELECT * FROM Task');
         const idMap = new Map();
 
-        console.log(`📥 Importing ${tasks.length} tasks...`);
 
         for (const task of tasks) {
             // Check if exists
@@ -355,45 +323,60 @@ export class DatabaseImport {
      * @returns {Promise<number>} Number of time entries added
      */
     async _importFromNewSchema(clientIdMap, projectIdMap, taskIdMap) {
+        // NEW SCHEMA FIX: Import TaskInstances FIRST to preserve stack structure
+        // Don't use _getOrCreateTaskInstance() - import each TaskInstance separately!
+        
+        // Step 1: Import TaskInstances and create ID mapping
+        const taskInstances = await this.importDb.query('SELECT * FROM TaskInstance');
+        const taskInstanceIdMap = new Map(); // old ID -> new ID
+        let instancesAdded = 0;
+
+
+        for (const instance of taskInstances) {
+            const newTaskId = taskIdMap.get(instance.task_id);
+            const newProjectId = projectIdMap.get(instance.project_id) || 1;
+            const newClientId = instance.client_id ? clientIdMap.get(instance.client_id) || 1 : 1;
+
+            if (!newTaskId) {
+                console.warn(`  ⚠️  Task ID ${instance.task_id} not found, skipping TaskInstance ${instance.id}`);
+                continue;
+            }
+
+            // Check if this exact TaskInstance was already imported (by checking unique TimeEntries later)
+            // For now, always create a NEW TaskInstance to preserve stack structure
+            const newInstanceId = await this.appDb.execute(
+                'INSERT INTO TaskInstance (task_id, project_id, client_id, total_time, last_used_at, is_favorite) VALUES (?, ?, ?, ?, ?, ?)',
+                [newTaskId, newProjectId, newClientId, 0, instance.last_used_at || new Date().toISOString(), instance.is_favorite || 0]
+            );
+
+            taskInstanceIdMap.set(instance.id, newInstanceId);
+            instancesAdded++;
+        }
+
+
+        // Step 2: Import TimeEntries using the TaskInstance ID mapping
         const timeEntries = await this.importDb.query('SELECT * FROM TimeEntry');
         let entriesAdded = 0;
 
-        console.log(`📥 Importing ${timeEntries.length} time entries...`);
 
         for (const entry of timeEntries) {
-            // Get TaskInstance info
-            const [taskInstance] = await this.importDb.query(
-                'SELECT * FROM TaskInstance WHERE id = ?',
-                [entry.task_instance_id]
-            );
+            const newTaskInstanceId = taskInstanceIdMap.get(entry.task_instance_id);
 
-            if (!taskInstance) continue;
+            if (!newTaskInstanceId) {
+                console.warn(`  ⚠️  TaskInstance ID ${entry.task_instance_id} not found, skipping TimeEntry ${entry.id}`);
+                continue;
+            }
 
-            // Map IDs
-            const newTaskId = taskIdMap.get(taskInstance.task_id);
-            const newProjectId = projectIdMap.get(taskInstance.project_id) || 1;
-            const newClientId = taskInstance.client_id ? clientIdMap.get(taskInstance.client_id) || 1 : 1;
-
-            if (!newTaskId) continue;
-
-            // Get or create TaskInstance
-            const taskInstanceId = await this._getOrCreateTaskInstance(
-                newTaskId,
-                newProjectId,
-                newClientId,
-                taskInstance.last_used_at || entry.end_time || entry.start_time
-            );
-
-            // Check if TimeEntry exists
+            // Check if TimeEntry exists (duplicate prevention)
             const existing = await this.appDb.query(
                 'SELECT id FROM TimeEntry WHERE task_instance_id = ? AND start_time = ?',
-                [taskInstanceId, entry.start_time]
+                [newTaskInstanceId, entry.start_time]
             );
 
             if (existing.length === 0) {
                 await this.appDb.execute(
                     'INSERT INTO TimeEntry (task_instance_id, start_time, end_time, duration) VALUES (?, ?, ?, ?)',
-                    [taskInstanceId, entry.start_time, entry.end_time, entry.duration]
+                    [newTaskInstanceId, entry.start_time, entry.end_time, entry.duration]
                 );
                 entriesAdded++;
             }
@@ -414,7 +397,6 @@ export class DatabaseImport {
         const taskNameToIdMap = new Map();
         let tasksAdded = 0;
 
-        console.log(`📥 Found ${uniqueTasks.length} unique tasks in old schema`);
 
         // Create Tasks
         for (const task of uniqueTasks) {
@@ -439,7 +421,6 @@ export class DatabaseImport {
         const oldTasks = await this.importDb.query('SELECT * FROM Task');
         let entriesAdded = 0;
 
-        console.log(`📥 Processing ${oldTasks.length} task entries from old schema`);
 
         for (const oldTask of oldTasks) {
             const taskId = taskNameToIdMap.get(oldTask.name);
@@ -448,12 +429,13 @@ export class DatabaseImport {
 
             if (!taskId) continue;
 
-            // Get or create TaskInstance
-            const taskInstanceId = await this._getOrCreateTaskInstance(
-                taskId,
-                projectId,
-                clientId,
-                oldTask.end_time || oldTask.start_time
+            // OLD SCHEMA FIX: Create SEPARATE TaskInstance for EACH old Task (session)
+            // This is necessary for stacks to work - stacks = multiple TaskInstances with same (task_id, project_id, client_id)
+            // Don't use _getOrCreateTaskInstance() here because it deduplicates!
+            const lastUsedAt = oldTask.end_time || oldTask.start_time || new Date().toISOString();
+            const taskInstanceId = await this.appDb.execute(
+                'INSERT INTO TaskInstance (task_id, project_id, client_id, total_time, last_used_at) VALUES (?, ?, ?, ?, ?)',
+                [taskId, projectId, clientId, 0, lastUsedAt]
             );
 
             // Create TimeEntry if valid
@@ -505,7 +487,6 @@ export class DatabaseImport {
      * Sync total_time for all TaskInstances
      */
     async _syncTotalTimes() {
-        console.log('🔄 Synchronizing total_time...');
 
         await this.appDb.execute(`
             UPDATE TaskInstance
@@ -516,7 +497,6 @@ export class DatabaseImport {
             )
         `);
 
-        console.log('✅ Total times synchronized');
     }
 
     /**
@@ -554,7 +534,6 @@ export class DatabaseImport {
         this.importDb.connection = this.importConnection;
         this.importDb.isConnected_ = true;
 
-        console.log('✅ Import database opened');
     }
 
     /**

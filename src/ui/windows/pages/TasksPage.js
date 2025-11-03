@@ -187,10 +187,8 @@ export class TasksPage {
                 // No duration in event - fallback to DB query
                 await this._refreshSingleTaskTime(data.taskInstanceId);
             } else if (data && data.taskId) {
-                console.log('[TasksPage] tracking-stopped: Using taskId fallback');
                 await this._refreshSingleTaskTimeByTaskId(data.taskId);
             } else {
-                console.log('[TasksPage] tracking-stopped: No taskInstanceId or taskId in data');
             }
             
                 // CRITICAL: Update all templates AFTER time updates (remove green dots, show start icons)
@@ -240,7 +238,6 @@ export class TasksPage {
             // CRITICAL: Check if task name, project or client changed
             // If changed - reload tasks list to show updated information
             if (data.taskName !== undefined || data.projectId !== undefined || data.clientId !== undefined) {
-                console.log('[TasksPage] Task/Project/Client updated during tracking, reloading task list');
                 // Reload task list to reflect changes
                 this.loadTasks().catch(err => {
                     console.error('[TasksPage] Error reloading tasks after tracking update:', err);
@@ -294,6 +291,12 @@ export class TasksPage {
         };
         this._eventHandlers['project-updated'] = (data) => {
             this._onProjectUpdated(data);
+        };
+        
+        // IMPORTANT: After database import/replace, reload entire task list
+        // This ensures UI shows correct data with new IDs
+        this._eventHandlers['task-updated'] = async () => {
+            await this.loadTasks();
         };
 
         // Memory cleanup events disabled - cleanup happens in destroy(), not periodically
@@ -401,7 +404,6 @@ export class TasksPage {
             });
             
             if (templatesToRemove.length > 0) {
-                console.log('[TasksPage] Cleaned', templatesToRemove.length, 'unused task templates');
             }
         }
         
@@ -409,13 +411,11 @@ export class TasksPage {
         if (this.tasks && this.tasks.length > 500) {
             // Keep only most recent 400 tasks
             this.tasks = this.tasks.slice(-400);
-            console.log('[TasksPage] Cleaned tasks array, kept 400 most recent');
         }
         
         if (this.filteredTasks && this.filteredTasks.length > 300) {
             // Keep only most recent 250 filtered tasks
             this.filteredTasks = this.filteredTasks.slice(-250);
-            console.log('[TasksPage] Cleaned filteredTasks array, kept 250 most recent');
         }
     }
 
@@ -918,7 +918,6 @@ export class TasksPage {
     _subscribeToGlobalTimer() {
         // CRITICAL: Check if already subscribed to prevent memory leak
         if (this._isSubscribedToGlobalTimer) {
-            console.log('[TasksPage] Already subscribed to GlobalTimer, skipping');
             return;
         }
 
@@ -930,7 +929,6 @@ export class TasksPage {
             }
         });
 
-        console.log('[TasksPage] Subscribed to GlobalTimer (once)');
     }
 
     _formatDuration(seconds) {
@@ -1445,7 +1443,6 @@ export class TasksPage {
      * Update tasks display with grouping (original UI design)
      */
     _updateTasksDisplay() {
-        console.log(`[TasksPage] _updateTasksDisplay() called. Tasks: ${this.tasks.length}, Filtered: ${this.filteredTasks?.length || 0}`);
         
         // OPTIMIZED: Clear ALL tracked widgets/templates FIRST to free RAM
         // Destroy all tracked templates
@@ -1455,7 +1452,6 @@ export class TasksPage {
                     template.destroy();
                 }
             } catch (e) {
-                console.log('[TasksPage] Error destroying tracked template:', e);
             }
         });
         this._trackedTemplates.clear();
@@ -1467,7 +1463,6 @@ export class TasksPage {
                     widget.destroy();
                 }
             } catch (e) {
-                console.log('[TasksPage] Error destroying tracked widget:', e);
             }
         });
         this._trackedWidgets.clear();
@@ -1534,14 +1529,12 @@ export class TasksPage {
         const groupsToShow = allTaskGroups.slice(start, end);
 
         // Render paginated groups
-        console.log(`[TasksPage] Rendering ${groupsToShow.length} groups (page ${this.currentTasksPage + 1}/${totalPages})`);
         this._renderTaskGroups(groupsToShow);
         
         // OPTIMIZED: Clear allTaskGroups after rendering to free memory
         // Only keep what's displayed - groupsToShow will be destroyed when widgets are destroyed
         allTaskGroups.length = 0;
         
-        console.log(`[TasksPage] Display updated. Showing ${groupsToShow.length} groups`);
 
         // Update pagination/selection UI
         this._updatePaginationInfo();
@@ -1556,28 +1549,23 @@ export class TasksPage {
      */
     async _addSingleTask(taskInstanceId) {
         if (!this.coreBridge) {
-            console.log('[TasksPage] _addSingleTask: No coreBridge');
             return;
         }
         
         try {
-            console.log(`[TasksPage] Adding task ${taskInstanceId} to list`);
             
             // Load only the new task from DB (one query, one object)
             const newTask = await this.coreBridge.getTaskInstance(taskInstanceId);
             if (!newTask) {
-                console.log(`[TasksPage] Task ${taskInstanceId} not found in DB`);
                 return;
             }
 
             // Check if task already in list (avoid duplicates)
             const exists = this.tasks.some(t => t.id === taskInstanceId);
             if (exists) {
-                console.log(`[TasksPage] Task ${taskInstanceId} already in list, skipping`);
                 return;
             }
 
-            console.log(`[TasksPage] Adding task ${taskInstanceId} (${newTask.task_name}) to list. Current tasks: ${this.tasks.length}`);
 
             // OPTIMIZED: Clear arrays before adding to prevent growth
             // Keep only last 500 tasks to prevent unlimited growth
@@ -1601,7 +1589,6 @@ export class TasksPage {
             // This is necessary because grouping might change
             this._updateTasksDisplay();
             
-            console.log(`[TasksPage] Task ${taskInstanceId} added. Now tasks: ${this.tasks.length}`);
         } catch (error) {
             console.error('[TasksPage] Error adding single task:', error);
         }
@@ -1654,17 +1641,14 @@ export class TasksPage {
      */
     async _refreshSingleTaskTime(taskInstanceId) {
         if (!this.coreBridge) {
-            console.log('[TasksPage] _refreshSingleTaskTime: No coreBridge');
             return;
         }
 
         try {
-            console.log(`[TasksPage] Refreshing time for task ${taskInstanceId}`);
             
             // Find task instance in current list by ID
             const taskInstance = this.tasks.find(t => t.id === taskInstanceId);
             if (!taskInstance) {
-                console.log(`[TasksPage] Task ${taskInstanceId} not in list, adding it`);
                 // Task not in list - try to add it if it's new
                 await this._addSingleTask(taskInstanceId);
                 return;
@@ -1680,7 +1664,6 @@ export class TasksPage {
                     const oldTime = taskInstance.total_time;
                     taskInstance.total_time = updatedTask.total_time;
                     taskInstance.last_used_at = updatedTask.last_used_at;
-                    console.log(`[TasksPage] Updated task ${taskInstanceId} time: ${oldTime} -> ${taskInstance.total_time}`);
                 }
             } else {
                 // No template - need full task for display update
@@ -1694,7 +1677,6 @@ export class TasksPage {
                 taskInstance.total_time = updatedTask.total_time;
                 taskInstance.last_used_at = updatedTask.last_used_at;
                 
-                console.log(`[TasksPage] Updated task ${taskInstanceId} time: ${oldTime} -> ${taskInstance.total_time}`);
             }
             
             if (template) {
@@ -1734,11 +1716,9 @@ export class TasksPage {
             // This prevents RAM growth from recreating all widgets
             // Only refresh if template doesn't exist or update failed
             if (!template) {
-                console.log(`[TasksPage] Template not found for ${taskInstanceId}, refreshing display`);
                 this._updateTasksDisplay();
             } else {
                 // Template exists and was updated - no need to refresh entire display
-                console.log(`[TasksPage] Template updated for ${taskInstanceId}, skipping full refresh`);
             }
         } catch (error) {
             console.error('[TasksPage] Error refreshing task time:', error);
@@ -1782,7 +1762,6 @@ export class TasksPage {
                     template.updateTrackingState();
                 }
             } catch (e) {
-                console.log('[TasksPage] Error updating template tracking state:', e);
             }
         });
     }
@@ -2549,14 +2528,12 @@ export class TasksPage {
             const projectExists = projects.some(p => p.id === this.currentProjectId);
             if (!projectExists && projects.length > 0) {
                 this.currentProjectId = projects[0].id;
-                console.log('[TasksPage] Reset to default project:', this.currentProjectId);
             }
 
             // Validate client ID
             const clientExists = clients.some(c => c.id === this.currentClientId);
             if (!clientExists && clients.length > 0) {
                 this.currentClientId = clients[0].id;
-                console.log('[TasksPage] Reset to default client:', this.currentClientId);
             }
         } catch (error) {
             // Fallback to ID 1 if validation fails

@@ -1855,27 +1855,21 @@ export const PreferencesDialog = GObject.registerClass({
 
             migrationDialog.showCompletion();
 
-            console.log('✅ Replace completed:', result);
 
             // Force reload all services from database
-            console.log('🔄 Force reloading all services...');
             if (app.coreAPI) {
                 // Clear any caches and force reload
                 try {
                     if (app.coreAPI.taskService) {
-                        console.log('  Reloading TaskService...');
                         await app.coreAPI.taskService.loadAllTasks?.();
                     }
                     if (app.coreAPI.taskInstanceService) {
-                        console.log('  Reloading TaskInstanceService...');
                         await app.coreAPI.taskInstanceService.loadAll?.();
                     }
                     if (app.coreAPI.clientService) {
-                        console.log('  Reloading ClientService...');
                         await app.coreAPI.clientService.loadAll?.();
                     }
                     if (app.coreAPI.projectService) {
-                        console.log('  Reloading ProjectService...');
                         await app.coreAPI.projectService.loadAll?.();
                     }
                 } catch (reloadError) {
@@ -1887,7 +1881,6 @@ export const PreferencesDialog = GObject.registerClass({
                 app.coreBridge?.emitUIEvent('project-updated');
                 app.coreBridge?.emitUIEvent('task-updated');
 
-                console.log('✅ Services reloaded and events emitted');
             }
 
         } catch (error) {
@@ -1912,7 +1905,6 @@ export const PreferencesDialog = GObject.registerClass({
                 throw new Error('Database bridge not found');
             }
 
-            console.log('📂 Using app database connection for merge');
 
             // Merge via DataNavigator (data layer)
             const result = await app.dataNavigator.mergeFromDatabaseFile(importPath, (step, total, message) => {
@@ -1931,27 +1923,21 @@ export const PreferencesDialog = GObject.registerClass({
 
             migrationDialog.showCompletion();
 
-            console.log('✅ Merge completed:', result);
 
             // Force reload all services from database
-            console.log('🔄 Force reloading all services...');
             if (app.coreAPI) {
                 // Clear any caches and force reload
                 try {
                     if (app.coreAPI.taskService) {
-                        console.log('  Reloading TaskService...');
                         await app.coreAPI.taskService.loadAllTasks?.();
                     }
                     if (app.coreAPI.taskInstanceService) {
-                        console.log('  Reloading TaskInstanceService...');
                         await app.coreAPI.taskInstanceService.loadAll?.();
                     }
                     if (app.coreAPI.clientService) {
-                        console.log('  Reloading ClientService...');
                         await app.coreAPI.clientService.loadAll?.();
                     }
                     if (app.coreAPI.projectService) {
-                        console.log('  Reloading ProjectService...');
                         await app.coreAPI.projectService.loadAll?.();
                     }
                 } catch (reloadError) {
@@ -1963,7 +1949,6 @@ export const PreferencesDialog = GObject.registerClass({
                 app.coreBridge?.emitUIEvent('project-updated');
                 app.coreBridge?.emitUIEvent('task-updated');
 
-                console.log('✅ Services reloaded and events emitted');
             }
 
             // Close dialog after 1 second

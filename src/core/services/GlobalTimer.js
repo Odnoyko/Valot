@@ -33,7 +33,6 @@ export class GlobalTimer extends BaseService {
         this.startTime = startTime || Date.now();
         this.isRunning = true;
 
-        console.log(`[GlobalTimer] Started at ${new Date(this.startTime).toISOString()}`);
 
         // Start interval
         this._startInterval();
@@ -51,7 +50,6 @@ export class GlobalTimer extends BaseService {
         this.isRunning = false;
         this.startTime = null;
 
-        console.log('[GlobalTimer] Stopped');
     }
 
     /**

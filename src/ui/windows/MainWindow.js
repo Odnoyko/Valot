@@ -8,6 +8,7 @@ import Adw from 'gi://Adw?version=1';
 import Gtk from 'gi://Gtk?version=4.0';
 import Gdk from 'gi://Gdk';
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import { Config } from 'resource:///com/odnoyko/valot/config.js';
 import { PreferencesDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/PreferencesDialog.js';
 import { GestureController } from 'resource:///com/odnoyko/valot/ui/utils/GestureController.js';
@@ -756,13 +757,19 @@ export const ValotMainWindow = GObject.registerClass({
         if (!this.coreBridge) return;
 
         // Store handlers for cleanup
-        this._eventHandlers['tracking-started'] = () => {
+        this._eventHandlers['tracking-started'] = (data) => {
+            
+            // Check if tracked task is in current week
+            if (data && data.startTime) {
+                this._checkIfTrackingIsInCurrentWeek(data.startTime);
+            }
             this._updateSidebarStats();
         };
 
         this._eventHandlers['tracking-stopped'] = () => {
             // Clear cached week stats
             this._cachedWeekStats = null;
+            this._isTrackingInCurrentWeek = false;
 
             this._updateSidebarStats();
 
@@ -770,6 +777,39 @@ export const ValotMainWindow = GObject.registerClass({
             if (this.reportsPageInstance && this.reportsPageInstance.updateChartsOnly) {
                 this.reportsPageInstance.updateChartsOnly();
             }
+        };
+        
+        // OPTIMIZED: Real-time sidebar updates - only update label text, no object creation
+        this._eventHandlers['tracking-updated'] = (data) => {
+            if (!data || data.elapsedSeconds === undefined) {
+                return;
+            }
+            
+            
+            // Only update if tracking is in current week
+            if (!this._isTrackingInCurrentWeek) {
+                return;
+            }
+            
+            // OPTIMIZED: Update only label text, no getTrackingState() call
+            if (!this._cachedWeekStats) {
+                return;
+            }
+            
+            const totalTime = this._cachedWeekStats.totalTime + data.elapsedSeconds;
+            const hours = Math.floor(totalTime / 3600);
+            const minutes = Math.floor((totalTime % 3600) / 60);
+            const secs = totalTime % 60;
+            const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            
+            this.weeklyTimeRow.set_subtitle(`${timeStr} • ${this._cachedWeekStats.taskCount} tasks`);
+        };
+        
+        // IMPORTANT: After database import/replace, reload sidebar stats
+        this._eventHandlers['task-updated'] = async () => {
+            this._cachedWeekStats = null;
+            this._isTrackingInCurrentWeek = false;
+            await this._updateSidebarStats();
         };
 
         // DISABLED: tracking-updated handler removed - causes RAM growth
@@ -874,6 +914,41 @@ export const ValotMainWindow = GObject.registerClass({
     }
 
     /**
+     * Check if tracking start time is in current week
+     */
+    _checkIfTrackingIsInCurrentWeek(startTime) {
+        
+        try {
+            const now = GLib.DateTime.new_now_local();
+            const dayOfWeek = now.get_day_of_week(); // 1=Monday, 7=Sunday
+            const daysToMonday = dayOfWeek - 1;
+            const monday = now.add_days(-daysToMonday);
+            
+            const weekStart = GLib.DateTime.new_local(
+                monday.get_year(),
+                monday.get_month(),
+                monday.get_day_of_month(),
+                0, 0, 0
+            );
+            
+            // Convert "2025-11-03 18:53:35" to ISO 8601 format with timezone
+            // GLib requires full ISO 8601 with zone: "2025-11-03T18:53:35Z"
+            const isoStartTime = startTime.replace(' ', 'T') + 'Z';
+            const startDateTime = GLib.DateTime.new_from_iso8601(isoStartTime, null);
+            
+            if (!startDateTime) {
+                this._isTrackingInCurrentWeek = false;
+                return;
+            }
+            
+            this._isTrackingInCurrentWeek = startDateTime.compare(weekStart) >= 0;
+        } catch (error) {
+            console.error('Error checking if tracking is in current week:', error);
+            this._isTrackingInCurrentWeek = false;
+        }
+    }
+    
+    /**
      * Update sidebar statistics (full reload)
      */
     async _updateSidebarStats() {
@@ -882,6 +957,9 @@ export const ValotMainWindow = GObject.registerClass({
         try {
             // Get This Week stats from Core
             const weekStats = await this.coreBridge.getThisWeekStats();
+            
+            // Cache for real-time updates
+            this._cachedWeekStats = weekStats;
 
             const hours = Math.floor(weekStats.totalTime / 3600);
             const minutes = Math.floor((weekStats.totalTime % 3600) / 60);
@@ -889,6 +967,15 @@ export const ValotMainWindow = GObject.registerClass({
             const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 
             this.weeklyTimeRow.set_subtitle(`${timeStr} • ${weekStats.taskCount} tasks`);
+            
+            // CRITICAL: Check if tracking is currently active and in current week
+            const trackingState = this.coreBridge.getTrackingState();
+            
+            if (trackingState.isTracking && trackingState.startTime) {
+                this._checkIfTrackingIsInCurrentWeek(trackingState.startTime);
+            } else {
+                this._isTrackingInCurrentWeek = false;
+            }
         } catch (error) {
             console.error('Error updating sidebar stats:', error);
         }

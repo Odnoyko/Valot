@@ -32,8 +32,29 @@ export class TimeTrackingService extends BaseService {
             await this.stop();
         }
 
-        const validProjectId = projectId || null;
-        const validClientId = clientId || null;
+        // IMPORTANT: Validate project_id and client_id exist in DB
+        // After import/migration, GSettings may have stale IDs
+        let validProjectId = projectId || null;
+        let validClientId = clientId || null;
+        
+        // Validate project_id
+        if (validProjectId) {
+            const projectExists = await this.query('SELECT id FROM Project WHERE id = ?', [validProjectId]);
+            if (!projectExists || projectExists.length === 0) {
+                console.warn(`[Tracking] Project ID ${validProjectId} not found, using default (ID=1)`);
+                validProjectId = 1;
+            }
+        }
+        
+        // Validate client_id
+        if (validClientId) {
+            const clientExists = await this.query('SELECT id FROM Client WHERE id = ?', [validClientId]);
+            if (!clientExists || clientExists.length === 0) {
+                console.warn(`[Tracking] Client ID ${validClientId} not found, using default (ID=1)`);
+                validClientId = 1;
+            }
+        }
+        
         this.lastUsedProjectId = validProjectId;
         this.lastUsedClientId = validClientId;
 
@@ -68,7 +89,6 @@ export class TimeTrackingService extends BaseService {
                 [taskId, validProjectId, validClientId]
             );
         } catch (error) {
-            console.log(`[Tracking] Close abandoned: ${error.message}`);
         }
 
         // Create TaskInstance (direct SQL)
@@ -169,7 +189,6 @@ export class TimeTrackingService extends BaseService {
             const now = Date.now();
             elapsed = Math.floor((now - startTimestamp) / 1000);
             
-            console.log(`[Tracking] Stop: startTime="${tracking.startTime}", parsed=${startTimestamp}, now=${now}, elapsed=${elapsed}s`);
             
             // CRITICAL: If elapsed is 0 or negative, use minimum (very fast start/stop or parsing error)
             if (elapsed <= 0) {
@@ -226,7 +245,6 @@ export class TimeTrackingService extends BaseService {
                         [duration, instanceId]
                     );
                     
-                    console.log(`[Tracking] Stop: Updated TaskInstance ${instanceId} total_time: added ${duration}s`);
                     updated = true;
                 } else {
                     console.warn(`[Tracking] Stop: instanceRow is empty or invalid`);
@@ -262,7 +280,6 @@ export class TimeTrackingService extends BaseService {
                     [duration, tracking.currentTaskInstanceId]
                 );
                 
-                console.log(`[Tracking] Stop fallback: Updated TaskInstance ${tracking.currentTaskInstanceId} total_time: added ${duration}s`);
             } catch (error) {
                 console.error(`[Tracking] Stop fallback error: ${error.message}`);
             }
@@ -403,7 +420,6 @@ export class TimeTrackingService extends BaseService {
             
             // CRITICAL: Restart timer to recalculate _cachedStartTimestamp with new startTime
             // Without this, timer continues using old cached timestamp
-            console.log(`[Tracking] startTime updated for active entry, restarting timer with new startTime: ${input.start_time}`);
             this.stopTimer();
             this.startTimer();
         }
@@ -457,10 +473,8 @@ export class TimeTrackingService extends BaseService {
         if (typeof tracking.startTime === 'string') {
             // Parse "YYYY-MM-DD HH:MM:SS" format (replace space with T for ISO)
             this._cachedStartTimestamp = new Date(tracking.startTime.replace(' ', 'T')).getTime();
-            console.log(`[Tracking] startTimer: Parsed startTime string "${tracking.startTime}" to timestamp ${this._cachedStartTimestamp}`);
         } else {
             this._cachedStartTimestamp = tracking.startTime;
-            console.log(`[Tracking] startTimer: Using startTime timestamp directly: ${this._cachedStartTimestamp}`);
         }
         
         if (!this._cachedStartTimestamp || isNaN(this._cachedStartTimestamp)) {
@@ -696,7 +710,6 @@ export class TimeTrackingService extends BaseService {
     startTimer() {
         const startTime = Date.now();
         this.globalTimer.start(startTime);
-        console.log(`[TimeTrackingService] Started GlobalTimer at ${new Date(startTime).toISOString()}`);
     }
 
     /**
@@ -704,7 +717,6 @@ export class TimeTrackingService extends BaseService {
      */
     stopTimer() {
         this.globalTimer.stop();
-        console.log('[TimeTrackingService] Stopped GlobalTimer');
     }
     /**
      * Get all time entries

@@ -78,22 +78,24 @@ export class Logger {
      * Log debug message (only if debug enabled)
      */
     static debug(context, ...args) {
-        if (Logger.DEBUG_ENABLED && 
-            Logger.currentLevel <= Logger.LEVELS.DEBUG &&
-            Logger._isContextEnabled(context, Logger.LEVELS.DEBUG)) {
-            console.log(...Logger._formatMessage('DEBUG', context, ...args));
-        }
+        // console.log removed - debug logging disabled
+        // if (Logger.DEBUG_ENABLED && 
+        //     Logger.currentLevel <= Logger.LEVELS.DEBUG &&
+        //     Logger._isContextEnabled(context, Logger.LEVELS.DEBUG)) {
+        //     console.log(...Logger._formatMessage('DEBUG', context, ...args));
+        // }
     }
     
     /**
      * Log info message (only if info enabled)
      */
     static info(context, ...args) {
-        if (Logger.INFO_ENABLED && 
-            Logger.currentLevel <= Logger.LEVELS.INFO &&
-            Logger._isContextEnabled(context, Logger.LEVELS.INFO)) {
-            console.log(...Logger._formatMessage('INFO', context, ...args));
-        }
+        // console.log removed - info logging disabled
+        // if (Logger.INFO_ENABLED && 
+        //     Logger.currentLevel <= Logger.LEVELS.INFO &&
+        //     Logger._isContextEnabled(context, Logger.LEVELS.INFO)) {
+        //     console.log(...Logger._formatMessage('INFO', context, ...args));
+        // }
     }
     
     /**

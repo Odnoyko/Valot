@@ -27,7 +27,6 @@ export class ListRenderService {
                     template.destroy();
                 }
             } catch (e) {
-                console.log('[ListRenderService] Error destroying template:', e);
             }
         });
         this._templates.clear();
@@ -39,7 +38,6 @@ export class ListRenderService {
                     widget.destroy();
                 }
             } catch (e) {
-                console.log('[ListRenderService] Error destroying widget:', e);
             }
         });
         this._widgets.clear();
@@ -57,7 +55,6 @@ export class ListRenderService {
                     oldWidget.destroy();
                 }
             } catch (e) {
-                console.log('[ListRenderService] Error destroying old widget:', e);
             }
         }
         this._widgets.set(key, widget);
@@ -75,7 +72,6 @@ export class ListRenderService {
                     oldTemplate.destroy();
                 }
             } catch (e) {
-                console.log('[ListRenderService] Error destroying old template:', e);
             }
         }
         this._templates.set(key, template);
@@ -92,7 +88,6 @@ export class ListRenderService {
                     widget.destroy();
                 }
             } catch (e) {
-                console.log('[ListRenderService] Error destroying widget:', e);
             }
             this._widgets.delete(key);
         }
@@ -104,7 +99,6 @@ export class ListRenderService {
                     template.destroy();
                 }
             } catch (e) {
-                console.log('[ListRenderService] Error destroying template:', e);
             }
             this._templates.delete(key);
         }

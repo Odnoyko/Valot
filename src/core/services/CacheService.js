@@ -61,7 +61,6 @@ export class CacheService {
      * Initialize cache by loading all data from DB
      */
     async initialize() {
-        console.log('Cache', 'Initializing cache from database...');
         
         try {
             // Load all entities from DB
@@ -73,7 +72,6 @@ export class CacheService {
                 // TimeEntries are loaded on-demand (only completed ones)
             ]);
             
-            console.log('Cache', `Cache initialized: ${this.tasks.size} tasks, ${this.projects.size} projects, ${this.clients.size} clients, ${this.taskInstances.size} instances`);
             
             // Start periodic sync
             // DISABLED: Periodic sync timer - sync on demand only, not every 5 seconds
@@ -434,7 +432,6 @@ export class CacheService {
      */
     async syncToDB() {
         if (this.syncInProgress) {
-            console.log('Cache', 'Sync already in progress, skipping...');
             return;
         }
         
@@ -453,7 +450,6 @@ export class CacheService {
                 this._syncTimeEntries(),
             ]);
             
-            console.log('Cache', `Sync complete. Stats: ${this.stats.cacheHits} hits, ${this.stats.cacheMisses} misses`);
         } catch (error) {
             console.error('Cache', 'Sync to DB failed:', error);
             throw error;

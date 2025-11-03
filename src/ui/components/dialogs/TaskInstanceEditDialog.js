@@ -1375,7 +1375,6 @@ export class TaskInstanceEditDialog {
                     // Active entry: only update start_time, NEVER set end_time (keeps it active)
                     // elapsedSeconds will be recalculated automatically in updateTimeEntry()
                     const newStartTime = TimeUtils.formatTimestampForDB(this.startDate);
-                    console.log('[TaskInstanceEditDialog] Updating ACTIVE entry start_time to:', newStartTime);
                     
                     // CRITICAL: Calculate NEW elapsed time BEFORE saving (this will be the target for animation)
                     const now = Date.now();
@@ -1383,7 +1382,6 @@ export class TaskInstanceEditDialog {
                     const newElapsedSeconds = Math.floor(newElapsedMs / 1000);
                     const currentDisplayedSeconds = this.durationAnimator ? this.durationAnimator.getCurrentSeconds() : newElapsedSeconds;
                     
-                    console.log('[TaskInstanceEditDialog] Save animation: FROM', currentDisplayedSeconds, 'TO', newElapsedSeconds);
                     
                     await this.coreBridge.updateTimeEntry(this.latestEntry.id, {
                         start_time: newStartTime,
