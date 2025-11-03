@@ -69,6 +69,7 @@
     <file>ui/utils/timeUtils.js</file>
     <file>ui/utils/svgRecolor.js</file>
     <file>ui/utils/StringCache.js</file>
+    <file>ui/utils/DurationAnimator.js</file>
 
     <!-- UI Export Utilities -->
     <file>ui/utils/export/reportExporter.js</file>

@@ -109,11 +109,11 @@ export class MultipleTasksEditDialog {
         this.dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
 
         // Handle responses
-        this.dialog.connect('response', (dialog, response) => {
+        this.dialog.connect('response', async (dialog, response) => {
             if (response === 'save') {
-                this._saveChanges();
+                await this._saveChanges();
             }
-            // Cleanup dropdowns and resources before closing
+            // Cleanup dropdowns and resources AFTER save completes
             this.cleanup();
         });
     }

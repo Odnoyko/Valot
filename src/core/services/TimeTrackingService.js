@@ -397,8 +397,15 @@ export class TimeTrackingService extends BaseService {
 
         // Update state if tracking
         const tracking = this.state.state.tracking;
+        
         if (tracking.isTracking && tracking.currentTimeEntryId === id && input.start_time) {
             this.state.updateTrackingState({ startTime: input.start_time });
+            
+            // CRITICAL: Restart timer to recalculate _cachedStartTimestamp with new startTime
+            // Without this, timer continues using old cached timestamp
+            console.log(`[Tracking] startTime updated for active entry, restarting timer with new startTime: ${input.start_time}`);
+            this.stopTimer();
+            this.startTimer();
         }
 
         this.events.emit(CoreEvents.TIME_ENTRY_UPDATED, { id, ...input });
@@ -618,31 +625,6 @@ export class TimeTrackingService extends BaseService {
         const entryId = await this.execute(sql, [input.task_instance_id, input.start_time]);
         this.events.emit(CoreEvents.TIME_ENTRY_CREATED, { id: entryId, ...input });
         return entryId;
-    }
-    /**
-     * Update a time entry
-     */
-    async updateTimeEntry(id, input) {
-        const updates = [];
-        const params = [];
-        if (input.start_time !== undefined) {
-            updates.push('start_time = ?');
-            params.push(input.start_time);
-        }
-        if (input.end_time !== undefined) {
-            updates.push('end_time = ?');
-            params.push(input.end_time);
-        }
-        if (input.duration !== undefined) {
-            updates.push('duration = ?');
-            params.push(input.duration);
-        }
-        if (updates.length === 0)
-            return;
-        params.push(id);
-        const sql = `UPDATE TimeEntry SET ${updates.join(', ')} WHERE id = ?`;
-        await this.execute(sql, params);
-        this.events.emit(CoreEvents.TIME_ENTRY_UPDATED, { id, ...input });
     }
     /**
      * Get current time entry (active tracking)

@@ -10,6 +10,7 @@ import GLib from 'gi://GLib';
 import { ProjectDropdown } from 'resource:///com/odnoyko/valot/ui/utils/projectDropdown.js';
 import { ClientDropdown } from 'resource:///com/odnoyko/valot/ui/utils/clientDropdown.js';
 import { TimeUtils } from 'resource:///com/odnoyko/valot/core/utils/TimeUtils.js';
+import { DurationAnimator } from 'resource:///com/odnoyko/valot/ui/utils/DurationAnimator.js';
 
 // Single reusable dialog instance
 let REUSABLE_DIALOG = null;
@@ -89,8 +90,9 @@ export class TaskInstanceEditDialog {
      * This is the data filling method, separate from UI creation
      */
     async setTaskInstance(taskInstance) {
-        // Cleanup old handlers before updating
-        this._cleanupHandlers();
+        // NOTE: We do NOT call _cleanupHandlers() here!
+        // Response handler must stay connected for the entire dialog lifecycle
+        // It will be reconnected automatically in _updateData() if lost
 
         // Store task instance
         this.taskInstance = taskInstance;
@@ -110,10 +112,10 @@ export class TaskInstanceEditDialog {
             this.startDate = TimeUtils.parseTimestampFromDB(this.latestEntry.start_time);
             // Check if this is the active entry (no end_time = still tracking)
             const trackingState = this.coreBridge.getTrackingState();
-            const isActiveEntry = trackingState.isTracking && 
+            this.isActiveEntry = trackingState.isTracking && 
                                  trackingState.currentTimeEntryId === this.latestEntry.id;
             
-            if (isActiveEntry && !this.latestEntry.end_time) {
+            if (this.isActiveEntry && !this.latestEntry.end_time) {
                 // Active entry: use current time as end_time for display only (not saved)
                 this.endDate = new Date(TimeUtils.getCurrentTimestamp());
             } else {
@@ -126,6 +128,7 @@ export class TaskInstanceEditDialog {
             // No entries yet - use current date
             this.startDate = new Date();
             this.endDate = new Date();
+            this.isActiveEntry = false;
         }
 
         // Store original duration in seconds (use Core TimeUtils)
@@ -155,10 +158,38 @@ export class TaskInstanceEditDialog {
         // Recreate dialog only if it was destroyed by GTK
         // All UI widgets are preserved and reused
         if (!this.dialog || this.dialog.is_destroyed?.()) {
+            // Clear old handlers
+            this._handlerIds = [];
             this._createDialog();
         } else {
             // Dialog still exists - just update data
             this._fillUI();
+            
+            // CRITICAL FIX: Reconnect handler if lost (happens when _clearReferences() is called)
+            if (this._handlerIds.length === 0) {
+                this._handlerIds.push(
+                    this.dialog.connect('response', (dialog, response) => {
+                        // Mark as not in use immediately (dialog will close)
+                        this._isInUse = false;
+                        
+                        if (response === 'save') {
+                            // Save asynchronously - dialog will close automatically (AdwAlertDialog behavior)
+                            // Clear references AFTER save completes to ensure coreBridge is available
+                            this._saveChanges().then(() => {
+                                // Clear data references after successful save
+                                this._clearReferences();
+                            }).catch((error) => {
+                                console.error('[TaskInstanceEditDialog] Error saving task changes:', error);
+                                // Clear references even on error
+                                this._clearReferences();
+                            });
+                        } else {
+                            // Cancel - just clear references immediately
+                            this._clearReferences();
+                        }
+                    })
+                );
+            }
         }
     }
 
@@ -173,7 +204,19 @@ export class TaskInstanceEditDialog {
 
         // Update duration label
         if (this.durationLabel) {
-            this.durationLabel.set_label(TimeUtils.formatDuration(this.taskInstance.total_time || 0));
+            // For actively tracked tasks: calculate elapsed time from startDate
+            // For completed tasks: use total_time
+            if (this.isActiveEntry && this.startDate) {
+                const now = Date.now();
+                const elapsedMs = now - this.startDate.getTime();
+                const elapsedSeconds = Math.floor(elapsedMs / 1000);
+                // Animate to new duration (with pulse effect on first display)
+                if (this.durationAnimator) {
+                    this.durationAnimator.animateTo(elapsedSeconds, false);
+                }
+            } else {
+                this.durationLabel.set_label(TimeUtils.formatDuration(this.taskInstance.total_time || 0));
+            }
         }
 
         // Update task name entry
@@ -186,6 +229,10 @@ export class TaskInstanceEditDialog {
 
         // Update date/time labels
         this._updateDateTimeButtonLabels();
+        
+        // Update End time editability (disable for actively tracked tasks)
+        // This will also subscribe to GlobalTimer for real-time Duration updates
+        this._updateEndTimeEditability();
     }
 
     /**
@@ -292,6 +339,9 @@ export class TaskInstanceEditDialog {
                 halign: Gtk.Align.CENTER,
                 css_classes: ['duration_counter'],
             });
+            
+            // Initialize duration animator for this label
+            this.durationAnimator = new DurationAnimator(this.durationLabel);
         }
 
         // Inline row: name + project + client (reuse if exists)
@@ -341,16 +391,25 @@ export class TaskInstanceEditDialog {
         // Store handler ID for cleanup (only if not already connected)
         if (this._handlerIds.length === 0) {
             this._handlerIds.push(
-                this.dialog.connect('response', async (dialog, response) => {
-                    if (response === 'save') {
-                        await this._saveChanges();
-                    }
-                    // Mark as not in use (dialog will be destroyed by GTK automatically)
+                this.dialog.connect('response', (dialog, response) => {
+                    // Mark as not in use immediately (dialog will close)
                     this._isInUse = false;
-                    // Note: dialog is destroyed by GTK, but UI widgets may be preserved
-                    // Check if widgets still exist on next open
-                    // Clear only data references, keep UI widgets for reuse
-                    this._clearReferences();
+                    
+                    if (response === 'save') {
+                        // Save asynchronously - dialog will close automatically (AdwAlertDialog behavior)
+                        // Clear references AFTER save completes to ensure coreBridge is available
+                        this._saveChanges().then(() => {
+                            // Clear data references after successful save
+                            this._clearReferences();
+                        }).catch((error) => {
+                            console.error('[TaskInstanceEditDialog] Error saving task changes:', error);
+                            // Clear references even on error
+                            this._clearReferences();
+                        });
+                    } else {
+                        // Cancel - just clear references immediately
+                        this._clearReferences();
+                    }
                 })
             );
         }
@@ -409,11 +468,20 @@ export class TaskInstanceEditDialog {
 
             this.startTimeButton.connect('clicked', () => {
                 this._showTimePicker(this.startDate, (hours, minutes) => {
-                    const currentDuration = this.endDate.getTime() - this.startDate.getTime();
                     this.startDate.setHours(hours);
                     this.startDate.setMinutes(minutes);
                     this.startDate.setSeconds(0);
-                    this.endDate = new Date(this.startDate.getTime() + currentDuration);
+                    
+                    // For actively tracked tasks: End time is always "now" (don't move it)
+                    // For completed tasks: preserve duration by moving End time
+                    if (!this.isActiveEntry) {
+                        const currentDuration = this.endDate.getTime() - this.startDate.getTime();
+                        this.endDate = new Date(this.startDate.getTime() + currentDuration);
+                    } else {
+                        // Active task: End time = current time
+                        this.endDate = new Date();
+                    }
+                    
                     this._onDateTimeChanged();
                     this._updateDateTimeButtonLabels();
                 }, 'start');
@@ -425,9 +493,18 @@ export class TaskInstanceEditDialog {
             });
             startTimeScrollController.connect('scroll', (controller, dx, dy) => {
                 const minutesDelta = dy > 0 ? -1 : 1;
-                const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, minutesDelta, 'minutes');
-                this.startDate = adjusted.startDate;
-                this.endDate = adjusted.endDate;
+                
+                // For actively tracked tasks: only move Start time, End stays = "now"
+                // For completed tasks: use Core logic to preserve duration
+                if (this.isActiveEntry) {
+                    this.startDate = new Date(this.startDate.getTime() + minutesDelta * 60 * 1000);
+                    this.endDate = new Date(); // Always "now" for active tasks
+                } else {
+                    const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, minutesDelta, 'minutes');
+                    this.startDate = adjusted.startDate;
+                    this.endDate = adjusted.endDate;
+                }
+                
                 this._onDateTimeChanged();
                 return true;
             });
@@ -475,15 +552,22 @@ export class TaskInstanceEditDialog {
                         this.startDate.getSeconds()
                     );
 
-                    // Use Core logic to adjust start date (preserves duration or moves both dates)
-                    const adjusted = TimeUtils.adjustStartDateTime(
-                        this.startDate,
-                        this.endDate,
-                        Math.floor((newDate.getTime() - this.startDate.getTime()) / (1000 * 60)),
-                        'minutes'
-                    );
-                    this.startDate = adjusted.startDate;
-                    this.endDate = adjusted.endDate;
+                    // For actively tracked tasks: only move Start date, End stays = "now"
+                    // For completed tasks: use Core logic to preserve duration
+                    if (this.isActiveEntry) {
+                        this.startDate = newDate;
+                        this.endDate = new Date(); // Always "now" for active tasks
+                    } else {
+                        const adjusted = TimeUtils.adjustStartDateTime(
+                            this.startDate,
+                            this.endDate,
+                            Math.floor((newDate.getTime() - this.startDate.getTime()) / (1000 * 60)),
+                            'minutes'
+                        );
+                        this.startDate = adjusted.startDate;
+                        this.endDate = adjusted.endDate;
+                    }
+                    
                     this._onDateTimeChanged();
                     this.startDateLabel.set_label(this.startDate.toLocaleDateString('de-DE'));
                 });
@@ -495,9 +579,18 @@ export class TaskInstanceEditDialog {
             });
             startDateScrollController.connect('scroll', (controller, dx, dy) => {
                 const daysDelta = dy > 0 ? -1 : 1; // Scroll down = decrease, up = increase
-                const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, daysDelta, 'days');
-                this.startDate = adjusted.startDate;
-                this.endDate = adjusted.endDate;
+                
+                // For actively tracked tasks: only move Start date, End stays = "now"
+                // For completed tasks: use Core logic to preserve duration
+                if (this.isActiveEntry) {
+                    this.startDate = new Date(this.startDate.getTime() + daysDelta * 24 * 60 * 60 * 1000);
+                    this.endDate = new Date(); // Always "now" for active tasks
+                } else {
+                    const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, daysDelta, 'days');
+                    this.startDate = adjusted.startDate;
+                    this.endDate = adjusted.endDate;
+                }
+                
                 this._onDateTimeChanged();
                 return true;
             });
@@ -515,10 +608,13 @@ export class TaskInstanceEditDialog {
         startColumn.append(startLabel);
         startColumn.append(startButtonsBox);
 
-        // End column
-        const endColumn = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-        });
+        // End column (save reference for disabling when tracking)
+        if (!this.endColumn || this.endColumn.is_destroyed?.()) {
+            this.endColumn = new Gtk.Box({
+                orientation: Gtk.Orientation.VERTICAL,
+            });
+        }
+        const endColumn = this.endColumn;
 
         const endLabel = new Gtk.Label({
             label: _('End'),
@@ -700,7 +796,19 @@ export class TaskInstanceEditDialog {
         this._updateDateTimeButtonLabels();
 
         // Update duration display (use Core TimeUtils for formatting)
-        this.durationLabel.set_label(TimeUtils.formatDuration(validated.duration));
+        // For actively tracked tasks: calculate from startDate to NOW (with animation)
+        // For completed tasks: calculate from startDate to endDate
+        if (this.isActiveEntry && this.startDate) {
+            const now = Date.now();
+            const elapsedMs = now - this.startDate.getTime();
+            const elapsedSeconds = Math.floor(elapsedMs / 1000);
+            // Animate duration change (smooth transition with pulse)
+            if (this.durationAnimator) {
+                this.durationAnimator.animateTo(elapsedSeconds, true);
+            }
+        } else {
+            this.durationLabel.set_label(TimeUtils.formatDuration(validated.duration));
+        }
     }
 
     /**
@@ -723,6 +831,103 @@ export class TaskInstanceEditDialog {
         if (this.endDateLabel) {
             this.endDateLabel.set_label(this.endDate.toLocaleDateString('de-DE'));
         }
+    }
+
+    /**
+     * Update End time editability based on tracking state
+     * Disables End time editing for actively tracked tasks (End time = "now")
+     */
+    _updateEndTimeEditability() {
+        // For actively tracked tasks: disable End time editing (it's always "now")
+        // Start time remains editable so user can correct if they forgot to start tracking on time
+        
+        if (this.isActiveEntry) {
+            // Disable End time buttons
+            if (this.endTimeButton) {
+                this.endTimeButton.set_sensitive(false);
+            }
+            if (this.endDateButton) {
+                this.endDateButton.set_sensitive(false);
+            }
+            // Visual indication: 40% opacity
+            if (this.endColumn) {
+                this.endColumn.set_opacity(0.4);
+            }
+            
+            // Subscribe to GlobalTimer to update Duration in real-time
+            this._subscribeToGlobalTimer();
+        } else {
+            // Enable End time buttons (completed task)
+            if (this.endTimeButton) {
+                this.endTimeButton.set_sensitive(true);
+            }
+            if (this.endDateButton) {
+                this.endDateButton.set_sensitive(true);
+            }
+            // Normal opacity
+            if (this.endColumn) {
+                this.endColumn.set_opacity(1.0);
+            }
+            
+            // Unsubscribe from GlobalTimer (completed tasks don't need real-time updates)
+            if (this._timerUnsubscribe) {
+                this._timerUnsubscribe();
+                this._timerUnsubscribe = null;
+            }
+        }
+    }
+
+    /**
+     * Subscribe to GlobalTimer for real-time Duration updates (for actively tracked tasks)
+     */
+    _subscribeToGlobalTimer() {
+        // Unsubscribe first if already subscribed
+        if (this._timerUnsubscribe) {
+            this._timerUnsubscribe();
+        }
+        
+        // Subscribe to GlobalTimer tick events
+        const handler = (data) => {
+            // Only update if this is still the active entry
+            if (!this.isActiveEntry || !this.latestEntry || !this.coreBridge) return;
+            
+            const trackingState = this.coreBridge.getTrackingState();
+            if (!trackingState.isTracking || trackingState.currentTimeEntryId !== this.latestEntry.id) {
+                // No longer tracking this entry - unsubscribe
+                if (this._timerUnsubscribe) {
+                    this._timerUnsubscribe();
+                    this._timerUnsubscribe = null;
+                }
+                return;
+            }
+            
+            // Update Duration label with current elapsed time (no animation, just increment)
+            if (this.durationAnimator && this.startDate) {
+                const now = Date.now();
+                const elapsedMs = now - this.startDate.getTime();
+                const elapsedSeconds = Math.floor(elapsedMs / 1000);
+                
+                // Direct update without animation (for regular 1-second ticks)
+                this.durationAnimator.setDirect(elapsedSeconds);
+            }
+            
+            // Update End time labels (End time = "now" for active tasks)
+            this.endDate = new Date();
+            if (this.endTimeLabel) {
+                this.endTimeLabel.set_label(this.endDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
+            }
+            if (this.endDateLabel) {
+                this.endDateLabel.set_label(this.endDate.toLocaleDateString('de-DE'));
+            }
+        };
+        
+        // Subscribe via CoreBridge events
+        this.coreBridge.onUIEvent('global-timer-tick', handler);
+        
+        // Store unsubscribe function
+        this._timerUnsubscribe = () => {
+            this.coreBridge.offUIEvent('global-timer-tick', handler);
+        };
     }
 
     _showDatePicker(currentDate, onDateSelected) {
@@ -1115,10 +1320,19 @@ export class TaskInstanceEditDialog {
 
     async _saveChanges() {
         try {
-
             const newName = this.nameEntry.get_text().trim();
             if (!newName) {
-                console.error('Task name cannot be empty');
+                console.error('[TaskInstanceEditDialog] Task name cannot be empty');
+                return;
+            }
+
+            if (!this.taskInstance) {
+                console.error('[TaskInstanceEditDialog] taskInstance is null, cannot save!');
+                return;
+            }
+
+            if (!this.coreBridge) {
+                console.error('[TaskInstanceEditDialog] coreBridge is null, cannot save!');
                 return;
             }
 
@@ -1152,10 +1366,23 @@ export class TaskInstanceEditDialog {
                 if (isActiveEntry) {
                     // Active entry: only update start_time, NEVER set end_time (keeps it active)
                     // elapsedSeconds will be recalculated automatically in updateTimeEntry()
+                    const newStartTime = TimeUtils.formatTimestampForDB(this.startDate);
+                    console.log('[TaskInstanceEditDialog] Updating ACTIVE entry start_time to:', newStartTime);
+                    
                     await this.coreBridge.updateTimeEntry(this.latestEntry.id, {
-                        start_time: TimeUtils.formatTimestampForDB(this.startDate),
+                        start_time: newStartTime,
                         // Do NOT set end_time or duration - entry stays active
                     });
+                    
+                    // Update Duration label immediately (with animation)
+                    if (this.durationAnimator) {
+                        const now = Date.now();
+                        const elapsedMs = now - this.startDate.getTime();
+                        const elapsedSeconds = Math.floor(elapsedMs / 1000);
+                        // Animate to new duration after save (with pulse effect)
+                        this.durationAnimator.animateTo(elapsedSeconds, true);
+                    }
+                    
                     // Don't update total_time - active entry is excluded from it
                 } else {
                     // Completed entry: update all fields including end_time
@@ -1201,7 +1428,8 @@ export class TaskInstanceEditDialog {
             });
 
         } catch (error) {
-            console.error('❌ Error saving task changes:', error);
+            console.error('[TaskInstanceEditDialog] ❌ Error saving task changes:', error);
+            console.error('[TaskInstanceEditDialog] Error stack:', error.stack);
         }
     }
 
@@ -1230,7 +1458,17 @@ export class TaskInstanceEditDialog {
         this.startDate = null;
         this.endDate = null;
         this.originalDuration = null;
-        // Keep: parent, coreBridge, nameEntry, durationLabel, buttons, dropdowns (for reuse)
+        
+        // Unsubscribe from GlobalTimer if subscribed
+        if (this._timerUnsubscribe) {
+            this._timerUnsubscribe();
+            this._timerUnsubscribe = null;
+        }
+        
+        // Note: We do NOT destroy durationAnimator here - it will be reused
+        // Just let it reset its internal state naturally
+        
+        // Keep: parent, coreBridge, nameEntry, durationLabel, durationAnimator, buttons, dropdowns (for reuse)
     }
 
     /**
@@ -1238,6 +1476,18 @@ export class TaskInstanceEditDialog {
      * Used when removing from pool or final cleanup
      */
     cleanup() {
+        // Destroy duration animator (cleanup memory)
+        if (this.durationAnimator) {
+            this.durationAnimator.destroy();
+            this.durationAnimator = null;
+        }
+        
+        // Unsubscribe from GlobalTimer
+        if (this._timerUnsubscribe) {
+            this._timerUnsubscribe();
+            this._timerUnsubscribe = null;
+        }
+        
         // Cleanup dropdowns
         if (this.projectDropdown) {
             try {
@@ -1261,10 +1511,10 @@ export class TaskInstanceEditDialog {
             this.clientDropdown = null;
         }
         
-        // Clear all references
+        // Clear all references (only in full cleanup, not in _clearReferences)
         this.taskInstance = null;
         this.parent = null;
-        this.coreBridge = null;
+        this.coreBridge = null;  // Only clear in cleanup(), not in _clearReferences()
         this.latestEntry = null;
         this.nameEntry = null;
         this.durationLabel = null;

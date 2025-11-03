@@ -300,7 +300,7 @@ export class AdvancedTrackingWidget {
                 if (!this.trackButton.has_css_class('suggested-action')) {
                     this.trackButton.add_css_class('suggested-action');
                 }
-                this._cachedPomodoroMode = isPomodoroMode;
+                this._cachedPomodoroMode = state.pomodoroMode;  // Fixed: use state.pomodoroMode instead of undefined isPomodoroMode
             }
 
             // Subscribe to GlobalTimer for UI updates
