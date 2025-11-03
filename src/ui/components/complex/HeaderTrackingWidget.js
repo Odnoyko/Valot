@@ -10,7 +10,6 @@ import Gtk from 'gi://Gtk?version=4.0';
 import Gdk from 'gi://Gdk?version=4.0';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
-import { Logger } from 'resource:///com/odnoyko/valot/core/utils/Logger.js';
 
 export class HeaderTrackingWidget {
     constructor(config = {}) {
@@ -124,7 +123,7 @@ export class HeaderTrackingWidget {
 
     _connectToCore() {
         if (!this.coreBridge) {
-            Logger.error('[HeaderTrackingWidget] CoreBridge not available - tracking widget cannot work');
+            console.error('[HeaderTrackingWidget] CoreBridge not available - tracking widget cannot work');
             this.widget.set_sensitive(false);
             return;
         }
@@ -219,7 +218,7 @@ export class HeaderTrackingWidget {
                 }
             }
         } catch (error) {
-            Logger.error('[HeaderTrackingWidget] Error updating UI from Core:', error);
+            console.error('[HeaderTrackingWidget] Error updating UI from Core:', error);
         }
     }
 
@@ -296,7 +295,7 @@ export class HeaderTrackingWidget {
                 this._selectTask();
             }
         } catch (error) {
-            Logger.error('[HeaderTrackingWidget] Error toggling tracking:', error);
+            console.error('[HeaderTrackingWidget] Error toggling tracking:', error);
             this._showError(error.message);
         }
     }
@@ -314,7 +313,7 @@ export class HeaderTrackingWidget {
             // Clear pending flag
             this.pendingPomodoroMode = false;
         } catch (error) {
-            Logger.error('[HeaderTrackingWidget] Error starting tracking:', error);
+            console.error('[HeaderTrackingWidget] Error starting tracking:', error);
             this._showError(error.message);
         }
     }
@@ -385,7 +384,7 @@ export class HeaderTrackingWidget {
 
             selector.present(this.parentWindow);
         } catch (error) {
-            Logger.error('[HeaderTrackingWidget] Error opening task selector:', error);
+            console.error('[HeaderTrackingWidget] Error opening task selector:', error);
             this._showError(error.message);
         }
     }
@@ -400,7 +399,7 @@ export class HeaderTrackingWidget {
 
     _openCompactTracker(shiftMode = false) {
         if (!this.parentWindow || !this.parentWindow.application) {
-            Logger.error('[HeaderTrackingWidget] Cannot open compact tracker: no application reference');
+            console.error('[HeaderTrackingWidget] Cannot open compact tracker: no application reference');
             return;
         }
 
@@ -409,7 +408,7 @@ export class HeaderTrackingWidget {
     }
 
     _showError(message) {
-        Logger.error('[HeaderTrackingWidget] Tracking error:', message);
+        console.error('[HeaderTrackingWidget] Tracking error:', message);
         // TODO: Show toast notification
     }
 
@@ -446,7 +445,7 @@ export class HeaderTrackingWidget {
             // Setup file monitor to watch for changes
             this._setupConfigMonitor(file);
         } catch (error) {
-            Logger.error('[HeaderTrackingWidget] Error loading Pomodoro config:', error);
+            console.error('[HeaderTrackingWidget] Error loading Pomodoro config:', error);
             // Fallback to default
             this.pomodoroDuration = 1200; // 20 minutes
         }
@@ -469,7 +468,7 @@ export class HeaderTrackingWidget {
                 }
             });
         } catch (error) {
-            Logger.error('[HeaderTrackingWidget] Error setting up config monitor:', error);
+            console.error('[HeaderTrackingWidget] Error setting up config monitor:', error);
         }
     }
 

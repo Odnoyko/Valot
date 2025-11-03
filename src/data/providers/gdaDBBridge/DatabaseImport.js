@@ -12,7 +12,6 @@
 
 import Gda from 'gi://Gda?version=6.0';
 import GLib from 'gi://GLib';
-import { Logger } from 'resource:///com/odnoyko/valot/core/utils/Logger.js';
 
 export class DatabaseImport {
     /**
@@ -23,11 +22,11 @@ export class DatabaseImport {
         this.importDb = null; // Import database connection (read from here)
         this.importConnection = null;
 
-        Logger.debug('🔧 DatabaseImport initialized');
-        Logger.debug('  App DB connection:', this.appDb ? 'EXISTS' : 'NULL');
-        Logger.debug('  App DB type:', this.appDb?.constructor?.name);
-        Logger.debug('  App DB has connection:', this.appDb?.connection ? 'YES' : 'NO');
-        Logger.debug('  App DB is connected:', this.appDb?.isConnected_);
+        console.log('🔧 DatabaseImport initialized');
+        console.log('  App DB connection:', this.appDb ? 'EXISTS' : 'NULL');
+        console.log('  App DB type:', this.appDb?.constructor?.name);
+        console.log('  App DB has connection:', this.appDb?.connection ? 'YES' : 'NO');
+        console.log('  App DB is connected:', this.appDb?.isConnected_);
     }
 
     /**
@@ -37,7 +36,7 @@ export class DatabaseImport {
      * @returns {Promise<{clientsAdded: number, projectsAdded: number, tasksAdded: number, entriesAdded: number}>}
      */
     async replaceData(importPath, progressCallback = null) {
-        Logger.debug('🔄 DATABASE IMPORT: REPLACE MODE');
+        console.log('🔄 DATABASE IMPORT: REPLACE MODE');
 
         try {
             // Step 1: Open import database
@@ -47,13 +46,13 @@ export class DatabaseImport {
             // Step 2: Detect schema
             this._updateProgress(progressCallback, 2, 7, 'Checking database version...');
             const isOldSchema = await this._isOldSchema();
-            Logger.debug(`📋 Import DB schema: ${isOldSchema ? 'OLD (0.8.x)' : 'NEW (0.9.0+)'}`);
+            console.log(`📋 Import DB schema: ${isOldSchema ? 'OLD (0.8.x)' : 'NEW (0.9.0+)'}`);
 
             // Step 3: Clear current database
             this._updateProgress(progressCallback, 3, 7, 'Clearing current database...');
 
             // BEGIN TRANSACTION
-            Logger.debug('🔒 Starting transaction...');
+            console.log('🔒 Starting transaction...');
             await this.appDb.execute('BEGIN IMMEDIATE');
 
             try {
@@ -63,15 +62,15 @@ export class DatabaseImport {
                 const result = await this._importDataWithoutTransaction(isOldSchema, progressCallback, 4);
 
                 // COMMIT
-                Logger.debug('💾 Committing transaction...');
+                console.log('💾 Committing transaction...');
                 await this.appDb.execute('COMMIT');
-                Logger.debug('✅ Transaction committed');
+                console.log('✅ Transaction committed');
 
                 // Step 7: Finalize
                 this._updateProgress(progressCallback, 7, 7, 'Complete');
                 await this._closeImportDatabase();
 
-                Logger.debug('✅ Replace complete:', result);
+                console.log('✅ Replace complete:', result);
                 return result;
 
             } catch (error) {
@@ -99,7 +98,7 @@ export class DatabaseImport {
      * @returns {Promise<{clientsAdded: number, projectsAdded: number, tasksAdded: number, entriesAdded: number}>}
      */
     async mergeData(importPath, progressCallback = null) {
-        Logger.debug('🔄 DATABASE IMPORT: MERGE MODE');
+        console.log('🔄 DATABASE IMPORT: MERGE MODE');
 
         try {
             // Step 1: Open import database
@@ -109,7 +108,7 @@ export class DatabaseImport {
             // Step 2: Detect schema
             this._updateProgress(progressCallback, 2, 6, 'Checking database version...');
             const isOldSchema = await this._isOldSchema();
-            Logger.debug(`📋 Import DB schema: ${isOldSchema ? 'OLD (0.8.x)' : 'NEW (0.9.0+)'}`);
+            console.log(`📋 Import DB schema: ${isOldSchema ? 'OLD (0.8.x)' : 'NEW (0.9.0+)'}`);
 
             // Step 3-5: Import data (skip clearing)
             const result = await this._importData(isOldSchema, progressCallback, 3);
@@ -118,7 +117,7 @@ export class DatabaseImport {
             this._updateProgress(progressCallback, 6, 6, 'Complete');
             await this._closeImportDatabase();
 
-            Logger.debug('✅ Merge complete:', result);
+            console.log('✅ Merge complete:', result);
             return result;
 
         } catch (error) {
@@ -132,7 +131,7 @@ export class DatabaseImport {
      * Clear all data from current database (except default Client and Project)
      */
     async _clearAllData() {
-        Logger.debug('🗑️  Clearing all data from current database...');
+        console.log('🗑️  Clearing all data from current database...');
 
         await this.appDb.execute('DELETE FROM TimeEntry');
         await this.appDb.execute('DELETE FROM TaskInstance');
@@ -140,7 +139,7 @@ export class DatabaseImport {
         await this.appDb.execute('DELETE FROM Project WHERE id != 1');
         await this.appDb.execute('DELETE FROM Client WHERE id != 1');
 
-        Logger.debug('✅ Current database cleared');
+        console.log('✅ Current database cleared');
     }
 
     /**
@@ -153,16 +152,16 @@ export class DatabaseImport {
      */
     async _importData(isOldSchema, progressCallback, startStep) {
         // BEGIN TRANSACTION
-        Logger.debug('🔒 Starting transaction...');
+        console.log('🔒 Starting transaction...');
         await this.appDb.execute('BEGIN IMMEDIATE');
 
         try {
             const result = await this._importDataWithoutTransaction(isOldSchema, progressCallback, startStep);
 
             // COMMIT TRANSACTION
-            Logger.debug('💾 Committing transaction...');
+            console.log('💾 Committing transaction...');
             await this.appDb.execute('COMMIT');
-            Logger.debug('✅ Transaction committed');
+            console.log('✅ Transaction committed');
 
             return result;
 
@@ -233,7 +232,7 @@ export class DatabaseImport {
      * Verify import by counting records
      */
     async _verifyImport() {
-        Logger.debug('🔍 Verifying import...');
+        console.log('🔍 Verifying import...');
 
         const clientCount = await this.appDb.query('SELECT COUNT(*) as count FROM Client');
         const projectCount = await this.appDb.query('SELECT COUNT(*) as count FROM Project');
@@ -241,12 +240,12 @@ export class DatabaseImport {
         const taskInstanceCount = await this.appDb.query('SELECT COUNT(*) as count FROM TaskInstance');
         const timeEntryCount = await this.appDb.query('SELECT COUNT(*) as count FROM TimeEntry');
 
-        Logger.debug('📊 Current database state:');
-        Logger.debug(`  Clients: ${clientCount[0].count}`);
-        Logger.debug(`  Projects: ${projectCount[0].count}`);
-        Logger.debug(`  Tasks: ${taskCount[0].count}`);
-        Logger.debug(`  TaskInstances: ${taskInstanceCount[0].count}`);
-        Logger.debug(`  TimeEntries: ${timeEntryCount[0].count}`);
+        console.log('📊 Current database state:');
+        console.log(`  Clients: ${clientCount[0].count}`);
+        console.log(`  Projects: ${projectCount[0].count}`);
+        console.log(`  Tasks: ${taskCount[0].count}`);
+        console.log(`  TaskInstances: ${taskInstanceCount[0].count}`);
+        console.log(`  TimeEntries: ${timeEntryCount[0].count}`);
     }
 
     /**
@@ -257,7 +256,7 @@ export class DatabaseImport {
         const clients = await this.importDb.query('SELECT * FROM Client WHERE id != 1');
         const idMap = new Map();
 
-        Logger.debug(`📥 Importing ${clients.length} clients...`);
+        console.log(`📥 Importing ${clients.length} clients...`);
 
         for (const client of clients) {
             // Check if exists
@@ -267,19 +266,19 @@ export class DatabaseImport {
             );
 
             if (existing.length > 0) {
-                Logger.debug(`♻️  Client exists: ${client.name} (id=${existing[0].id})`);
+                console.log(`♻️  Client exists: ${client.name} (id=${existing[0].id})`);
                 idMap.set(client.id, existing[0].id);
             } else {
                 const newId = await this.appDb.execute(
                     'INSERT INTO Client (name, rate, currency) VALUES (?, ?, ?)',
                     [client.name, client.rate || 0.0, client.currency || 'USD']
                 );
-                Logger.debug(`✅ Created Client: ${client.name} (new_id=${newId})`);
+                console.log(`✅ Created Client: ${client.name} (new_id=${newId})`);
                 idMap.set(client.id, newId);
             }
         }
 
-        Logger.debug(`✅ Clients import complete. Total mapped: ${idMap.size}`);
+        console.log(`✅ Clients import complete. Total mapped: ${idMap.size}`);
         return idMap;
     }
 
@@ -292,7 +291,7 @@ export class DatabaseImport {
         const projects = await this.importDb.query('SELECT * FROM Project WHERE id != 1');
         const idMap = new Map();
 
-        Logger.debug(`📥 Importing ${projects.length} projects...`);
+        console.log(`📥 Importing ${projects.length} projects...`);
 
         for (const project of projects) {
             const newClientId = project.client_id ? clientIdMap.get(project.client_id) || null : null;
@@ -325,7 +324,7 @@ export class DatabaseImport {
         const tasks = await this.importDb.query('SELECT * FROM Task');
         const idMap = new Map();
 
-        Logger.debug(`📥 Importing ${tasks.length} tasks...`);
+        console.log(`📥 Importing ${tasks.length} tasks...`);
 
         for (const task of tasks) {
             // Check if exists
@@ -359,7 +358,7 @@ export class DatabaseImport {
         const timeEntries = await this.importDb.query('SELECT * FROM TimeEntry');
         let entriesAdded = 0;
 
-        Logger.debug(`📥 Importing ${timeEntries.length} time entries...`);
+        console.log(`📥 Importing ${timeEntries.length} time entries...`);
 
         for (const entry of timeEntries) {
             // Get TaskInstance info
@@ -415,7 +414,7 @@ export class DatabaseImport {
         const taskNameToIdMap = new Map();
         let tasksAdded = 0;
 
-        Logger.debug(`📥 Found ${uniqueTasks.length} unique tasks in old schema`);
+        console.log(`📥 Found ${uniqueTasks.length} unique tasks in old schema`);
 
         // Create Tasks
         for (const task of uniqueTasks) {
@@ -440,7 +439,7 @@ export class DatabaseImport {
         const oldTasks = await this.importDb.query('SELECT * FROM Task');
         let entriesAdded = 0;
 
-        Logger.debug(`📥 Processing ${oldTasks.length} task entries from old schema`);
+        console.log(`📥 Processing ${oldTasks.length} task entries from old schema`);
 
         for (const oldTask of oldTasks) {
             const taskId = taskNameToIdMap.get(oldTask.name);
@@ -506,7 +505,7 @@ export class DatabaseImport {
      * Sync total_time for all TaskInstances
      */
     async _syncTotalTimes() {
-        Logger.debug('🔄 Synchronizing total_time...');
+        console.log('🔄 Synchronizing total_time...');
 
         await this.appDb.execute(`
             UPDATE TaskInstance
@@ -517,7 +516,7 @@ export class DatabaseImport {
             )
         `);
 
-        Logger.debug('✅ Total times synchronized');
+        console.log('✅ Total times synchronized');
     }
 
     /**
@@ -555,7 +554,7 @@ export class DatabaseImport {
         this.importDb.connection = this.importConnection;
         this.importDb.isConnected_ = true;
 
-        Logger.debug('✅ Import database opened');
+        console.log('✅ Import database opened');
     }
 
     /**

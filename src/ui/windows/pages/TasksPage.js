@@ -54,6 +54,15 @@ export class TasksPage {
         this._trackingBaseTime = 0;
         this._trackingTaskInstance = null;
 
+        // Event handlers storage for cleanup
+        this._eventHandlers = {};
+        
+        // Store GTK signal handler IDs for cleanup (GLib timers)
+        this._signalHandlerIds = [];
+        
+        // Store widget handler connections for cleanup (widget -> handlerId)
+        this._widgetConnections = new Map();
+
         // Subscribe to Core events for automatic updates
         this._subscribeToCore();
 
@@ -74,48 +83,17 @@ export class TasksPage {
      */
     _subscribeToCore() {
         if (!this.coreBridge) return;
-        // Reload tasks when tracking starts/stops (creates new time entries)
-        this.coreBridge.onUIEvent('tracking-started', async () => {
+        
+        // Store handlers for cleanup
+        this._eventHandlers['tracking-started'] = async () => {
             // CRITICAL: Cache base time ONCE to avoid DB query every second
             this._trackingBaseTime = await this.coreBridge.getCurrentTaskOldTime();
             const trackingState = this.coreBridge.getTrackingState();
             this._trackingTaskInstance = trackingState.currentTaskInstanceId;
 
-            // Delay to ensure DB is updated
-            setTimeout(() => this.loadTasks(), 300);
-        });
-
-        this.coreBridge.onUIEvent('tracking-stopped', () => {
-            // Clear cached base time
-            this._trackingBaseTime = 0;
-            this._trackingTaskInstance = null;
-
             this.loadTasks();
-        });
-
-        // Reload when tasks are created/updated
-        this.coreBridge.onUIEvent('task-created', () => {
-            this.loadTasks();
-        });
-
-        this.coreBridge.onUIEvent('task-updated', () => {
-            this.loadTasks();
-        });
-
-        // Real-time tracking updates (every second)
-        this.coreBridge.onUIEvent('tracking-updated', (data) => {
-            this._updateTrackingTimeDisplay();
-
-            // If task name, project, or client changed, reload full list
-            // Note: taskId and elapsedSeconds are sent every second, but we ignore them
-            if (data && (data.taskName || data.projectId !== undefined || data.clientId !== undefined)) {
-                this.loadTasks();
-            } else {
-                Logger.debug('[TasksPage] tracking-started: No taskInstanceId in data');
-            }
-            // Update all templates to show correct icons (stop icon for tracked task)
-            this._updateAllTemplatesTrackingState();
         };
+
         this._eventHandlers['tracking-stopped'] = async (data) => {
             // OPTIMIZED: Update time directly from event data (no DB query if template exists)
             
@@ -209,10 +187,10 @@ export class TasksPage {
                 // No duration in event - fallback to DB query
                 await this._refreshSingleTaskTime(data.taskInstanceId);
             } else if (data && data.taskId) {
-                Logger.debug('[TasksPage] tracking-stopped: Using taskId fallback');
+                console.log('[TasksPage] tracking-stopped: Using taskId fallback');
                 await this._refreshSingleTaskTimeByTaskId(data.taskId);
             } else {
-                Logger.debug('[TasksPage] tracking-stopped: No taskInstanceId or taskId in data');
+                console.log('[TasksPage] tracking-stopped: No taskInstanceId or taskId in data');
             }
             
                 // CRITICAL: Update all templates AFTER time updates (remove green dots, show start icons)
@@ -386,6 +364,25 @@ export class TasksPage {
                         }
                     }
                 }
+            }
+        } catch (error) {
+            console.error('[TasksPage] Error updating tracking time display:', error);
+        }
+    }
+
+    /**
+     * Cleanup unused UI elements (called on destroy or when needed)
+     */
+    async _cleanupUnusedUI() {
+        // Cleanup task templates that are no longer in the task list
+        if (this.taskTemplates && this.tasks) {
+            const taskIds = new Set(this.tasks.map(t => t.id));
+            const templatesToRemove = [];
+            
+            this.taskTemplates.forEach((template, taskId) => {
+                if (!taskIds.has(taskId)) {
+                    templatesToRemove.push(taskId);
+                }
             });
             
             templatesToRemove.forEach(key => {
@@ -393,7 +390,7 @@ export class TasksPage {
             });
             
             if (templatesToRemove.length > 0) {
-                Logger.debug('[TasksPage] Cleaned', templatesToRemove.length, 'unused task templates');
+                console.log('[TasksPage] Cleaned', templatesToRemove.length, 'unused task templates');
             }
         }
         
@@ -401,13 +398,13 @@ export class TasksPage {
         if (this.tasks && this.tasks.length > 500) {
             // Keep only most recent 400 tasks
             this.tasks = this.tasks.slice(-400);
-            Logger.debug('[TasksPage] Cleaned tasks array, kept 400 most recent');
+            console.log('[TasksPage] Cleaned tasks array, kept 400 most recent');
         }
         
         if (this.filteredTasks && this.filteredTasks.length > 300) {
             // Keep only most recent 250 filtered tasks
             this.filteredTasks = this.filteredTasks.slice(-250);
-            Logger.debug('[TasksPage] Cleaned filteredTasks array, kept 250 most recent');
+            console.log('[TasksPage] Cleaned filteredTasks array, kept 250 most recent');
         }
     }
 
@@ -785,21 +782,9 @@ export class TasksPage {
             return;
         }
 
-        // Subscribe to Core events
-        this.coreBridge.onUIEvent('tracking-started', (data) => {
-            this._onTrackingStarted(data);
-        });
-
-        this.coreBridge.onUIEvent('tracking-stopped', (data) => {
-            this._onTrackingStopped(data);
-        });
-
-        // DISABLED: tracking-updated handler removed - causes RAM growth
-        // Handler calls getTrackingState() which creates objects every second
-        // this.coreBridge.onUIEvent('tracking-updated', (data) => {
-        //     this._onTrackingUpdated(data);
-        // });
-
+        // Events are now registered in _subscribeToCore() via _eventHandlers
+        // This avoids duplicate registrations
+        
         // Load initial state
         this._updateTrackingUIFromCore();
 
@@ -1062,7 +1047,7 @@ export class TasksPage {
             const debouncedFilter = Debouncer.debounce((query) => {
                 this.currentTasksPage = 0;
                 this._filterTasks(query).catch(err => {
-                    Logger.error('[TasksPage] Error filtering tasks:', err);
+                    console.error('[TasksPage] Error filtering tasks:', err);
                 });
             }, 300); // 300ms debounce
             
@@ -1448,7 +1433,7 @@ export class TasksPage {
      * Update tasks display with grouping (original UI design)
      */
     _updateTasksDisplay() {
-        Logger.debug(`[TasksPage] _updateTasksDisplay() called. Tasks: ${this.tasks.length}, Filtered: ${this.filteredTasks?.length || 0}`);
+        console.log(`[TasksPage] _updateTasksDisplay() called. Tasks: ${this.tasks.length}, Filtered: ${this.filteredTasks?.length || 0}`);
         
         // OPTIMIZED: Clear ALL tracked widgets/templates FIRST to free RAM
         // Destroy all tracked templates
@@ -1458,7 +1443,7 @@ export class TasksPage {
                     template.destroy();
                 }
             } catch (e) {
-                Logger.debug('[TasksPage] Error destroying tracked template:', e);
+                console.log('[TasksPage] Error destroying tracked template:', e);
             }
         });
         this._trackedTemplates.clear();
@@ -1470,7 +1455,7 @@ export class TasksPage {
                     widget.destroy();
                 }
             } catch (e) {
-                Logger.debug('[TasksPage] Error destroying tracked widget:', e);
+                console.log('[TasksPage] Error destroying tracked widget:', e);
             }
         });
         this._trackedWidgets.clear();
@@ -1537,14 +1522,14 @@ export class TasksPage {
         const groupsToShow = allTaskGroups.slice(start, end);
 
         // Render paginated groups
-        Logger.debug(`[TasksPage] Rendering ${groupsToShow.length} groups (page ${this.currentTasksPage + 1}/${totalPages})`);
+        console.log(`[TasksPage] Rendering ${groupsToShow.length} groups (page ${this.currentTasksPage + 1}/${totalPages})`);
         this._renderTaskGroups(groupsToShow);
         
         // OPTIMIZED: Clear allTaskGroups after rendering to free memory
         // Only keep what's displayed - groupsToShow will be destroyed when widgets are destroyed
         allTaskGroups.length = 0;
         
-        Logger.debug(`[TasksPage] Display updated. Showing ${groupsToShow.length} groups`);
+        console.log(`[TasksPage] Display updated. Showing ${groupsToShow.length} groups`);
 
         // Update pagination/selection UI
         this._updatePaginationInfo();
@@ -1559,28 +1544,28 @@ export class TasksPage {
      */
     async _addSingleTask(taskInstanceId) {
         if (!this.coreBridge) {
-            Logger.debug('[TasksPage] _addSingleTask: No coreBridge');
+            console.log('[TasksPage] _addSingleTask: No coreBridge');
             return;
         }
         
         try {
-            Logger.debug(`[TasksPage] Adding task ${taskInstanceId} to list`);
+            console.log(`[TasksPage] Adding task ${taskInstanceId} to list`);
             
             // Load only the new task from DB (one query, one object)
             const newTask = await this.coreBridge.getTaskInstance(taskInstanceId);
             if (!newTask) {
-                Logger.debug(`[TasksPage] Task ${taskInstanceId} not found in DB`);
+                console.log(`[TasksPage] Task ${taskInstanceId} not found in DB`);
                 return;
             }
 
             // Check if task already in list (avoid duplicates)
             const exists = this.tasks.some(t => t.id === taskInstanceId);
             if (exists) {
-                Logger.debug(`[TasksPage] Task ${taskInstanceId} already in list, skipping`);
+                console.log(`[TasksPage] Task ${taskInstanceId} already in list, skipping`);
                 return;
             }
 
-            Logger.debug(`[TasksPage] Adding task ${taskInstanceId} (${newTask.task_name}) to list. Current tasks: ${this.tasks.length}`);
+            console.log(`[TasksPage] Adding task ${taskInstanceId} (${newTask.task_name}) to list. Current tasks: ${this.tasks.length}`);
 
             // OPTIMIZED: Clear arrays before adding to prevent growth
             // Keep only last 500 tasks to prevent unlimited growth
@@ -1604,9 +1589,9 @@ export class TasksPage {
             // This is necessary because grouping might change
             this._updateTasksDisplay();
             
-            Logger.debug(`[TasksPage] Task ${taskInstanceId} added. Now tasks: ${this.tasks.length}`);
+            console.log(`[TasksPage] Task ${taskInstanceId} added. Now tasks: ${this.tasks.length}`);
         } catch (error) {
-            Logger.error('[TasksPage] Error adding single task:', error);
+            console.error('[TasksPage] Error adding single task:', error);
         }
     }
 
@@ -1645,7 +1630,7 @@ export class TasksPage {
             // Rebuild display to reflect changes
             this._updateTasksDisplay();
         } catch (error) {
-            Logger.error('[TasksPage] Error updating single task:', error);
+            console.error('[TasksPage] Error updating single task:', error);
             // Fallback to full reload on error
             await this.loadTasks();
         }
@@ -1657,17 +1642,17 @@ export class TasksPage {
      */
     async _refreshSingleTaskTime(taskInstanceId) {
         if (!this.coreBridge) {
-            Logger.debug('[TasksPage] _refreshSingleTaskTime: No coreBridge');
+            console.log('[TasksPage] _refreshSingleTaskTime: No coreBridge');
             return;
         }
 
         try {
-            Logger.info(`[TasksPage] Refreshing time for task ${taskInstanceId}`);
+            console.log(`[TasksPage] Refreshing time for task ${taskInstanceId}`);
             
             // Find task instance in current list by ID
             const taskInstance = this.tasks.find(t => t.id === taskInstanceId);
             if (!taskInstance) {
-                Logger.debug(`[TasksPage] Task ${taskInstanceId} not in list, adding it`);
+                console.log(`[TasksPage] Task ${taskInstanceId} not in list, adding it`);
                 // Task not in list - try to add it if it's new
                 await this._addSingleTask(taskInstanceId);
                 return;
@@ -1683,13 +1668,13 @@ export class TasksPage {
                     const oldTime = taskInstance.total_time;
                     taskInstance.total_time = updatedTask.total_time;
                     taskInstance.last_used_at = updatedTask.last_used_at;
-                    Logger.info(`[TasksPage] Updated task ${taskInstanceId} time: ${oldTime} -> ${taskInstance.total_time}`);
+                    console.log(`[TasksPage] Updated task ${taskInstanceId} time: ${oldTime} -> ${taskInstance.total_time}`);
                 }
             } else {
                 // No template - need full task for display update
                 const updatedTask = await this.coreBridge.getTaskInstance(taskInstanceId);
                 if (!updatedTask) {
-                    Logger.warn(`[TasksPage] Task ${taskInstanceId} not found in DB`);
+                    console.warn(`[TasksPage] Task ${taskInstanceId} not found in DB`);
                     return;
                 }
 
@@ -1697,7 +1682,7 @@ export class TasksPage {
                 taskInstance.total_time = updatedTask.total_time;
                 taskInstance.last_used_at = updatedTask.last_used_at;
                 
-                Logger.info(`[TasksPage] Updated task ${taskInstanceId} time: ${oldTime} -> ${taskInstance.total_time}`);
+                console.log(`[TasksPage] Updated task ${taskInstanceId} time: ${oldTime} -> ${taskInstance.total_time}`);
             }
             
             if (template) {
@@ -1737,14 +1722,14 @@ export class TasksPage {
             // This prevents RAM growth from recreating all widgets
             // Only refresh if template doesn't exist or update failed
             if (!template) {
-                Logger.debug(`[TasksPage] Template not found for ${taskInstanceId}, refreshing display`);
+                console.log(`[TasksPage] Template not found for ${taskInstanceId}, refreshing display`);
                 this._updateTasksDisplay();
             } else {
                 // Template exists and was updated - no need to refresh entire display
-                Logger.debug(`[TasksPage] Template updated for ${taskInstanceId}, skipping full refresh`);
+                console.log(`[TasksPage] Template updated for ${taskInstanceId}, skipping full refresh`);
             }
         } catch (error) {
-            Logger.error('[TasksPage] Error refreshing task time:', error);
+            console.error('[TasksPage] Error refreshing task time:', error);
             // On error, do full refresh as fallback
             this._updateTasksDisplay();
         }
@@ -1768,7 +1753,7 @@ export class TasksPage {
             // Use taskInstanceId version
             await this._refreshSingleTaskTime(taskInstance.id);
         } catch (error) {
-            Logger.error('[TasksPage] Error refreshing task time by taskId:', error);
+            console.error('[TasksPage] Error refreshing task time by taskId:', error);
         }
     }
 
@@ -1785,7 +1770,7 @@ export class TasksPage {
                     template.updateTrackingState();
                 }
             } catch (e) {
-                Logger.debug('[TasksPage] Error updating template tracking state:', e);
+                console.log('[TasksPage] Error updating template tracking state:', e);
             }
         });
     }
@@ -2402,7 +2387,7 @@ export class TasksPage {
                                 }
                                 await this.loadTasks();
                             } catch (error) {
-                                Logger.error('[TasksPage] Error restoring task instances:', error);
+                                console.error('[TasksPage] Error restoring task instances:', error);
                                 // Show user-friendly error message
                                 if (this.parentWindow && this.parentWindow.showToast) {
                                     this.parentWindow.showToast(_('Failed to restore: some referenced items were deleted'));
@@ -2411,7 +2396,7 @@ export class TasksPage {
                         });
                     }
                 } catch (error) {
-                    Logger.error('[TasksPage] Error deleting tasks:', error);
+                    console.error('[TasksPage] Error deleting tasks:', error);
                 }
             }
             dialog.close();
@@ -2552,14 +2537,14 @@ export class TasksPage {
             const projectExists = projects.some(p => p.id === this.currentProjectId);
             if (!projectExists && projects.length > 0) {
                 this.currentProjectId = projects[0].id;
-                Logger.debug('[TasksPage] Reset to default project:', this.currentProjectId);
+                console.log('[TasksPage] Reset to default project:', this.currentProjectId);
             }
 
             // Validate client ID
             const clientExists = clients.some(c => c.id === this.currentClientId);
             if (!clientExists && clients.length > 0) {
                 this.currentClientId = clients[0].id;
-                Logger.debug('[TasksPage] Reset to default client:', this.currentClientId);
+                console.log('[TasksPage] Reset to default client:', this.currentClientId);
             }
         } catch (error) {
             // Fallback to ID 1 if validation fails

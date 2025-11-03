@@ -760,7 +760,7 @@ export const ValotMainWindow = GObject.registerClass({
             this._updateSidebarStats();
         };
 
-        this.coreBridge.onUIEvent('tracking-stopped', () => {
+        this._eventHandlers['tracking-stopped'] = () => {
             // Clear cached week stats
             this._cachedWeekStats = null;
 
@@ -925,6 +925,5 @@ export const ValotMainWindow = GObject.registerClass({
         } catch (error) {
             console.error('Error updating sidebar stats realtime:', error);
         }
->>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
     }
 });

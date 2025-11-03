@@ -19,7 +19,6 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import { ProjectDropdown } from 'resource:///com/odnoyko/valot/ui/utils/projectDropdown.js';
 import { ClientDropdown } from 'resource:///com/odnoyko/valot/ui/utils/clientDropdown.js';
-import { Logger } from 'resource:///com/odnoyko/valot/core/utils/Logger.js';
 
 export class AdvancedTrackingWidget {
     constructor(coreBridge, parentWindow) {
@@ -500,7 +499,7 @@ export class AdvancedTrackingWidget {
 
             }
         } catch (error) {
-            Logger.error('[AdvancedTrackingWidget] Error toggling tracking:', error);
+            console.error('[AdvancedTrackingWidget] Error toggling tracking:', error);
         }
     }
 
@@ -519,7 +518,7 @@ export class AdvancedTrackingWidget {
             await this.coreBridge.updateCurrentTaskName(newName);
 
         } catch (error) {
-            Logger.error('[AdvancedTrackingWidget] Error updating task name:', error);
+            console.error('[AdvancedTrackingWidget] Error updating task name:', error);
         }
     }
 
@@ -539,7 +538,7 @@ export class AdvancedTrackingWidget {
 
 
         } catch (error) {
-            Logger.error('[AdvancedTrackingWidget] Error updating tracking context:', error);
+            console.error('[AdvancedTrackingWidget] Error updating tracking context:', error);
         }
     }
     /**
@@ -625,7 +624,7 @@ export class AdvancedTrackingWidget {
             // Setup file monitor to watch for changes
             this._setupConfigMonitor(file);
         } catch (error) {
-            Logger.error('[AdvancedTrackingWidget] Error loading Pomodoro config:', error);
+            console.error('[AdvancedTrackingWidget] Error loading Pomodoro config:', error);
             // Fallback to default
             this.pomodoroDuration = 1200; // 20 minutes
         }
@@ -648,7 +647,7 @@ export class AdvancedTrackingWidget {
                 }
             });
         } catch (error) {
-            Logger.error('[AdvancedTrackingWidget] Error setting up config monitor:', error);
+            console.error('[AdvancedTrackingWidget] Error setting up config monitor:', error);
         }
     }
 

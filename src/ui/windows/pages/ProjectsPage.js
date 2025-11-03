@@ -6,11 +6,7 @@ import { ProjectDialog } from 'resource:///com/odnoyko/valot/ui/components/compl
 import { ProjectAppearanceDialog } from 'resource:///com/odnoyko/valot/ui/components/complex/ProjectAppearanceDialog.js';
 import { AdvancedTrackingWidget } from 'resource:///com/odnoyko/valot/ui/components/complex/AdvancedTrackingWidget.js';
 import { createProjectIconWidget } from 'resource:///com/odnoyko/valot/ui/utils/widgetFactory.js';
-<<<<<<< HEAD
-import { Logger } from 'resource:///com/odnoyko/valot/core/utils/Logger.js';
-=======
 import { stringCache } from 'resource:///com/odnoyko/valot/ui/utils/StringCache.js';
->>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
 
 /**
  * Projects management page
@@ -63,35 +59,17 @@ export class ProjectsPage {
     _subscribeToCore() {
         if (!this.coreBridge) return;
 
-<<<<<<< HEAD
         // Store handlers for cleanup
         this._eventHandlers['tracking-started'] = () => {
             // OPTIMIZED: Don't reload projects - tracking doesn't change project list
             // Reloading creates new objects every time, causing RAM growth
-            // setTimeout(() => this.loadProjects(), 300); // DISABLED
         };
         this._eventHandlers['tracking-stopped'] = () => {
             // OPTIMIZED: Don't reload projects - stopping tracking doesn't change projects
-            // this.loadProjects(); // DISABLED - causes RAM growth
         };
         // DISABLED: tracking-updated handler removed - causes RAM growth
         // Handler was empty but still registered, causing unnecessary processing
-        // this._eventHandlers['tracking-updated'] = () => {
-        //     // tracking-updated fires every second during tracking
-        //     // Handler removed to prevent RAM growth
-        // };
         this._eventHandlers['task-updated'] = () => {
-=======
-        // Reload projects when tracking starts/stops
-        this.coreBridge.onUIEvent('tracking-started', () => {
-            setTimeout(() => this.loadProjects(), 300);
-        });
-
-        this.coreBridge.onUIEvent('tracking-stopped', () => {
-            // Clear cached project times
-            this._cachedProjectBaseTimes = null;
-            
->>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
             this.loadProjects();
         };
         this._eventHandlers['task-deleted'] = () => {
@@ -220,7 +198,7 @@ export class ProjectsPage {
             if (this.parentWindow?.application) {
                 this.parentWindow.application._launchCompactTracker(shiftPressed);
             } else {
-                Logger.error('[ProjectsPage] No application reference!');
+                console.error('[ProjectsPage] No application reference!');
             }
         });
 
@@ -332,14 +310,9 @@ export class ProjectsPage {
             this.trackButton.remove_css_class('suggested-action');
             this.trackButton.add_css_class('destructive-action');
 
-<<<<<<< HEAD
             // DISABLED: Time updates in ProjectsPage (only header widget shows time)
             // this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
             // this._startTrackingUITimer();
-=======
-            this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-            this._subscribeToGlobalTimer();
->>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
         } else {
             this.taskNameEntry.set_text('');
             this.taskNameEntry.set_sensitive(true);
@@ -352,11 +325,7 @@ export class ProjectsPage {
             this.trackButton.add_css_class('suggested-action');
 
             this.actualTimeLabel.set_label('00:00:00');
-<<<<<<< HEAD
             // REMOVED: No timer to stop
-=======
-            // Timer will automatically stop when tracking stops
->>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
         }
     }
 
@@ -369,7 +338,7 @@ export class ProjectsPage {
             try {
                 await this.coreBridge.stopTracking();
             } catch (error) {
-                Logger.error('[ProjectsPage] Error stopping tracking:', error);
+                console.error('[ProjectsPage] Error stopping tracking:', error);
             }
         } else {
             try {
@@ -384,37 +353,13 @@ export class ProjectsPage {
 
                 await this.coreBridge.startTracking(task.id, null, null);
             } catch (error) {
-                Logger.error('[ProjectsPage] Error starting tracking:', error);
+                console.error('[ProjectsPage] Error starting tracking:', error);
             }
         }
     }
 
-<<<<<<< HEAD
     // REMOVED: _startTrackingUITimer() and _stopTrackingUITimer()
     // No separate timers needed - only header widget shows time
-=======
-    /**
-     * Subscribe to GlobalTimer for real-time tracking display
-     * CRITICAL FIX: Only subscribe once, prevent listener accumulation
-     */
-    _subscribeToGlobalTimer() {
-        // CRITICAL: Check if already subscribed to prevent memory leak
-        if (this._isSubscribedToGlobalTimer) {
-            console.log('[ProjectsPage] Already subscribed to GlobalTimer, skipping');
-            return;
-        }
-        
-        this._isSubscribedToGlobalTimer = true;
-        
-        this.coreBridge.onUIEvent('tracking-updated', (data) => {
-            if (this.actualTimeLabel) {
-                this.actualTimeLabel.set_label(this._formatDuration(data.elapsedSeconds));
-            }
-        });
-        
-        console.log('[ProjectsPage] Subscribed to GlobalTimer (once)');
-    }
->>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
 
     _formatDuration(seconds) {
         // OPTIMIZED: Use string cache to avoid creating new strings
@@ -433,7 +378,7 @@ export class ProjectsPage {
         try {
             await this.coreBridge.updateCurrentTaskName(newName);
         } catch (error) {
-            Logger.error('[ProjectsPage] Error updating task name:', error);
+            console.error('[ProjectsPage] Error updating task name:', error);
         }
     }
 
@@ -625,7 +570,7 @@ export class ProjectsPage {
      */
     async loadProjects() {
         if (!this.coreBridge) {
-            Logger.error('[ProjectsPage] No coreBridge available');
+            console.error('[ProjectsPage] No coreBridge available');
             return;
         }
 
@@ -641,7 +586,7 @@ export class ProjectsPage {
             
             this._updateProjectsDisplay();
         } catch (error) {
-            Logger.error('[ProjectsPage] Error loading projects:', error);
+            console.error('[ProjectsPage] Error loading projects:', error);
         }
     }
 
@@ -1217,7 +1162,7 @@ export class ProjectsPage {
                         });
                     }
                 } catch (error) {
-                    Logger.error('[ProjectsPage] Error deleting projects:', error);
+                    console.error('[ProjectsPage] Error deleting projects:', error);
                 }
             }
             dialog.close();
@@ -1280,7 +1225,7 @@ export class ProjectsPage {
                         wasSaved = true;
                         return true;
                     } catch (error) {
-                        Logger.error('[ProjectsPage] Error updating project:', error);
+                        console.error('[ProjectsPage] Error updating project:', error);
                         dialogInstance.showFieldError('name', _('Failed to update project'));
                         return false;
                     }
@@ -1294,7 +1239,7 @@ export class ProjectsPage {
                         await this.coreBridge.deleteProject(createdProject.id);
                         await this.loadProjects();
                     } catch (error) {
-                        Logger.error('[ProjectsPage] Error deleting cancelled project:', error);
+                        console.error('[ProjectsPage] Error deleting cancelled project:', error);
                     }
                 }
             });
@@ -1302,7 +1247,7 @@ export class ProjectsPage {
             dialog.present(this.parentWindow);
 
         } catch (error) {
-            Logger.error('[ProjectsPage] Error in add project flow:', error);
+            console.error('[ProjectsPage] Error in add project flow:', error);
         }
     }
 
@@ -1320,7 +1265,7 @@ export class ProjectsPage {
 
                     await this.loadProjects();
                 } catch (error) {
-                    Logger.error('[ProjectsPage] Error updating project:', error);
+                    console.error('[ProjectsPage] Error updating project:', error);
                 }
             }
         });
@@ -1364,7 +1309,7 @@ export class ProjectsPage {
 
                     await this.loadProjects();
                 } catch (error) {
-                    Logger.error('[ProjectsPage] Error updating project name:', error);
+                    console.error('[ProjectsPage] Error updating project name:', error);
                 }
             }
             dialog.close();
@@ -1373,72 +1318,8 @@ export class ProjectsPage {
         dialog.present(this.parentWindow);
     }
 
-<<<<<<< HEAD
     // REMOVED: _updateTrackingProjectTime()
     // No real-time time updates in pages - only header widget shows time
-=======
-    /**
-     * Update currently tracking project time in real-time
-     */
-    async _updateTrackingProjectTime() {
-        if (!this.coreBridge) return;
-
-        const trackingState = this.coreBridge.getTrackingState();
-        if (!trackingState.isTracking || !trackingState.currentProjectId) {
-            // Reset last tracking project when stopped
-            this.lastTrackingProjectId = null;
-            return;
-        }
-
-        const currentProjectId = trackingState.currentProjectId;
-
-        try {
-            // CRITICAL FIX: Don't load ALL tasks from DB every second!
-            // Instead, use cached project times and just add current elapsed time
-            
-            // Cache project base times if not already cached
-            if (!this._cachedProjectBaseTimes) {
-                this._cachedProjectBaseTimes = new Map();
-                // Load once and cache
-                const taskInstances = await this.coreBridge.getAllTaskInstances();
-                
-                // Calculate base times for all projects
-                const projectTimes = new Map();
-                for (const task of taskInstances) {
-                    const projectId = task.project_id;
-                    const currentTime = projectTimes.get(projectId) || 0;
-                    projectTimes.set(projectId, currentTime + (task.total_time || 0));
-                }
-                this._cachedProjectBaseTimes = projectTimes;
-            }
-
-            // If project changed, reset old project time to cached base value
-            if (this.lastTrackingProjectId && this.lastTrackingProjectId !== currentProjectId) {
-                const oldTimeLabel = this.projectTimeLabels.get(this.lastTrackingProjectId);
-                if (oldTimeLabel) {
-                    const baseTotalSeconds = this._cachedProjectBaseTimes.get(this.lastTrackingProjectId) || 0;
-                    oldTimeLabel.set_label(this._formatDurationHMS(baseTotalSeconds));
-                }
-            }
-
-            // Update current project time with tracking time (use cached base + elapsed)
-            const timeLabel = this.projectTimeLabels.get(currentProjectId);
-            if (timeLabel) {
-                const baseTotalSeconds = this._cachedProjectBaseTimes.get(currentProjectId) || 0;
-                const currentElapsed = trackingState.elapsedSeconds || 0;
-                const totalSeconds = baseTotalSeconds + currentElapsed;
-
-                // Update label - NO DB QUERY, NO OBJECT CREATION
-                timeLabel.set_label(this._formatDurationHMS(totalSeconds));
-            }
-
-            // Update last tracking project
-            this.lastTrackingProjectId = currentProjectId;
-        } catch (error) {
-            console.error('Error updating tracking project time:', error);
-        }
-    }
->>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
 
     /**
      * Refresh page data

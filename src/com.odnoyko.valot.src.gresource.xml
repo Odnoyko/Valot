@@ -106,8 +106,8 @@
     <file>core/services/StatsService.js</file>
     <file>core/services/TaskInstanceService.js</file>
     <file>core/services/TaskService.js</file>
-    <file>core/services/TimerScheduler.js</file>
     <file>core/services/TimeTrackingService.js</file>
+    <file>core/services/CacheService.js</file>
     <file>core/services/GlobalTimer.js</file>
 
     <!-- Core Models -->
@@ -116,10 +116,6 @@
     <file>core/models/Task.js</file>
     <file>core/models/TaskInstance.js</file>
     <file>core/models/TimeEntry.js</file>
-
-    <!-- Core Database -->
-    <file>core/database/DatabaseAdapter.js</file>
-    <file>core/database/GdaAdapter.js</file>
 
     <!-- Core State -->
     <file>core/state/StateManager.js</file>

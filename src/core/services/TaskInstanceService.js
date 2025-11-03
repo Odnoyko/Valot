@@ -4,7 +4,6 @@
  */
 import { BaseService } from './BaseService.js';
 import { TimeUtils } from '../utils/TimeUtils.js';
-import { Logger } from '../utils/Logger.js';
 
 export class TaskInstanceService extends BaseService {
     constructor(coreAPI) {

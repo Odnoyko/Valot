@@ -377,7 +377,7 @@ export class TaskRowTemplate {
         
         // CRITICAL: Validate newTotalTime
         if (newTotalTime === undefined || newTotalTime === null || isNaN(newTotalTime)) {
-            Logger.warn(`[TaskRowTemplate] updateTime: Invalid newTotalTime=${newTotalTime}, using 0`);
+            console.warn(`[TaskRowTemplate] updateTime: Invalid newTotalTime=${newTotalTime}, using 0`);
             newTotalTime = 0;
         }
         

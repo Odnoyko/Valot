@@ -11,7 +11,6 @@
  */
 
 import GLib from 'gi://GLib';
-import { Logger } from '../utils/Logger.js';
 
 export class CacheService {
     constructor(coreAPI) {
@@ -62,7 +61,7 @@ export class CacheService {
      * Initialize cache by loading all data from DB
      */
     async initialize() {
-        Logger.info('Cache', 'Initializing cache from database...');
+        console.log('Cache', 'Initializing cache from database...');
         
         try {
             // Load all entities from DB
@@ -74,13 +73,13 @@ export class CacheService {
                 // TimeEntries are loaded on-demand (only completed ones)
             ]);
             
-            Logger.info('Cache', `Cache initialized: ${this.tasks.size} tasks, ${this.projects.size} projects, ${this.clients.size} clients, ${this.taskInstances.size} instances`);
+            console.log('Cache', `Cache initialized: ${this.tasks.size} tasks, ${this.projects.size} projects, ${this.clients.size} clients, ${this.taskInstances.size} instances`);
             
             // Start periodic sync
             // DISABLED: Periodic sync timer - sync on demand only, not every 5 seconds
             // this.startPeriodicSync();
         } catch (error) {
-            Logger.error('Cache', 'Failed to initialize cache:', error);
+            console.error('Cache', 'Failed to initialize cache:', error);
             throw error;
         }
     }
@@ -435,7 +434,7 @@ export class CacheService {
      */
     async syncToDB() {
         if (this.syncInProgress) {
-            Logger.debug('Cache', 'Sync already in progress, skipping...');
+            console.log('Cache', 'Sync already in progress, skipping...');
             return;
         }
         
@@ -454,9 +453,9 @@ export class CacheService {
                 this._syncTimeEntries(),
             ]);
             
-            Logger.debug('Cache', `Sync complete. Stats: ${this.stats.cacheHits} hits, ${this.stats.cacheMisses} misses`);
+            console.log('Cache', `Sync complete. Stats: ${this.stats.cacheHits} hits, ${this.stats.cacheMisses} misses`);
         } catch (error) {
-            Logger.error('Cache', 'Sync to DB failed:', error);
+            console.error('Cache', 'Sync to DB failed:', error);
             throw error;
         } finally {
             this.syncInProgress = false;
@@ -511,7 +510,7 @@ export class CacheService {
                 // For now, just remove from dirty - cache will be cleared by size limits
                 // Objects stay in cache for fast reads, but no extra copies created
             } catch (error) {
-                Logger.error('Cache', `Failed to sync task ${id}:`, error);
+                console.error('Cache', `Failed to sync task ${id}:`, error);
             }
         }
     }
@@ -605,7 +604,7 @@ export class CacheService {
                 this.dirtyProjects.delete(id);
                 this.stats.dbWrites++;
             } catch (error) {
-                Logger.error('Cache', `Failed to sync project ${id}:`, error);
+                console.error('Cache', `Failed to sync project ${id}:`, error);
             }
         }
     }
@@ -643,7 +642,7 @@ export class CacheService {
                 this.dirtyClients.delete(id);
                 this.stats.dbWrites++;
             } catch (error) {
-                Logger.error('Cache', `Failed to sync client ${id}:`, error);
+                console.error('Cache', `Failed to sync client ${id}:`, error);
             }
         }
     }
@@ -681,7 +680,7 @@ export class CacheService {
                 this.dirtyTaskInstances.delete(id);
                 this.stats.dbWrites++;
             } catch (error) {
-                Logger.error('Cache', `Failed to sync task instance ${id}:`, error);
+                console.error('Cache', `Failed to sync task instance ${id}:`, error);
             }
         }
     }
@@ -723,7 +722,7 @@ export class CacheService {
     destroy() {
         // Final sync before shutdown
         this.flush().catch(err => {
-            Logger.error('Cache', 'Final sync on shutdown failed:', err);
+            console.error('Cache', 'Final sync on shutdown failed:', err);
         });
     }
 }

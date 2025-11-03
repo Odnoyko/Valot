@@ -24,14 +24,9 @@ export class StateManager {
                 currentTaskInstanceId: null,
                 currentTimeEntryId: null,
                 startTime: null, // ONLY stored value - all time computed as (current time - startTime)
-<<<<<<< HEAD
                 // elapsedSeconds removed - calculated dynamically from startTime to prevent RAM growth
                 // oldTime removed - calculated on demand when needed, not stored in RAM
                 savedTimeFromCrash: 0, // Time saved in JSON from previous crash - added to duration on stop (small number)
-=======
-                // elapsedSeconds NOT stored - calculated dynamically from startTime to prevent RAM growth
-                savedTimeFromCrash: 0, // Time saved in JSON from previous crash - added to duration on stop
->>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
                 pomodoroMode: false,
                 pomodoroDuration: 0,
                 pomodoroRemaining: 0, // Calculated dynamically from elapsedSeconds and pomodoroDuration
@@ -59,11 +54,8 @@ export class StateManager {
         const currentState = this.state.tracking;
         
         // Check if base (non-time-based) state has changed
-<<<<<<< HEAD
         // Base state includes: isTracking, taskId, taskName, projectId, clientId, startTime, pomodoroMode, pomodoroDuration
         // Time-based fields (elapsedSeconds, pomodoroRemaining) are updated on existing object
-=======
->>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
         const baseStateChanged = 
             !this._cachedTrackingState ||
             this._cachedTrackingState.isTracking !== currentState.isTracking ||
@@ -101,11 +93,7 @@ export class StateManager {
             if (this._cachedTrackingState.isTracking && this._cachedTrackingState.startTime) {
                 // Convert startTime to timestamp and cache it (avoid creating Date object every call)
                 this._cachedStartTimestamp = typeof this._cachedTrackingState.startTime === 'string'
-<<<<<<< HEAD
-                    ? new Date(this._cachedTrackingState.startTime).getTime()
-=======
                     ? new Date(this._cachedTrackingState.startTime.replace(' ', 'T')).getTime()
->>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
                     : this._cachedTrackingState.startTime;
                 const now = Date.now();
                 this._cachedTrackingState.elapsedSeconds = Math.floor((now - this._cachedStartTimestamp) / 1000);
@@ -166,7 +154,6 @@ export class StateManager {
         if (update.pomodoroDuration !== undefined) tracking.pomodoroDuration = update.pomodoroDuration;
         if (update.pomodoroRemaining !== undefined) tracking.pomodoroRemaining = update.pomodoroRemaining;
         
-<<<<<<< HEAD
         // CRITICAL: Invalidate and clear ALL cache to free RAM
         // This ensures no stale cached objects remain in memory
         if (this._cachedTrackingState) {
@@ -186,13 +173,10 @@ export class StateManager {
             cached.pomodoroRemaining = null;
             cached.elapsedSeconds = null;
         }
+        // CRITICAL: Invalidate cache to force recalculation on next getTrackingState()
         this._cachedTrackingState = null;
         this._lastStateHash = null;
         this._lastElapsedUpdate = 0;
-=======
-        // CRITICAL: Invalidate cache to force recalculation on next getTrackingState()
-        this._cachedTrackingState = null;
->>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
         this._cachedStartTimestamp = null;
         
         // Emit event with direct reference (no object creation)

@@ -68,7 +68,7 @@ export class TimeTrackingService extends BaseService {
                 [taskId, validProjectId, validClientId]
             );
         } catch (error) {
-            Logger.debug(`[Tracking] Close abandoned: ${error.message}`);
+            console.log(`[Tracking] Close abandoned: ${error.message}`);
         }
 
         // Create TaskInstance (direct SQL)
@@ -140,7 +140,7 @@ export class TimeTrackingService extends BaseService {
         let elapsed = 0;
         
         if (!tracking.startTime) {
-            Logger.error(`[Tracking] Stop: No startTime in tracking state!`);
+            console.error(`[Tracking] Stop: No startTime in tracking state!`);
             elapsed = 1; // Force minimum
         } else {
             // Parse startTime string to timestamp
@@ -169,11 +169,11 @@ export class TimeTrackingService extends BaseService {
             const now = Date.now();
             elapsed = Math.floor((now - startTimestamp) / 1000);
             
-            Logger.info(`[Tracking] Stop: startTime="${tracking.startTime}", parsed=${startTimestamp}, now=${now}, elapsed=${elapsed}s`);
+            console.log(`[Tracking] Stop: startTime="${tracking.startTime}", parsed=${startTimestamp}, now=${now}, elapsed=${elapsed}s`);
             
             // CRITICAL: If elapsed is 0 or negative, use minimum (very fast start/stop or parsing error)
             if (elapsed <= 0) {
-                Logger.warn(`[Tracking] Stop: elapsed=${elapsed}s is invalid, forcing to 1 second (startTime=${tracking.startTime})`);
+                console.warn(`[Tracking] Stop: elapsed=${elapsed}s is invalid, forcing to 1 second (startTime=${tracking.startTime})`);
                 elapsed = 1;
             }
         }
@@ -182,7 +182,7 @@ export class TimeTrackingService extends BaseService {
         let duration = Math.max(1, elapsed + savedTime);
         // CRITICAL: If duration is still 0 after calculation, force to 1 (should not happen but safety check)
         if (duration <= 0) {
-            Logger.error(`[Tracking] Stop: CRITICAL - duration=${duration} is invalid, forcing to 1 second!`);
+            console.error(`[Tracking] Stop: CRITICAL - duration=${duration} is invalid, forcing to 1 second!`);
             duration = 1;
         }
 
@@ -195,7 +195,7 @@ export class TimeTrackingService extends BaseService {
                 // Update entry (guarantees end_time > start_time via SQL)
                 // CRITICAL: Verify duration > 0 before update
                 if (duration <= 0) {
-                    Logger.error(`[Tracking] Stop: Invalid duration=${duration}, cannot update TimeEntry`);
+                    console.error(`[Tracking] Stop: Invalid duration=${duration}, cannot update TimeEntry`);
                     throw new Error(`Invalid duration: ${duration}`);
                 }
                 
@@ -226,10 +226,10 @@ export class TimeTrackingService extends BaseService {
                         [duration, instanceId]
                     );
                     
-                    Logger.info(`[Tracking] Stop: Updated TaskInstance ${instanceId} total_time: added ${duration}s`);
+                    console.log(`[Tracking] Stop: Updated TaskInstance ${instanceId} total_time: added ${duration}s`);
                     updated = true;
                 } else {
-                    Logger.warn(`[Tracking] Stop: instanceRow is empty or invalid`);
+                    console.warn(`[Tracking] Stop: instanceRow is empty or invalid`);
                 }
                 
                 // OPTIMIZED: Clear query result array immediately to free RAM
@@ -237,7 +237,7 @@ export class TimeTrackingService extends BaseService {
                     instanceRow.length = 0;
                 }
             } catch (error) {
-                Logger.error(`[Tracking] Stop error: ${error.message}`);
+                console.error(`[Tracking] Stop error: ${error.message}`);
             }
         }
 
@@ -262,9 +262,9 @@ export class TimeTrackingService extends BaseService {
                     [duration, tracking.currentTaskInstanceId]
                 );
                 
-                Logger.info(`[Tracking] Stop fallback: Updated TaskInstance ${tracking.currentTaskInstanceId} total_time: added ${duration}s`);
+                console.log(`[Tracking] Stop fallback: Updated TaskInstance ${tracking.currentTaskInstanceId} total_time: added ${duration}s`);
             } catch (error) {
-                Logger.error(`[Tracking] Stop fallback error: ${error.message}`);
+                console.error(`[Tracking] Stop fallback error: ${error.message}`);
             }
         }
 
@@ -440,7 +440,7 @@ export class TimeTrackingService extends BaseService {
     startTimer() {
         const tracking = this.state.state.tracking;
         if (!tracking.isTracking || !tracking.startTime) {
-            Logger.warn(`[Tracking] startTimer: Not tracking or no startTime. isTracking=${tracking.isTracking}, startTime=${tracking.startTime}`);
+            console.warn(`[Tracking] startTimer: Not tracking or no startTime. isTracking=${tracking.isTracking}, startTime=${tracking.startTime}`);
             return;
         }
 
@@ -450,14 +450,14 @@ export class TimeTrackingService extends BaseService {
         if (typeof tracking.startTime === 'string') {
             // Parse "YYYY-MM-DD HH:MM:SS" format (replace space with T for ISO)
             this._cachedStartTimestamp = new Date(tracking.startTime.replace(' ', 'T')).getTime();
-            Logger.debug(`[Tracking] startTimer: Parsed startTime string "${tracking.startTime}" to timestamp ${this._cachedStartTimestamp}`);
+            console.log(`[Tracking] startTimer: Parsed startTime string "${tracking.startTime}" to timestamp ${this._cachedStartTimestamp}`);
         } else {
             this._cachedStartTimestamp = tracking.startTime;
-            Logger.debug(`[Tracking] startTimer: Using startTime timestamp directly: ${this._cachedStartTimestamp}`);
+            console.log(`[Tracking] startTimer: Using startTime timestamp directly: ${this._cachedStartTimestamp}`);
         }
         
         if (!this._cachedStartTimestamp || isNaN(this._cachedStartTimestamp)) {
-            Logger.error(`[Tracking] startTimer: Invalid timestamp! startTime=${tracking.startTime}, parsed=${this._cachedStartTimestamp}`);
+            console.error(`[Tracking] startTimer: Invalid timestamp! startTime=${tracking.startTime}, parsed=${this._cachedStartTimestamp}`);
             return;
         }
 
@@ -472,7 +472,7 @@ export class TimeTrackingService extends BaseService {
 
             // Pomodoro check
             if (t.pomodoroMode && t.pomodoroDuration > 0 && elapsed >= t.pomodoroDuration) {
-                this.stop().catch(err => Logger.error(`[Tracking] Pomodoro stop: ${err.message}`));
+                this.stop().catch(err => console.error(`[Tracking] Pomodoro stop: ${err.message}`));
                 return;
             }
 
@@ -589,8 +589,6 @@ export class TimeTrackingService extends BaseService {
     }
 
     /**
-<<<<<<< HEAD
-=======
      * Get total completed time for current task instance
      * (excludes the active/current time entry)
      */
@@ -714,7 +712,6 @@ export class TimeTrackingService extends BaseService {
         console.log('[TimeTrackingService] Stopped GlobalTimer');
     }
     /**
->>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
      * Get all time entries
      */
     async getAllTimeEntries() {

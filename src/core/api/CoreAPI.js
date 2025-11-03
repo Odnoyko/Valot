@@ -8,8 +8,6 @@ import { TaskInstanceService } from '../services/TaskInstanceService.js';
 import { TimeTrackingService } from '../services/TimeTrackingService.js';
 import { ReportService } from '../services/ReportService.js';
 import { StatsService } from '../services/StatsService.js';
-import { TrackingPersistenceService } from '../services/TrackingPersistenceService.js';
-import { TimerScheduler } from '../services/TimerScheduler.js';
 import { CacheService } from '../services/CacheService.js';
 /**
  * Core API
@@ -26,7 +24,6 @@ export class CoreAPI {
         this.state = new StateManager(this.events);
         this.database = null;
         this.initialized = false;
-        // Note: TimerScheduler is created in initialize() as part of services
     }
     /**
      * Initialize Core with database adapter
@@ -41,7 +38,6 @@ export class CoreAPI {
         // Initialize cache service FIRST (other services will use it)
         this.services = {
             cache: new CacheService(this),
-            timerScheduler: new TimerScheduler(1),
         };
         
         // Initialize cache (loads all data from DB)
@@ -56,16 +52,9 @@ export class CoreAPI {
         this.services.reports = new ReportService(this);
         this.services.stats = new StatsService(this);
         
-        // Initialize persistence service (handles crash recovery)
-        this.services.persistence = new TrackingPersistenceService(this);
-        await this.services.persistence.initialize();
-        
         this.events.emit(CoreEvents.DATABASE_CONNECTED);
         this.events.emit(CoreEvents.CORE_INITIALIZED);
         this.initialized = true;
-    }
-    getScheduler() {
-        return this.services?.timerScheduler;
     }
     /**
      * Check if core is initialized
@@ -77,16 +66,6 @@ export class CoreAPI {
      * Shutdown core
      */
     async shutdown() {
-        // Cleanup persistence service
-        if (this.services?.persistence) {
-            this.services.persistence.destroy();
-        }
-        
-        // Stop timer scheduler
-        if (this.services?.timerScheduler) {
-            this.services.timerScheduler.stop();
-        }
-        
         // Final cache sync and cleanup
         if (this.services?.cache) {
             this.services.cache.destroy();

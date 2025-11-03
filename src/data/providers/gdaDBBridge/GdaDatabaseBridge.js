@@ -5,7 +5,6 @@
 
 import Gda from 'gi://Gda?version=6.0';
 import GLib from 'gi://GLib';
-import { Logger } from 'resource:///com/odnoyko/valot/core/utils/Logger.js';
 
 export class GdaDatabaseBridge {
     constructor() {
@@ -52,7 +51,7 @@ export class GdaDatabaseBridge {
             await this._initSchema();
 
         } catch (error) {
-            Logger.error('❌ Database connection error:', error);
+            console.error('❌ Database connection error:', error);
             throw error;
         }
     }
@@ -164,7 +163,7 @@ export class GdaDatabaseBridge {
             await this._applyIndicesAndConstraints();
 
         } catch (error) {
-            Logger.error('❌ Schema initialization error:', error);
+            console.error('❌ Schema initialization error:', error);
             throw error;
         }
     }
@@ -421,7 +420,7 @@ export class GdaDatabaseBridge {
             
             return results;
         } catch (error) {
-            Logger.error(`❌ Query error: ${sql}`, error);
+            console.error(`❌ Query error: ${sql}`, error);
             throw error;
         }
     }
@@ -487,7 +486,7 @@ export class GdaDatabaseBridge {
             
             return finalResult;
         } catch (error) {
-            Logger.error(`❌ Execute error: ${sql}`, error);
+            console.error(`❌ Execute error: ${sql}`, error);
             throw error;
         }
     }
@@ -520,7 +519,7 @@ export class GdaDatabaseBridge {
         try {
             this.connection.begin_transaction(null, Gda.TransactionIsolation.REPEATABLE_READ);
         } catch (error) {
-            Logger.error('❌ Begin transaction error:', error);
+            console.error('❌ Begin transaction error:', error);
             throw error;
         }
     }
@@ -536,7 +535,7 @@ export class GdaDatabaseBridge {
         try {
             this.connection.commit_transaction(null);
         } catch (error) {
-            Logger.error('❌ Commit error:', error);
+            console.error('❌ Commit error:', error);
             throw error;
         }
     }
@@ -552,7 +551,7 @@ export class GdaDatabaseBridge {
         try {
             this.connection.rollback_transaction(null);
         } catch (error) {
-            Logger.error('❌ Rollback error:', error);
+            console.error('❌ Rollback error:', error);
             throw error;
         }
     }
@@ -566,7 +565,7 @@ export class GdaDatabaseBridge {
                 // Explicitly close the connection
                 this.connection.close();
             } catch (error) {
-                Logger.error('❌ Close error:', error);
+                console.error('❌ Close error:', error);
             } finally {
                 // Always clear references to help GC and prevent GWeakRef accumulation
                 this.connection = null;

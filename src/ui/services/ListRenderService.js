@@ -4,7 +4,6 @@
  * Prevents memory leaks by ensuring old widgets are destroyed before creating new ones
  */
 
-import { Logger } from 'resource:///com/odnoyko/valot/core/utils/Logger.js';
 
 /**
  * Base class for list rendering with cleanup
@@ -28,7 +27,7 @@ export class ListRenderService {
                     template.destroy();
                 }
             } catch (e) {
-                Logger.debug('[ListRenderService] Error destroying template:', e);
+                console.log('[ListRenderService] Error destroying template:', e);
             }
         });
         this._templates.clear();
@@ -40,7 +39,7 @@ export class ListRenderService {
                     widget.destroy();
                 }
             } catch (e) {
-                Logger.debug('[ListRenderService] Error destroying widget:', e);
+                console.log('[ListRenderService] Error destroying widget:', e);
             }
         });
         this._widgets.clear();
@@ -58,7 +57,7 @@ export class ListRenderService {
                     oldWidget.destroy();
                 }
             } catch (e) {
-                Logger.debug('[ListRenderService] Error destroying old widget:', e);
+                console.log('[ListRenderService] Error destroying old widget:', e);
             }
         }
         this._widgets.set(key, widget);
@@ -76,7 +75,7 @@ export class ListRenderService {
                     oldTemplate.destroy();
                 }
             } catch (e) {
-                Logger.debug('[ListRenderService] Error destroying old template:', e);
+                console.log('[ListRenderService] Error destroying old template:', e);
             }
         }
         this._templates.set(key, template);
@@ -93,7 +92,7 @@ export class ListRenderService {
                     widget.destroy();
                 }
             } catch (e) {
-                Logger.debug('[ListRenderService] Error destroying widget:', e);
+                console.log('[ListRenderService] Error destroying widget:', e);
             }
             this._widgets.delete(key);
         }
@@ -105,7 +104,7 @@ export class ListRenderService {
                     template.destroy();
                 }
             } catch (e) {
-                Logger.debug('[ListRenderService] Error destroying template:', e);
+                console.log('[ListRenderService] Error destroying template:', e);
             }
             this._templates.delete(key);
         }

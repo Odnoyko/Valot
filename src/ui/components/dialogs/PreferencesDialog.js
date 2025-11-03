@@ -5,7 +5,6 @@ import Gdk from 'gi://Gdk?version=4.0';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import { Config } from 'resource:///com/odnoyko/valot/config.js';
-import { Logger } from 'resource:///com/odnoyko/valot/core/utils/Logger.js';
 import { AccentColorManager } from 'resource:///com/odnoyko/valot/ui/windows/Application.js';
 // TODO: Restore when migrated
 // import { pomodoroManager } from 'resource:///com/odnoyko/valot/js/func/global/pomodoroManager.js';
@@ -1856,27 +1855,27 @@ export const PreferencesDialog = GObject.registerClass({
 
             migrationDialog.showCompletion();
 
-            Logger.debug('✅ Replace completed:', result);
+            console.log('✅ Replace completed:', result);
 
             // Force reload all services from database
-            Logger.debug('🔄 Force reloading all services...');
+            console.log('🔄 Force reloading all services...');
             if (app.coreAPI) {
                 // Clear any caches and force reload
                 try {
                     if (app.coreAPI.taskService) {
-                        Logger.debug('  Reloading TaskService...');
+                        console.log('  Reloading TaskService...');
                         await app.coreAPI.taskService.loadAllTasks?.();
                     }
                     if (app.coreAPI.taskInstanceService) {
-                        Logger.debug('  Reloading TaskInstanceService...');
+                        console.log('  Reloading TaskInstanceService...');
                         await app.coreAPI.taskInstanceService.loadAll?.();
                     }
                     if (app.coreAPI.clientService) {
-                        Logger.debug('  Reloading ClientService...');
+                        console.log('  Reloading ClientService...');
                         await app.coreAPI.clientService.loadAll?.();
                     }
                     if (app.coreAPI.projectService) {
-                        Logger.debug('  Reloading ProjectService...');
+                        console.log('  Reloading ProjectService...');
                         await app.coreAPI.projectService.loadAll?.();
                     }
                 } catch (reloadError) {
@@ -1888,7 +1887,7 @@ export const PreferencesDialog = GObject.registerClass({
                 app.coreBridge?.emitUIEvent('project-updated');
                 app.coreBridge?.emitUIEvent('task-updated');
 
-                Logger.debug('✅ Services reloaded and events emitted');
+                console.log('✅ Services reloaded and events emitted');
             }
 
         } catch (error) {
@@ -1913,7 +1912,7 @@ export const PreferencesDialog = GObject.registerClass({
                 throw new Error('Database bridge not found');
             }
 
-            Logger.debug('📂 Using app database connection for merge');
+            console.log('📂 Using app database connection for merge');
 
             // Merge via DataNavigator (data layer)
             const result = await app.dataNavigator.mergeFromDatabaseFile(importPath, (step, total, message) => {
@@ -1932,27 +1931,27 @@ export const PreferencesDialog = GObject.registerClass({
 
             migrationDialog.showCompletion();
 
-            Logger.debug('✅ Merge completed:', result);
+            console.log('✅ Merge completed:', result);
 
             // Force reload all services from database
-            Logger.debug('🔄 Force reloading all services...');
+            console.log('🔄 Force reloading all services...');
             if (app.coreAPI) {
                 // Clear any caches and force reload
                 try {
                     if (app.coreAPI.taskService) {
-                        Logger.debug('  Reloading TaskService...');
+                        console.log('  Reloading TaskService...');
                         await app.coreAPI.taskService.loadAllTasks?.();
                     }
                     if (app.coreAPI.taskInstanceService) {
-                        Logger.debug('  Reloading TaskInstanceService...');
+                        console.log('  Reloading TaskInstanceService...');
                         await app.coreAPI.taskInstanceService.loadAll?.();
                     }
                     if (app.coreAPI.clientService) {
-                        Logger.debug('  Reloading ClientService...');
+                        console.log('  Reloading ClientService...');
                         await app.coreAPI.clientService.loadAll?.();
                     }
                     if (app.coreAPI.projectService) {
-                        Logger.debug('  Reloading ProjectService...');
+                        console.log('  Reloading ProjectService...');
                         await app.coreAPI.projectService.loadAll?.();
                     }
                 } catch (reloadError) {
@@ -1964,7 +1963,7 @@ export const PreferencesDialog = GObject.registerClass({
                 app.coreBridge?.emitUIEvent('project-updated');
                 app.coreBridge?.emitUIEvent('task-updated');
 
-                Logger.debug('✅ Services reloaded and events emitted');
+                console.log('✅ Services reloaded and events emitted');
             }
 
             // Close dialog after 1 second
@@ -2181,7 +2180,7 @@ export const PreferencesDialog = GObject.registerClass({
      */
     _loadExtensionFromURLInput(app) {
         // TODO: Show text input dialog for URL
-        Logger.warn('Load from URL dialog not implemented yet');
+        console.warn('Load from URL dialog not implemented yet');
     }
 
     /**

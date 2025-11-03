@@ -50,10 +50,8 @@ export class ClientDialog extends FormDialog {
         // Load available currencies
         this.availableCurrencies = this._getAvailableCurrencies();
         
-        // Create custom layout after form is ready
-        setTimeout(() => {
-            this._setupCustomLayout(isEdit, client);
-        }, 0);
+        // Create custom layout
+        this._setupCustomLayout(isEdit, client);
     }
 
     _setupCustomLayout(isEdit, client) {

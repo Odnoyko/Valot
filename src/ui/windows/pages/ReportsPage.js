@@ -6,7 +6,6 @@ import { AdvancedTrackingWidget } from 'resource:///com/odnoyko/valot/ui/compone
 import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/data/currencies.js';
 import { ReportExporter } from 'resource:///com/odnoyko/valot/ui/utils/export/reportExporter.js';
 import { PDFExportPreferencesDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/PDFExportPreferencesDialog.js';
-import { Logger } from 'resource:///com/odnoyko/valot/core/utils/Logger.js';
 
 /**
  * Reports Page - Restored UI from main branch
@@ -56,7 +55,7 @@ export class ReportsPage {
         if (!this.coreBridge) return;
         // Reload when tracking starts/stops (creates new time entries)
         this.coreBridge.onUIEvent('tracking-started', () => {
-            setTimeout(() => this.updateChartsOnly(), 300);
+            this.updateChartsOnly();
             this._subscribeToGlobalTimer(); // Subscribe to real-time updates
         });
 
@@ -172,19 +171,19 @@ export class ReportsPage {
             // Keep only most recent items
             const toRemove = this.allTasks.length - this._maxCacheSize;
             this.allTasks.splice(0, toRemove);
-            Logger.debug('[ReportsPage] Cleaned', toRemove, 'old tasks from cache');
+            console.log('[ReportsPage] Cleaned', toRemove, 'old tasks from cache');
         }
         
         if (this.allProjects && this.allProjects.length > this._maxCacheSize) {
             const toRemove = this.allProjects.length - this._maxCacheSize;
             this.allProjects.splice(0, toRemove);
-            Logger.debug('[ReportsPage] Cleaned', toRemove, 'old projects from cache');
+            console.log('[ReportsPage] Cleaned', toRemove, 'old projects from cache');
         }
         
         if (this.allClients && this.allClients.length > this._maxCacheSize) {
             const toRemove = this.allClients.length - this._maxCacheSize;
             this.allClients.splice(0, toRemove);
-            Logger.debug('[ReportsPage] Cleaned', toRemove, 'old clients from cache');
+            console.log('[ReportsPage] Cleaned', toRemove, 'old clients from cache');
         }
     }
 
@@ -376,7 +375,7 @@ export class ReportsPage {
             if (this.parentWindow?.application) {
                 this.parentWindow.application._launchCompactTracker(shiftPressed);
             } else {
-                Logger.error('[ReportsPage] No application reference!');
+                console.error('[ReportsPage] No application reference!');
             }
         });
 
@@ -799,7 +798,7 @@ export class ReportsPage {
                 this._subscribeToGlobalTimer();
             }
         } catch (error) {
-            Logger.error('[ReportsPage] Error loading reports:', error);
+            console.error('[ReportsPage] Error loading reports:', error);
         }
     }
 
@@ -847,7 +846,7 @@ export class ReportsPage {
 
         // Update statistics (async - calls Core)
         await this._updateStatistics(filteredTasks).catch(error => {
-            Logger.error('[ReportsPage] Error updating statistics:', error);
+            console.error('[ReportsPage] Error updating statistics:', error);
         });
 
         // DISABLED: No real-time updates of Recent Tasks with tracking time
@@ -2079,10 +2078,28 @@ export class ReportsPage {
      * Update Recent Tasks list in real-time
      * DISABLED: We don't want real-time updates of Recent Tasks during tracking
      */
-<<<<<<< HEAD
     async _updateRecentTasksRealtime(trackingState) {
         // DISABLED: Recent Tasks real-time updates - not needed during tracking
         return;
+    }
+
+    /**
+     * Subscribe to GlobalTimer ticks for real-time UI updates
+     */
+    _subscribeToGlobalTimer() {
+        // Subscribe to tracking updates for real-time statistics
+        if (this._isSubscribedToGlobalTimer) {
+            return;
+        }
+        this._isSubscribedToGlobalTimer = true;
+        
+        this.coreBridge.onUIEvent('tracking-updated', (data) => {
+            const state = this.coreBridge.getTrackingState();
+            if (state.isTracking) {
+                this._updateStatisticsRealtime();
+                this._updateRecentTasksRealtime(state);
+            }
+        });
     }
 
     /**
@@ -2121,108 +2138,6 @@ export class ReportsPage {
                 }
             }
         }
-=======
-    /**
-     * Subscribe to GlobalTimer ticks for real-time UI updates
-     * CRITICAL FIX: Only subscribe once, prevent listener accumulation
-     */
-    _subscribeToGlobalTimer() {
-        // CRITICAL: Check if already subscribed to prevent memory leak
-        if (this._isSubscribedToGlobalTimer) {
-            console.log('[ReportsPage] Already subscribed to GlobalTimer, skipping');
-            return;
-        }
-
-        this._isSubscribedToGlobalTimer = true;
-
-        // Listen to TRACKING_UPDATED events (now emitted by GlobalTimer via TimeTrackingService)
-        this.coreBridge.onUIEvent('tracking-updated', (data) => {
-            const state = this.coreBridge.getTrackingState();
-            if (state.isTracking) {
-                // Update Total Time in real-time
-                this._updateStatisticsRealtime();
-
-                // Update Recent Tasks list to show current tracking task with updated time
-                this._updateRecentTasksRealtime(state);
-            }
-        });
-
-        console.log('[ReportsPage] Subscribed to GlobalTimer (once)');
-    }
-
-    /**
-     * Update Recent Tasks list in real-time (update current tracking task time)
-     * Uses cached tasks + current elapsed time (no database queries)
-     */
-    _updateRecentTasksRealtime(trackingState) {
-        if (!this.recentTasksList || !trackingState.isTracking) return;
-        if (!this.allTasks || this.allTasks.length === 0) return;
-
-        try {
-            // CRITICAL FIX: Don't create new objects! Find task directly and update only what's needed
-            // Reuse existing task objects from allTasks array (zero object creation)
-            const currentTask = this.allTasks.find(t =>
-                t.task_id === trackingState.currentTaskId &&
-                t.project_id === trackingState.currentProjectId &&
-                t.client_id === trackingState.currentClientId
-            );
-
-            if (currentTask) {
-                // Cache original total_time if not already cached
-                if (currentTask._originalTotalTime === undefined) {
-                    currentTask._originalTotalTime = currentTask.total_time || 0;
-                }
-
-                // Update total_time directly (reuse existing object property)
-                currentTask.total_time = currentTask._originalTotalTime + trackingState.elapsedSeconds;
-            }
-
-            // OPTIMIZED: Don't rebuild entire list every second!
-            // Just update the time label for the tracking task if it's in the recent list
-            if (this.recentTasksList && currentTask) {
-                // Find the row for this task in the recent list and update its time label
-                // Note: recentTasksList is a Gtk.ListBox, so children are Gtk.ListBoxRow objects
-                let listBoxRow = this.recentTasksList.get_first_child();
-                while (listBoxRow) {
-                    // Get the actual Adw.ActionRow child from the ListBoxRow
-                    const actionRow = listBoxRow.get_child();
-                    // Check if it's an ActionRow by checking for get_title method (safer than constructor.name)
-                    if (actionRow && typeof actionRow.get_title === 'function') {
-                        try {
-                            const rowTitle = actionRow.get_title();
-                            if (rowTitle && rowTitle.includes(currentTask.task_name)) {
-                                // Found the task row - update its time suffix
-                                if (typeof actionRow.get_suffix === 'function') {
-                                    const suffix = actionRow.get_suffix();
-                                    if (suffix && typeof suffix.set_label === 'function') {
-                                        suffix.set_label(this._formatDuration(currentTask.total_time || 0));
-                                    }
-                                }
-                                break;
-                            }
-                        } catch (e) {
-                            // Skip this row if there's an error
-                            console.warn('[ReportsPage] Error checking row:', e);
-                        }
-                    }
-                    listBoxRow = listBoxRow.get_next_sibling();
-                }
-            }
-
-            // Only rebuild full list when filters change (not every second)
-            // This will be called from _updateReports() when needed
-        } catch (error) {
-            console.error('[ReportsPage] Error updating recent tasks realtime:', error);
-        }
-    }
-
-    /**
-     * Get filtered tasks from provided array (used for real-time updates)
-     * OPTIMIZED: Start with direct reference, no spread operator
-     */
-    _getFilteredTasksFromArray(tasksArray) {
-        let filtered = tasksArray; // Direct reference - no spread operator
->>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
 
         // Filter by project
         if (this.chartFilters.projectId) {
@@ -2583,7 +2498,7 @@ export class ReportsPage {
      */
     async _exportPDF() {
         if (!this.reportExporter) {
-            Logger.error('[ReportsPage] Report exporter not initialized');
+            console.error('[ReportsPage] Report exporter not initialized');
             return;
         }
 
@@ -2601,7 +2516,7 @@ export class ReportsPage {
             prefsDialog.present(this.parentWindow);
 
         } catch (error) {
-            Logger.error('[ReportsPage] Error exporting PDF:', error);
+            console.error('[ReportsPage] Error exporting PDF:', error);
             if (this.parentWindow && this.parentWindow.showToast) {
                 this.parentWindow.showToast(_('PDF export failed'));
             }
@@ -2628,7 +2543,7 @@ export class ReportsPage {
             // Update all reports
             this._updateReports();
         } catch (error) {
-            Logger.error('[ReportsPage] Error updating charts:', error);
+            console.error('[ReportsPage] Error updating charts:', error);
         }
     }
 }
