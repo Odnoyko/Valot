@@ -143,7 +143,7 @@ export class ReportHTML {
             if (response === 'open_folder') {
                 this._openFolder(reportsDir);
             }
-            dialog.close();
+            // Note: AdwAlertDialog closes automatically after response, no need to call close()
         });
 
         dialog.present(parentWindow);

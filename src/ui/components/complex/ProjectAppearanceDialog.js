@@ -49,7 +49,7 @@ export class ProjectAppearanceDialog {
             if (response === 'save' && this.onSave) {
                 await this.onSave(this.project);
             }
-            dialog.close();
+            // Note: AdwAlertDialog closes automatically after response, no need to call close()
         });
 
         dialog.present(this.parentWindow);

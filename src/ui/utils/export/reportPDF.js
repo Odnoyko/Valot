@@ -76,8 +76,14 @@ export class ReportPDF {
         progressDialog.present(parentWindow);
         
         let exportCancelled = false;
+        let dialogClosed = false;
         progressDialog.connect('response', () => {
             exportCancelled = true;
+            dialogClosed = true;
+        });
+        progressDialog.connect('close-request', () => {
+            dialogClosed = true;
+            return false;
         });
 
         try {
@@ -117,11 +123,25 @@ export class ReportPDF {
                 }
                 
                 // Success!
-                progressDialog.close();
+                // Note: Close progress dialog only if not already closed by user
+                if (progressDialog && !dialogClosed) {
+                    try {
+                        progressDialog.close();
+                    } catch (e) {
+                        // Dialog may already be closed or not presented - ignore
+                    }
+                }
                 this._showSuccessDialog(filepath, reportsDir, parentWindow);
             }
         } catch (error) {
-            progressDialog.close();
+            // Close progress dialog on error only if not already closed
+            if (progressDialog && !dialogClosed) {
+                try {
+                    progressDialog.close();
+                } catch (e) {
+                    // Dialog may already be closed or not presented - ignore
+                }
+            }
             // PDF export failed
             
             let errorMessage = error.message;
@@ -201,7 +221,7 @@ export class ReportPDF {
             if (response === 'open_folder') {
                 this._openFolder(reportsDir);
             }
-            dialog.close();
+            // Note: AdwAlertDialog closes automatically after response, no need to call close()
         });
         
         dialog.present(parentWindow);

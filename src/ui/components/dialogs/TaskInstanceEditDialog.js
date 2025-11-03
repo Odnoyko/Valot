@@ -67,6 +67,7 @@ export class TaskInstanceEditDialog {
 
     /**
      * Static method to close all open instances
+     * Note: AdwAlertDialog closes automatically after response, so we just mark as not in use
      */
     static closeAll() {
         if (!REUSABLE_DIALOG || !REUSABLE_DIALOG.dialog) return;
@@ -77,19 +78,10 @@ export class TaskInstanceEditDialog {
             return;
         }
         
-        // Only close if dialog is actually in use (was presented)
-        // Adw.AlertDialog doesn't have is_presented property, so we use _isInUse
-        if (REUSABLE_DIALOG._isInUse) {
-            try {
-                // Adw.AlertDialog will throw if trying to close when not presented
-                // Wrapping in try-catch to prevent critical errors
-                REUSABLE_DIALOG.dialog.close();
-            } catch (e) {
-                // Dialog may already be closed or not presented - ignore error
-                // This is expected behavior when dialog was already closed by user
-            }
-            REUSABLE_DIALOG._isInUse = false;
-        }
+        // Mark as not in use - AdwAlertDialog will close automatically
+        // Don't call close() manually as it causes "Trying to close AdwAlertDialog that's not presented" error
+        // The dialog closes automatically after any response (save/cancel)
+        REUSABLE_DIALOG._isInUse = false;
     }
 
     /**
@@ -797,7 +789,7 @@ export class TaskInstanceEditDialog {
                 const selectedDate = calendar.get_date();
                 onDateSelected(selectedDate);
             }
-            dialog.close();
+            // Note: AdwAlertDialog closes automatically after response, no need to call close()
         });
 
         // Get the actual GTK window from parent page
@@ -1113,7 +1105,7 @@ export class TaskInstanceEditDialog {
 
                 onTimeSelected(validHours, validMinutes);
             }
-            dialog.close();
+            // Note: AdwAlertDialog closes automatically after response, no need to call close()
         });
 
         // Get the actual GTK window from parent page

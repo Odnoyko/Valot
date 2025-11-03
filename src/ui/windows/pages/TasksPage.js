@@ -2436,7 +2436,7 @@ export class TasksPage {
 
         if (tasksToEdit.length === 0) return;
 
-        // Open MultipleTasksEditDialog
+        // Create MultipleTasksEditDialog (AdwAlertDialog closes automatically, can't be reused)
         const dialog = new MultipleTasksEditDialog(tasksToEdit, this, this.coreBridge);
         dialog.present(this.parentWindow);
 

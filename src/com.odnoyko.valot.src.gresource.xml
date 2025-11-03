@@ -55,6 +55,9 @@
     <file>ui/components/dialogs/QuickTaskSelector.js</file>
     <file>ui/components/dialogs/DatabaseMigrationDialog.js</file>
 
+    <!-- UI Services -->
+    <file>ui/services/DialogPool.js</file>
+
     <!-- UI Utilities -->
     <file>ui/utils/widgetFactory.js</file>
     <file>ui/utils/selectorFactory.js</file>

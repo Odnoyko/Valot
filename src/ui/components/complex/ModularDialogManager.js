@@ -5,20 +5,23 @@ import { FormDialog } from './FormDialog.js';
 // import { InputValidator } from '../../../func/global/inputValidation.js';
 import { ValidationUtils } from 'resource:///com/odnoyko/valot/ui/utils/CoreImports.js';
 import { LABEL } from 'resource:///com/odnoyko/valot/ui/utils/commonStrings.js';
+import { getDialogPool } from '../../services/DialogPool.js';
 
 /**
  * Modular dialog manager that replaces the old dialogManager.js
  * Provides consistent dialog creation using the new modular system
+ * Now uses DialogPool for dialog reusability
  */
 export class ModularDialogManager {
     constructor(parentWindow, app = null) {
         this.parentWindow = parentWindow;
         this.app = app;
         this.activeDialogs = new Map();
+        this.dialogPool = getDialogPool();
     }
 
     /**
-     * Create and show a project dialog
+     * Create and show a project dialog (reusable)
      */
     showProjectDialog(config = {}) {
         const {
@@ -28,36 +31,68 @@ export class ModularDialogManager {
             ...dialogConfig
         } = config;
 
-        const dialog = new ProjectDialog({
-            mode,
-            project,
-            parentWindow: this.parentWindow,
-            onProjectSave: (projectData, mode, dialog) => {
-                if (onSave) {
-                    return onSave(projectData, mode, dialog);
+        const dialogType = 'project-dialog';
+        
+        // Define create function for DialogPool
+        const createFn = async () => {
+            const dialog = new ProjectDialog({
+                mode,
+                project,
+                parentWindow: this.parentWindow,
+                onProjectSave: (projectData, saveMode, dialog) => {
+                    if (onSave) {
+                        return onSave(projectData, saveMode, dialog);
+                    }
+                    return this._handleProjectSave(projectData, saveMode);
+                },
+                ...dialogConfig
+            });
+            
+            // Setup event subscription once
+            dialog.subscribe((event, data) => {
+                if (event === 'projectSaved') {
+                    this._emit('projectSaved', data);
                 }
-                
-                // Default save logic
-                return this._handleProjectSave(projectData, mode);
-            },
-            ...dialogConfig
-        });
-
+            });
+            
+            return dialog;
+        };
+        
+        // Define update function for DialogPool
+        const updateFn = async (dialog, data) => {
+            const { mode: updateMode, project: updateProject } = data;
+            
+            // Update the onProjectSave callback
+            dialog.onProjectSave = (projectData, saveMode, dialogInstance) => {
+                if (onSave) {
+                    return onSave(projectData, saveMode, dialogInstance);
+                }
+                return this._handleProjectSave(projectData, saveMode);
+            };
+            
+            if (updateMode === 'edit' && updateProject) {
+                dialog.setProject(updateProject);
+            } else {
+                dialog.resetForNew();
+            }
+        };
+        
+        // Get or create dialog from pool
+        const dialog = this.dialogPool.getDialog(
+            dialogType,
+            createFn,
+            updateFn,
+            { mode, project, onSave, ...dialogConfig }
+        );
+        
         this.activeDialogs.set('project', dialog);
         
-        dialog.subscribe((event, data) => {
-            if (event === 'projectSaved') {
-                this._emit('projectSaved', data);
-                this.activeDialogs.delete('project');
-            }
-        });
-
         dialog.present(this.parentWindow);
         return dialog;
     }
 
     /**
-     * Create and show a client dialog
+     * Create and show a client dialog (reusable)
      */
     showClientDialog(config = {}) {
         const {
@@ -67,30 +102,62 @@ export class ModularDialogManager {
             ...dialogConfig
         } = config;
 
-        const dialog = new ClientDialog({
-            mode,
-            client,
-            parentWindow: this.parentWindow,
-            onClientSave: (clientData, mode, dialog) => {
-                if (onSave) {
-                    return onSave(clientData, mode, dialog);
+        const dialogType = 'client-dialog';
+        
+        // Define create function for DialogPool
+        const createFn = async () => {
+            const dialog = new ClientDialog({
+                mode,
+                client,
+                parentWindow: this.parentWindow,
+                onClientSave: (clientData, saveMode, dialog) => {
+                    if (onSave) {
+                        return onSave(clientData, saveMode, dialog);
+                    }
+                    return this._handleClientSave(clientData, saveMode);
+                },
+                ...dialogConfig
+            });
+            
+            // Setup event subscription once
+            dialog.subscribe((event, data) => {
+                if (event === 'clientSaved') {
+                    this._emit('clientSaved', data);
                 }
-                
-                // Default save logic
-                return this._handleClientSave(clientData, mode);
-            },
-            ...dialogConfig
-        });
-
+            });
+            
+            return dialog;
+        };
+        
+        // Define update function for DialogPool
+        const updateFn = async (dialog, data) => {
+            const { mode: updateMode, client: updateClient } = data;
+            
+            // Update the onClientSave callback
+            dialog.onClientSave = (clientData, saveMode, dialogInstance) => {
+                if (onSave) {
+                    return onSave(clientData, saveMode, dialogInstance);
+                }
+                return this._handleClientSave(clientData, saveMode);
+            };
+            
+            if (updateMode === 'edit' && updateClient) {
+                dialog.setClient(updateClient);
+            } else {
+                dialog.resetForNew();
+            }
+        };
+        
+        // Get or create dialog from pool
+        const dialog = this.dialogPool.getDialog(
+            dialogType,
+            createFn,
+            updateFn,
+            { mode, client, onSave, ...dialogConfig }
+        );
+        
         this.activeDialogs.set('client', dialog);
         
-        dialog.subscribe((event, data) => {
-            if (event === 'clientSaved') {
-                this._emit('clientSaved', data);
-                this.activeDialogs.delete('client');
-            }
-        });
-
         dialog.present(this.parentWindow);
         return dialog;
     }
