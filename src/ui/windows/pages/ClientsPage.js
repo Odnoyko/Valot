@@ -302,7 +302,7 @@ export class ClientsPage {
 
             // DISABLED: Time updates in ClientsPage (only header widget shows time)
             // Start UI update timer
-            // this._startTrackingUITimer();
+            this._subscribeToGlobalTimer();
         } else {
             // Tracking idle
             this.taskNameEntry.set_text('');
@@ -317,7 +317,6 @@ export class ClientsPage {
 
             this.actualTimeLabel.set_label('00:00:00');
 
-            // REMOVED: No timer to stop
         }
     }
 
@@ -384,8 +383,30 @@ export class ClientsPage {
         }
     }
 
-    // REMOVED: _startTrackingUITimer() and _stopTrackingUITimer()
-    // No separate timers needed - only header widget shows time
+    /**
+     * UI update timer - refreshes time display from Core
+     */
+    /**
+     * Subscribe to GlobalTimer for real-time tracking display
+     * CRITICAL FIX: Only subscribe once, prevent listener accumulation
+     */
+    _subscribeToGlobalTimer() {
+        // CRITICAL: Check if already subscribed to prevent memory leak
+        if (this._isSubscribedToGlobalTimer) {
+            console.log('[ClientsPage] Already subscribed to GlobalTimer, skipping');
+            return;
+        }
+
+        this._isSubscribedToGlobalTimer = true;
+
+        this.coreBridge.onUIEvent('tracking-updated', (data) => {
+            if (this.actualTimeLabel) {
+                this.actualTimeLabel.set_label(this._formatDuration(data.elapsedSeconds));
+            }
+        });
+
+        console.log('[ClientsPage] Subscribed to GlobalTimer (once)');
+    }
 
     _formatDuration(seconds) {
         const hours = Math.floor(seconds / 3600);

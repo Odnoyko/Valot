@@ -156,8 +156,11 @@ export class TrackingWidget {
                     this.clientButton.set_sensitive(false);
                 }
 
-                this.trackButton.set_icon_name('media-playback-stop-symbolic');
-                this.trackButton.set_tooltip_text(_('Stop tracking'));
+                // OPTIMIZED: Only update icon if needed
+                if (this.trackButton.get_icon_name() !== 'media-playback-stop-symbolic') {
+                    this.trackButton.set_icon_name('media-playback-stop-symbolic');
+                    this.trackButton.set_tooltip_text(_('Stop tracking'));
+                }
                 this.trackButton.add_css_class('destructive-action');
                 this.trackButton.remove_css_class('suggested-action');
 
@@ -166,8 +169,8 @@ export class TrackingWidget {
                     this.timeLabel.set_label(this._formatDuration(state.elapsedSeconds));
                 }
 
-                // DISABLED: No timer - use tracking-updated events instead
-                // this._startUIUpdateTimer();
+                // Start UI update timer
+                this._subscribeToGlobalTimer();
             } else {
                 // Update UI to idle mode
                 this.taskButton.set_label(this.config.taskPlaceholder);
@@ -180,16 +183,17 @@ export class TrackingWidget {
                     this.clientButton.set_sensitive(true);
                 }
 
-                this.trackButton.set_icon_name('media-playback-start-symbolic');
-                this.trackButton.set_tooltip_text(_('Start tracking'));
+                // OPTIMIZED: Only update icon if needed
+                if (this.trackButton.get_icon_name() !== 'media-playback-start-symbolic') {
+                    this.trackButton.set_icon_name('media-playback-start-symbolic');
+                    this.trackButton.set_tooltip_text(_('Start tracking'));
+                }
                 this.trackButton.remove_css_class('destructive-action');
                 this.trackButton.add_css_class('suggested-action');
 
                 if (this.timeLabel) {
                     this.timeLabel.set_label('00:00:00');
                 }
-
-                // REMOVED: No timer to stop
             }
         } catch (error) {
             console.error('Error updating UI from Core:', error);
@@ -261,8 +265,30 @@ export class TrackingWidget {
         }
     }
 
-    // REMOVED: _startUIUpdateTimer() and _stopUIUpdateTimer()
-    // No separate timers needed - listen to Core TRACKING_UPDATED events instead
+    /**
+     * UI update timer - refreshes display from Core state
+     */
+    /**
+     * Subscribe to GlobalTimer for real-time tracking display
+     * CRITICAL FIX: Only subscribe once, prevent listener accumulation
+     */
+    _subscribeToGlobalTimer() {
+        // CRITICAL: Check if already subscribed to prevent memory leak
+        if (this._isSubscribedToGlobalTimer) {
+            console.log('[TrackingWidget] Already subscribed to GlobalTimer, skipping');
+            return;
+        }
+
+        this._isSubscribedToGlobalTimer = true;
+
+        this.config.coreBridge.onUIEvent('tracking-updated', (data) => {
+            if (this.timeLabel) {
+                this.timeLabel.set_label(this._formatDuration(data.elapsedSeconds));
+            }
+        });
+
+        console.log('[TrackingWidget] Subscribed to GlobalTimer (once)');
+    }
 
     _formatDuration(seconds) {
         const hours = Math.floor(seconds / 3600);
@@ -324,15 +350,6 @@ export class TrackingWidget {
      * Cleanup
      */
     cleanup() {
-        // Unsubscribe from CoreBridge events
-        if (this.config.coreBridge && this._coreEventHandlers) {
-            Object.keys(this._coreEventHandlers).forEach(event => {
-                this.config.coreBridge.offUIEvent(event, this._coreEventHandlers[event]);
-            });
-            this._coreEventHandlers = {};
-        }
-
-        // REMOVED: No timer to stop
     }
 
     /**

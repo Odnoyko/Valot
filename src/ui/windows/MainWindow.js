@@ -760,7 +760,10 @@ export const ValotMainWindow = GObject.registerClass({
             this._updateSidebarStats();
         };
 
-        this._eventHandlers['tracking-stopped'] = () => {
+        this.coreBridge.onUIEvent('tracking-stopped', () => {
+            // Clear cached week stats
+            this._cachedWeekStats = null;
+
             this._updateSidebarStats();
 
             // Update reports page chart if it's loaded
@@ -893,31 +896,35 @@ export const ValotMainWindow = GObject.registerClass({
 
     /**
      * Update sidebar stats in real-time (without full reload)
-     * DISABLED: We don't want real-time updates in sidebar during tracking
+     * OPTIMIZED: Cache base stats, only add current elapsed time
      */
     async _updateSidebarStatsRealtime() {
-        // DISABLED: Sidebar real-time updates - not needed during tracking
-        return;
-        
-        // if (!this.coreBridge) return;
-        // 
-        // const trackingState = this.coreBridge.getTrackingState();
-        // if (!trackingState.isTracking) return;
-        // 
-        // try {
-        //     // Get This Week stats from Core
-        //     const weekStats = await this.coreBridge.getThisWeekStats();
-        //     const currentElapsed = trackingState.elapsedSeconds || 0;
-        //     const totalTime = weekStats.totalTime + currentElapsed;
-        // 
-        //     const hours = Math.floor(totalTime / 3600);
-        //     const minutes = Math.floor((totalTime % 3600) / 60);
-        //     const secs = totalTime % 60;
-        //     const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-        // 
-        //     this.weeklyTimeRow.set_subtitle(`${timeStr} • ${weekStats.taskCount} tasks`);
-        // } catch (error) {
-        //     console.error('Error updating sidebar stats realtime:', error);
-        // }
+        if (!this.coreBridge) return;
+
+        const trackingState = this.coreBridge.getTrackingState();
+        if (!trackingState.isTracking) return;
+
+        try {
+            // CRITICAL FIX: Don't query DB every second!
+            // Cache base stats and reuse them
+            if (!this._cachedWeekStats) {
+                // Load once and cache
+                this._cachedWeekStats = await this.coreBridge.getThisWeekStats();
+            }
+
+            // Use cached stats + current elapsed (NO DB QUERY)
+            const currentElapsed = trackingState.elapsedSeconds || 0;
+            const totalTime = this._cachedWeekStats.totalTime + currentElapsed;
+
+            const hours = Math.floor(totalTime / 3600);
+            const minutes = Math.floor((totalTime % 3600) / 60);
+            const secs = totalTime % 60;
+            const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+            this.weeklyTimeRow.set_subtitle(`${timeStr} • ${this._cachedWeekStats.taskCount} tasks`);
+        } catch (error) {
+            console.error('Error updating sidebar stats realtime:', error);
+        }
+>>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
     }
 });

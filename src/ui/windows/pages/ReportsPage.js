@@ -54,23 +54,35 @@ export class ReportsPage {
      */
     _subscribeToEvents() {
         if (!this.coreBridge) return;
+        // Reload when tracking starts/stops (creates new time entries)
+        this.coreBridge.onUIEvent('tracking-started', () => {
+            setTimeout(() => this.updateChartsOnly(), 300);
+            this._subscribeToGlobalTimer(); // Subscribe to real-time updates
+        });
 
-        // Store handlers for cleanup
-        this._eventHandlers['tracking-started'] = async () => {
-            // OPTIMIZED: Don't update charts - creates new objects from getAllTaskInstances/getAllTimeEntries
-            // Charts don't need real-time updates, only when user manually refreshes
-            // setTimeout(() => this.updateChartsOnly(), 300); // DISABLED - causes RAM growth
-        };
+        this.coreBridge.onUIEvent('tracking-stopped', () => {
+            // Restore original total_time for all tasks (clean up cache from real-time updates)
+            if (this.allTasks && this.allTasks.length > 0) {
+                this.allTasks.forEach(task => {
+                    if (task._originalTotalTime !== undefined) {
+                        task.total_time = task._originalTotalTime;
+                        delete task._originalTotalTime; // Clean up cache property
+                    }
+                });
+            }
 
-        this._eventHandlers['tracking-stopped'] = () => {
-            // OPTIMIZED: Don't update charts - creates new objects from getAllTaskInstances/getAllTimeEntries
-            // Charts don't need real-time updates, only when user manually refreshes
-            // this.updateChartsOnly(); // DISABLED - causes RAM growth
-        };
+            // Clean up realtime earnings Map cache
+            if (this._realtimeEarningsMap) {
+                this._realtimeEarningsMap.clear();
+                this._realtimeEarningsMap = null;
+            }
 
-        this._eventHandlers['task-created'] = () => {
+            // Clean up currency cache arrays
+            this._cachedCurrentCurrencies = null;
+
             this.updateChartsOnly();
-        };
+            // UI updates will stop automatically when tracking stops
+        });
 
         this._eventHandlers['task-updated'] = () => {
             this.updateChartsOnly();
@@ -782,10 +794,10 @@ export class ReportsPage {
 
             // DISABLED: Time updates in ReportsPage (only header widget shows time)
             // Start real-time timer if tracking is active
-            // const trackingState = this.coreBridge.getTrackingState();
-            // if (trackingState.isTracking) {
-            //     this._startTrackingUITimer();
-            // }
+            const trackingState = this.coreBridge.getTrackingState();
+            if (trackingState.isTracking) {
+                this._subscribeToGlobalTimer();
+            }
         } catch (error) {
             Logger.error('[ReportsPage] Error loading reports:', error);
         }
@@ -2035,6 +2047,7 @@ export class ReportsPage {
     /**
      * Update currency earnings in real-time
      * Calculates current task earnings and adds to cached base
+     * OPTIMIZED: Reuse Map instead of creating new one every second
      */
     _updateCurrencyEarningsRealtime(trackingState, currentElapsed) {
         if (!this._cachedEarningsByCurrency) return;
@@ -2045,19 +2058,28 @@ export class ReportsPage {
         const currentEarnings = hoursElapsed * this._cachedTrackingClient.rate;
         const currency = this._cachedTrackingClient.currency || 'USD';
 
-        // Clone cached earnings and add current earnings
-        const updatedEarnings = new Map(this._cachedEarningsByCurrency);
-        const baseAmount = updatedEarnings.get(currency) || 0;
-        updatedEarnings.set(currency, baseAmount + currentEarnings);
+        // CRITICAL FIX: Reuse Map - update directly instead of cloning
+        // Cache base amount if not already cached
+        if (!this._realtimeEarningsMap) {
+            // Create Map once, reuse forever
+            this._realtimeEarningsMap = new Map(this._cachedEarningsByCurrency);
+        }
 
-        // Update carousel with real-time values
-        this._updateCurrencyCarousel(updatedEarnings);
+        // Get base amount from cached earnings (original value)
+        const baseAmount = this._cachedEarningsByCurrency.get(currency) || 0;
+
+        // Update reused Map with calculated total
+        this._realtimeEarningsMap.set(currency, baseAmount + currentEarnings);
+
+        // Update carousel with real-time values (pass reused Map)
+        this._updateCurrencyCarousel(this._realtimeEarningsMap);
     }
 
     /**
      * Update Recent Tasks list in real-time
      * DISABLED: We don't want real-time updates of Recent Tasks during tracking
      */
+<<<<<<< HEAD
     async _updateRecentTasksRealtime(trackingState) {
         // DISABLED: Recent Tasks real-time updates - not needed during tracking
         return;
@@ -2099,6 +2121,108 @@ export class ReportsPage {
                 }
             }
         }
+=======
+    /**
+     * Subscribe to GlobalTimer ticks for real-time UI updates
+     * CRITICAL FIX: Only subscribe once, prevent listener accumulation
+     */
+    _subscribeToGlobalTimer() {
+        // CRITICAL: Check if already subscribed to prevent memory leak
+        if (this._isSubscribedToGlobalTimer) {
+            console.log('[ReportsPage] Already subscribed to GlobalTimer, skipping');
+            return;
+        }
+
+        this._isSubscribedToGlobalTimer = true;
+
+        // Listen to TRACKING_UPDATED events (now emitted by GlobalTimer via TimeTrackingService)
+        this.coreBridge.onUIEvent('tracking-updated', (data) => {
+            const state = this.coreBridge.getTrackingState();
+            if (state.isTracking) {
+                // Update Total Time in real-time
+                this._updateStatisticsRealtime();
+
+                // Update Recent Tasks list to show current tracking task with updated time
+                this._updateRecentTasksRealtime(state);
+            }
+        });
+
+        console.log('[ReportsPage] Subscribed to GlobalTimer (once)');
+    }
+
+    /**
+     * Update Recent Tasks list in real-time (update current tracking task time)
+     * Uses cached tasks + current elapsed time (no database queries)
+     */
+    _updateRecentTasksRealtime(trackingState) {
+        if (!this.recentTasksList || !trackingState.isTracking) return;
+        if (!this.allTasks || this.allTasks.length === 0) return;
+
+        try {
+            // CRITICAL FIX: Don't create new objects! Find task directly and update only what's needed
+            // Reuse existing task objects from allTasks array (zero object creation)
+            const currentTask = this.allTasks.find(t =>
+                t.task_id === trackingState.currentTaskId &&
+                t.project_id === trackingState.currentProjectId &&
+                t.client_id === trackingState.currentClientId
+            );
+
+            if (currentTask) {
+                // Cache original total_time if not already cached
+                if (currentTask._originalTotalTime === undefined) {
+                    currentTask._originalTotalTime = currentTask.total_time || 0;
+                }
+
+                // Update total_time directly (reuse existing object property)
+                currentTask.total_time = currentTask._originalTotalTime + trackingState.elapsedSeconds;
+            }
+
+            // OPTIMIZED: Don't rebuild entire list every second!
+            // Just update the time label for the tracking task if it's in the recent list
+            if (this.recentTasksList && currentTask) {
+                // Find the row for this task in the recent list and update its time label
+                // Note: recentTasksList is a Gtk.ListBox, so children are Gtk.ListBoxRow objects
+                let listBoxRow = this.recentTasksList.get_first_child();
+                while (listBoxRow) {
+                    // Get the actual Adw.ActionRow child from the ListBoxRow
+                    const actionRow = listBoxRow.get_child();
+                    // Check if it's an ActionRow by checking for get_title method (safer than constructor.name)
+                    if (actionRow && typeof actionRow.get_title === 'function') {
+                        try {
+                            const rowTitle = actionRow.get_title();
+                            if (rowTitle && rowTitle.includes(currentTask.task_name)) {
+                                // Found the task row - update its time suffix
+                                if (typeof actionRow.get_suffix === 'function') {
+                                    const suffix = actionRow.get_suffix();
+                                    if (suffix && typeof suffix.set_label === 'function') {
+                                        suffix.set_label(this._formatDuration(currentTask.total_time || 0));
+                                    }
+                                }
+                                break;
+                            }
+                        } catch (e) {
+                            // Skip this row if there's an error
+                            console.warn('[ReportsPage] Error checking row:', e);
+                        }
+                    }
+                    listBoxRow = listBoxRow.get_next_sibling();
+                }
+            }
+
+            // Only rebuild full list when filters change (not every second)
+            // This will be called from _updateReports() when needed
+        } catch (error) {
+            console.error('[ReportsPage] Error updating recent tasks realtime:', error);
+        }
+    }
+
+    /**
+     * Get filtered tasks from provided array (used for real-time updates)
+     * OPTIMIZED: Start with direct reference, no spread operator
+     */
+    _getFilteredTasksFromArray(tasksArray) {
+        let filtered = tasksArray; // Direct reference - no spread operator
+>>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
 
         // Filter by project
         if (this.chartFilters.projectId) {
@@ -2203,18 +2327,30 @@ export class ReportsPage {
     /**
      * Update existing carousel labels without rebuilding (prevents flicker)
      * Returns true if successful, false if rebuild needed
+     * OPTIMIZED: Reuse arrays for currency comparison
      */
     _updateCurrencyCarouselLabels(currencyTotals) {
         if (!this._currencyCarouselPages) return false;
 
-        // Check if currencies match
-        const currentCurrencies = Array.from(this._currencyCarouselPages.keys()).sort();
-        const newCurrencies = currencyTotals ? Array.from(currencyTotals.keys()).sort() : [];
+        // OPTIMIZED: Cache currency arrays to avoid creating new arrays every second
+        if (!this._cachedCurrentCurrencies) {
+            this._cachedCurrentCurrencies = [];
+        }
 
-        if (currentCurrencies.length !== newCurrencies.length) return false;
-        if (!currentCurrencies.every((c, i) => c === newCurrencies[i])) return false;
+        // Only rebuild currency arrays if currency structure changed (rare)
+        const currencyCount = this._currencyCarouselPages.size;
+        const newCurrencyCount = currencyTotals ? currencyTotals.size : 0;
 
-        // Update amounts in existing labels
+        if (currencyCount !== newCurrencyCount) {
+            // Structure changed - rebuild cache arrays
+            this._cachedCurrentCurrencies = Array.from(this._currencyCarouselPages.keys()).sort();
+            const newCurrencies = currencyTotals ? Array.from(currencyTotals.keys()).sort() : [];
+
+            if (this._cachedCurrentCurrencies.length !== newCurrencies.length) return false;
+            if (!this._cachedCurrentCurrencies.every((c, i) => c === newCurrencies[i])) return false;
+        }
+
+        // Update amounts in existing labels - NO NEW OBJECTS
         for (const [currency, amountLabel] of this._currencyCarouselPages) {
             const amount = currencyTotals.get(currency) || 0;
             amountLabel.set_label(amount.toFixed(2));

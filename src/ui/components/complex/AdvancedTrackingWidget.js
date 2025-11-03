@@ -32,8 +32,6 @@ export class AdvancedTrackingWidget {
         // Current selections - restore from GSettings (Core will validate)
         this.currentProjectId = this.settings.get_int('last-project-id') || 1;
         this.currentClientId = this.settings.get_int('last-client-id') || 1;
-
-        // REMOVED: trackingUITimerToken - no longer using separate timers
         this.taskNameDebounceTimer = null;
         this._blockTaskNameUpdate = false;
 
@@ -282,72 +280,32 @@ export class AdvancedTrackingWidget {
                 this.currentClientId = state.currentClientId;
                 this.clientDropdown.setSelectedClient(state.currentClientId);
             }
-
-            // OPTIMIZED: Only update button if Pomodoro mode changed
-            const isPomodoroMode = state.pomodoroMode || false;
-            const iconName = 'media-playback-stop-symbolic';
-            
-            // Update icon only if changed (prevents unnecessary redraws)
-            if (this._cachedIconName !== iconName) {
-                this.trackButton.set_icon_name(iconName);
-                this._cachedIconName = iconName;
+            // OPTIMIZED: Only change icon if needed (avoid GTK icon recoloring)
+            if (this.trackButton.get_icon_name() !== 'media-playback-stop-symbolic') {
+                this.trackButton.set_icon_name('media-playback-stop-symbolic');
             }
-            
-            if (this._cachedPomodoroMode !== isPomodoroMode) {
-                if (isPomodoroMode) {
-                    // Pomodoro mode - update tooltip only if changed
-                    const tooltipText = _('Stop Pomodoro');
-                    if (this._cachedTooltipText !== tooltipText) {
-                        this.trackButton.set_tooltip_text(tooltipText);
-                        this._cachedTooltipText = tooltipText;
-                    }
-                    // Update CSS classes only if not already set (avoid unnecessary redraws)
-                    if (this.trackButton.has_css_class('suggested-action')) {
-                        this.trackButton.remove_css_class('suggested-action');
-                    }
-                    if (this.trackButton.has_css_class('destructive-action')) {
-                        this.trackButton.remove_css_class('destructive-action');
-                    }
-                    if (!this.trackButton.has_css_class('pomodoro-active')) {
-                        this.trackButton.add_css_class('pomodoro-active');
-                    }
-                } else {
-                    // Normal mode - update tooltip only if changed
-                    const tooltipText = _('Stop tracking');
-                    if (this._cachedTooltipText !== tooltipText) {
-                        this.trackButton.set_tooltip_text(tooltipText);
-                        this._cachedTooltipText = tooltipText;
-                    }
-                    // Update CSS classes only if not already set (avoid unnecessary redraws)
-                    if (this.trackButton.has_css_class('pomodoro-active')) {
-                        this.trackButton.remove_css_class('pomodoro-active');
-                    }
-                    if (!this.trackButton.has_css_class('suggested-action')) {
-                        this.trackButton.add_css_class('suggested-action');
-                    }
+
+            // Pomodoro mode UI
+            if (state.pomodoroMode) {
+                this.trackButton.set_tooltip_text(_('Stop Pomodoro'));
+                this.trackButton.remove_css_class('suggested-action');
+                this.trackButton.remove_css_class('destructive-action');
+                this.trackButton.add_css_class('pomodoro-active');
+
+                // Show countdown time
+                const remaining = state.pomodoroRemaining || 0;
+                this.actualTimeLabel.set_label('🍅 ' + this._formatDuration(remaining, true));
+            } else {
+                this.trackButton.set_tooltip_text(_('Stop tracking'));
+                this.trackButton.remove_css_class('pomodoro-active');
+                if (!this.trackButton.has_css_class('suggested-action')) {
+                    this.trackButton.add_css_class('suggested-action');
                 }
                 this._cachedPomodoroMode = isPomodoroMode;
             }
 
-            // Show initial time (will be updated by timer events)
-            // OPTIMIZED: Only set initial time, timer events will update it
-            if (isPomodoroMode) {
-                const remaining = state.pomodoroRemaining || 0;
-                const timeText = '🍅 ' + this._formatDuration(remaining, true);
-                if (this._cachedTimeText !== timeText) {
-                    this.actualTimeLabel.set_label(timeText);
-                    this._cachedTimeText = timeText;
-                }
-            } else {
-                const timeText = this._formatDuration(state.elapsedSeconds);
-                if (this._cachedTimeText !== timeText) {
-                    this.actualTimeLabel.set_label(timeText);
-                    this._cachedTimeText = timeText;
-                }
-            }
-
-            // No timer needed - listen to Core TRACKING_UPDATED events instead
-            // Time is already calculated in Core timer, we just show it
+            // Subscribe to GlobalTimer for UI updates
+            this._subscribeToGlobalTimer();
         } else {
             // Tracking idle - KEEP task name in input (don't clear it)
             this.taskNameEntry.set_sensitive(true);
@@ -361,30 +319,13 @@ export class AdvancedTrackingWidget {
                 this.clientDropdown.setSelectedClient(this.currentClientId);
             }
 
-            // OPTIMIZED: Only update button if state changed
-            if (this._cachedPomodoroMode !== false) {
-                this._cachedPomodoroMode = false;
-            }
-            
-            // Change icon to play, keep green (only if not already set)
-            if (this._cachedIconName !== 'media-playback-start-symbolic') {
+            // OPTIMIZED: Only change icon if needed (avoid GTK icon recoloring)
+            if (this.trackButton.get_icon_name() !== 'media-playback-start-symbolic') {
                 this.trackButton.set_icon_name('media-playback-start-symbolic');
-                this._cachedIconName = 'media-playback-start-symbolic';
+                this.trackButton.set_tooltip_text(_('Start tracking (Long press or P for Pomodoro)'));
             }
-            
-            const tooltipText = _('Start tracking (Long press or P for Pomodoro)');
-            if (this._cachedTooltipText !== tooltipText) {
-                this.trackButton.set_tooltip_text(tooltipText);
-                this._cachedTooltipText = tooltipText;
-            }
-            
-            // Update CSS classes only if needed
-            if (this.trackButton.has_css_class('pomodoro-active')) {
-                this.trackButton.remove_css_class('pomodoro-active');
-            }
-            if (this.trackButton.has_css_class('destructive-action')) {
-                this.trackButton.remove_css_class('destructive-action');
-            }
+            this.trackButton.remove_css_class('pomodoro-active');
+            this.trackButton.remove_css_class('destructive-action');
             if (!this.trackButton.has_css_class('suggested-action')) {
                 this.trackButton.add_css_class('suggested-action');
             }
@@ -394,8 +335,6 @@ export class AdvancedTrackingWidget {
                 this.actualTimeLabel.set_label(timeText);
                 this._cachedTimeText = timeText;
             }
-
-            // REMOVED: No timer to stop
         }
     }
 
@@ -603,10 +542,35 @@ export class AdvancedTrackingWidget {
             Logger.error('[AdvancedTrackingWidget] Error updating tracking context:', error);
         }
     }
+    /**
+     * Subscribe to GlobalTimer ticks for real-time UI updates
+     * CRITICAL FIX: Only subscribe once, prevent listener accumulation
+     */
+    _subscribeToGlobalTimer() {
+        // CRITICAL: Check if already subscribed to prevent memory leak
+        if (this._isSubscribedToGlobalTimer) {
+            console.log('[AdvancedTrackingWidget] Already subscribed to GlobalTimer, skipping');
+            return;
+        }
 
-    // REMOVED: _startUITimer() and _stopUITimer()
-    // No separate timers needed - listen to Core TRACKING_UPDATED events instead
+        this._isSubscribedToGlobalTimer = true;
 
+        // Listen to TRACKING_UPDATED events (which are now emitted by GlobalTimer via TimeTrackingService)
+        this.coreBridge.onUIEvent('tracking-updated', (data) => {
+            const state = this.coreBridge?.getTrackingState();
+            if (state && state.isTracking) {
+                // Update time display based on mode
+                if (state.pomodoroMode) {
+                    const remaining = state.pomodoroRemaining || 0;
+                    this.actualTimeLabel.set_label('🍅 ' + this._formatDuration(remaining, true));
+                } else {
+                    this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+                }
+            }
+        });
+
+        console.log('[AdvancedTrackingWidget] Subscribed to GlobalTimer (once)');
+    }
     _formatDuration(seconds, useShortFormat = false) {
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
@@ -689,25 +653,6 @@ export class AdvancedTrackingWidget {
     }
 
     cleanup() {
-        // Unsubscribe from CoreBridge events
-        if (this.coreBridge && this._coreEventHandlers) {
-            Object.keys(this._coreEventHandlers).forEach(event => {
-                this.coreBridge.offUIEvent(event, this._coreEventHandlers[event]);
-            });
-            this._coreEventHandlers = {};
-        }
-
-        // Cleanup dropdowns
-        if (this.projectDropdown && typeof this.projectDropdown.destroy === 'function') {
-            this.projectDropdown.destroy();
-            this.projectDropdown = null;
-        }
-        if (this.clientDropdown && typeof this.clientDropdown.destroy === 'function') {
-            this.clientDropdown.destroy();
-            this.clientDropdown = null;
-        }
-
-        // REMOVED: No timer to stop
         if (this.taskNameDebounceTimer) {
             GLib.Source.remove(this.taskNameDebounceTimer);
             this.taskNameDebounceTimer = null;

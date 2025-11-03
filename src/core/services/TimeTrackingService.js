@@ -5,16 +5,20 @@
 import { BaseService } from './BaseService.js';
 import { CoreEvents } from '../events/CoreEvents.js';
 import { TimeUtils } from '../utils/TimeUtils.js';
-import { Logger } from '../utils/Logger.js';
+import { GlobalTimer } from './GlobalTimer.js';
 
 export class TimeTrackingService extends BaseService {
-    _timerToken = 0;
-    _cachedStartTimestamp = null; // Cached timestamp for timer (avoid closure holding references)
     lastUsedProjectId = null;
     lastUsedClientId = null;
 
     constructor(core) {
         super(core);
+
+        // Initialize GlobalTimer
+        this.globalTimer = new GlobalTimer(core);
+
+        // Subscribe to global timer ticks
+        this._subscribeToGlobalTimer();
     }
 
     /**
@@ -585,6 +589,132 @@ export class TimeTrackingService extends BaseService {
     }
 
     /**
+<<<<<<< HEAD
+=======
+     * Get total completed time for current task instance
+     * (excludes the active/current time entry)
+     */
+    async getCurrentTaskOldTime() {
+        const currentState = this.state.getTrackingState();
+        if (!currentState.isTracking || !currentState.currentTaskInstanceId) {
+            return 0;
+        }
+
+        const sql = `
+            SELECT COALESCE(SUM(duration), 0) as total
+            FROM TimeEntry
+            WHERE task_instance_id = ${currentState.currentTaskInstanceId}
+                AND end_time IS NOT NULL
+        `;
+        const results = await this.query(sql);
+        return results.length > 0 ? results[0].total : 0;
+    }
+    /**
+     * Create a time entry
+     */
+    async createTimeEntry(input) {
+        const sql = `
+            INSERT INTO TimeEntry (task_instance_id, start_time, end_time, duration, created_at)
+            VALUES (?, ?, NULL, 0, datetime('now'))
+        `;
+        const entryId = await this.execute(sql, [input.task_instance_id, input.start_time]);
+        this.events.emit(CoreEvents.TIME_ENTRY_CREATED, { id: entryId, ...input });
+        return entryId;
+    }
+    /**
+     * Update a time entry
+     */
+    async updateTimeEntry(id, input) {
+        const updates = [];
+        const params = [];
+        if (input.start_time !== undefined) {
+            updates.push('start_time = ?');
+            params.push(input.start_time);
+        }
+        if (input.end_time !== undefined) {
+            updates.push('end_time = ?');
+            params.push(input.end_time);
+        }
+        if (input.duration !== undefined) {
+            updates.push('duration = ?');
+            params.push(input.duration);
+        }
+        if (updates.length === 0)
+            return;
+        params.push(id);
+        const sql = `UPDATE TimeEntry SET ${updates.join(', ')} WHERE id = ?`;
+        await this.execute(sql, params);
+        this.events.emit(CoreEvents.TIME_ENTRY_UPDATED, { id, ...input });
+    }
+    /**
+     * Get current time entry (active tracking)
+     */
+    async getCurrentTimeEntry() {
+        const currentState = this.state.getTrackingState();
+        // Scope to the current task instance to avoid unrelated NULL rows causing issues
+        const sql = `SELECT id, task_instance_id, start_time, end_time, duration, created_at
+                     FROM TimeEntry
+                     WHERE end_time IS NULL AND task_instance_id = ?
+                     ORDER BY id DESC LIMIT 1`;
+        const results = await this.query(sql, [currentState.currentTaskInstanceId]);
+        return results.length > 0 ? results[0] : null;
+    }
+    /**
+     * Subscribe to GlobalTimer ticks
+     */
+    _subscribeToGlobalTimer() {
+        // Reuse event data object to avoid creating new objects every second
+        const updateEvent = {
+            taskId: null,
+            elapsedSeconds: 0,
+            pomodoroRemaining: 0
+        };
+
+        this.events.on(CoreEvents.GLOBAL_TIMER_TICK, (data) => {
+            // Get cached tracking state (reused object, not created every second)
+            const t = this.state.getTrackingState();
+            if (!t.isTracking) return;
+
+            // elapsedSeconds is already calculated in getTrackingState() from cached timestamp
+            const elapsedSeconds = t.elapsedSeconds;
+            const pomodoroRemaining = t.pomodoroRemaining;
+
+            // Pomodoro auto-stop check
+            if (t.pomodoroMode && t.pomodoroDuration > 0 && elapsedSeconds >= t.pomodoroDuration) {
+                this.stop().catch(error => {
+                    console.error('Error auto-stopping Pomodoro:', error);
+                });
+                return;
+            }
+
+            // Emit update event - UI components will update labels
+            // Reuse SAME object, just update properties
+            updateEvent.taskId = t.currentTaskId;
+            updateEvent.elapsedSeconds = elapsedSeconds;
+            updateEvent.pomodoroRemaining = pomodoroRemaining;
+
+            this.events.emit(CoreEvents.TRACKING_UPDATED, updateEvent);
+        });
+    }
+
+    /**
+     * Start global timer with current timestamp
+     */
+    startTimer() {
+        const startTime = Date.now();
+        this.globalTimer.start(startTime);
+        console.log(`[TimeTrackingService] Started GlobalTimer at ${new Date(startTime).toISOString()}`);
+    }
+
+    /**
+     * Stop global timer
+     */
+    stopTimer() {
+        this.globalTimer.stop();
+        console.log('[TimeTrackingService] Stopped GlobalTimer');
+    }
+    /**
+>>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
      * Get all time entries
      */
     async getAllTimeEntries() {

@@ -65,6 +65,7 @@
     <file>ui/utils/GestureController.js</file>
     <file>ui/utils/timeUtils.js</file>
     <file>ui/utils/svgRecolor.js</file>
+    <file>ui/utils/StringCache.js</file>
 
     <!-- UI Export Utilities -->
     <file>ui/utils/export/reportExporter.js</file>
@@ -107,9 +108,7 @@
     <file>core/services/TaskService.js</file>
     <file>core/services/TimerScheduler.js</file>
     <file>core/services/TimeTrackingService.js</file>
-    <file>core/services/TrackingPersistenceService.js</file>
-    <file>core/services/TrackingFileCache.js</file>
-    <file>core/services/CacheService.js</file>
+    <file>core/services/GlobalTimer.js</file>
 
     <!-- Core Models -->
     <file>core/models/Client.js</file>

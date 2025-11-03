@@ -6,7 +6,11 @@ import { ProjectDialog } from 'resource:///com/odnoyko/valot/ui/components/compl
 import { ProjectAppearanceDialog } from 'resource:///com/odnoyko/valot/ui/components/complex/ProjectAppearanceDialog.js';
 import { AdvancedTrackingWidget } from 'resource:///com/odnoyko/valot/ui/components/complex/AdvancedTrackingWidget.js';
 import { createProjectIconWidget } from 'resource:///com/odnoyko/valot/ui/utils/widgetFactory.js';
+<<<<<<< HEAD
 import { Logger } from 'resource:///com/odnoyko/valot/core/utils/Logger.js';
+=======
+import { stringCache } from 'resource:///com/odnoyko/valot/ui/utils/StringCache.js';
+>>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
 
 /**
  * Projects management page
@@ -59,6 +63,7 @@ export class ProjectsPage {
     _subscribeToCore() {
         if (!this.coreBridge) return;
 
+<<<<<<< HEAD
         // Store handlers for cleanup
         this._eventHandlers['tracking-started'] = () => {
             // OPTIMIZED: Don't reload projects - tracking doesn't change project list
@@ -76,6 +81,17 @@ export class ProjectsPage {
         //     // Handler removed to prevent RAM growth
         // };
         this._eventHandlers['task-updated'] = () => {
+=======
+        // Reload projects when tracking starts/stops
+        this.coreBridge.onUIEvent('tracking-started', () => {
+            setTimeout(() => this.loadProjects(), 300);
+        });
+
+        this.coreBridge.onUIEvent('tracking-stopped', () => {
+            // Clear cached project times
+            this._cachedProjectBaseTimes = null;
+            
+>>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
             this.loadProjects();
         };
         this._eventHandlers['task-deleted'] = () => {
@@ -316,9 +332,14 @@ export class ProjectsPage {
             this.trackButton.remove_css_class('suggested-action');
             this.trackButton.add_css_class('destructive-action');
 
+<<<<<<< HEAD
             // DISABLED: Time updates in ProjectsPage (only header widget shows time)
             // this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
             // this._startTrackingUITimer();
+=======
+            this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+            this._subscribeToGlobalTimer();
+>>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
         } else {
             this.taskNameEntry.set_text('');
             this.taskNameEntry.set_sensitive(true);
@@ -331,7 +352,11 @@ export class ProjectsPage {
             this.trackButton.add_css_class('suggested-action');
 
             this.actualTimeLabel.set_label('00:00:00');
+<<<<<<< HEAD
             // REMOVED: No timer to stop
+=======
+            // Timer will automatically stop when tracking stops
+>>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
         }
     }
 
@@ -364,14 +389,36 @@ export class ProjectsPage {
         }
     }
 
+<<<<<<< HEAD
     // REMOVED: _startTrackingUITimer() and _stopTrackingUITimer()
     // No separate timers needed - only header widget shows time
+=======
+    /**
+     * Subscribe to GlobalTimer for real-time tracking display
+     * CRITICAL FIX: Only subscribe once, prevent listener accumulation
+     */
+    _subscribeToGlobalTimer() {
+        // CRITICAL: Check if already subscribed to prevent memory leak
+        if (this._isSubscribedToGlobalTimer) {
+            console.log('[ProjectsPage] Already subscribed to GlobalTimer, skipping');
+            return;
+        }
+        
+        this._isSubscribedToGlobalTimer = true;
+        
+        this.coreBridge.onUIEvent('tracking-updated', (data) => {
+            if (this.actualTimeLabel) {
+                this.actualTimeLabel.set_label(this._formatDuration(data.elapsedSeconds));
+            }
+        });
+        
+        console.log('[ProjectsPage] Subscribed to GlobalTimer (once)');
+    }
+>>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
 
     _formatDuration(seconds) {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        // OPTIMIZED: Use string cache to avoid creating new strings
+        return stringCache.getTimeString(seconds);
     }
 
     async _onTaskNameChanged() {
@@ -586,7 +633,12 @@ export class ProjectsPage {
             // Get projects with calculated total_time from Core
             const projects = await this.coreBridge.getAllProjectsWithTime();
             this.projects = projects || [];
-            this.filteredProjects = [...this.projects];
+            // OPTIMIZED: Direct reference instead of spread operator (will be filtered later if needed)
+            this.filteredProjects = this.projects;
+            
+            // Clear cached project times when reloading
+            this._cachedProjectBaseTimes = null;
+            
             this._updateProjectsDisplay();
         } catch (error) {
             Logger.error('[ProjectsPage] Error loading projects:', error);
@@ -595,10 +647,12 @@ export class ProjectsPage {
 
     /**
      * Filter projects based on search query
+     * OPTIMIZED: Direct reference when no filter, only create new array when filtering
      */
     _filterProjects(query = '') {
         if (!query.trim()) {
-            this.filteredProjects = [...this.projects];
+            // OPTIMIZED: Direct reference instead of spread operator
+            this.filteredProjects = this.projects;
         } else {
             const lowerQuery = query.toLowerCase();
             this.filteredProjects = this.projects.filter(project =>
@@ -985,10 +1039,8 @@ export class ProjectsPage {
     }
 
     _formatDurationHMS(seconds) {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        // OPTIMIZED: Use string cache to avoid creating new strings
+        return stringCache.getTimeString(seconds);
     }
 
     _showEmptyState() {
@@ -1321,8 +1373,72 @@ export class ProjectsPage {
         dialog.present(this.parentWindow);
     }
 
+<<<<<<< HEAD
     // REMOVED: _updateTrackingProjectTime()
     // No real-time time updates in pages - only header widget shows time
+=======
+    /**
+     * Update currently tracking project time in real-time
+     */
+    async _updateTrackingProjectTime() {
+        if (!this.coreBridge) return;
+
+        const trackingState = this.coreBridge.getTrackingState();
+        if (!trackingState.isTracking || !trackingState.currentProjectId) {
+            // Reset last tracking project when stopped
+            this.lastTrackingProjectId = null;
+            return;
+        }
+
+        const currentProjectId = trackingState.currentProjectId;
+
+        try {
+            // CRITICAL FIX: Don't load ALL tasks from DB every second!
+            // Instead, use cached project times and just add current elapsed time
+            
+            // Cache project base times if not already cached
+            if (!this._cachedProjectBaseTimes) {
+                this._cachedProjectBaseTimes = new Map();
+                // Load once and cache
+                const taskInstances = await this.coreBridge.getAllTaskInstances();
+                
+                // Calculate base times for all projects
+                const projectTimes = new Map();
+                for (const task of taskInstances) {
+                    const projectId = task.project_id;
+                    const currentTime = projectTimes.get(projectId) || 0;
+                    projectTimes.set(projectId, currentTime + (task.total_time || 0));
+                }
+                this._cachedProjectBaseTimes = projectTimes;
+            }
+
+            // If project changed, reset old project time to cached base value
+            if (this.lastTrackingProjectId && this.lastTrackingProjectId !== currentProjectId) {
+                const oldTimeLabel = this.projectTimeLabels.get(this.lastTrackingProjectId);
+                if (oldTimeLabel) {
+                    const baseTotalSeconds = this._cachedProjectBaseTimes.get(this.lastTrackingProjectId) || 0;
+                    oldTimeLabel.set_label(this._formatDurationHMS(baseTotalSeconds));
+                }
+            }
+
+            // Update current project time with tracking time (use cached base + elapsed)
+            const timeLabel = this.projectTimeLabels.get(currentProjectId);
+            if (timeLabel) {
+                const baseTotalSeconds = this._cachedProjectBaseTimes.get(currentProjectId) || 0;
+                const currentElapsed = trackingState.elapsedSeconds || 0;
+                const totalSeconds = baseTotalSeconds + currentElapsed;
+
+                // Update label - NO DB QUERY, NO OBJECT CREATION
+                timeLabel.set_label(this._formatDurationHMS(totalSeconds));
+            }
+
+            // Update last tracking project
+            this.lastTrackingProjectId = currentProjectId;
+        } catch (error) {
+            console.error('Error updating tracking project time:', error);
+        }
+    }
+>>>>>>> 15443b1 (v0.9.1 beta 4 Initial release)
 
     /**
      * Refresh page data

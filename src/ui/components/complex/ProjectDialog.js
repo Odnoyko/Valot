@@ -137,21 +137,40 @@ export class ProjectDialog extends FormDialog {
             this.projectButton.get_style_context().remove_provider(this.cssProvider);
         }
 
-        // Create icon widget (handle both emoji and system icons)
+        // OPTIMIZED: Reuse existing icon widget if possible
+        const existingChild = this.projectButton.get_child();
+        const isEmoji = this.currentIcon && this.currentIcon.startsWith('emoji:');
+
         let iconWidget;
-        if (this.currentIcon && this.currentIcon.startsWith('emoji:')) {
+
+        if (isEmoji) {
             const emoji = this.currentIcon.substring(6);
-            iconWidget = new Gtk.Label({
-                label: emoji,
-                css_classes: ['emoji-icon'],
-                halign: Gtk.Align.CENTER,
-                valign: Gtk.Align.CENTER
-            });
+            // Reuse existing label if it exists
+            if (existingChild instanceof Gtk.Label) {
+                existingChild.set_label(emoji);
+                iconWidget = existingChild;
+            } else {
+                iconWidget = new Gtk.Label({
+                    label: emoji,
+                    css_classes: ['emoji-icon'],
+                    halign: Gtk.Align.CENTER,
+                    valign: Gtk.Align.CENTER
+                });
+                this.projectButton.set_child(iconWidget);
+            }
         } else {
-            iconWidget = new Gtk.Image({
-                icon_name: this.currentIcon || null,
-                pixel_size: 20
-            });
+            // Reuse existing image if it exists
+            if (existingChild instanceof Gtk.Image) {
+                existingChild.set_from_icon_name(this.currentIcon || null);
+                existingChild.set_pixel_size(20);
+                iconWidget = existingChild;
+            } else {
+                iconWidget = new Gtk.Image({
+                    icon_name: this.currentIcon || null,
+                    pixel_size: 20
+                });
+                this.projectButton.set_child(iconWidget);
+            }
         }
         
         // Apply background color and icon color (same as project list)
@@ -181,8 +200,6 @@ export class ProjectDialog extends FormDialog {
             }`
         );
         this.projectButton.get_style_context().add_provider(this.cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
-        
-        this.projectButton.set_child(iconWidget);
     }
 
     _openProjectAppearanceDialog() {

@@ -10,7 +10,7 @@ import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/data/currencies
 import { AdvancedTrackingWidget } from 'resource:///com/odnoyko/valot/ui/components/complex/AdvancedTrackingWidget.js';
 import { MultipleTasksEditDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/MultipleTasksEditDialog.js';
 import { createRecoloredSVG } from 'resource:///com/odnoyko/valot/ui/utils/svgRecolor.js';
-import { Logger } from 'resource:///com/odnoyko/valot/core/utils/Logger.js';
+import { stringCache } from 'resource:///com/odnoyko/valot/ui/utils/StringCache.js';
 
 /**
  * Tasks management page
@@ -50,14 +50,9 @@ export class TasksPage {
         this.currentProjectId = 1;
         this.currentClientId = 1;
 
-        // Store event handler references for cleanup
-        this._eventHandlers = {};
-        
-        // Store GTK signal handler IDs for cleanup
-        this._signalHandlerIds = [];
-        
-        // Store widget handler connections for cleanup (widget -> handlerId)
-        this._widgetConnections = new Map();
+        // Cache for base time during tracking (to avoid DB query every second)
+        this._trackingBaseTime = 0;
+        this._trackingTaskInstance = null;
 
         // Subscribe to Core events for automatic updates
         this._subscribeToCore();
@@ -79,32 +74,42 @@ export class TasksPage {
      */
     _subscribeToCore() {
         if (!this.coreBridge) return;
+        // Reload tasks when tracking starts/stops (creates new time entries)
+        this.coreBridge.onUIEvent('tracking-started', async () => {
+            // CRITICAL: Cache base time ONCE to avoid DB query every second
+            this._trackingBaseTime = await this.coreBridge.getCurrentTaskOldTime();
+            const trackingState = this.coreBridge.getTrackingState();
+            this._trackingTaskInstance = trackingState.currentTaskInstanceId;
 
-        // Store handlers for cleanup
-        this._eventHandlers['tracking-started'] = async (data) => {
-            // OPTIMIZED: Add only new task without reloading all tasks
-            Logger.debug('[TasksPage] tracking-started event:', data);
-            if (data && data.taskInstanceId) {
-                await this._addSingleTask(data.taskInstanceId);
-                
-                // CRITICAL: Save base time for real-time updates (prevents accumulation)
-                const taskInstance = this.tasks.find(t => t.id === data.taskInstanceId);
-                if (taskInstance) {
-                    // Store base time when tracking starts (for real-time calculation)
-                    taskInstance._baseTimeOnStart = taskInstance.total_time || 0;
-                    Logger.info(`[TasksPage] Saved base time for ${data.taskInstanceId}: ${taskInstance._baseTimeOnStart}`);
-                    
-                    // Also update base time in stacks if task is in a stack
-                    for (const [stackId, stackTemplate] of this.taskTemplates.entries()) {
-                        if (stackTemplate.group && stackTemplate.group.tasks) {
-                            const taskInStack = stackTemplate.group.tasks.find(t => t.id === data.taskInstanceId);
-                            if (taskInStack) {
-                                taskInStack._baseTimeOnStart = taskInStack.total_time || 0;
-                                Logger.info(`[TasksPage] Saved base time for stack task ${data.taskInstanceId}: ${taskInStack._baseTimeOnStart}`);
-                            }
-                        }
-                    }
-                }
+            // Delay to ensure DB is updated
+            setTimeout(() => this.loadTasks(), 300);
+        });
+
+        this.coreBridge.onUIEvent('tracking-stopped', () => {
+            // Clear cached base time
+            this._trackingBaseTime = 0;
+            this._trackingTaskInstance = null;
+
+            this.loadTasks();
+        });
+
+        // Reload when tasks are created/updated
+        this.coreBridge.onUIEvent('task-created', () => {
+            this.loadTasks();
+        });
+
+        this.coreBridge.onUIEvent('task-updated', () => {
+            this.loadTasks();
+        });
+
+        // Real-time tracking updates (every second)
+        this.coreBridge.onUIEvent('tracking-updated', (data) => {
+            this._updateTrackingTimeDisplay();
+
+            // If task name, project, or client changed, reload full list
+            // Note: taskId and elapsedSeconds are sent every second, but we ignore them
+            if (data && (data.taskName || data.projectId !== undefined || data.clientId !== undefined)) {
+                this.loadTasks();
             } else {
                 Logger.debug('[TasksPage] tracking-started: No taskInstanceId in data');
             }
@@ -318,24 +323,68 @@ export class TasksPage {
     /**
      * Cleanup unused UI elements (called on destroy or when needed)
      */
-    _cleanupUnusedUI() {
-        // Cleanup old task templates that are no longer in use
-        if (this.taskTemplates && this.taskTemplates.size > 100) {
-            // Keep only templates for current page + some buffer
-            const currentTaskIds = new Set(
-                this.filteredTasks
-                    .slice(this.currentTasksPage * this.tasksPerPage, (this.currentTasksPage + 1) * this.tasksPerPage)
-                    .flatMap(t => 'id' in t ? [t.id] : t.tasks?.map(tt => tt.id) || [])
-            );
-            const templatesToRemove = [];
+    async _updateTrackingTimeDisplay() {
+        if (!this.coreBridge) return;
+
+        const trackingState = this.coreBridge.getTrackingState();
+        if (!trackingState.isTracking || !trackingState.currentTaskInstanceId) return;
+
+        // Find the task instance that is being tracked
+        const trackingTask = this.tasks.find(t =>
+            t.task_id === trackingState.currentTaskId &&
+            t.project_id === trackingState.currentProjectId &&
+            t.client_id === trackingState.currentClientId
+        );
+
+        if (!trackingTask) return;
+
+        try {
+            // CRITICAL FIX: Don't call _groupSimilarTasks() every second!
+            // It creates a NEW Map and objects every second!
+            // Instead, use cached taskTemplates map which already tracks tasks
             
-            this.taskTemplates.forEach((template, key) => {
-                const taskId = typeof key === 'string' && key.startsWith('stack:') 
-                    ? null // Keep stack templates
-                    : key;
-                
-                if (taskId && !currentTaskIds.has(taskId)) {
-                    templatesToRemove.push(key);
+            // CRITICAL FIX: Use cached base time instead of querying DB every second!
+            // Base time is cached when tracking starts, avoiding expensive DB queries
+            const currentElapsed = trackingState.elapsedSeconds || 0;
+            const totalTime = this._trackingBaseTime + currentElapsed;
+
+            // Use cached template instead of rebuilding groups (avoids creating new Map every second)
+            const taskTemplate = this.taskTemplates.get(trackingTask.id);
+            if (taskTemplate) {
+                const timeLabel = taskTemplate.getTimeLabel();
+                const moneyLabel = taskTemplate.getMoneyLabel();
+                const trackButton = taskTemplate.getTrackButton();
+
+                if (timeLabel) {
+                    // OPTIMIZED: Use cached string formatting to avoid creating new strings
+                    timeLabel.set_label(stringCache.getTimeStringWithIndicator(totalTime));
+                    timeLabel.remove_css_class('dim-label');
+                    if (!timeLabel.has_css_class('caption')) {
+                        timeLabel.add_css_class('caption');
+                    }
+
+                    // Update money
+                    if (moneyLabel && trackingTask.client_rate > 0) {
+                        const totalCost = (totalTime / 3600) * trackingTask.client_rate;
+                        const currencySymbol = getCurrencySymbol(trackingTask.client_currency || 'EUR');
+                        // OPTIMIZED: Use cached money string formatting
+                        moneyLabel.set_label(stringCache.getMoneyString(totalCost, currencySymbol));
+                        moneyLabel.set_visible(true);
+                        moneyLabel.remove_css_class('dim-label');
+                        if (!moneyLabel.has_css_class('caption')) {
+                            moneyLabel.add_css_class('caption');
+                        }
+                    }
+
+                    // OPTIMIZED: Only update icon if it's not already set
+                    // Calling set_icon_name() every second triggers GTK recoloring/snapshot!
+                    if (trackButton) {
+                        const currentIcon = trackButton.get_icon_name();
+                        if (currentIcon !== 'media-playback-stop-symbolic') {
+                            trackButton.set_icon_name('media-playback-stop-symbolic');
+                            trackButton.set_tooltip_text(_('Stop tracking'));
+                        }
+                    }
                 }
             });
             
@@ -801,7 +850,8 @@ export class TasksPage {
             // DISABLED: Time updates in TasksPage (only header widget shows time)
             // this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
 
-            // REMOVED: No timer needed
+            // Start UI update timer
+            this._subscribeToGlobalTimer();
         } else {
             // Tracking idle - KEEP task name in input (don't clear it)
             this.taskNameEntry.set_sensitive(true);
@@ -824,9 +874,6 @@ export class TasksPage {
             }
 
             this.actualTimeLabel.set_label('00:00:00');
-
-            // Stop UI update timer
-            // REMOVED: No timer to stop
         }
     }
 
@@ -864,15 +911,34 @@ export class TasksPage {
             this.trackingWidget._toggleTracking(pomodoroMode);
         }
     }
+    /**
+     * UI update timer - refreshes time display from Core
+     */
+    /**
+     * Subscribe to GlobalTimer for real-time tracking display
+     * CRITICAL FIX: Only subscribe once, prevent listener accumulation
+     */
+    _subscribeToGlobalTimer() {
+        // CRITICAL: Check if already subscribed to prevent memory leak
+        if (this._isSubscribedToGlobalTimer) {
+            console.log('[TasksPage] Already subscribed to GlobalTimer, skipping');
+            return;
+        }
 
-    // REMOVED: _startTrackingUITimer() and _stopTrackingUITimer()
-    // No separate timers needed - only header widget shows time
+        this._isSubscribedToGlobalTimer = true;
+
+        this.coreBridge.onUIEvent('tracking-updated', (data) => {
+            if (this.actualTimeLabel) {
+                this.actualTimeLabel.set_label(this._formatDuration(data.elapsedSeconds));
+            }
+        });
+
+        console.log('[TasksPage] Subscribed to GlobalTimer (once)');
+    }
 
     _formatDuration(seconds) {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        // OPTIMIZED: Use string cache to avoid creating new strings
+        return stringCache.getTimeString(seconds);
     }
 
     /**
@@ -1941,12 +2007,10 @@ export class TasksPage {
 
     /**
      * Format duration in HH:MM:SS format
+     * OPTIMIZED: Use string cache
      */
     _formatDurationHMS(seconds) {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        return stringCache.getTimeString(seconds);
     }
 
     /**

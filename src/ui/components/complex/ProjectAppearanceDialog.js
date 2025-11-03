@@ -141,79 +141,54 @@ export class ProjectAppearanceDialog {
     }
 
     _updateIconPreview() {
-        // Reuse existing icon widget or create it once
-        if (!this._iconPreviewWidget || this._iconPreviewWidget.is_destroyed?.()) {
-            // First creation: create widget once
-            if (!this.project.icon) {
-                // Empty icon - show placeholder icon
-                this._iconPreviewWidget = new Gtk.Image({
+        // OPTIMIZED: Reuse existing icon widget if possible
+        const existingChild = this.iconPreview.get_child();
+        const isEmoji = this.project.icon && this.project.icon.startsWith('emoji:');
+
+        let iconWidget;
+
+        if (!this.project.icon) {
+            // Empty icon - reuse existing image or create new
+            if (existingChild instanceof Gtk.Image) {
+                existingChild.set_from_icon_name('applications-graphics-symbolic');
+                existingChild.set_pixel_size(24);
+                existingChild.set_css_classes(['dim-label']);
+                iconWidget = existingChild;
+            } else {
+                iconWidget = new Gtk.Image({
                     icon_name: 'applications-graphics-symbolic',
                     pixel_size: 24,
                     css_classes: ['dim-label'],
                 });
-            } else if (this.project.icon.startsWith('emoji:')) {
-                const emoji = this.project.icon.substring(6);
-                this._iconPreviewWidget = new Gtk.Label({
+                this.iconPreview.set_child(iconWidget);
+            }
+        } else if (isEmoji) {
+            const emoji = this.project.icon.substring(6);
+            // Reuse existing label or create new
+            if (existingChild instanceof Gtk.Label) {
+                existingChild.set_label(emoji);
+                existingChild.set_css_classes(['emoji-preview']);
+                iconWidget = existingChild;
+            } else {
+                iconWidget = new Gtk.Label({
                     label: emoji,
                     css_classes: ['emoji-preview'],
                 });
+                this.iconPreview.set_child(iconWidget);
+            }
+        } else {
+            // Reuse existing image or create new
+            if (existingChild instanceof Gtk.Image) {
+                existingChild.set_from_icon_name(this.project.icon);
+                existingChild.set_pixel_size(24);
+                existingChild.set_css_classes([]);
+                iconWidget = existingChild;
             } else {
-                this._iconPreviewWidget = new Gtk.Image({
+                iconWidget = new Gtk.Image({
                     icon_name: this.project.icon,
                     pixel_size: 24,
                 });
-            }
-            this.iconPreview.set_child(this._iconPreviewWidget);
-        } else {
-            // Update existing widget instead of creating new one
-            const child = this.iconPreview.get_child();
-            if (child !== this._iconPreviewWidget) {
-                // Widget was replaced, restore reference
-                this._iconPreviewWidget = child;
-            }
-
-            // Update based on current icon type
-            if (!this.project.icon) {
-                // Empty icon - update placeholder
-                if (this._iconPreviewWidget instanceof Gtk.Image) {
-                    this._iconPreviewWidget.set_from_icon_name('applications-graphics-symbolic');
-                } else {
-                    // Type mismatch - recreate
-                    this._iconPreviewWidget = new Gtk.Image({
-                        icon_name: 'applications-graphics-symbolic',
-                        pixel_size: 24,
-                        css_classes: ['dim-label'],
-                    });
-                    this.iconPreview.set_child(this._iconPreviewWidget);
-                }
-            } else if (this.project.icon.startsWith('emoji:')) {
-                // Emoji icon
-                const emoji = this.project.icon.substring(6);
-                if (this._iconPreviewWidget instanceof Gtk.Label) {
-                    // Update existing emoji label
-                    this._iconPreviewWidget.set_label(emoji);
-                } else {
-                    // Type mismatch - recreate as label
-                    this._iconPreviewWidget = new Gtk.Label({
-                        label: emoji,
-                        css_classes: ['emoji-preview'],
-                    });
-                    this.iconPreview.set_child(this._iconPreviewWidget);
-                }
-            } else {
-                // Symbolic icon - update using set_from_icon_name (reuses widget, avoids snapshot)
-                if (this._iconPreviewWidget instanceof Gtk.Image) {
-                    this._iconPreviewWidget.set_from_icon_name(this.project.icon);
-                    // Remove dim-label class if it exists (from placeholder)
-                    this._iconPreviewWidget.remove_css_class('dim-label');
-                } else {
-                    // Type mismatch - recreate as image
-                    this._iconPreviewWidget = new Gtk.Image({
-                        icon_name: this.project.icon,
-                        pixel_size: 24,
-                    });
-                    this.iconPreview.set_child(this._iconPreviewWidget);
-                }
+                this.iconPreview.set_child(iconWidget);
             }
         }
     }

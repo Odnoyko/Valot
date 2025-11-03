@@ -57,7 +57,7 @@
                 {
                     "type" : "git",
                     "url" : "https://gitlab.com/Valo27/valot.git",
-                    "tag" : "v0.9.1 beta 3"
+                    "tag" : "v0.9.1 beta 4"
                 }
             ]
         }

@@ -17,8 +17,6 @@ export class HeaderTrackingWidget {
         this.parentWindow = config.parentWindow;
         this.coreBridge = config.coreBridge;
 
-        // REMOVED: updateTimerToken - no longer using separate timers
-
         // Pomodoro configuration
         this.pomodoroDuration = 1200; // Default 20 minutes in seconds
         this.pomodoroActivated = false; // Flag to prevent click after long press
@@ -167,69 +165,37 @@ export class HeaderTrackingWidget {
                 this.projectBtn.set_sensitive(false);
                 this.clientBtn.set_sensitive(false);
 
-                // OPTIMIZED: Only update button if Pomodoro mode changed
-                const isPomodoroMode = state.pomodoroMode || false;
-                const iconName = 'media-playback-stop-symbolic';
-                
-                // Update icon only if changed (prevents unnecessary redraws)
-                if (this._cachedIconName !== iconName) {
-                    this.trackBtn.set_icon_name(iconName);
-                    this._cachedIconName = iconName;
-                }
-                
-                if (this._cachedPomodoroMode !== isPomodoroMode) {
-                    if (isPomodoroMode) {
-                        const tooltipText = _('Stop Pomodoro');
-                        if (this._cachedTooltipText !== tooltipText) {
-                            this.trackBtn.set_tooltip_text(tooltipText);
-                            this._cachedTooltipText = tooltipText;
-                        }
-                        // Update CSS classes only if needed
-                        if (this.trackBtn.has_css_class('suggested-action')) {
-                            this.trackBtn.remove_css_class('suggested-action');
-                        }
-                        if (this.trackBtn.has_css_class('destructive-action')) {
-                            this.trackBtn.remove_css_class('destructive-action');
-                        }
-                        if (!this.trackBtn.has_css_class('pomodoro-active')) {
-                            this.trackBtn.add_css_class('pomodoro-active');
-                        }
-                    } else {
-                        const tooltipText = _('Stop tracking');
-                        if (this._cachedTooltipText !== tooltipText) {
-                            this.trackBtn.set_tooltip_text(tooltipText);
-                            this._cachedTooltipText = tooltipText;
-                        }
-                        // Update CSS classes only if needed
-                        if (this.trackBtn.has_css_class('pomodoro-active')) {
-                            this.trackBtn.remove_css_class('pomodoro-active');
-                        }
-                        if (!this.trackBtn.has_css_class('destructive-action')) {
-                            this.trackBtn.add_css_class('destructive-action');
-                        }
+                // Pomodoro mode UI
+                if (state.pomodoroMode) {
+                    // OPTIMIZED: Only update icon if needed
+                    if (this.trackBtn.get_icon_name() !== 'media-playback-stop-symbolic') {
+                        this.trackBtn.set_icon_name('media-playback-stop-symbolic');
                     }
-                    this._cachedPomodoroMode = isPomodoroMode;
-                }
+                    this.trackBtn.set_tooltip_text(_('Stop Pomodoro'));
+                    this.trackBtn.remove_css_class('suggested-action');
+                    this.trackBtn.remove_css_class('destructive-action');
+                    this.trackBtn.add_css_class('pomodoro-active');
 
-                // Show initial time (will be updated by timer events)
-                // OPTIMIZED: Only set if changed
-                if (isPomodoroMode) {
+                    // Show countdown time
                     const remaining = state.pomodoroRemaining || 0;
-                    const timeText = '🍅 ' + this._formatDuration(remaining, true);
-                    if (this._cachedTimeText !== timeText) {
-                        this.timeLabel.set_label(timeText);
-                        this._cachedTimeText = timeText;
-                    }
+                    this.timeLabel.set_label('🍅 ' + this._formatDuration(remaining, true));
                 } else {
-                    const timeText = this._formatDuration(state.elapsedSeconds);
-                    if (this._cachedTimeText !== timeText) {
-                        this.timeLabel.set_label(timeText);
-                        this._cachedTimeText = timeText;
+                    // Normal tracking mode
+                    // OPTIMIZED: Only update icon if needed
+                    if (this.trackBtn.get_icon_name() !== 'media-playback-stop-symbolic') {
+                        this.trackBtn.set_icon_name('media-playback-stop-symbolic');
                     }
+                    this.trackBtn.set_tooltip_text(_('Stop tracking'));
+                    this.trackBtn.remove_css_class('suggested-action');
+                    this.trackBtn.remove_css_class('pomodoro-active');
+                    this.trackBtn.add_css_class('destructive-action');
+
+                    // Update time display
+                    this.timeLabel.set_label(this._formatDuration(state.elapsedSeconds));
                 }
 
-                // DISABLED: No timer - use tracking-updated events instead
-                // this._startUIUpdateTimer();
+                // Start UI update timer
+                this._subscribeToGlobalTimer();
             } else {
                 // Update UI to idle mode
                 this.taskButton.set_label(_('Select task...'));
@@ -237,41 +203,20 @@ export class HeaderTrackingWidget {
                 this.projectBtn.set_sensitive(true);
                 this.clientBtn.set_sensitive(true);
 
-                // OPTIMIZED: Only update if changed
-                if (this._cachedPomodoroMode !== false) {
-                    this._cachedPomodoroMode = false;
+                // OPTIMIZED: Only update icon if needed
+                if (this.trackBtn.get_icon_name() !== 'media-playback-start-symbolic') {
+                    this.trackBtn.set_icon_name('media-playback-start-symbolic');
+                    this.trackBtn.set_tooltip_text(_('Start tracking (Long press or P for Pomodoro)'));
                 }
-                
-                const iconName = 'media-playback-start-symbolic';
-                if (this._cachedIconName !== iconName) {
-                    this.trackBtn.set_icon_name(iconName);
-                    this._cachedIconName = iconName;
-                }
-                
-                const tooltipText = _('Start tracking (Long press or P for Pomodoro)');
-                if (this._cachedTooltipText !== tooltipText) {
-                    this.trackBtn.set_tooltip_text(tooltipText);
-                    this._cachedTooltipText = tooltipText;
-                }
-                
-                // Update CSS classes only if needed
-                if (this.trackBtn.has_css_class('destructive-action')) {
-                    this.trackBtn.remove_css_class('destructive-action');
-                }
-                if (this.trackBtn.has_css_class('pomodoro-active')) {
-                    this.trackBtn.remove_css_class('pomodoro-active');
-                }
-                if (!this.trackBtn.has_css_class('suggested-action')) {
-                    this.trackBtn.add_css_class('suggested-action');
-                }
+                this.trackBtn.remove_css_class('destructive-action');
+                this.trackBtn.remove_css_class('pomodoro-active');
+                this.trackBtn.add_css_class('suggested-action');
 
                 const timeText = '00:00:00';
                 if (this._cachedTimeText !== timeText) {
                     this.timeLabel.set_label(timeText);
                     this._cachedTimeText = timeText;
                 }
-
-                // REMOVED: No timer to stop
             }
         } catch (error) {
             Logger.error('[HeaderTrackingWidget] Error updating UI from Core:', error);
@@ -374,8 +319,35 @@ export class HeaderTrackingWidget {
         }
     }
 
-    // REMOVED: _startUIUpdateTimer() and _stopUIUpdateTimer()
-    // No separate timers needed - listen to Core TRACKING_UPDATED events instead
+    /**
+     * Subscribe to GlobalTimer for real-time UI updates
+     * CRITICAL FIX: Only subscribe once, prevent listener accumulation
+     */
+    _subscribeToGlobalTimer() {
+        // CRITICAL: Check if already subscribed to prevent memory leak
+        if (this._isSubscribedToGlobalTimer) {
+            console.log('[HeaderTrackingWidget] Already subscribed to GlobalTimer, skipping');
+            return;
+        }
+
+        this._isSubscribedToGlobalTimer = true;
+
+        // Listen to TRACKING_UPDATED events (emitted by GlobalTimer via TimeTrackingService)
+        this.coreBridge.onUIEvent('tracking-updated', (data) => {
+            const state = this.coreBridge.getTrackingState();
+            if (state.isTracking) {
+                // Update time display based on mode
+                if (state.pomodoroMode) {
+                    const remaining = state.pomodoroRemaining || 0;
+                    this.timeLabel.set_label('🍅 ' + this._formatDuration(remaining, true));
+                } else {
+                    this.timeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+                }
+            }
+        });
+
+        console.log('[HeaderTrackingWidget] Subscribed to GlobalTimer (once)');
+    }
 
     _formatDuration(seconds, useShortFormat = false) {
         const hours = Math.floor(seconds / 3600);
@@ -502,15 +474,6 @@ export class HeaderTrackingWidget {
     }
 
     cleanup() {
-        // Unsubscribe from CoreBridge events
-        if (this.coreBridge && this._coreEventHandlers) {
-            Object.keys(this._coreEventHandlers).forEach(event => {
-                this.coreBridge.offUIEvent(event, this._coreEventHandlers[event]);
-            });
-            this._coreEventHandlers = {};
-        }
-
-        // REMOVED: No timer to stop
         if (this.pomodoroConfigMonitor) {
             this.pomodoroConfigMonitor.cancel();
             this.pomodoroConfigMonitor = null;
