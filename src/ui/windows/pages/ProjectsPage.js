@@ -32,6 +32,10 @@ export class ProjectsPage {
         this.projectRowMap = new Map(); // projectId -> Gtk.ListBoxRow
         this._cssProviders = new Map(); // settingsButton -> CssProvider (for cleanup)
 
+        // Track currently tracked project for real-time time updates
+        this._trackingProjectId = null;
+        this._trackingProjectBaseTime = 0;
+        
         // Track last tracking project to reset its time when switching
         this.lastTrackingProjectId = null;
         
@@ -60,15 +64,67 @@ export class ProjectsPage {
         if (!this.coreBridge) return;
 
         // Store handlers for cleanup
-        this._eventHandlers['tracking-started'] = () => {
+        this._eventHandlers['tracking-started'] = (data) => {
             // OPTIMIZED: Don't reload projects - tracking doesn't change project list
             // Reloading creates new objects every time, causing RAM growth
+            // CRITICAL: Save base time for tracked project to add elapsed seconds to it
+            if (data && data.projectId) {
+                const project = this.projects.find(p => p.id === data.projectId);
+                if (project) {
+                    // Store base time before tracking started
+                    this._trackingProjectBaseTime = project.total_time || 0;
+                    this._trackingProjectId = data.projectId;
+                }
+            }
         };
         this._eventHandlers['tracking-stopped'] = () => {
             // OPTIMIZED: Don't reload projects - stopping tracking doesn't change projects
+            // Clear tracking state
+            this._trackingProjectId = null;
+            this._trackingProjectBaseTime = 0;
         };
-        // DISABLED: tracking-updated handler removed - causes RAM growth
-        // Handler was empty but still registered, causing unnecessary processing
+        // OPTIMIZED: tracking-updated handler for real-time project time updates
+        // Only updates time label, no object creation, no DB queries
+        this._eventHandlers['tracking-updated'] = (data) => {
+            if (!data) return;
+            
+            // Check if project changed during tracking
+            if (data.projectId !== undefined && data.projectId !== this._trackingProjectId) {
+                console.log('[ProjectsPage] Project changed during tracking, reloading to get updated times');
+                // CRITICAL: Clear tracking state before reload to prevent reset in loadProjects()
+                this._trackingProjectId = null;
+                this._trackingProjectBaseTime = 0;
+                
+                // Reload projects to get updated total_time after old time entry was saved
+                // Then set new tracking project
+                this.loadProjects().then(() => {
+                    const newProject = this.projects.find(p => p.id === data.projectId);
+                    if (newProject) {
+                        // Set new tracking project and base time
+                        this._trackingProjectId = data.projectId;
+                        this._trackingProjectBaseTime = newProject.total_time || 0;
+                        console.log(`[ProjectsPage] Now tracking project ${data.projectId}, base time: ${this._trackingProjectBaseTime}s`);
+                    }
+                }).catch(err => {
+                    console.error('[ProjectsPage] Error reloading projects after project change:', err);
+                });
+                return; // Exit - will update after reload
+            }
+            
+            // CRITICAL: Early return if not tracking or no elapsed seconds
+            if (!this._trackingProjectId || data.elapsedSeconds === undefined) {
+                return;
+            }
+            
+            // OPTIMIZED: Update only time label for currently tracked project
+            // No getTrackingState() call, no object creation, just update label text
+            const timeLabel = this.projectTimeLabels.get(this._trackingProjectId);
+            if (timeLabel && !timeLabel.is_destroyed?.()) {
+                // Calculate current total time: base time + elapsed seconds
+                const currentTotal = (this._trackingProjectBaseTime || 0) + data.elapsedSeconds;
+                timeLabel.set_label(this._formatDurationHMS(currentTotal));
+            }
+        };
         this._eventHandlers['task-updated'] = () => {
             this.loadProjects();
         };
@@ -583,6 +639,23 @@ export class ProjectsPage {
             
             // Clear cached project times when reloading
             this._cachedProjectBaseTimes = null;
+            
+            // CRITICAL: Restore tracking state after reload
+            // If tracking is active, update base time for tracked project
+            if (this._trackingProjectId) {
+                const trackingState = this.coreBridge.getTrackingState();
+                if (trackingState && trackingState.isTracking && trackingState.currentProjectId === this._trackingProjectId) {
+                    const trackedProject = this.projects.find(p => p.id === this._trackingProjectId);
+                    if (trackedProject) {
+                        // Recalculate base time: current total - elapsed seconds
+                        this._trackingProjectBaseTime = (trackedProject.total_time || 0) - (trackingState.elapsedSeconds || 0);
+                    }
+                } else {
+                    // Tracking stopped or changed - clear state
+                    this._trackingProjectId = null;
+                    this._trackingProjectBaseTime = 0;
+                }
+            }
             
             this._updateProjectsDisplay();
         } catch (error) {

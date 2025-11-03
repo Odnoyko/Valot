@@ -53,23 +53,23 @@ export class ProjectDropdown {
 
     /**
      * Cleanup: unsubscribe from events
+     * CRITICAL: Must unparent popover BEFORE button is finalized
      */
     destroy() {
-        // Close and destroy popover before destroying button
+        // FIRST: Close and unparent popover from button (prevents GTK warnings)
         if (this.popover) {
             try {
                 if (!this.popover.is_destroyed?.()) {
                     this.popover.popdown();
+                    // CRITICAL: Unparent FIRST to detach from button before any destruction
                     this.popover.unparent();
-                    this.popover.destroy();
                 }
             } catch (e) {
-                // Popover may already be destroyed
+                // Popover may already be destroyed or unparented
             }
-            this.popover = null;
         }
         
-        // Destroy button
+        // SECOND: Destroy button (now safe, popover is detached)
         if (this.dropdownButton) {
             try {
                 if (!this.dropdownButton.is_destroyed?.()) {
@@ -79,6 +79,18 @@ export class ProjectDropdown {
                 // Button may already be destroyed
             }
             this.dropdownButton = null;
+        }
+        
+        // THIRD: Now destroy popover widget itself
+        if (this.popover) {
+            try {
+                if (!this.popover.is_destroyed?.()) {
+                    this.popover.destroy();
+                }
+            } catch (e) {
+                // Popover may already be destroyed
+            }
+            this.popover = null;
         }
         
         // Unsubscribe from events

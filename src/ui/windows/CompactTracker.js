@@ -115,6 +115,16 @@ export const ValotCompactTracker = GObject.registerClass({
             this.set_visible(false);
             return true; // Prevent actual close
         });
+        
+        // Cleanup when window is hidden (save resources)
+        this.connect('hide', () => {
+            this.cleanup();
+        });
+        
+        // Resubscribe when window is shown again
+        this.connect('show', () => {
+            this._resubscribe();
+        });
 
         // Cleanup when window is destroyed
         this.connect('destroy', () => {
@@ -132,6 +142,34 @@ export const ValotCompactTracker = GObject.registerClass({
             });
             this._eventHandlers = {};
         }
+    }
+    
+    /**
+     * Resubscribe to events when window is shown again
+     */
+    _resubscribe() {
+        // Recreate event handlers if they were cleaned up
+        if (!this._eventHandlers || Object.keys(this._eventHandlers).length === 0) {
+            this._eventHandlers = {
+                'tracking-started': (data) => {
+                    this._onTrackingStarted(data);
+                },
+                'tracking-stopped': (data) => {
+                    this._onTrackingStopped(data);
+                },
+                'tracking-updated': (data) => {
+                    this._onTrackingUpdated(data);
+                }
+            };
+            
+            // Subscribe to tracking events
+            Object.keys(this._eventHandlers).forEach(event => {
+                this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
+            });
+        }
+        
+        // Load current state
+        this._loadState();
     }
 
     /**

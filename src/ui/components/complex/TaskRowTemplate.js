@@ -2,6 +2,7 @@ import Gtk from 'gi://Gtk';
 import Gdk from 'gi://Gdk';
 import Adw from 'gi://Adw';
 import { WidgetFactory } from 'resource:///com/odnoyko/valot/ui/utils/widgetFactory.js';
+import { DurationAnimator } from 'resource:///com/odnoyko/valot/ui/utils/DurationAnimator.js';
 
 /**
  * Template component for individual task rows
@@ -212,9 +213,19 @@ export class TaskRowTemplate {
         const baseTime = this.task._baseTimeOnStart !== undefined ? this.task._baseTimeOnStart : (this.task.total_time || 0);
         const currentTotal = baseTime + elapsedSeconds;
         
-        // Update time label text with green dot (always tracking when this is called)
-        const timeText = '● ' + this._formatDuration(currentTotal);
-        this.timeLabel.set_text(timeText);
+        // Create animator if not exists (for when task starts tracking mid-session)
+        if (!this.durationAnimator && this.timeLabel) {
+            this.durationAnimator = new DurationAnimator(this.timeLabel, '● ');
+        }
+        
+        // Update via animator (smooth, with pulse effect on every second)
+        if (this.durationAnimator) {
+            this.durationAnimator.setDirect(currentTotal);
+        } else {
+            // Fallback to direct update if animator not available
+            const timeText = '● ' + this._formatDuration(currentTotal);
+            this.timeLabel.set_text(timeText);
+        }
         
         // Ensure green dot is visible (remove dim-label)
         if (this.timeLabel.has_css_class('dim-label')) {
@@ -302,21 +313,32 @@ export class TaskRowTemplate {
 
         // Update time label (remove/add green dot and dim-label)
         if (this.timeLabel) {
-            let timeText = '';
             if (isCurrentlyTracking) {
-                timeText = '● ' + this._formatDuration(this.task.total_time);
+                // Create animator with green dot prefix if starting tracking
+                if (!this.durationAnimator) {
+                    this.durationAnimator = new DurationAnimator(this.timeLabel, '● ');
+                    // Animate from current total_time to current total_time (will show with glitch effect)
+                    // Pass fromSeconds = current time to initialize animator properly
+                    this.durationAnimator.animateTo(this.task.total_time, true, this.task.total_time);
+                }
                 // Remove dim-label to show green color
                 if (this.timeLabel.has_css_class('dim-label')) {
                     this.timeLabel.remove_css_class('dim-label');
                 }
             } else {
-                timeText = this._formatDuration(this.task.total_time);
+                // Cleanup animator when stopping tracking
+                if (this.durationAnimator) {
+                    this.durationAnimator.destroy();
+                    this.durationAnimator = null;
+                }
+                // Set text without animator (not tracking)
+                const timeText = this._formatDuration(this.task.total_time);
+                this.timeLabel.set_text(timeText);
                 // Add dim-label if not tracking
                 if (!this.timeLabel.has_css_class('dim-label')) {
                     this.timeLabel.add_css_class('dim-label');
                 }
             }
-            this.timeLabel.set_text(timeText);
         }
         
         // CRITICAL: Update money label (currency) based on tracking state
@@ -452,6 +474,12 @@ export class TaskRowTemplate {
      * Cleanup: destroy widget and clear references to free RAM
      */
     destroy() {
+        // Cleanup duration animator
+        if (this.durationAnimator) {
+            this.durationAnimator.destroy();
+            this.durationAnimator = null;
+        }
+        
         if (this.widget) {
             try {
                 if (typeof this.widget.destroy === 'function') {

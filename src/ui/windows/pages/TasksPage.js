@@ -237,6 +237,17 @@ export class TasksPage {
                 return;
             }
             
+            // CRITICAL: Check if task name, project or client changed
+            // If changed - reload tasks list to show updated information
+            if (data.taskName !== undefined || data.projectId !== undefined || data.clientId !== undefined) {
+                console.log('[TasksPage] Task/Project/Client updated during tracking, reloading task list');
+                // Reload task list to reflect changes
+                this.loadTasks().catch(err => {
+                    console.error('[TasksPage] Error reloading tasks after tracking update:', err);
+                });
+                return; // Exit early - loadTasks() will refresh everything
+            }
+            
             // OPTIMIZED: Extract primitives immediately, don't store data object reference
             const taskId = data.taskId;
             const elapsedSeconds = data.elapsedSeconds;
@@ -539,7 +550,8 @@ export class TasksPage {
     onHide() {
         // REMOVED: No timer to stop
         
-        // Cleanup tracking widget subscriptions
+        // Cleanup tracking widget subscriptions to prevent multiple subscriptions
+        // Widget will resubscribe in refresh() when page becomes visible again
         if (this.trackingWidget && typeof this.trackingWidget.cleanup === 'function') {
             this.trackingWidget.cleanup();
         }

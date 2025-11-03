@@ -202,6 +202,11 @@ export class TaskInstanceEditDialog {
         // Update dialog heading
         this.dialog.heading = _('Edit Task ');
 
+        // Reset duration animator for fresh start (prevents animation from previous task's value)
+        if (this.durationAnimator) {
+            this.durationAnimator.reset();
+        }
+
         // Update duration label
         if (this.durationLabel) {
             // For actively tracked tasks: calculate elapsed time from startDate
@@ -803,8 +808,11 @@ export class TaskInstanceEditDialog {
             const elapsedMs = now - this.startDate.getTime();
             const elapsedSeconds = Math.floor(elapsedMs / 1000);
             // Animate duration change (smooth transition with pulse)
+            // FROM current displayed value TO new calculated value
             if (this.durationAnimator) {
-                this.durationAnimator.animateTo(elapsedSeconds, true);
+                const currentSeconds = this.durationAnimator.getCurrentSeconds();
+                // Animate from current displayed time to new time (smooth transition without jumps)
+                this.durationAnimator.animateTo(elapsedSeconds, true, currentSeconds);
             }
         } else {
             this.durationLabel.set_label(TimeUtils.formatDuration(validated.duration));
@@ -1369,18 +1377,25 @@ export class TaskInstanceEditDialog {
                     const newStartTime = TimeUtils.formatTimestampForDB(this.startDate);
                     console.log('[TaskInstanceEditDialog] Updating ACTIVE entry start_time to:', newStartTime);
                     
+                    // CRITICAL: Calculate NEW elapsed time BEFORE saving (this will be the target for animation)
+                    const now = Date.now();
+                    const newElapsedMs = now - this.startDate.getTime();
+                    const newElapsedSeconds = Math.floor(newElapsedMs / 1000);
+                    const currentDisplayedSeconds = this.durationAnimator ? this.durationAnimator.getCurrentSeconds() : newElapsedSeconds;
+                    
+                    console.log('[TaskInstanceEditDialog] Save animation: FROM', currentDisplayedSeconds, 'TO', newElapsedSeconds);
+                    
                     await this.coreBridge.updateTimeEntry(this.latestEntry.id, {
                         start_time: newStartTime,
                         // Do NOT set end_time or duration - entry stays active
                     });
                     
-                    // Update Duration label immediately (with animation)
+                    // Update Duration label immediately with smooth animation
+                    // FROM current displayed value TO new calculated value (based on new startTime)
+                    // This ensures smooth transition before Global timer resumes
                     if (this.durationAnimator) {
-                        const now = Date.now();
-                        const elapsedMs = now - this.startDate.getTime();
-                        const elapsedSeconds = Math.floor(elapsedMs / 1000);
-                        // Animate to new duration after save (with pulse effect)
-                        this.durationAnimator.animateTo(elapsedSeconds, true);
+                        // Animate from current displayed time to NEW time (smooth, no jumps)
+                        this.durationAnimator.animateTo(newElapsedSeconds, true, currentDisplayedSeconds);
                     }
                     
                     // Don't update total_time - active entry is excluded from it

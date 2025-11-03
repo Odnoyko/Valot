@@ -540,9 +540,15 @@ export class TimeTrackingService extends BaseService {
             currentTaskName: newName,
         });
 
+        // Calculate elapsed seconds for UI update
+        const elapsedSeconds = this._cachedStartTimestamp 
+            ? Math.floor((Date.now() - this._cachedStartTimestamp) / 1000)
+            : 0;
+
         this.events.emit(CoreEvents.TRACKING_UPDATED, {
             taskId: newTask.id,
             taskName: newName,
+            elapsedSeconds: elapsedSeconds,
         });
     }
 
@@ -568,9 +574,16 @@ export class TimeTrackingService extends BaseService {
             currentClientId: clientId,
         });
 
+        // Calculate elapsed seconds for UI update
+        const elapsedSeconds = this._cachedStartTimestamp 
+            ? Math.floor((Date.now() - this._cachedStartTimestamp) / 1000)
+            : 0;
+
         this.events.emit(CoreEvents.TRACKING_UPDATED, {
+            taskId: tracking.currentTaskId,
             projectId: projectId,
             clientId: clientId,
+            elapsedSeconds: elapsedSeconds,
         });
     }
 

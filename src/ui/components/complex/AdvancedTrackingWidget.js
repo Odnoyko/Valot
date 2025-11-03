@@ -19,6 +19,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import { ProjectDropdown } from 'resource:///com/odnoyko/valot/ui/utils/projectDropdown.js';
 import { ClientDropdown } from 'resource:///com/odnoyko/valot/ui/utils/clientDropdown.js';
+import { DurationAnimator } from 'resource:///com/odnoyko/valot/ui/utils/DurationAnimator.js';
 
 export class AdvancedTrackingWidget {
     constructor(coreBridge, parentWindow) {
@@ -113,6 +114,9 @@ export class AdvancedTrackingWidget {
             margin_start: 8,
         });
         box.append(this.actualTimeLabel);
+        
+        // Duration animator for smooth time transitions
+        this.durationAnimator = new DurationAnimator(this.actualTimeLabel);
 
         // Track button
         this.trackButton = new Gtk.Button({
@@ -303,8 +307,7 @@ export class AdvancedTrackingWidget {
                 this._cachedPomodoroMode = state.pomodoroMode;  // Fixed: use state.pomodoroMode instead of undefined isPomodoroMode
             }
 
-            // Subscribe to GlobalTimer for UI updates
-            this._subscribeToGlobalTimer();
+            // Already subscribed to tracking-updated in _connectToCore()
         } else {
             // Tracking idle - KEEP task name in input (don't clear it)
             this.taskNameEntry.set_sensitive(true);
@@ -344,6 +347,12 @@ export class AdvancedTrackingWidget {
         this._cachedTimeText = '';
         this._cachedIconName = '';
         this._cachedTooltipText = '';
+        
+        // Animate duration from 0 to initial value (smooth start)
+        if (this.durationAnimator && data && data.elapsedSeconds !== undefined) {
+            // Start animation from 0 (fresh start) to current elapsed time
+            this.durationAnimator.animateTo(data.elapsedSeconds, true, 0);
+        }
         
         // Force full UI refresh to synchronize with current state
         this._updateUIFromCore();
@@ -402,20 +411,18 @@ export class AdvancedTrackingWidget {
             return;
         }
         
-        if (data && this.actualTimeLabel) {
-            let newTimeText = '';
+        if (data && this.actualTimeLabel && this.durationAnimator) {
             if (data.pomodoroRemaining !== undefined && data.pomodoroRemaining > 0) {
-                // Pomodoro mode - show remaining time
-                newTimeText = '🍅 ' + this._formatDuration(data.pomodoroRemaining, true);
+                // Pomodoro mode - show remaining time (direct update, no animation for countdown)
+                const newTimeText = '🍅 ' + this._formatDuration(data.pomodoroRemaining, true);
+                if (newTimeText !== this._cachedTimeText) {
+                    this.actualTimeLabel.set_label(newTimeText);
+                    this._cachedTimeText = newTimeText;
+                }
             } else if (data.elapsedSeconds !== undefined) {
-                // Normal tracking mode - show elapsed time
-                newTimeText = this._formatDuration(data.elapsedSeconds);
-            }
-            
-            // OPTIMIZED: Only update label if text actually changed
-            if (newTimeText && newTimeText !== this._cachedTimeText) {
-                this.actualTimeLabel.set_label(newTimeText);
-                this._cachedTimeText = newTimeText;
+                // Normal tracking mode - use animator for smooth updates (with pulse on regular ticks)
+                this.durationAnimator.setDirect(data.elapsedSeconds);
+                this._cachedTimeText = this._formatDuration(data.elapsedSeconds);
             }
         }
 
@@ -433,17 +440,17 @@ export class AdvancedTrackingWidget {
             }
         }
 
-        // DISABLED: Project/client updates in tracking-updated handler
-        // These updates should happen only on tracking-started, not every second
-        // if (data && data.projectId !== undefined && data.projectId !== this.currentProjectId && this.projectDropdown) {
-        //     this.currentProjectId = data.projectId;
-        //     this.projectDropdown.setCurrentProject(data.projectId);
-        // }
-        // 
-        // if (data && data.clientId !== undefined && data.clientId !== this.currentClientId && this.clientDropdown) {
-        //     this.currentClientId = data.clientId;
-        //     this.clientDropdown.setSelectedClient(data.clientId);
-        // }
+        // Project/client updates when changed during tracking
+        // Only update if actually changed to prevent unnecessary redraws
+        if (data && data.projectId !== undefined && data.projectId !== this.currentProjectId && this.projectDropdown) {
+            this.currentProjectId = data.projectId;
+            this.projectDropdown.setCurrentProject(data.projectId);
+        }
+        
+        if (data && data.clientId !== undefined && data.clientId !== this.currentClientId && this.clientDropdown) {
+            this.currentClientId = data.clientId;
+            this.clientDropdown.setSelectedClient(data.clientId);
+        }
     }
 
     async _toggleTracking(pomodoroMode = false) {
@@ -541,35 +548,9 @@ export class AdvancedTrackingWidget {
             console.error('[AdvancedTrackingWidget] Error updating tracking context:', error);
         }
     }
-    /**
-     * Subscribe to GlobalTimer ticks for real-time UI updates
-     * CRITICAL FIX: Only subscribe once, prevent listener accumulation
-     */
-    _subscribeToGlobalTimer() {
-        // CRITICAL: Check if already subscribed to prevent memory leak
-        if (this._isSubscribedToGlobalTimer) {
-            console.log('[AdvancedTrackingWidget] Already subscribed to GlobalTimer, skipping');
-            return;
-        }
-
-        this._isSubscribedToGlobalTimer = true;
-
-        // Listen to TRACKING_UPDATED events (which are now emitted by GlobalTimer via TimeTrackingService)
-        this.coreBridge.onUIEvent('tracking-updated', (data) => {
-            const state = this.coreBridge?.getTrackingState();
-            if (state && state.isTracking) {
-                // Update time display based on mode
-                if (state.pomodoroMode) {
-                    const remaining = state.pomodoroRemaining || 0;
-                    this.actualTimeLabel.set_label('🍅 ' + this._formatDuration(remaining, true));
-                } else {
-                    this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-                }
-            }
-        });
-
-        console.log('[AdvancedTrackingWidget] Subscribed to GlobalTimer (once)');
-    }
+    // REMOVED: _subscribeToGlobalTimer() - duplicate subscription
+    // Already subscribed to 'tracking-updated' in _connectToCore()
+    // via _coreEventHandlers, which calls _onTrackingUpdated(data)
     _formatDuration(seconds, useShortFormat = false) {
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
@@ -590,8 +571,13 @@ export class AdvancedTrackingWidget {
     /**
      * Force refresh UI from Core state
      * Call this when page becomes visible to synchronize
+     * CRITICAL: Resubscribe if cleanup() was called (page was hidden)
      */
     refresh() {
+        // Resubscribe to Core events if we were cleaned up
+        if (!this._coreEventHandlers || Object.keys(this._coreEventHandlers).length === 0) {
+            this._connectToCore();
+        }
         this._updateUIFromCore();
     }
 
@@ -652,6 +638,14 @@ export class AdvancedTrackingWidget {
     }
 
     cleanup() {
+        // CRITICAL: Unsubscribe from Core events to prevent memory leaks
+        if (this.coreBridge && this._coreEventHandlers) {
+            Object.keys(this._coreEventHandlers).forEach(event => {
+                this.coreBridge.offUIEvent(event, this._coreEventHandlers[event]);
+            });
+            this._coreEventHandlers = {};
+        }
+        
         if (this.taskNameDebounceTimer) {
             GLib.Source.remove(this.taskNameDebounceTimer);
             this.taskNameDebounceTimer = null;
@@ -659,6 +653,11 @@ export class AdvancedTrackingWidget {
         if (this.pomodoroConfigMonitor) {
             this.pomodoroConfigMonitor.cancel();
             this.pomodoroConfigMonitor = null;
+        }
+        // Cleanup duration animator
+        if (this.durationAnimator) {
+            this.durationAnimator.destroy();
+            this.durationAnimator = null;
         }
     }
 }
