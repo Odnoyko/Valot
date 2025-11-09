@@ -3,6 +3,8 @@ import Adw from 'gi://Adw?version=1';
 import Gdk from 'gi://Gdk';
 import GLib from 'gi://GLib';
 import { AdvancedTrackingWidget } from 'resource:///com/odnoyko/valot/ui/components/complex/AdvancedTrackingWidget.js';
+import { TaskRowTemplate } from 'resource:///com/odnoyko/valot/ui/components/complex/TaskRowTemplate.js';
+import { TaskStackTemplate } from 'resource:///com/odnoyko/valot/ui/components/complex/TaskStackTemplate.js';
 import { getCurrencySymbol } from 'resource:///com/odnoyko/valot/data/currencies.js';
 import { ReportExporter } from 'resource:///com/odnoyko/valot/ui/utils/export/reportExporter.js';
 import { PDFExportPreferencesDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/PDFExportPreferencesDialog.js';
@@ -39,6 +41,13 @@ export class ReportsPage {
         // Store widget handler connections for cleanup (widget -> handlerId)
         this._widgetConnections = new Map();
 
+        // COPIED FROM TasksPage: Template tracking for real-time updates
+        this.taskTemplates = new Map(); // taskInstanceId -> template instance
+        
+        // Tracked widgets/templates for cleanup (inline ListRenderService logic)
+        this._trackedWidgets = new Map(); // key -> widget
+        this._trackedTemplates = new Map(); // key -> template
+
         // Maximum cache size to prevent memory leaks
         this._maxCacheSize = 1000;
         
@@ -58,6 +67,7 @@ export class ReportsPage {
         if (!this.coreBridge) return;
         
         // Reload when tracking starts/stops (creates new time entries)
+        // COPIED FROM TasksPage: Use _baseTimeOnStart pattern to prevent time accumulation
         this._eventHandlers['tracking-started'] = async (data) => {
             try {
                 // CRITICAL: Check if tracking matches ALL active filters (period, project, client)
@@ -77,47 +87,264 @@ export class ReportsPage {
                     this._cachedTrackingClient = null;
                 }
                 
-                // CRITICAL: Clear tracked task base time - will be set when list is updated
-                this._trackedTaskBaseTime = undefined;
+                // COPIED FROM TasksPage: Save base time when tracking starts (prevents accumulation)
+                if (data && data.taskInstanceId) {
+                    const taskInstance = this.allTasks.find(t => t.id === data.taskInstanceId);
+                    if (taskInstance) {
+                        // Save base time when tracking starts (prevents accumulation)
+                        taskInstance._baseTimeOnStart = taskInstance.total_time || 0;
+                        
+                        // Also set for template task object
+                        const template = this.taskTemplates.get(data.taskInstanceId);
+                        if (template && template.task) {
+                            template.task._baseTimeOnStart = taskInstance._baseTimeOnStart;
+                        }
+                        
+                        // For stack templates - find task in group and set base time
+                        for (const [stackId, stackTemplate] of this.taskTemplates.entries()) {
+                            if (stackTemplate.group && stackTemplate.group.tasks) {
+                                const taskInStack = stackTemplate.group.tasks.find(t => t.id === data.taskInstanceId);
+                                if (taskInStack) {
+                                    taskInStack._baseTimeOnStart = taskInstance._baseTimeOnStart;
+                                }
+                            }
+                        }
+                    }
+                }
                 
-                // CRITICAL: Update Recent Tasks list to include tracked task and set up real-time updates
-                // This ensures the tracked task appears in Recent Tasks and gets real-time time updates
-                // First, reload tasks to get the new tracked task instance
+                // Reload tasks to get the new tracked task instance
                 await this.updateChartsOnly();
                 
-                // Then update Recent Tasks list with fresh data including the new tracked task
+                // CRITICAL: Re-set _baseTimeOnStart after updateChartsOnly() reloads tasks
+                // This ensures the tracked task in allTasks has the correct base time
+                if (data && data.taskInstanceId) {
+                    const taskInstance = this.allTasks.find(t => t.id === data.taskInstanceId);
+                    if (taskInstance && taskInstance._baseTimeOnStart === undefined) {
+                        taskInstance._baseTimeOnStart = taskInstance.total_time || 0;
+                    }
+                }
+                
+                // Update Recent Tasks list with fresh data including the new tracked task
                 const filteredTasks = this._getFilteredTasks();
                 this._updateRecentTasksList(filteredTasks);
+                
+                // CRITICAL: After rendering, set _baseTimeOnStart for tracked task in templates
+                // This ensures templates have the correct base time for real-time updates
+                if (data && data.taskInstanceId) {
+                    const trackedTask = this.allTasks.find(t => t.id === data.taskInstanceId);
+                    if (trackedTask && trackedTask._baseTimeOnStart !== undefined) {
+                        // Set for single task template
+                        const template = this.taskTemplates.get(data.taskInstanceId);
+                        if (template && template.task) {
+                            template.task._baseTimeOnStart = trackedTask._baseTimeOnStart;
+                        }
+                        
+                        // Set for stack templates
+                        for (const [stackId, stackTemplate] of this.taskTemplates.entries()) {
+                            if (stackTemplate.group && stackTemplate.group.tasks) {
+                                const taskInStack = stackTemplate.group.tasks.find(t => t.id === data.taskInstanceId);
+                                if (taskInStack) {
+                                    taskInStack._baseTimeOnStart = trackedTask._baseTimeOnStart;
+                                }
+                            }
+                        }
+                    }
+                }
             } catch (error) {
                 console.error('[ReportsPage] Error in tracking-started handler:', error);
             }
         };
 
-        this._eventHandlers['tracking-stopped'] = () => {
-            // Clear tracking state
-            this._isTrackingInPeriod = false;
-            this._cachedTrackingClient = null;
+        // COPIED FROM TasksPage: Full logic for tracking-stopped
+        this._eventHandlers['tracking-stopped'] = async (data) => {
+            try {
+                // Clear tracking state
+                this._isTrackingInPeriod = false;
+                this._cachedTrackingClient = null;
 
-            // Clean up realtime earnings Map cache
-            if (this._realtimeEarningsMap) {
-                this._realtimeEarningsMap.clear();
-                this._realtimeEarningsMap = null;
+                // Clean up realtime earnings Map cache
+                if (this._realtimeEarningsMap) {
+                    this._realtimeEarningsMap.clear();
+                    this._realtimeEarningsMap = null;
+                }
+
+                // Clean up currency cache arrays
+                this._cachedCurrentCurrencies = null;
+                
+                // COPIED FROM TasksPage: Update time using base time + duration (not accumulated total)
+                if (data && data.taskInstanceId && data.duration) {
+                    // OPTIMIZED: If template exists, update directly from event duration (no DB query)
+                    const template = this.taskTemplates.get(data.taskInstanceId);
+                    const taskInstance = this.allTasks.find(t => t.id === data.taskInstanceId);
+                    
+                    if (template && taskInstance) {
+                        // CRITICAL: Update time using base time + duration (not accumulated total)
+                        const baseTime = taskInstance._baseTimeOnStart !== undefined ? taskInstance._baseTimeOnStart : (taskInstance.total_time || 0);
+                        taskInstance.total_time = baseTime + data.duration;
+                        
+                        // Clear base time marker (tracking stopped)
+                        delete taskInstance._baseTimeOnStart;
+                        
+                        // OPTIMIZED: Update template directly (no DB query, no object creation)
+                        if (template.task) {
+                            template.task.total_time = taskInstance.total_time;
+                            // Clear base time in template task too
+                            delete template.task._baseTimeOnStart;
+                        } else if (template.group) {
+                            // For stack templates, update task in group
+                            const taskInGroup = template.group.tasks.find(t => t.id === data.taskInstanceId);
+                            if (taskInGroup) {
+                                taskInGroup.total_time = taskInstance.total_time;
+                                delete taskInGroup._baseTimeOnStart;
+                            }
+                        }
+                        
+                        // CRITICAL: Clear base time in all stacks that might contain this task
+                        for (const [stackId, stackTemplate] of this.taskTemplates.entries()) {
+                            if (stackTemplate.group && stackTemplate.group.tasks) {
+                                const taskInStack = stackTemplate.group.tasks.find(t => t.id === data.taskInstanceId);
+                                if (taskInStack) {
+                                    taskInStack.total_time = taskInstance.total_time;
+                                    delete taskInStack._baseTimeOnStart;
+                                }
+                            }
+                        }
+                        
+                        // CRITICAL: Update tracking state FIRST (clears isTracking flag)
+                        // This ensures isCurrentlyTracking will be false in updateTime/updateTaskTime
+                        if (typeof template.updateTrackingState === 'function') {
+                            template.updateTrackingState();
+                        }
+                        
+                        // CRITICAL: Update time AFTER tracking state (so green dot is removed correctly)
+                        if (typeof template.updateTime === 'function') {
+                            template.updateTime(taskInstance.total_time);
+                        }
+                        if (typeof template.updateTaskTime === 'function') {
+                            template.updateTaskTime(data.taskInstanceId, taskInstance.total_time);
+                        }
+                        
+                        // CRITICAL: Update tracking state AGAIN after time update (ensures correct state)
+                        if (typeof template.updateTrackingState === 'function') {
+                            template.updateTrackingState();
+                        }
+                    } else if (taskInstance) {
+                        // Task exists but no template - update time in allTasks
+                        const baseTime = taskInstance._baseTimeOnStart !== undefined ? taskInstance._baseTimeOnStart : (taskInstance.total_time || 0);
+                        taskInstance.total_time = baseTime + data.duration;
+                        delete taskInstance._baseTimeOnStart;
+                    }
+                }
+                
+                // CRITICAL: Update all templates AFTER time updates (remove green dots, show start icons)
+                // This ensures tracking state is correctly updated after stop
+                this._updateAllTemplatesTrackingState();
+
+                await this.updateChartsOnly();
+            } catch (error) {
+                console.error('[ReportsPage] Error in tracking-stopped handler:', error);
             }
-
-            // Clean up currency cache arrays
-            this._cachedCurrentCurrencies = null;
-            
-            // CRITICAL: Clear tracked task references (tracking stopped)
-            this._trackedTaskTimeLabel = null;
-            this._trackedTaskRow = null;
-            this._trackedTaskBaseTime = undefined;
-
-            this.updateChartsOnly();
+        };
+        
+        // COPIED FROM TasksPage: Handle task creation/updates
+        this._eventHandlers['task-created'] = async () => {
+            // Reload tasks list to show new task
+            const filteredTasks = this._getFilteredTasks();
+            this._updateRecentTasksList(filteredTasks);
+        };
+        
+        this._eventHandlers['task-updated'] = async (data) => {
+            console.log('[ReportsPage] task-updated event received:', data);
+            // COPIED FROM TasksPage: Update ALL task instances with same task_id
+            // This ensures all entries for a task are updated when task is modified
+            if (data && data.id) {
+                // data.id is task_id from Core TASK_UPDATED event
+                console.log('[ReportsPage] Updating all task instances for task_id:', data.id);
+                await this._updateAllTaskInstances(data.id);
+            } else if (data && data.taskInstanceId) {
+                // data.taskInstanceId is from UI task-updated event (TaskInstanceEditDialog)
+                console.log('[ReportsPage] Getting task_id from taskInstanceId:', data.taskInstanceId);
+                // Get task_id from task instance and update all instances
+                const taskInstance = await this.coreBridge.getTaskInstance(data.taskInstanceId);
+                if (taskInstance && taskInstance.task_id) {
+                    console.log('[ReportsPage] Found task_id:', taskInstance.task_id, 'updating all instances');
+                    await this._updateAllTaskInstances(taskInstance.task_id);
+                } else {
+                    console.log('[ReportsPage] Could not get task_id, doing full reload');
+                    // Fallback: full reload if can't get task_id
+                    await this.updateChartsOnly();
+                    const filteredTasks = this._getFilteredTasks();
+                    this._updateRecentTasksList(filteredTasks);
+                }
+            } else {
+                console.log('[ReportsPage] No ID in data, doing full reload');
+                // Fallback: full reload if no ID
+                await this.updateChartsOnly();
+                const filteredTasks = this._getFilteredTasks();
+                this._updateRecentTasksList(filteredTasks);
+            }
         };
         
         // OPTIMIZED: Real-time statistics updates - only update labels, no object creation
-        this._eventHandlers['tracking-updated'] = (data) => {
-            if (!data || data.elapsedSeconds === undefined) {
+        // COPIED FROM TasksPage: Update time using _baseTimeOnStart + elapsedSeconds
+        this._eventHandlers['tracking-updated'] = async (data) => {
+            console.log('[ReportsPage] tracking-updated event received:', {
+                hasData: !!data,
+                elapsedSeconds: data?.elapsedSeconds,
+                taskName: data?.taskName,
+                projectId: data?.projectId,
+                clientId: data?.clientId,
+                taskId: data?.taskId
+            });
+            
+            if (!data) {
+                console.log('[ReportsPage] tracking-updated: Early return - no data');
+                return;
+            }
+            
+            // CRITICAL: Check if task name, project or client changed FIRST (before elapsedSeconds check)
+            // This handles cases where project/client changes but elapsedSeconds might be 0
+            if (data.taskName !== undefined || data.projectId !== undefined || data.clientId !== undefined) {
+                console.log('[ReportsPage] tracking-updated: Name/Project/Client changed', {
+                    taskName: data.taskName,
+                    projectId: data.projectId,
+                    clientId: data.clientId,
+                    taskId: data.taskId
+                });
+                
+                // COPIED FROM TasksPage: Reload task list to reflect changes
+                // Reload projects/clients if they changed, then reload tasks
+                const promises = [];
+                if (data.projectId !== undefined) {
+                    promises.push(this.coreBridge.getAllProjects().then(projects => {
+                        this.allProjects = (projects || []).slice(-this._maxCacheSize);
+                        console.log('[ReportsPage] Projects reloaded:', this.allProjects.length);
+                    }));
+                }
+                if (data.clientId !== undefined) {
+                    promises.push(this.coreBridge.getAllClients().then(clients => {
+                        this.allClients = (clients || []).slice(-this._maxCacheSize);
+                        console.log('[ReportsPage] Clients reloaded:', this.allClients.length);
+                    }));
+                }
+                await Promise.all(promises);
+                
+                // Reload tasks from database to get updated names/projects/clients
+                console.log('[ReportsPage] Updating charts...');
+                await this.updateChartsOnly();
+                console.log('[ReportsPage] Charts updated, allTasks length:', this.allTasks.length);
+                
+                // Reload task list to reflect changes
+                const filteredTasks = this._getFilteredTasks();
+                console.log('[ReportsPage] Filtered tasks length:', filteredTasks.length);
+                this._updateRecentTasksList(filteredTasks);
+                console.log('[ReportsPage] Recent tasks list updated');
+                return; // Exit early - _updateRecentTasksList() will refresh everything
+            }
+            
+            // Only process time updates if elapsedSeconds is defined (can be 0)
+            if (data.elapsedSeconds === undefined) {
+                console.log('[ReportsPage] tracking-updated: Early return - no elapsedSeconds');
                 return;
             }
             
@@ -150,82 +377,148 @@ export class ReportsPage {
                 }
             }
             
-            // CRITICAL: Only update if tracking matches ALL active filters
-            // If tracking doesn't match filters - don't show real-time updates
+            // COPIED FROM TasksPage: Update time labels using templates (same as TasksPage)
+            if (!data.taskId) return;
+            
+            const tracking = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+            if (!tracking || !tracking.isTracking) {
+                return;
+            }
+            
+            const taskId = data.taskId;
+            const elapsedSeconds = data.elapsedSeconds;
+            
+            // COPIED FROM TasksPage: Find tracked task by taskInstanceId first (exact match)
+            // Then fallback to taskId + projectId + clientId
+            let trackedTask = null;
+            if (tracking.currentTaskInstanceId) {
+                trackedTask = this.allTasks.find(t => t.id === tracking.currentTaskInstanceId);
+            }
+            
+            // Fallback to taskId + projectId + clientId if not found by ID
+            if (!trackedTask) {
+                trackedTask = this.allTasks.find(t => 
+                    t.task_id === taskId &&
+                    t.project_id === tracking.currentProjectId &&
+                    t.client_id === tracking.currentClientId
+                );
+            }
+            
+            if (trackedTask && elapsedSeconds !== undefined) {
+                // COPIED FROM TasksPage: Update time label directly (no template lookup, no DB query)
+                const template = this.taskTemplates.get(trackedTask.id);
+                if (template) {
+                    // OPTIMIZED: Direct update of time label only
+                    if (typeof template.updateTimeLabel === 'function') {
+                        template.updateTimeLabel(elapsedSeconds);
+                    }
+                }
+                
+                // COPIED FROM TasksPage: Also check if it's in a stack
+                // Find all stack templates and check if they contain this task
+                for (const [stackId, stackTemplate] of this.taskTemplates.entries()) {
+                    if (stackTemplate.group && stackTemplate.group.tasks) {
+                        // CRITICAL: Find by exact taskInstanceId first (most reliable)
+                        let taskInStack = null;
+                        if (tracking.currentTaskInstanceId) {
+                            taskInStack = stackTemplate.group.tasks.find(t => t.id === tracking.currentTaskInstanceId);
+                        }
+                        
+                        // Fallback: Find by task_id/project_id/client_id if not found by ID
+                        if (!taskInStack) {
+                            taskInStack = stackTemplate.group.tasks.find(t => 
+                                t.id === trackedTask.id &&
+                                t.task_id === taskId &&
+                                t.project_id === tracking.currentProjectId &&
+                                t.client_id === tracking.currentClientId
+                            );
+                        }
+                        
+                        if (taskInStack) {
+                            // CRITICAL: Use base time from start (prevents accumulation)
+                            // If _baseTimeOnStart is not set, use current total_time as fallback
+                            let baseTime = taskInStack._baseTimeOnStart;
+                            if (baseTime === undefined) {
+                                // Fallback: try to get from trackedTask
+                                baseTime = trackedTask._baseTimeOnStart;
+                                if (baseTime === undefined) {
+                                    // Last fallback: use current total_time
+                                    baseTime = taskInStack.total_time || 0;
+                                    // Set it for next time
+                                    taskInStack._baseTimeOnStart = baseTime;
+                                } else {
+                                    // Sync with taskInStack
+                                    taskInStack._baseTimeOnStart = baseTime;
+                                }
+                            }
+                            
+                            const currentTotal = baseTime + elapsedSeconds;
+                            
+                            if (typeof stackTemplate.updateTaskTime === 'function') {
+                                stackTemplate.updateTaskTime(trackedTask.id, currentTotal);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // CRITICAL: Only update statistics if tracking matches ALL active filters
+            // If tracking doesn't match filters - don't show real-time updates in statistics
             if (!this._isTrackingInPeriod) {
                 return;
             }
             
             // OPTIMIZED: Update only labels, no getTrackingState() call, no DB queries
             this._updateStatisticsRealtimeFromData(data);
-            
-            // CRITICAL: Update tracked task time label in Recent Tasks list
-            // This ensures the last entry (tracked task) shows real-time updates
-            if (this._trackedTaskTimeLabel && !this._trackedTaskTimeLabel.is_destroyed?.()) {
-                const trackingState = this.coreBridge.getTrackingState();
-                if (trackingState && trackingState.isTracking && data.elapsedSeconds !== undefined) {
-                    // Get base time from cached tracking base time or find in allTasks
-                    let baseTime = 0;
-                    if (this._trackedTaskBaseTime !== undefined) {
-                        baseTime = this._trackedTaskBaseTime;
-                    } else {
-                        // Fallback: find tracked task in allTasks to get base time
-                        const trackedTask = this.allTasks.find(t =>
-                            t.task_id === trackingState.currentTaskId &&
-                            t.project_id === trackingState.currentProjectId &&
-                            t.client_id === trackingState.currentClientId
-                        );
-                        if (trackedTask) {
-                            baseTime = trackedTask.total_time || 0;
-                            // Cache base time for future updates
-                            this._trackedTaskBaseTime = baseTime;
-                        }
-                    }
-                    
-                    // Calculate total time: base time + elapsed seconds
-                    const totalTime = baseTime + data.elapsedSeconds;
-                    this._trackedTaskTimeLabel.set_label(this._formatDuration(totalTime));
-                }
-            }
         };
 
-        this._eventHandlers['task-updated'] = async () => {
-            if (!this._isLoadingReports) {
-                this._isLoadingReports = true;
-                try {
-                    await this.loadReports();
-                } finally {
-                    this._isLoadingReports = false;
-                }
-            } else {
-            }
-        };
+        // REMOVED: Duplicate task-updated handler - using COPIED FROM TasksPage version above
 
         this._eventHandlers['tasks-deleted'] = () => {
             this.updateChartsOnly();
         };
 
         this._eventHandlers['project-updated'] = async () => {
+            console.log('[ReportsPage] project-updated event received');
+            // COPIED FROM TasksPage: Reload tasks when project is updated
             if (!this._isLoadingReports) {
                 this._isLoadingReports = true;
                 try {
-                    await this.loadReports();
+                    // CRITICAL: Reload projects first to get updated project names
+                    this.allProjects = await this.coreBridge.getAllProjects() || [];
+                    console.log('[ReportsPage] Projects reloaded:', this.allProjects.length);
+                    // Then reload tasks to get updated project names in task data
+                    await this.updateChartsOnly();
+                    console.log('[ReportsPage] Charts updated, allTasks length:', this.allTasks.length);
+                    const filteredTasks = this._getFilteredTasks();
+                    console.log('[ReportsPage] Filtered tasks length:', filteredTasks.length);
+                    this._updateRecentTasksList(filteredTasks);
+                    console.log('[ReportsPage] Recent tasks list updated');
                 } finally {
                     this._isLoadingReports = false;
                 }
-            } else {
             }
         };
-
+        
         this._eventHandlers['client-updated'] = async () => {
+            console.log('[ReportsPage] client-updated event received');
+            // COPIED FROM TasksPage: Reload tasks when client is updated
             if (!this._isLoadingReports) {
                 this._isLoadingReports = true;
                 try {
-                    await this.loadReports();
+                    // CRITICAL: Reload clients first to get updated client names
+                    this.allClients = await this.coreBridge.getAllClients() || [];
+                    console.log('[ReportsPage] Clients reloaded:', this.allClients.length);
+                    // Then reload tasks to get updated client names in task data
+                    await this.updateChartsOnly();
+                    console.log('[ReportsPage] Charts updated, allTasks length:', this.allTasks.length);
+                    const filteredTasks = this._getFilteredTasks();
+                    console.log('[ReportsPage] Filtered tasks length:', filteredTasks.length);
+                    this._updateRecentTasksList(filteredTasks);
+                    console.log('[ReportsPage] Recent tasks list updated');
                 } finally {
                     this._isLoadingReports = false;
                 }
-            } else {
             }
         };
 
@@ -235,8 +528,10 @@ export class ReportsPage {
         // };
 
         // Subscribe with stored handlers
+        console.log('[ReportsPage] Subscribing to events:', Object.keys(this._eventHandlers));
         Object.keys(this._eventHandlers).forEach(event => {
             this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
+            console.log('[ReportsPage] Subscribed to event:', event);
         });
     }
 
@@ -441,6 +736,11 @@ export class ReportsPage {
         this._cachedEarningsByCurrency = new Map();
         this._cachedTrackingClient = null;
         
+        // COPIED FROM TasksPage: Clear templates before reload
+        this._trackedTemplates.clear();
+        this._trackedWidgets.clear();
+        this.taskTemplates.clear();
+        
         // CRITICAL: Refresh tracking widget to ensure it's synchronized with current tracking state
         // This updates time display and restores subscriptions if needed
         if (this.trackingWidget && typeof this.trackingWidget.refresh === 'function') {
@@ -449,7 +749,42 @@ export class ReportsPage {
         
         // CRITICAL: Always reload data and update reports to ensure filters work correctly
         // Even if data arrays are not empty, they may be stale or incomplete
-        this.loadReports().catch(error => {
+        // After loadReports completes, restore real-time updates for tracked task if tracking is active
+        // COPIED FROM TasksPage: Set _baseTimeOnStart for already-active tracking
+        this.loadReports().then(() => {
+            // COPIED FROM TasksPage: If tracking is already active, set _baseTimeOnStart for tracked task
+            // This handles case when page loads while tracking is already in progress
+            const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+            if (trackingState && trackingState.isTracking && trackingState.currentTaskInstanceId) {
+                const trackedTask = this.allTasks.find(t => t.id === trackingState.currentTaskInstanceId);
+                if (trackedTask) {
+                    // Set base time if not already set (prevents accumulation)
+                    if (trackedTask._baseTimeOnStart === undefined) {
+                        trackedTask._baseTimeOnStart = trackedTask.total_time || 0;
+                    }
+                } else {
+                    // Try to load it from Core if not found
+                    this.coreBridge.getTaskInstance(trackingState.currentTaskInstanceId).then(taskInstance => {
+                        if (taskInstance) {
+                            this.allTasks.push(taskInstance);
+                            // Set base time for newly loaded task
+                            taskInstance._baseTimeOnStart = taskInstance.total_time || 0;
+                            // Rebuild Recent Tasks list to include the tracked task
+                            const filteredTasks = this._getFilteredTasks();
+                            this._updateRecentTasksList(filteredTasks);
+                        }
+                    }).catch(error => {
+                        console.error('[ReportsPage] Error loading tracked task in onPageShown:', error);
+                    });
+                }
+                
+                // Ensure Recent Tasks list is updated with tracked task
+                if (!this._trackedTaskTimeLabel) {
+                    const filteredTasks = this._getFilteredTasks();
+                    this._updateRecentTasksList(filteredTasks);
+                }
+            }
+        }).catch(error => {
             console.error('[ReportsPage] Error loading reports in onPageShown:', error);
         });
     }
@@ -1012,6 +1347,38 @@ export class ReportsPage {
             // Update recent tasks list (only completed tasks, no tracking time)
             // Now uses _currentTaskInstanceIds from _updateStatistics for correct period filtering
             this._updateRecentTasksList(filteredTasks);
+            
+            // CRITICAL: After updating Recent Tasks list, immediately update tracked task time
+            // This ensures real-time updates work correctly after returning to the page
+            // Use setTimeout to ensure _updateRecentTasksList has completed and references are set
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+                const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+                if (trackingState && trackingState.isTracking && this._trackedTaskTimeLabel && 
+                    !this._trackedTaskTimeLabel.is_destroyed?.()) {
+                    // Update time immediately with current elapsedSeconds
+                    if (this._trackedTaskBaseTime !== undefined && this._trackedTaskBaseTime !== null) {
+                        const totalTime = this._trackedTaskBaseTime + (trackingState.elapsedSeconds || 0);
+                        this._trackedTaskTimeLabel.set_label(this._formatDuration(totalTime));
+                    } else {
+                        // If base time not set, recalculate it
+                        const currentElapsed = trackingState.elapsedSeconds || 0;
+                        // Try to find tracked task to get base time
+                        const trackedTask = this.allTasks.find(t =>
+                            t.id === trackingState.currentTaskInstanceId ||
+                            (t.task_id === trackingState.currentTaskId &&
+                             t.project_id === trackingState.currentProjectId &&
+                             t.client_id === trackingState.currentClientId)
+                        );
+                        if (trackedTask) {
+                            const baseTime = Math.max(0, (trackedTask.total_time || 0) - currentElapsed);
+                            this._trackedTaskBaseTime = baseTime;
+                            const totalTime = baseTime + currentElapsed;
+                            this._trackedTaskTimeLabel.set_label(this._formatDuration(totalTime));
+                        }
+                    }
+                }
+                return false; // Don't repeat
+            });
 
             // Update chart visualization
             this._updateChartVisualization();
@@ -1795,28 +2162,49 @@ export class ReportsPage {
             filtered = this._filterByPeriod(filtered, this.chartFilters.period);
         }
         
-        // CRITICAL: Include currently tracked task ONLY if it's actually being tracked
-        // AND it matches ALL filters (project, client, period)
-        // Do NOT add tracked task if it doesn't match filters (user wants to see only filtered data)
+        // COPIED FROM TasksPage: Always include currently tracked task AND all tasks from its stack
+        // This ensures user can always see what's being tracked and the entire stack is visible
         const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
         if (trackingState && trackingState.isTracking && trackingState.currentTaskInstanceId) {
-            // Check if tracked task matches ALL filters
-            const trackedTask = this.allTasks.find(t => t.id === trackingState.currentTaskInstanceId);
+            // Try to find tracked task by taskInstanceId first
+            let trackedTask = null;
+            if (trackingState.currentTaskInstanceId) {
+                trackedTask = this.allTasks.find(t => t.id === trackingState.currentTaskInstanceId);
+            }
+            
+            // If not found by ID, try to find by task_id/project_id/client_id
+            if (!trackedTask) {
+                trackedTask = this.allTasks.find(t =>
+                    t.task_id === trackingState.currentTaskId &&
+                    t.project_id === trackingState.currentProjectId &&
+                    t.client_id === trackingState.currentClientId
+                );
+            }
+            
+            // NOTE: Cannot use await here - _getFilteredTasks() is synchronous
+            // Tracked task should be loaded in tracking-started handler via updateChartsOnly()
+            
             if (trackedTask) {
-                // Check if tracked task matches project filter
-                const matchesProject = !this.chartFilters.projectId || trackedTask.project_id === this.chartFilters.projectId;
-                // Check if tracked task matches client filter
-                const matchesClient = !this.chartFilters.clientId || trackedTask.client_id === this.chartFilters.clientId;
-                // Check if tracked task matches period filter (is in _currentTaskInstanceIds)
-                const matchesPeriod = !this._currentTaskInstanceIds || 
-                                     (this._currentTaskInstanceIds.length > 0 && 
-                                      this._currentTaskInstanceIds.includes(trackedTask.id));
+                // CRITICAL: Find ALL tasks from the same stack (same task_name/project_name/client_name)
+                // This ensures the entire stack is visible when tracking any entry in it
+                const stackTasks = this.allTasks.filter(t => 
+                    t.task_name === trackedTask.task_name &&
+                    t.project_name === trackedTask.project_name &&
+                    t.client_name === trackedTask.client_name
+                );
                 
-                // Only add if it matches ALL active filters
-                if (matchesProject && matchesClient && matchesPeriod) {
-                    const isTrackedTaskInList = filtered.some(t => t.id === trackingState.currentTaskInstanceId);
-                    if (!isTrackedTaskInList) {
-                        filtered.push(trackedTask);
+                // Add all stack tasks to filtered list if not already present
+                for (const stackTask of stackTasks) {
+                    const isInList = filtered.some(t => 
+                        (trackingState.currentTaskInstanceId && t.id === stackTask.id) ||
+                        (t.id === stackTask.id) ||
+                        (t.task_id === stackTask.task_id &&
+                         t.project_id === stackTask.project_id &&
+                         t.client_id === stackTask.client_id &&
+                         t.id === stackTask.id)
+                    );
+                    if (!isInList) {
+                        filtered.push(stackTask);
                     }
                 }
             }
@@ -2471,151 +2859,8 @@ export class ReportsPage {
         }
     }
 
-    /**
-     * Get filtered tasks from provided array (used for real-time updates with temp data)
-     * Always includes currently tracked task even if it doesn't match filters
-     * Updates tracked task's total_time with accurate calculation
-     */
-    async _getFilteredTasksFromArray(tasksArray, trackingState = null) {
-        let filtered = [...tasksArray];
-        
-        // Remember tracked task before filtering (if provided)
-        // CRITICAL: Find by taskInstanceId first (exact match), then fallback to task_id/project_id/client_id
-        let trackedTask = null;
-        if (trackingState && trackingState.isTracking) {
-            // First try to find by exact taskInstanceId (if available)
-            if (trackingState.currentTaskInstanceId) {
-                trackedTask = tasksArray.find(t => t.id === trackingState.currentTaskInstanceId);
-            }
-            
-            // Fallback to task_id/project_id/client_id if not found by ID
-            if (!trackedTask) {
-                trackedTask = tasksArray.find(t =>
-                    t.task_id === trackingState.currentTaskId &&
-                    t.project_id === trackingState.currentProjectId &&
-                    t.client_id === trackingState.currentClientId
-                );
-            }
-            
-            // Update tracked task's time with accurate calculation
-            if (trackedTask) {
-                try {
-                    // NOTE: oldTime is no longer stored in state (calculated on demand)
-                    // Use await this.coreBridge.getCurrentTaskOldTime() to get old time
-                    // const oldTime = await this.coreBridge.getCurrentTaskOldTime();
-                    const oldTime = 0; // Temporary fallback (should use getCurrentTaskOldTime())
-                    const currentElapsed = trackingState.elapsedSeconds || 0;
-                    trackedTask.total_time = oldTime + currentElapsed;
-                    
-                    // Update last_used_at for proper sorting
-                    const { TimeUtils } = await import('resource:///com/odnoyko/valot/core/utils/TimeUtils.js');
-                    trackedTask.last_used_at = TimeUtils.getCurrentTimestamp();
-                } catch (error) {
-                    // Fallback: use cached total_time + elapsedSeconds
-                    trackedTask.total_time = (trackedTask.total_time || 0) + (trackingState.elapsedSeconds || 0);
-                }
-            }
-        }
-
-        // Filter by project
-        if (this.chartFilters.projectId) {
-            filtered = filtered.filter(t => t.project_id === this.chartFilters.projectId);
-        }
-
-        // Filter by client
-        if (this.chartFilters.clientId) {
-            filtered = filtered.filter(t => t.client_id === this.chartFilters.clientId);
-        }
-
-        // Filter by period
-        filtered = this._filterByPeriod(filtered, this.chartFilters.period);
-        
-        // Always include currently tracked task if it exists and not already in list
-        // CRITICAL: Check by taskInstanceId first (exact match), then by task_id/project_id/client_id
-        if (trackedTask) {
-            const isTrackedTaskInList = filtered.some(t => {
-                // Check by exact ID first
-                if (trackingState && trackingState.currentTaskInstanceId) {
-                    return t.id === trackingState.currentTaskInstanceId;
-                }
-                // Fallback to task_id/project_id/client_id
-                return t.task_id === trackedTask.task_id &&
-                       t.project_id === trackedTask.project_id &&
-                       t.client_id === trackedTask.client_id;
-            });
-            if (!isTrackedTaskInList) {
-                // Add tracked task to list even if it doesn't match filters
-                filtered.push(trackedTask);
-            }
-        }
-
-        return filtered;
-    }
-
-    /**
-     * Synchronous version of _getFilteredTasksFromArray for fallback
-     * Doesn't update tracked task time (uses cached values)
-     */
-    _getFilteredTasksFromArraySync(tasksArray, trackingState = null) {
-        let filtered = [...tasksArray];
-        
-        // Remember tracked task before filtering (if provided)
-        // CRITICAL: Find by taskInstanceId first (exact match), then fallback to task_id/project_id/client_id
-        let trackedTask = null;
-        if (trackingState && trackingState.isTracking) {
-            // First try to find by exact taskInstanceId (if available)
-            if (trackingState.currentTaskInstanceId) {
-                trackedTask = tasksArray.find(t => t.id === trackingState.currentTaskInstanceId);
-            }
-            
-            // Fallback to task_id/project_id/client_id if not found by ID
-            if (!trackedTask) {
-                trackedTask = tasksArray.find(t =>
-                    t.task_id === trackingState.currentTaskId &&
-                    t.project_id === trackingState.currentProjectId &&
-                    t.client_id === trackingState.currentClientId
-                );
-            }
-            
-            // Use cached total_time + elapsedSeconds as fallback
-            if (trackedTask) {
-                trackedTask.total_time = (trackedTask.total_time || 0) + (trackingState.elapsedSeconds || 0);
-            }
-        }
-
-        // Filter by project
-        if (this.chartFilters.projectId) {
-            filtered = filtered.filter(t => t.project_id === this.chartFilters.projectId);
-        }
-
-        // Filter by client
-        if (this.chartFilters.clientId) {
-            filtered = filtered.filter(t => t.client_id === this.chartFilters.clientId);
-        }
-
-        // Filter by period
-        filtered = this._filterByPeriod(filtered, this.chartFilters.period);
-        
-        // Always include currently tracked task if it exists and not already in list
-        // CRITICAL: Check by taskInstanceId first (exact match), then by task_id/project_id/client_id
-        if (trackedTask) {
-            const isTrackedTaskInList = filtered.some(t => {
-                // Check by exact ID first
-                if (trackingState && trackingState.currentTaskInstanceId) {
-                    return t.id === trackingState.currentTaskInstanceId;
-                }
-                // Fallback to task_id/project_id/client_id
-                return t.task_id === trackedTask.task_id &&
-                       t.project_id === trackedTask.project_id &&
-                       t.client_id === trackedTask.client_id;
-            });
-            if (!isTrackedTaskInList) {
-                filtered.push(trackedTask);
-            }
-        }
-
-        return filtered;
-    }
+    // REMOVED: _getFilteredTasksFromArray and _getFilteredTasksFromArraySync
+    // These methods are no longer used - _getFilteredTasks() handles all filtering logic
 
     /**
      * DISABLED: Carousel auto-advance timer - not needed for tracking functionality
@@ -2737,13 +2982,179 @@ export class ReportsPage {
     }
 
     /**
-     * Update recent tasks list
+     * COPIED FROM TasksPage: Group similar tasks together
+     */
+    _groupSimilarTasks(tasks) {
+        const groups = new Map();
+
+        tasks.forEach(taskInstance => {
+            // Group by task name + project + client (like old system)
+            const baseName = taskInstance.task_name;
+            const projectName = taskInstance.project_name || '';
+            const clientName = taskInstance.client_name || '';
+            const groupKey = `${baseName}::${projectName}::${clientName}`;
+
+            if (!groups.has(groupKey)) {
+                groups.set(groupKey, {
+                    groupKey: groupKey,
+                    baseName: baseName,
+                    tasks: [],
+                    totalDuration: 0,
+                    totalCost: 0,
+                    latestTask: null
+                });
+            }
+
+            const group = groups.get(groupKey);
+            group.tasks.push(taskInstance);
+            group.totalDuration += taskInstance.total_time || 0;
+
+            // Calculate cost for this task instance
+            const instanceCost = (taskInstance.total_time / 3600) * (taskInstance.client_rate || 0);
+            group.totalCost += instanceCost;
+
+            // Keep track of the most recently used task
+            if (!group.latestTask) {
+                group.latestTask = taskInstance;
+            } else {
+                const currentTime = taskInstance.last_used_at || '';
+                const latestTime = group.latestTask.last_used_at || '';
+                if (currentTime > latestTime) {
+                    group.latestTask = taskInstance;
+                }
+            }
+        });
+
+        // Convert to array and clear Map immediately to free memory
+        const result = Array.from(groups.values());
+        groups.clear();
+        return result;
+    }
+
+    /**
+     * COPIED FROM TasksPage: Update ALL task instances with same task_id
+     * This ensures all entries for a task are updated when task is modified
+     */
+    async _updateAllTaskInstances(taskId) {
+        console.log('[ReportsPage] _updateAllTaskInstances called for task_id:', taskId);
+        if (!this.coreBridge) {
+            console.log('[ReportsPage] No coreBridge, returning');
+            return;
+        }
+
+        try {
+            // Find ALL task instances with this task_id in allTasks
+            const taskInstances = this.allTasks.filter(t => t.task_id === taskId);
+            console.log('[ReportsPage] Found task instances:', taskInstances.length);
+            
+            if (taskInstances.length === 0) {
+                console.log('[ReportsPage] No task instances found, doing full reload');
+                // No tasks with this task_id in list - might need full reload
+                await this.updateChartsOnly();
+                const filteredTasks = this._getFilteredTasks();
+                this._updateRecentTasksList(filteredTasks);
+                return;
+            }
+
+            // CRITICAL: Update ALL task instances, not just first one
+            let allUpdated = true;
+            for (const taskInstance of taskInstances) {
+                console.log('[ReportsPage] Updating task instance:', taskInstance.id);
+                if (!taskInstance || !taskInstance.id) {
+                    allUpdated = false;
+                    continue;
+                }
+
+                try {
+                    // Load updated task instance from DB
+                    const updatedTask = await this.coreBridge.getTaskInstance(taskInstance.id);
+                    if (updatedTask) {
+                        // Find index in allTasks array
+                        const taskIndex = this.allTasks.findIndex(t => t.id === taskInstance.id);
+                        if (taskIndex !== -1) {
+                            // Update in place (direct assignment, no spread)
+                            Object.assign(this.allTasks[taskIndex], updatedTask);
+                            
+                            // Update template if exists
+                            const template = this.taskTemplates.get(taskInstance.id);
+                            if (template) {
+                                console.log('[ReportsPage] Template found for instance:', taskInstance.id, 'task_name:', updatedTask.task_name);
+                                // Update task reference in template
+                                if (template.task) {
+                                    Object.assign(template.task, updatedTask);
+                                    console.log('[ReportsPage] Updated single task template, calling updateTrackingState');
+                                    // Update subtitle to show new names
+                                    if (typeof template.updateTrackingState === 'function') {
+                                        template.updateTrackingState();
+                                    }
+                                } else if (template.group) {
+                                    // For stack templates, update task in group
+                                    const taskInGroup = template.group.tasks.find(t => t.id === taskInstance.id);
+                                    if (taskInGroup) {
+                                        Object.assign(taskInGroup, updatedTask);
+                                        console.log('[ReportsPage] Updated task in stack, calling updateTrackingState');
+                                        // Update stack subtitle
+                                        if (typeof template.updateTrackingState === 'function') {
+                                            template.updateTrackingState();
+                                        }
+                                    }
+                                }
+                            } else {
+                                console.log('[ReportsPage] No template found for instance:', taskInstance.id);
+                            }
+                            
+                            // Also check if it's in a stack (by groupKey)
+                            for (const [stackId, stackTemplate] of this.taskTemplates.entries()) {
+                                if (stackTemplate.group && stackTemplate.group.tasks) {
+                                    const taskInStack = stackTemplate.group.tasks.find(t => t.id === taskInstance.id);
+                                    if (taskInStack) {
+                                        Object.assign(taskInStack, updatedTask);
+                                        // Update stack subtitle
+                                        if (typeof stackTemplate.updateTrackingState === 'function') {
+                                            stackTemplate.updateTrackingState();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        allUpdated = false;
+                    }
+                } catch (error) {
+                    console.error(`[ReportsPage] Error updating task instance ${taskInstance.id}:`, error);
+                    allUpdated = false;
+                }
+            }
+            
+            // If some updates failed, do full reload as fallback
+            if (!allUpdated) {
+                console.warn('[ReportsPage] Some task instances failed to update, doing full reload');
+                await this.updateChartsOnly();
+                const filteredTasks = this._getFilteredTasks();
+                this._updateRecentTasksList(filteredTasks);
+            }
+        } catch (error) {
+            console.error('[ReportsPage] Error updating all task instances:', error);
+            // Fallback to full reload on error
+            await this.updateChartsOnly();
+            const filteredTasks = this._getFilteredTasks();
+            this._updateRecentTasksList(filteredTasks);
+        }
+    }
+
+    /**
+     * COPIED FROM TasksPage: Update recent tasks list using same components as TasksPage
      */
     _updateRecentTasksList(tasks) {
-        // CRITICAL: Clear tracked task references before rebuilding list
-        this._trackedTaskTimeLabel = null;
-        this._trackedTaskRow = null;
-        this._trackedTaskBaseTime = undefined;
+        // OPTIMIZED: Clear ALL tracked widgets/templates FIRST to free RAM
+        this._trackedTemplates.forEach((template, key) => {
+            if (template && typeof template.destroy === 'function') {
+                template.destroy();
+            }
+        });
+        this._trackedTemplates.clear();
+        this._trackedWidgets.clear();
+        this.taskTemplates.clear();
         
         // Clear existing list
         let child = this.recentTasksList.get_first_child();
@@ -2770,90 +3181,207 @@ export class ReportsPage {
             return b.last_used_at.localeCompare(a.last_used_at);
         });
 
-        // Show top 10 recent tasks
-        const recentTasks = sortedTasks.slice(0, 10);
-
-        // Get tracking state once for all tasks
+        // CRITICAL: Don't limit tasks here - we'll limit groups (tasks/stacks) to 6 after grouping
+        // This ensures all entries from tracked stack are available for grouping
+        let recentTasks = [...sortedTasks];
+        
+        // CRITICAL: Ensure tracked task AND all tasks from its stack are always in the list
+        // This ensures the entire stack is visible when tracking a task in it
         const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
-
-        recentTasks.forEach(task => {
-            const row = new Adw.ActionRow({
-                title: task.task_name || _('Unnamed Task'),
-                use_markup: true,
-            });
-
-            // Subtitle: colored dot + project + client + date
-            const projectColor = task.project_color || '#9a9996';
-            const subtitleParts = [];
-
-            // Add colored dot before project name
-            if (task.project_name) {
-                subtitleParts.push(`<span foreground="${projectColor}">●</span> ${task.project_name}`);
-            }
-            if (task.client_name) subtitleParts.push(task.client_name);
-            if (task.last_used_at) {
-                const date = this._formatDate(task.last_used_at);
-                subtitleParts.push(date);
-            }
-            row.set_subtitle(subtitleParts.join(' • '));
-
-            // Time suffix - always get fresh tracking state for accurate time display
-            const currentTrackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
-            let displayTime = task.total_time || 0;
+        if (trackingState && trackingState.isTracking && trackingState.currentTaskInstanceId) {
+            // COPIED FROM TasksPage: Find tracked task by taskInstanceId first (exact match)
+            let trackedTask = tasks.find(t => t.id === trackingState.currentTaskInstanceId);
             
-            // CRITICAL: Declare isTracked outside if block so it's available later
-            let isTracked = false;
+            // If not found, try to find by task_id/project_id/client_id
+            if (!trackedTask) {
+                trackedTask = tasks.find(t =>
+                    t.task_id === trackingState.currentTaskId &&
+                    t.project_id === trackingState.currentProjectId &&
+                    t.client_id === trackingState.currentClientId
+                );
+            }
             
-            // CRITICAL: Check if this is the EXACT tracked task instance (by taskInstanceId, not just task_id)
-            // If there are 4 different entries for 1 task, only the current tracked instance should show real-time updates
-            if (currentTrackingState && currentTrackingState.isTracking) {
-                // Check if this is the exact tracked TaskInstance (by ID, not just task_id/project_id/client_id)
-                const isExactTrackedInstance = task.id === currentTrackingState.currentTaskInstanceId;
+            if (trackedTask) {
+                // CRITICAL: Find ALL tasks from the same stack (same task_name/project_name/client_name)
+                // This ensures the entire stack is visible, not just the tracked task
+                const stackTasks = tasks.filter(t => 
+                    t.task_name === trackedTask.task_name &&
+                    t.project_name === trackedTask.project_name &&
+                    t.client_name === trackedTask.client_name
+                );
                 
-                // Also check if it matches by task_id/project_id/client_id (for backward compatibility)
-                const matchesTaskCriteria = task.task_id === currentTrackingState.currentTaskId &&
-                                          task.project_id === currentTrackingState.currentProjectId &&
-                                          task.client_id === currentTrackingState.currentClientId;
-                
-                // CRITICAL: Only mark as tracked if it's the EXACT instance being tracked
-                // This ensures real-time updates work only for the current tracked entry, not all entries for the task
-                isTracked = isExactTrackedInstance || (matchesTaskCriteria && !currentTrackingState.currentTaskInstanceId);
-                
-                if (isTracked) {
-                    // Always use fresh elapsedSeconds from tracking state
-                    // task.total_time should already include oldTime + elapsedSeconds from _getFilteredTasksFromArray
-                    // But if it's still 0 or too low, add elapsedSeconds directly
-                    const currentElapsed = currentTrackingState.elapsedSeconds || 0;
-                    
-                    // If total_time seems outdated (less than current elapsed), recalculate
-                    // This handles case where async update hasn't completed yet
-                    if (displayTime === 0 || displayTime < currentElapsed) {
-                        // Use elapsedSeconds directly as minimum
-                        displayTime = currentElapsed;
+                // Add all stack tasks to the beginning of the list (most important)
+                // This ensures stack is always visible with all its entries
+                for (const stackTask of stackTasks) {
+                    const isAlreadyInList = recentTasks.some(t => t.id === stackTask.id);
+                    if (!isAlreadyInList) {
+                        recentTasks.unshift(stackTask);
                     }
-                    // Otherwise task.total_time already has the correct value (oldTime + elapsedSeconds)
+                }
+                
+                // No need to limit here - we'll limit groups (tasks/stacks) to 6 after grouping
+            }
+        }
+
+        // COPIED FROM TasksPage: Group tasks and render using same templates
+        // CRITICAL: Group AFTER adding tracked task and its stack to ensure entire stack is grouped
+        const taskGroups = this._groupSimilarTasks(recentTasks);
+        
+        // CRITICAL: After grouping, verify tracked task is in a group
+        // If tracked task is not in any group, it means grouping failed - add it manually
+        let trackedGroup = null;
+        if (trackingState && trackingState.isTracking && trackingState.currentTaskInstanceId) {
+            const trackedTask = recentTasks.find(t => t.id === trackingState.currentTaskInstanceId);
+            if (trackedTask) {
+                // Check if tracked task is in any group
+                let isInGroup = false;
+                for (const group of taskGroups) {
+                    if (group.tasks.some(t => t.id === trackedTask.id)) {
+                        isInGroup = true;
+                        trackedGroup = group;
+                        break;
+                    }
+                }
+                
+                // If not in any group, create a group for it or add to matching group
+                if (!isInGroup) {
+                    // Try to find a group with same task_name/project_name/client_name
+                    const matchingGroup = taskGroups.find(g => 
+                        g.baseName === trackedTask.task_name &&
+                        g.tasks[0]?.project_name === trackedTask.project_name &&
+                        g.tasks[0]?.client_name === trackedTask.client_name
+                    );
+                    
+                    if (matchingGroup) {
+                        // Add to existing group
+                        const isAlreadyInGroup = matchingGroup.tasks.some(t => t.id === trackedTask.id);
+                        if (!isAlreadyInGroup) {
+                            matchingGroup.tasks.push(trackedTask);
+                            matchingGroup.totalDuration += trackedTask.total_time || 0;
+                            const instanceCost = (trackedTask.total_time / 3600) * (trackedTask.client_rate || 0);
+                            matchingGroup.totalCost += instanceCost;
+                        }
+                        trackedGroup = matchingGroup;
+                    } else {
+                        // Create new group for tracked task
+                        const groupKey = `${trackedTask.task_name}::${trackedTask.project_name || ''}::${trackedTask.client_name || ''}`;
+                        trackedGroup = {
+                            groupKey: groupKey,
+                            baseName: trackedTask.task_name,
+                            tasks: [trackedTask],
+                            totalDuration: trackedTask.total_time || 0,
+                            totalCost: (trackedTask.total_time / 3600) * (trackedTask.client_rate || 0),
+                            latestTask: trackedTask
+                        };
+                        taskGroups.unshift(trackedGroup);
+                    }
+                }
+                
+                // CRITICAL: Ensure tracked group is at the beginning of the list (most visible)
+                if (trackedGroup && taskGroups.indexOf(trackedGroup) > 0) {
+                    const index = taskGroups.indexOf(trackedGroup);
+                    taskGroups.splice(index, 1);
+                    taskGroups.unshift(trackedGroup);
                 }
             }
-            
-            const timeLabel = new Gtk.Label({
-                label: this._formatDuration(displayTime),
-                css_classes: ['dim-label'],
-                valign: Gtk.Align.CENTER,
-            });
-            row.add_suffix(timeLabel);
-            
-            // CRITICAL: Store reference to timeLabel and task info for real-time updates
-            // This allows us to update the last entry (tracked task) in real-time
-            if (currentTrackingState && currentTrackingState.isTracking && isTracked) {
-                // Store reference to tracked task's time label for real-time updates
-                this._trackedTaskTimeLabel = timeLabel;
-                this._trackedTaskRow = row;
-                // CRITICAL: Cache base time (total_time without elapsedSeconds) for real-time updates
-                // This ensures we always add elapsedSeconds to the correct base value
-                this._trackedTaskBaseTime = task.total_time || 0;
+        }
+        
+        // CRITICAL: Limit to 6 groups (tasks/stacks) maximum, but always include tracked group
+        // This ensures we show only last 6 items (single tasks and stacks), not entries
+        if (taskGroups.length > 6) {
+            if (trackedGroup) {
+                // Keep tracked group + 5 most recent other groups
+                const otherGroups = taskGroups.filter(g => g !== trackedGroup);
+                // Sort other groups by latest task's last_used_at
+                otherGroups.sort((a, b) => {
+                    const aTime = a.latestTask?.last_used_at || '';
+                    const bTime = b.latestTask?.last_used_at || '';
+                    if (!aTime) return 1;
+                    if (!bTime) return -1;
+                    return bTime.localeCompare(aTime);
+                });
+                // Keep top 5 other groups + tracked group
+                const limitedGroups = [trackedGroup, ...otherGroups.slice(0, 5)];
+                // Sort final list: tracked group first, then by last_used_at
+                limitedGroups.sort((a, b) => {
+                    if (a === trackedGroup) return -1;
+                    if (b === trackedGroup) return 1;
+                    const aTime = a.latestTask?.last_used_at || '';
+                    const bTime = b.latestTask?.last_used_at || '';
+                    if (!aTime) return 1;
+                    if (!bTime) return -1;
+                    return bTime.localeCompare(aTime);
+                });
+                // Replace taskGroups with limited list
+                taskGroups.length = 0;
+                taskGroups.push(...limitedGroups);
+            } else {
+                // No tracked group - just keep 6 most recent groups
+                taskGroups.sort((a, b) => {
+                    const aTime = a.latestTask?.last_used_at || '';
+                    const bTime = b.latestTask?.last_used_at || '';
+                    if (!aTime) return 1;
+                    if (!bTime) return -1;
+                    return bTime.localeCompare(aTime);
+                });
+                taskGroups.splice(6);
+            }
+        }
+        
+        taskGroups.forEach(group => {
+            let row;
+
+            if (group.tasks.length === 1) {
+                // Single task - use TaskRowTemplate
+                const task = group.tasks[0];
+                const template = new TaskRowTemplate(task, this);
+                row = template.getWidget();
+
+                // Register for cleanup tracking
+                this._trackedTemplates.set(task.id, template);
+                this._trackedWidgets.set(`task-${task.id}`, row);
+
+                // Update tracking state (icon and green dot)
+                template.updateTrackingState();
+
+                // Store template for real-time updates
+                this.taskTemplates.set(task.id, template);
+            } else {
+                // Multiple tasks - use TaskStackTemplate (stack/expander)
+                const template = new TaskStackTemplate(group, this);
+                row = template.getWidget();
+
+                // Register for cleanup tracking
+                this._trackedTemplates.set(`stack:${group.groupKey}`, template);
+                this._trackedWidgets.set(`stack-${group.groupKey}`, row);
+
+                // Update tracking state (icon)
+                template.updateTrackingState();
+
+                // Store template for real-time updates by groupKey (for stacks)
+                this.taskTemplates.set(`stack:${group.groupKey}`, template);
             }
 
-            this.recentTasksList.append(row);
+            if (row) {
+                this.recentTasksList.append(row);
+            }
+        });
+    }
+
+    /**
+     * COPIED FROM TasksPage: Update all templates' tracking state
+     */
+    _updateAllTemplatesTrackingState() {
+        if (!this.taskTemplates || this.taskTemplates.size === 0) return;
+
+        this.taskTemplates.forEach((template, key) => {
+            try {
+                if (template && typeof template.updateTrackingState === 'function') {
+                    template.updateTrackingState();
+                }
+            } catch (e) {
+                // Ignore errors
+            }
         });
     }
 
@@ -2964,8 +3492,15 @@ export class ReportsPage {
     async updateChartsOnly() {
         try {
             // Reload only time entries and task instances
-            this.allTasks = await this.coreBridge.getAllTaskInstances() || [];
+            const allTaskInstances = await this.coreBridge.getAllTaskInstances() || [];
+            this.allTasks = allTaskInstances.slice(-this._maxCacheSize);
             this.allTimeEntries = await this.coreBridge.getAllTimeEntries() || [];
+
+            // DEBUG: Log to verify tracked task is loaded
+            const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+            if (trackingState && trackingState.isTracking && trackingState.currentTaskInstanceId) {
+                const trackedTask = this.allTasks.find(t => t.id === trackingState.currentTaskInstanceId);
+            }
 
             // Update all reports
             await this._updateReports();

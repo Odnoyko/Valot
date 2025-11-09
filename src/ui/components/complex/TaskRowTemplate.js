@@ -374,8 +374,13 @@ export class TaskRowTemplate {
             }
         }
 
-        // Update subtitle with "Currently Tracking" text (original design)
+        // CRITICAL: Update title (task name) and subtitle with current data
         if (this.widget) {
+            // Update title (task name) if changed
+            const taskName = this._escapeMarkup(this.task.task_name);
+            this.widget.set_title(taskName);
+            
+            // Update subtitle with current project/client names
             const projectName = this.task.project_name || 'No Project';
             const clientName = this.task.client_name || 'No Client';
             const dotColor = this.task.project_color || '#9a9996';

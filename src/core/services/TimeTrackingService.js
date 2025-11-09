@@ -222,48 +222,49 @@ export class TimeTrackingService extends BaseService {
         let updated = false;
         if (tracking.currentTimeEntryId) {
             try {
-                // Update entry (guarantees end_time > start_time via SQL)
-                // CRITICAL: Verify duration > 0 before update
+                // CRITICAL: Handle zero duration gracefully (very fast start/stop)
+                // Don't update database if duration is 0, but don't throw error
                 if (duration <= 0) {
-                    console.error(`[Tracking] Stop: Invalid duration=${duration}, cannot update TimeEntry`);
-                    throw new Error(`Invalid duration: ${duration}`);
-                }
-                
-                // Update TimeEntry (no verify - trust SQL)
-                await this.execute(
-                    `UPDATE TimeEntry 
-                     SET end_time = datetime(start_time, '+' || CAST(? AS TEXT) || ' seconds'),
-                         duration = ?
-                     WHERE id = ?`,
-                    [duration, duration, tracking.currentTimeEntryId]
-                );
-
-                // Get instance ID (single query, no verify)
-                const instanceRow = await this.query(
-                    `SELECT task_instance_id FROM TimeEntry WHERE id = ?`,
-                    [tracking.currentTimeEntryId]
-                );
-
-                if (instanceRow && instanceRow.length > 0) {
-                    const instanceId = instanceRow[0].task_instance_id;
-                    
-                    // OPTIMIZED: Update total_time in single query (no separate SELECT)
-                    await this.execute(
-                        `UPDATE TaskInstance 
-                         SET total_time = COALESCE(total_time, 0) + ?,
-                             updated_at = datetime('now')
-                         WHERE id = ?`,
-                        [duration, instanceId]
-                    );
-                    
-                    updated = true;
+                    console.warn(`[Tracking] Stop: duration=${duration} is 0 or negative, skipping database update (very fast start/stop)`);
+                    // Still need to stop tracking and clear state
+                    updated = true; // Mark as handled to skip fallback
                 } else {
-                    console.warn(`[Tracking] Stop: instanceRow is empty or invalid`);
-                }
-                
-                // OPTIMIZED: Clear query result array immediately to free RAM
-                if (instanceRow && Array.isArray(instanceRow)) {
-                    instanceRow.length = 0;
+                    // Update TimeEntry (no verify - trust SQL)
+                    await this.execute(
+                        `UPDATE TimeEntry 
+                         SET end_time = datetime(start_time, '+' || CAST(? AS TEXT) || ' seconds'),
+                             duration = ?
+                         WHERE id = ?`,
+                        [duration, duration, tracking.currentTimeEntryId]
+                    );
+
+                    // Get instance ID (single query, no verify)
+                    const instanceRow = await this.query(
+                        `SELECT task_instance_id FROM TimeEntry WHERE id = ?`,
+                        [tracking.currentTimeEntryId]
+                    );
+
+                    if (instanceRow && instanceRow.length > 0) {
+                        const instanceId = instanceRow[0].task_instance_id;
+                        
+                        // OPTIMIZED: Update total_time in single query (no separate SELECT)
+                        await this.execute(
+                            `UPDATE TaskInstance 
+                             SET total_time = COALESCE(total_time, 0) + ?,
+                                 updated_at = datetime('now')
+                             WHERE id = ?`,
+                            [duration, instanceId]
+                        );
+                        
+                        updated = true;
+                        
+                        // OPTIMIZED: Clear query result array immediately to free RAM
+                        if (Array.isArray(instanceRow)) {
+                            instanceRow.length = 0;
+                        }
+                    } else {
+                        console.warn(`[Tracking] Stop: instanceRow is empty or invalid`);
+                    }
                 }
             } catch (error) {
                 console.error(`[Tracking] Stop error: ${error.message}`);
@@ -273,23 +274,47 @@ export class TimeTrackingService extends BaseService {
         // Fallback: find by instance ID
         if (!updated && tracking.currentTaskInstanceId) {
             try {
-                await this.execute(
-                    `UPDATE TimeEntry 
-                     SET end_time = datetime(start_time, '+' || CAST(? AS TEXT) || ' seconds'),
-                         duration = ?
-                     WHERE task_instance_id = ? AND end_time IS NULL
-                     ORDER BY id DESC LIMIT 1`,
-                    [duration, duration, tracking.currentTaskInstanceId]
-                );
-                
-                // OPTIMIZED: Update total_time in single query (no separate SELECT)
-                await this.execute(
-                    `UPDATE TaskInstance 
-                     SET total_time = COALESCE(total_time, 0) + ?,
-                         updated_at = datetime('now')
-                     WHERE id = ?`,
-                    [duration, tracking.currentTaskInstanceId]
-                );
+                // CRITICAL: Handle zero duration gracefully (very fast start/stop)
+                // Don't update database if duration is 0, but don't throw error
+                if (duration <= 0) {
+                    console.warn(`[Tracking] Stop: duration=${duration} is 0 or negative, skipping database update (very fast start/stop)`);
+                    updated = true; // Mark as handled to prevent further errors
+                } else {
+                    // CRITICAL: SQLite doesn't support ORDER BY/LIMIT in UPDATE directly
+                    // Use subquery to get the ID of the last entry first
+                    const lastEntryRow = await this.query(
+                        `SELECT id FROM TimeEntry 
+                         WHERE task_instance_id = ? AND end_time IS NULL
+                         ORDER BY id DESC LIMIT 1`,
+                        [tracking.currentTaskInstanceId]
+                    );
+                    
+                    if (lastEntryRow && lastEntryRow.length > 0) {
+                        const lastEntryId = lastEntryRow[0].id;
+                        
+                        // Now update using the specific ID
+                        await this.execute(
+                            `UPDATE TimeEntry 
+                             SET end_time = datetime(start_time, '+' || CAST(? AS TEXT) || ' seconds'),
+                                 duration = ?
+                             WHERE id = ?`,
+                            [duration, duration, lastEntryId]
+                        );
+                        
+                        // OPTIMIZED: Update total_time in single query (no separate SELECT)
+                        await this.execute(
+                            `UPDATE TaskInstance 
+                             SET total_time = COALESCE(total_time, 0) + ?,
+                                 updated_at = datetime('now')
+                             WHERE id = ?`,
+                            [duration, tracking.currentTaskInstanceId]
+                        );
+                        
+                        updated = true;
+                    } else {
+                        console.warn(`[Tracking] Stop: No active TimeEntry found for instance ${tracking.currentTaskInstanceId}`);
+                    }
+                }
                 
             } catch (error) {
                 console.error(`[Tracking] Stop fallback error: ${error.message}`);

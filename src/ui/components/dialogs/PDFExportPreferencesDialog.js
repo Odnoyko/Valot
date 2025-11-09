@@ -46,12 +46,12 @@ export const PDFExportPreferencesDialog = GObject.registerClass({
         this._buildInterface();
         this._connectSignals();
         
-        // Connect to close-request to cleanup before destroy
-        this.connect('close-request', () => {
-            // Cleanup resources before destroy
+        // CRITICAL: Adw.Dialog doesn't have 'close-request' or 'response' signals
+        // Use 'destroy' signal for cleanup when dialog is destroyed
+        this.connect('destroy', () => {
+            // Cleanup resources when dialog is destroyed
             this.parentWindow = null;
             this.reportExporter = null;
-            return false; // Allow default destroy to unload from memory
         });
     }
 

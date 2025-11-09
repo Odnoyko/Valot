@@ -287,8 +287,8 @@ export class TaskStackTemplate {
     }
 
     /**
-     * Update tracking state (icon)
-     * Called when tracking starts/stops to update UI without recreating widget
+     * Update tracking state (icon and subtitle)
+     * Called when tracking starts/stops or when task/project/client names change
      */
     updateTrackingState() {
         if (!this.coreBridge || !this.trackButton) return;
@@ -308,6 +308,40 @@ export class TaskStackTemplate {
         } else {
             this.trackButton.set_icon_name('media-playback-start-symbolic');
             this.trackButton.set_tooltip_text(_('Start tracking'));
+        }
+        
+        // CRITICAL: Update title (task name) and subtitle with current project/client names
+        if (this.widget && this.group.latestTask) {
+            // Update title (task name) if changed
+            const taskName = this._escapeMarkup(this.group.latestTask.task_name);
+            this.widget.set_title(`${taskName} (${this.group.tasks.length} entries)`);
+            
+            // Update subtitle with current project/client names
+            const groupProjectName = this.group.latestTask.project_name || 'No Project';
+            const groupClientName = this.group.latestTask.client_name || 'No Client';
+            const dotColor = this.group.latestTask.project_color || '#9a9996';
+            
+            const groupSubtitle = `<span foreground="${dotColor}">●</span> ${groupProjectName} • ${groupClientName}`;
+            this.widget.set_subtitle(groupSubtitle);
+            
+            // Also update all child task rows titles and subtitles
+            if (this.childRows && this.childRows.length > 0) {
+                this.group.tasks.forEach((task, index) => {
+                    const taskRow = this.childRows[index];
+                    if (taskRow) {
+                        // Update title (task name)
+                        const taskName = this._escapeMarkup(task.task_name);
+                        taskRow.set_title(taskName);
+                        
+                        // Update subtitle
+                        const taskProjectName = task.project_name || 'No Project';
+                        const taskClientName = task.client_name || 'No Client';
+                        const dateText = this._formatDate(task.last_used_at);
+                        const taskSubtitle = `<span foreground="${dotColor}">●</span> ${taskProjectName} • ${taskClientName} • ${dateText}`;
+                        taskRow.set_subtitle(taskSubtitle);
+                    }
+                });
+            }
         }
     }
 
