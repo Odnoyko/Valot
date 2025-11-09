@@ -28,16 +28,18 @@ export const CompactTrackerWindow = GObject.registerClass({
         // Set minimal size after UI is built
         this.set_size_request(500, -1);
 
-        // Cleanup tracking widget when window is hidden (save resources)
+        // CRITICAL: Don't cleanup on hide - keep subscriptions active
+        // Only cleanup on destroy to prevent memory leaks
+        // This ensures window works correctly when shown again
         this.connect('hide', () => {
-            if (this.trackingWidget && typeof this.trackingWidget.cleanup === 'function') {
-                this.trackingWidget.cleanup();
-            }
+            // Don't cleanup - keep subscriptions active for when window is shown again
+            // AdvancedTrackingWidget will handle its own cleanup on destroy
         });
         
-        // Resubscribe when window is shown again
+        // CRITICAL: Refresh when window is shown again to ensure UI is synchronized
         this.connect('show', () => {
             if (this.trackingWidget && typeof this.trackingWidget.refresh === 'function') {
+                // refresh() will resubscribe if needed and update UI
                 this.trackingWidget.refresh();
             }
         });

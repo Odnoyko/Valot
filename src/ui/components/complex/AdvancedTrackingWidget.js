@@ -647,10 +647,23 @@ export class AdvancedTrackingWidget {
      * CRITICAL: Resubscribe if cleanup() was called (page was hidden)
      */
     refresh() {
-        // Resubscribe to Core events if we were cleaned up
+        // CRITICAL: Always ensure subscriptions are active
+        // Resubscribe to Core events if we were cleaned up or handlers are missing
         if (!this._coreEventHandlers || Object.keys(this._coreEventHandlers).length === 0) {
             this._connectToCore();
+        } else {
+            // Even if handlers exist, ensure they are subscribed (in case subscriptions were lost)
+            // This handles edge cases where handlers exist but subscriptions were removed
+            if (this.coreBridge && this._coreEventHandlers) {
+                Object.keys(this._coreEventHandlers).forEach(event => {
+                    // Remove old subscription first (if exists) to prevent duplicates
+                    this.coreBridge.offUIEvent(event, this._coreEventHandlers[event]);
+                    // Add new subscription
+                    this.coreBridge.onUIEvent(event, this._coreEventHandlers[event]);
+                });
+            }
         }
+        // Always update UI to current state
         this._updateUIFromCore();
     }
 

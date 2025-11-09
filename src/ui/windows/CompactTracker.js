@@ -116,13 +116,17 @@ export const ValotCompactTracker = GObject.registerClass({
             return true; // Prevent actual close
         });
         
-        // Cleanup when window is hidden (save resources)
+        // CRITICAL: Don't cleanup on hide - keep subscriptions active
+        // Only cleanup on destroy to prevent memory leaks
+        // This ensures window works correctly when shown again
         this.connect('hide', () => {
-            this.cleanup();
+            // Don't cleanup - keep subscriptions active for when window is shown again
+            // Just update UI to current state when hidden (optional)
         });
         
-        // Resubscribe when window is shown again
+        // CRITICAL: Resubscribe and reload state when window is shown again
         this.connect('show', () => {
+            // Always resubscribe (in case cleanup was called elsewhere)
             this._resubscribe();
         });
 
@@ -146,8 +150,11 @@ export const ValotCompactTracker = GObject.registerClass({
     
     /**
      * Resubscribe to events when window is shown again
+     * CRITICAL: Always ensure subscriptions are active, even if handlers exist
      */
     _resubscribe() {
+        if (!this.coreBridge) return;
+        
         // Recreate event handlers if they were cleaned up
         if (!this._eventHandlers || Object.keys(this._eventHandlers).length === 0) {
             this._eventHandlers = {
@@ -161,25 +168,31 @@ export const ValotCompactTracker = GObject.registerClass({
                     this._onTrackingUpdated(data);
                 }
             };
-            
-            // Subscribe to tracking events
-            Object.keys(this._eventHandlers).forEach(event => {
-                this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
-            });
         }
         
-        // Load current state
+        // CRITICAL: Always resubscribe to ensure handlers are active
+        // This handles case when window was hidden and subscriptions were lost
+        Object.keys(this._eventHandlers).forEach(event => {
+            // Remove old subscription first (if exists) to prevent duplicates
+            this.coreBridge.offUIEvent(event, this._eventHandlers[event]);
+            // Add new subscription
+            this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
+        });
+        
+        // CRITICAL: Load current state to update UI immediately
         this._loadState();
     }
 
     /**
      * Load initial state
+     * CRITICAL: Always load current state, even if not tracking (to show correct UI)
      */
     _loadState() {
+        if (!this.coreBridge) return;
+        
         const state = this.coreBridge.getTrackingState();
-        if (state.isTracking) {
-            this._updateUI(state);
-        }
+        // Always update UI with current state (including elapsedSeconds if tracking)
+        this._updateUI(state);
     }
 
     /**
@@ -267,18 +280,24 @@ export const ValotCompactTracker = GObject.registerClass({
 
     /**
      * Event: Tracking updated
-     */
-    /**
-     * Event: Tracking updated
+     * CRITICAL: This fires every second from Core timer
+     * Use elapsedSeconds directly from data (already calculated by global timer)
      */
     _onTrackingUpdated(data) {
         // tracking-updated fires every second from Core timer
         // Core timer calculates elapsedSeconds (currentTime - startTime), we just show it
         // No calculation in UI, no RAM storage - just display Core timer result
         
-        // Update time display directly from Core timer data (already calculated, just show it)
-        if (data && data.elapsedSeconds !== undefined && this._updateTime) {
+        // CRITICAL: Update time display directly from Core timer data
+        // Always use data.elapsedSeconds from global timer (not from state)
+        if (data && data.elapsedSeconds !== undefined) {
             this._updateTime(data.elapsedSeconds);
+        } else {
+            // Fallback: get from state if data is missing
+            const state = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+            if (state && state.elapsedSeconds !== undefined) {
+                this._updateTime(state.elapsedSeconds);
+            }
         }
     }
 
@@ -300,8 +319,15 @@ export const ValotCompactTracker = GObject.registerClass({
             this.trackButton.add_css_class('suggested-action');
         }
 
+        // CRITICAL: Always update time from state (for initial load and manual updates)
         if (state.elapsedSeconds !== undefined) {
             this._updateTime(state.elapsedSeconds);
+        } else if (state.isTracking) {
+            // If tracking but elapsedSeconds not in state, get from Core
+            const currentState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+            if (currentState && currentState.elapsedSeconds !== undefined) {
+                this._updateTime(currentState.elapsedSeconds);
+            }
         }
     }
 

@@ -475,6 +475,12 @@ export const ValotApplication = GObject.registerClass(
                 if (this.compactWindow && !this.compactWindow.is_destroyed?.()) {
                     // Window exists (visible or hidden) - show it
                     this.compactWindow.setShiftMode(shiftMode);
+                    
+                    // CRITICAL: Refresh tracking widget before showing (restores subscriptions if needed)
+                    if (this.compactWindow.trackingWidget && typeof this.compactWindow.trackingWidget.refresh === 'function') {
+                        this.compactWindow.trackingWidget.refresh();
+                    }
+                    
                     this.compactWindow.set_visible(true);
                     this.compactWindow.present();
 
