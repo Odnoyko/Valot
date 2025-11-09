@@ -1496,4 +1496,43 @@ export class ProjectsPage {
         // Reset tracking references
         this.lastTrackingProjectId = null;
     }
+    
+    /**
+     * Called when page becomes visible
+     * CRITICAL: Reload projects if arrays are empty and restore real-time updates
+     */
+    onPageShown() {
+        // CRITICAL: Always reload projects when returning to page to ensure all data is fresh
+        // This ensures projectTimeLabels map is rebuilt and real-time updates work correctly
+        this.loadProjects().then(() => {
+            // CRITICAL: Restore real-time updates for tracked project AFTER loadProjects completes
+            // loadProjects() will rebuild projectTimeLabels map via _updateProjectsDisplay()
+            // Then we restore tracking state so real-time updates work
+            const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+            if (trackingState && trackingState.isTracking && trackingState.currentProjectId) {
+                const trackedProject = this.projects.find(p => p.id === trackingState.currentProjectId);
+                if (trackedProject) {
+                    // Restore tracking state
+                    this._trackingProjectId = trackingState.currentProjectId;
+                    // Recalculate base time: current total - elapsed seconds
+                    this._trackingProjectBaseTime = (trackedProject.total_time || 0) - (trackingState.elapsedSeconds || 0);
+                    
+                    // Update time label for tracked project (should exist after _updateProjectsDisplay)
+                    const timeLabel = this.projectTimeLabels.get(trackingState.currentProjectId);
+                    if (timeLabel && !timeLabel.is_destroyed?.()) {
+                        const totalTime = this._trackingProjectBaseTime + (trackingState.elapsedSeconds || 0);
+                        timeLabel.set_label(this._formatDurationHMS(totalTime));
+                    }
+                }
+            }
+        }).catch(error => {
+            console.error('[ProjectsPage] Error loading projects in onPageShown:', error);
+        });
+        
+        // CRITICAL: Refresh tracking widget to ensure it's synchronized with current tracking state
+        // This updates time display and restores subscriptions if needed
+        if (this.trackingWidget && typeof this.trackingWidget.refresh === 'function') {
+            this.trackingWidget.refresh();
+        }
+    }
 }

@@ -60,18 +60,30 @@ export class ReportsPage {
         // Reload when tracking starts/stops (creates new time entries)
         this._eventHandlers['tracking-started'] = async (data) => {
             try {
-                // Check if tracking is in current period filter
-                if (data && data.startTime) {
-                    this._checkIfTrackingIsInPeriod(data.startTime);
+                // CRITICAL: Check if tracking matches ALL active filters (period, project, client)
+                // But only if _currentDateRange is already set (page loaded)
+                // Otherwise, check will happen in _updateStatistics after date range is calculated
+                if (data && data.startTime && this._currentDateRange) {
+                    this._checkIfTrackingMatchesFilters(data);
+                } else {
+                    // If date range not set yet, will be checked in _updateStatistics
+                    this._isTrackingInPeriod = false;
                 }
                 
-                // Cache client info for real-time income calculations
-                if (data && data.clientId) {
+                // Cache client info for real-time income calculations (only if matches filters)
+                if (this._isTrackingInPeriod && data && data.clientId) {
                     await this._cacheTrackingClientFromData(data.clientId);
+                } else {
+                    this._cachedTrackingClient = null;
                 }
                 
                 // CRITICAL: Clear tracked task base time - will be set when list is updated
                 this._trackedTaskBaseTime = undefined;
+                
+                // CRITICAL: Update Recent Tasks list to include tracked task and set up real-time updates
+                // This ensures the tracked task appears in Recent Tasks and gets real-time time updates
+                const filteredTasks = this._getFilteredTasks();
+                this._updateRecentTasksList(filteredTasks);
                 
                 await this.updateChartsOnly();
             } catch (error) {
@@ -107,27 +119,37 @@ export class ReportsPage {
                 return;
             }
             
-            // CRITICAL: Check if client changed during tracking - update currency
-            if (data.clientId !== undefined) {
-                const trackingState = this.coreBridge.getTrackingState();
-                if (trackingState && trackingState.isTracking) {
-                    // Client changed - recache client info and recalculate earnings
-                    this._cacheTrackingClientFromData(data.clientId).then(() => {
-                        // Clear realtime earnings map to force recalculation with new currency
-                        if (this._realtimeEarningsMap) {
-                            this._realtimeEarningsMap.clear();
-                            this._realtimeEarningsMap = null;
-                        }
-                        // Update earnings with new currency
-                        if (this._isTrackingInPeriod) {
-                            this._updateStatisticsRealtimeFromData(data);
-                        }
+            // CRITICAL: Re-check if tracking matches filters when project/client changes
+            const trackingState = this.coreBridge.getTrackingState();
+            if (trackingState && trackingState.isTracking) {
+                // Re-check filters when project/client changes during tracking
+                if (data.projectId !== undefined || data.clientId !== undefined) {
+                    this._checkIfTrackingMatchesFilters({
+                        startTime: trackingState.startTime,
+                        projectId: data.projectId !== undefined ? data.projectId : trackingState.currentProjectId,
+                        clientId: data.clientId !== undefined ? data.clientId : trackingState.currentClientId
                     });
-                    return; // Exit early - will update after client is cached
+                    
+                    // If client changed and still matches filters - update currency cache
+                    if (data.clientId !== undefined && this._isTrackingInPeriod) {
+                        this._cacheTrackingClientFromData(data.clientId).then(() => {
+                            // Clear realtime earnings map to force recalculation with new currency
+                            if (this._realtimeEarningsMap) {
+                                this._realtimeEarningsMap.clear();
+                                this._realtimeEarningsMap = null;
+                            }
+                            // Update earnings with new currency (only if still matches filters)
+                            if (this._isTrackingInPeriod) {
+                                this._updateStatisticsRealtimeFromData(data);
+                            }
+                        });
+                        return; // Exit early - will update after client is cached
+                    }
                 }
             }
             
-            // Only update if tracking is in current period filter
+            // CRITICAL: Only update if tracking matches ALL active filters
+            // If tracking doesn't match filters - don't show real-time updates
             if (!this._isTrackingInPeriod) {
                 return;
             }
@@ -407,10 +429,29 @@ export class ReportsPage {
     onPageShown() {
         this._updateSidebarToggleButton();
         
+        // CRITICAL: Clear cached date range and task IDs to force recalculation
+        // This ensures filters are applied correctly after page changes
+        this._currentDateRange = null;
+        this._currentTaskInstanceIds = null;
+        
         // CRITICAL: Refresh tracking widget to ensure it's synchronized with current tracking state
         // This updates time display and restores subscriptions if needed
         if (this.trackingWidget && typeof this.trackingWidget.refresh === 'function') {
             this.trackingWidget.refresh();
+        }
+        
+        // CRITICAL: If data arrays are empty (after onHide()), reload data first
+        // Then update reports to ensure filters work correctly
+        if (!this.allTasks || this.allTasks.length === 0) {
+            // Data was cleared in onHide() - reload it first
+            this.loadReports().catch(error => {
+                console.error('[ReportsPage] Error loading reports in onPageShown:', error);
+            });
+        } else {
+            // Data is already loaded - just update reports with current filters
+            this._updateReports().catch(error => {
+                console.error('[ReportsPage] Error updating reports in onPageShown:', error);
+            });
         }
     }
 
@@ -572,6 +613,9 @@ export class ReportsPage {
             } else {
                 this.customDateBox.set_visible(false);
             }
+            
+            // CRITICAL: Don't check filters here - _updateStatistics will do it after updating _currentDateRange
+            // This ensures we check against the correct date range for the current period filter
 
             this._updateReports().catch(error => {
                 console.error('[ReportsPage] Error updating reports from period change:', error);
@@ -893,20 +937,11 @@ export class ReportsPage {
             this._updateFilterDropdowns();
 
             // Update all reports
-            this._updateReports().catch(error => {
+            // CRITICAL: _updateStatistics will check if tracking matches filters after updating _currentDateRange
+            // This ensures we check against the correct date range for the current period filter
+            await this._updateReports().catch(error => {
                 console.error('[ReportsPage] Error updating reports from loadReports:', error);
             });
-
-            // Check if tracking is active and in current period
-            const trackingState = this.coreBridge.getTrackingState();
-            
-            if (trackingState.isTracking && trackingState.startTime) {
-                this._checkIfTrackingIsInPeriod(trackingState.startTime);
-                if (trackingState.currentClientId) {
-                    this._cacheTrackingClientFromData(trackingState.currentClientId);
-                }
-            } else {
-            }
         } catch (error) {
             console.error('[ReportsPage] Error loading reports:', error);
         }
@@ -927,6 +962,10 @@ export class ReportsPage {
         this.projectFilter.connect('notify::selected', () => {
             const selected = this.projectFilter.get_selected();
             this.chartFilters.projectId = selected === 0 ? null : this.allProjects[selected - 1]?.id;
+            
+            // CRITICAL: Don't check filters here - _updateStatistics will do it after updating _currentDateRange
+            // This ensures we check against the correct date range for the current period filter
+            
             this._updateReports().catch(error => {
                 console.error('[ReportsPage] Error updating reports from project filter:', error);
             });
@@ -943,8 +982,12 @@ export class ReportsPage {
         this.clientFilter.connect('notify::selected', () => {
             const selected = this.clientFilter.get_selected();
             this.chartFilters.clientId = selected === 0 ? null : this.allClients[selected - 1]?.id;
+            
+            // CRITICAL: Don't check filters here - _updateStatistics will do it after updating _currentDateRange
+            // This ensures we check against the correct date range for the current period filter
+            
             this._updateReports().catch(error => {
-                console.error('[ReportsPage] Error updating reports from period filter:', error);
+                console.error('[ReportsPage] Error updating reports from client filter:', error);
             });
         });
     }
@@ -1989,6 +2032,10 @@ export class ReportsPage {
                 }
 
                 this._updateCustomDateButtons();
+                
+                // CRITICAL: Don't check filters here - _updateStatistics will do it after updating _currentDateRange
+                // This ensures we check against the correct date range for the custom period filter
+                
                 this._updateReports().catch(error => {
                     console.error('[ReportsPage] Error updating reports from custom date:', error);
                 });
@@ -2069,6 +2116,9 @@ export class ReportsPage {
 
         // Store current date range for real-time updates
         this._currentDateRange = { startDate, endDate };
+        
+        // CRITICAL: Always reset task instance IDs at the start
+        // This ensures we don't use stale filter values from previous calls
         this._currentTaskInstanceIds = null;
 
         // Only pass task IDs if we're filtering by project or client
@@ -2076,36 +2126,100 @@ export class ReportsPage {
         // we want ALL time entries in that date range, not just entries
         // from tasks that have last_used_at in that range
         if (this.chartFilters.projectId || this.chartFilters.clientId) {
-            // When filtering by project/client, we need to pass the filtered task IDs
-            this._currentTaskInstanceIds = tasks.map(t => t.id);
+            // CRITICAL: When filtering by project/client, we need to:
+            // 1. Get tasks that match project/client filter (from allTasks, not filtered by period)
+            // 2. Get task IDs that have TimeEntry records with end_time in the selected period
+            // 3. Intersect these two sets to get tasks that match BOTH filters
+            
+            // Step 1: Filter tasks by project/client (without period filter)
+            let projectClientFiltered = [...this.allTasks];
+            if (this.chartFilters.projectId) {
+                projectClientFiltered = projectClientFiltered.filter(t => t.project_id === this.chartFilters.projectId);
+            }
+            if (this.chartFilters.clientId) {
+                projectClientFiltered = projectClientFiltered.filter(t => t.client_id === this.chartFilters.clientId);
+            }
+            
+            // Step 2: Get task IDs that have TimeEntry records in the selected period
+            const taskIdsInPeriod = await this.coreBridge.getTaskInstanceIdsForPeriod(this._currentDateRange);
+            const taskIdsInPeriodSet = new Set(taskIdsInPeriod);
+            
+            // Step 3: Intersect - only tasks that match project/client AND have entries in period
+            const filteredTaskIds = projectClientFiltered
+                .filter(t => taskIdsInPeriodSet.has(t.id))
+                .map(t => t.id);
+            
+            // CRITICAL: If no tasks match both filters (project/client AND period),
+            // return zero statistics instead of showing all data
+            if (filteredTaskIds.length === 0) {
+                // No tasks match the filters - show zero statistics
+                this._cachedStatsTotal = 0;
+                this._cachedEarningsByCurrency = new Map();
+                this._isTrackingInPeriod = false;
+                this._cachedTrackingClient = null;
+                
+                this.totalTimeLabel.set_label('00:00:00');
+                this.activeProjectsLabel.set_label('0');
+                this.trackedTasksLabel.set_label('0');
+                this._updateCurrencyCarousel(new Map());
+                return;
+            }
+            
+            this._currentTaskInstanceIds = filteredTaskIds;
+        } else {
+            // CRITICAL: Explicitly set to null when no project/client filters are active
+            // This ensures we get ALL time entries in the period, not filtered by task IDs
+            this._currentTaskInstanceIds = null;
         }
 
+        // CRITICAL: Double-check that taskInstanceIds is correct before calling getStatsForPeriod
+        // If no project/client filters, ensure it's null (not an empty array or stale value)
+        const taskInstanceIdsToPass = (this.chartFilters.projectId || this.chartFilters.clientId) 
+            ? this._currentTaskInstanceIds 
+            : null;
+        
         // Get statistics from Core (business logic)
         const stats = await this.coreBridge.getStatsForPeriod(
             this._currentDateRange,
-            this._currentTaskInstanceIds
+            taskInstanceIdsToPass
         );
 
         // Cache the base stats total and earnings for real-time updates
         this._cachedStatsTotal = stats.totalTime;
         this._cachedEarningsByCurrency = stats.earningsByCurrency;
         
+        // CRITICAL: Re-check if current tracking matches filters after updating statistics
+        // This ensures real-time updates work only if tracking matches current filters
+        const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+        if (trackingState && trackingState.isTracking && trackingState.startTime) {
+            this._checkIfTrackingMatchesFilters({
+                startTime: trackingState.startTime,
+                projectId: trackingState.currentProjectId,
+                clientId: trackingState.currentClientId
+            });
+            
+            // Cache client info only if tracking matches filters
+            if (this._isTrackingInPeriod && trackingState.currentClientId) {
+                await this._cacheCurrentTrackingClient();
+            } else {
+                this._cachedTrackingClient = null;
+            }
+        } else {
+            this._isTrackingInPeriod = false;
+            this._cachedTrackingClient = null;
+        }
 
-        // DISABLED: No caching of tracking client info - no real-time updates
-        // await this._cacheCurrentTrackingClient();
-
-        // DISABLED: No real-time tracking time in Total Time - show only completed time
-        // Total Time shows only completed time entries, not active tracking time
-        const displayTotal = stats.totalTime; // Only completed time, no tracking time
+        // CRITICAL: Show only filtered time (completed entries matching filters)
+        // Real-time tracking time will be added ONLY if tracking matches filters
+        const displayTotal = stats.totalTime; // Only completed time matching filters
 
         // Update UI labels
         this.totalTimeLabel.set_label(this._formatDuration(displayTotal));
         this.activeProjectsLabel.set_label(stats.activeProjects.toString());
         this.trackedTasksLabel.set_label(stats.trackedTasks.toString());
 
-        // DISABLED: No real-time updates of currency earnings during tracking
-        // Currency earnings shows only completed time entries, not active tracking
-        // Always update carousel normally (no tracking time included)
+        // CRITICAL: Show only filtered earnings (completed entries matching filters)
+        // Real-time tracking earnings will be added ONLY if tracking matches filters
         this._updateCurrencyCarousel(stats.earningsByCurrency);
     }
 
@@ -2202,29 +2316,38 @@ export class ReportsPage {
     }
 
     /**
-     * Check if tracking start time is in current period filter
+     * Check if tracking matches ALL active filters (period, project, client)
+     * CRITICAL: Real-time updates work ONLY if tracking matches all filters
      */
-    _checkIfTrackingIsInPeriod(startTime) {
+    _checkIfTrackingMatchesFilters(data) {
+        if (!data) {
+            this._isTrackingInPeriod = false;
+            return;
+        }
         
-        if (!this._currentDateRange) {
+        const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+        if (!trackingState || !trackingState.isTracking) {
+            this._isTrackingInPeriod = false;
+            return;
+        }
+        
+        // Check 1: Period filter - startTime must be in current date range
+        if (!this._currentDateRange || !data.startTime) {
             this._isTrackingInPeriod = false;
             return;
         }
         
         try {
             // CRITICAL: startTime can be timestamp (number) or string format
-            // Convert to ISO 8601 format with timezone for GLib
             let isoStartTime;
-            if (typeof startTime === 'number') {
-                // startTime is timestamp (milliseconds) - convert to ISO string
-                const date = new Date(startTime);
-                isoStartTime = date.toISOString(); // Already in ISO format with Z
-            } else if (typeof startTime === 'string') {
-                // startTime is string "2025-11-03 18:53:35" - convert to ISO 8601
-                isoStartTime = startTime.replace(' ', 'T') + 'Z';
+            if (typeof data.startTime === 'number') {
+                const date = new Date(data.startTime);
+                isoStartTime = date.toISOString();
+            } else if (typeof data.startTime === 'string') {
+                isoStartTime = data.startTime.replace(' ', 'T') + 'Z';
             } else {
-                console.error('Invalid startTime format:', startTime);
-                return false;
+                this._isTrackingInPeriod = false;
+                return;
             }
             
             const startDateTime = GLib.DateTime.new_from_iso8601(isoStartTime, null);
@@ -2234,10 +2357,49 @@ export class ReportsPage {
             }
             
             const { startDate, endDate } = this._currentDateRange;
-            this._isTrackingInPeriod = startDateTime.compare(startDate) >= 0 && 
-                                        startDateTime.compare(endDate) <= 0;
+            const isInPeriod = startDateTime.compare(startDate) >= 0 && 
+                              startDateTime.compare(endDate) <= 0;
+            
+            if (!isInPeriod) {
+                this._isTrackingInPeriod = false;
+                return;
+            }
+            
+            // Check 2: Project filter - if filter is set, tracking must match
+            if (this.chartFilters.projectId !== null) {
+                const trackingProjectId = trackingState.currentProjectId || data.projectId;
+                if (trackingProjectId !== this.chartFilters.projectId) {
+                    this._isTrackingInPeriod = false;
+                    return;
+                }
+            }
+            
+            // Check 3: Client filter - if filter is set, tracking must match
+            if (this.chartFilters.clientId !== null) {
+                const trackingClientId = trackingState.currentClientId || data.clientId;
+                if (trackingClientId !== this.chartFilters.clientId) {
+                    this._isTrackingInPeriod = false;
+                    return;
+                }
+            }
+            
+            // All filters passed - tracking matches
+            this._isTrackingInPeriod = true;
         } catch (error) {
-            console.error('[ReportsPage] Error checking if tracking is in period:', error);
+            console.error('[ReportsPage] Error checking if tracking matches filters:', error);
+            this._isTrackingInPeriod = false;
+        }
+    }
+    
+    /**
+     * Check if tracking start time is in current period filter (legacy method, kept for compatibility)
+     */
+    _checkIfTrackingIsInPeriod(startTime) {
+        // Use new method with full filter checking
+        const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+        if (trackingState && trackingState.isTracking) {
+            this._checkIfTrackingMatchesFilters({ startTime });
+        } else {
             this._isTrackingInPeriod = false;
         }
     }

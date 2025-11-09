@@ -240,9 +240,10 @@ export class TasksPage {
             }
         };
         this._eventHandlers['task-updated'] = async (data) => {
-            // OPTIMIZED: Update only changed task
+            // CRITICAL: Update ALL task instances with same task_id, not just first one
+            // This ensures all entries for a task are updated when task is modified
             if (data && data.id) {
-                await this._updateSingleTask(data.id);
+                await this._updateAllTaskInstances(data.id);
             } else {
                 // Fallback: full reload if no ID
                 await this.loadTasks();
@@ -318,11 +319,8 @@ export class TasksPage {
             this._onProjectUpdated(data);
         };
         
-        // IMPORTANT: After database import/replace, reload entire task list
-        // This ensures UI shows correct data with new IDs
-        this._eventHandlers['task-updated'] = async () => {
-            await this.loadTasks();
-        };
+        // REMOVED: Duplicate task-updated handler - already handled above
+        // The handler above now updates ALL task instances with same task_id
 
         // Memory cleanup events disabled - cleanup happens in destroy(), not periodically
         // this._eventHandlers['memory-cleanup-ui'] = () => {
@@ -590,7 +588,25 @@ export class TasksPage {
         this.taskTemplates.clear();
         this.selectedTasks.clear();
         this.selectedStacks.clear();
+    }
+    
+    /**
+     * Called when page becomes visible
+     * CRITICAL: Reload tasks if arrays are empty (e.g., after returning from another page)
+     */
+    onPageShown() {
+        // CRITICAL: Always reload tasks when returning to page to ensure all entries are shown
+        // This fixes issue where only 1 entry is shown after returning from Reports page
+        // Even if tasks array is not empty, it might be stale or incomplete
+        this.loadTasks().catch(error => {
+            console.error('[TasksPage] Error loading tasks in onPageShown:', error);
+        });
         
+        // CRITICAL: Refresh tracking widget to ensure it's synchronized with current tracking state
+        // This updates time display and restores subscriptions if needed
+        if (this.trackingWidget && typeof this.trackingWidget.refresh === 'function') {
+            this.trackingWidget.refresh();
+        }
     }
 
     /**
@@ -1629,44 +1645,104 @@ export class TasksPage {
     }
 
     /**
-     * Update single task in list (without reloading all tasks)
-     * OPTIMIZED: Loads only one task from DB and updates UI
+     * Update ALL task instances with same task_id (not just first one)
+     * CRITICAL: When a task is updated, all TaskInstance entries with that task_id must be updated
+     * This ensures all entries for a task (e.g., in different projects/clients) are updated
      */
-    async _updateSingleTask(taskId) {
+    async _updateAllTaskInstances(taskId) {
         if (!this.coreBridge) return;
 
         try {
-            // Find task instance in current list
-            const taskIndex = this.tasks.findIndex(t => t.task_id === taskId);
-            if (taskIndex === -1) {
-                // Task not in list - might need full reload
+            // Find ALL task instances with this task_id (not just first one)
+            const taskInstances = this.tasks.filter(t => t.task_id === taskId);
+            
+            if (taskInstances.length === 0) {
+                // No tasks with this task_id in list - might need full reload
                 await this.loadTasks();
                 return;
             }
 
-            // Get updated task instance (find by task_id)
-            // Need to find TaskInstance ID first
-            const taskInstance = this.tasks[taskIndex];
-            if (!taskInstance || !taskInstance.id) {
-                await this.loadTasks();
-                return;
+            // CRITICAL: Update ALL task instances, not just first one
+            // Each TaskInstance has its own ID and must be updated separately
+            let allUpdated = true;
+            for (const taskInstance of taskInstances) {
+                if (!taskInstance || !taskInstance.id) {
+                    allUpdated = false;
+                    continue;
+                }
+
+                try {
+                    // Load updated task instance from DB
+                    const updatedTask = await this.coreBridge.getTaskInstance(taskInstance.id);
+                    if (updatedTask) {
+                        // Find index in tasks array
+                        const taskIndex = this.tasks.findIndex(t => t.id === taskInstance.id);
+                        if (taskIndex !== -1) {
+                            // Update in place (direct assignment, no spread)
+                            Object.assign(this.tasks[taskIndex], updatedTask);
+                            
+                            // Update template if exists
+                            const template = this.taskTemplates.get(taskInstance.id);
+                            if (template) {
+                                // Update task reference in template
+                                if (template.task) {
+                                    Object.assign(template.task, updatedTask);
+                                } else if (template.group) {
+                                    // For stack templates, update task in group
+                                    const taskInGroup = template.group.tasks.find(t => t.id === taskInstance.id);
+                                    if (taskInGroup) {
+                                        Object.assign(taskInGroup, updatedTask);
+                                    }
+                                }
+                                
+                                // Update time if template has updateTime method
+                                if (typeof template.updateTime === 'function') {
+                                    template.updateTime(updatedTask.total_time || 0);
+                                }
+                                
+                                // Update tracking state
+                                if (typeof template.updateTrackingState === 'function') {
+                                    template.updateTrackingState();
+                                }
+                            }
+                        }
+                    } else {
+                        allUpdated = false;
+                    }
+                } catch (error) {
+                    console.error(`[TasksPage] Error updating task instance ${taskInstance.id}:`, error);
+                    allUpdated = false;
+                }
             }
-
-            // Load updated task instance
-            const updatedTask = await this.coreBridge.getTaskInstance(taskInstance.id);
-            if (!updatedTask) return;
-
-            // Update in place (direct assignment, no spread)
-            Object.assign(this.tasks[taskIndex], updatedTask);
+            
             // filteredTasks is direct reference, so it's already updated
-
-            // Rebuild display to reflect changes
-            this._updateTasksDisplay();
+            // Only rebuild display if templates don't exist (need to create them)
+            // Otherwise templates were updated in place above
+            const needsRebuild = taskInstances.some(t => !this.taskTemplates.has(t.id));
+            if (needsRebuild) {
+                this._updateTasksDisplay();
+            }
+            
+            // If some updates failed, do full reload as fallback
+            if (!allUpdated) {
+                console.warn('[TasksPage] Some task instances failed to update, doing full reload');
+                await this.loadTasks();
+            }
         } catch (error) {
-            console.error('[TasksPage] Error updating single task:', error);
+            console.error('[TasksPage] Error updating all task instances:', error);
             // Fallback to full reload on error
             await this.loadTasks();
         }
+    }
+    
+    /**
+     * Update single task in list (without reloading all tasks)
+     * DEPRECATED: Use _updateAllTaskInstances instead to update all instances
+     * Kept for backward compatibility
+     */
+    async _updateSingleTask(taskId) {
+        // Delegate to new method that updates all instances
+        await this._updateAllTaskInstances(taskId);
     }
 
     /**
@@ -1769,15 +1845,22 @@ export class TasksPage {
         if (!this.coreBridge) return;
 
         try {
-            // Find task instance in current list by task_id
-            const taskInstance = this.tasks.find(t => t.task_id === taskId);
-            if (!taskInstance || !taskInstance.id) {
+            // CRITICAL: Find ALL task instances with this task_id, not just first one
+            // This ensures all entries for a task are updated when time changes
+            const taskInstances = this.tasks.filter(t => t.task_id === taskId);
+            
+            if (taskInstances.length === 0) {
                 // Task not in list - no need to update
                 return;
             }
 
-            // Use taskInstanceId version
-            await this._refreshSingleTaskTime(taskInstance.id);
+            // CRITICAL: Refresh time for ALL task instances with this task_id
+            // Each TaskInstance has its own time and must be updated separately
+            for (const taskInstance of taskInstances) {
+                if (taskInstance && taskInstance.id) {
+                    await this._refreshSingleTaskTime(taskInstance.id);
+                }
+            }
         } catch (error) {
             console.error('[TasksPage] Error refreshing task time by taskId:', error);
         }

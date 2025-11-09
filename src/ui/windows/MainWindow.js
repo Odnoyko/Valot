@@ -650,6 +650,28 @@ export const ValotMainWindow = GObject.registerClass({
                 instance.trackingWidget.refresh();
             }
         });
+        
+        // CRITICAL: Call onPageShown() on the current page instance
+        // This ensures pages reload data if needed (e.g., TasksPage reloads tasks)
+        let currentPageInstance = null;
+        switch (pageTag) {
+            case 'tasks':
+                currentPageInstance = this.tasksPageInstance;
+                break;
+            case 'projects':
+                currentPageInstance = this.projectsPageInstance;
+                break;
+            case 'clients':
+                currentPageInstance = this.clientsPageInstance;
+                break;
+            case 'reports':
+                currentPageInstance = this.reportsPageInstance;
+                break;
+        }
+        
+        if (currentPageInstance && typeof currentPageInstance.onPageShown === 'function') {
+            currentPageInstance.onPageShown();
+        }
 
         // Store current page as previous for next navigation
         this._previousPageTag = pageTag;
