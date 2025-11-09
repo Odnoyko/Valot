@@ -931,9 +931,22 @@ export const ValotMainWindow = GObject.registerClass({
                 0, 0, 0
             );
             
-            // Convert "2025-11-03 18:53:35" to ISO 8601 format with timezone
-            // GLib requires full ISO 8601 with zone: "2025-11-03T18:53:35Z"
-            const isoStartTime = startTime.replace(' ', 'T') + 'Z';
+            // CRITICAL: startTime can be timestamp (number) or string format
+            // Convert to ISO 8601 format with timezone for GLib
+            let isoStartTime;
+            if (typeof startTime === 'number') {
+                // startTime is timestamp (milliseconds) - convert to ISO string
+                const date = new Date(startTime);
+                isoStartTime = date.toISOString(); // Already in ISO format with Z
+            } else if (typeof startTime === 'string') {
+                // startTime is string "2025-11-03 18:53:35" - convert to ISO 8601
+                isoStartTime = startTime.replace(' ', 'T') + 'Z';
+            } else {
+                console.error('Invalid startTime format:', startTime);
+                this._isTrackingInCurrentWeek = false;
+                return;
+            }
+            
             const startDateTime = GLib.DateTime.new_from_iso8601(isoStartTime, null);
             
             if (!startDateTime) {

@@ -85,11 +85,36 @@ export class TasksPage {
         if (!this.coreBridge) return;
         
         // Store handlers for cleanup
-        this._eventHandlers['tracking-started'] = async () => {
+        this._eventHandlers['tracking-started'] = async (data) => {
             // CRITICAL: Cache base time ONCE to avoid DB query every second
             this._trackingBaseTime = await this.coreBridge.getCurrentTaskOldTime();
             const trackingState = this.coreBridge.getTrackingState();
             this._trackingTaskInstance = trackingState.currentTaskInstanceId;
+
+            // CRITICAL: Set _baseTimeOnStart when tracking starts to prevent time accumulation
+            if (data && data.taskInstanceId) {
+                const taskInstance = this.tasks.find(t => t.id === data.taskInstanceId);
+                if (taskInstance) {
+                    // Save base time when tracking starts (prevents accumulation)
+                    taskInstance._baseTimeOnStart = taskInstance.total_time || 0;
+                    
+                    // Also set for template task object
+                    const template = this.taskTemplates.get(data.taskInstanceId);
+                    if (template && template.task) {
+                        template.task._baseTimeOnStart = taskInstance._baseTimeOnStart;
+                    }
+                    
+                    // For stack templates - find task in group and set base time
+                    for (const [stackId, stackTemplate] of this.taskTemplates.entries()) {
+                        if (stackTemplate.group && stackTemplate.group.tasks) {
+                            const taskInStack = stackTemplate.group.tasks.find(t => t.id === data.taskInstanceId);
+                            if (taskInStack) {
+                                taskInStack._baseTimeOnStart = taskInstance._baseTimeOnStart;
+                            }
+                        }
+                    }
+                }
+            }
 
             this.loadTasks();
         };
@@ -1308,6 +1333,16 @@ export class TasksPage {
                 this.tasks.forEach(task => {
                     delete task._baseTimeOnStart;
                 });
+            }
+
+            // CRITICAL: If tracking is already active, set _baseTimeOnStart for tracked task
+            // This handles case when page loads while tracking is already in progress
+            const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+            if (trackingState && trackingState.isTracking && trackingState.currentTaskInstanceId) {
+                const trackedTask = limitedTasks.find(t => t.id === trackingState.currentTaskInstanceId);
+                if (trackedTask) {
+                    trackedTask._baseTimeOnStart = trackedTask.total_time || 0;
+                }
             }
             
             // OPTIMIZED: Explicitly clear old arrays to help GC

@@ -197,8 +197,8 @@ export class ExtensionManager {
      */
     async loadBuiltinExtensions() {
         try {
-            // Development extensions disabled by default
-            // await this._loadDevelopmentExtensions();
+            // Development extensions - load built-in extensions
+            await this._loadDevelopmentExtensions();
             
             // Load extensions from /app/extensions/ (Flatpak extensions)
             await this._loadFlatpakExtensions();
@@ -220,12 +220,30 @@ export class ExtensionManager {
         try {
             // Try to load from resource URI first (built-in extensions)
             try {
+                // Load RAMMonitor extension
+                try {
+                    const { RAMMonitor } = await import('resource:///com/odnoyko/valot/extensions/RAMMonitor/RAMMonitor.js');
+                    const ramMonitor = new RAMMonitor();
+                    if (ramMonitor.metadata && ramMonitor.metadata.id) {
+                        this.registerExtension(ramMonitor.metadata.id, ramMonitor);
+                        this.extensionSources.set(ramMonitor.metadata.id, { source: 'development:RAMMonitor', filePath: 'resource' });
+                        console.warn(`✅ Registered development extension: ${ramMonitor.metadata.name}`);
+                    }
+                } catch (error) {
+                    // RAMMonitor not available - ignore
+                }
+
+                // Load Example extension (if needed)
+            try {
                 const { Example } = await import('resource:///com/odnoyko/valot/extensions/Example/Example.js');
                 const extension = new Example();
                 if (extension.metadata && extension.metadata.id) {
                     this.registerExtension(extension.metadata.id, extension);
                     this.extensionSources.set(extension.metadata.id, { source: 'development:Example', filePath: 'resource' });
                     // console.warn(`✅ Registered development extension: ${extension.metadata.name}`);
+                    }
+                } catch (error) {
+                    // Example not available - ignore
                 }
             } catch (error) {
                 // Not loaded from resources, try file system

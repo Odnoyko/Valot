@@ -100,11 +100,14 @@ export class TimeTrackingService extends BaseService {
         );
 
         // Create TimeEntry (direct SQL)
-        const startTime = TimeUtils.getCurrentTimestamp();
+        // CRITICAL: Save startTime as timestamp (milliseconds) for precise calculation
+        // Store both string (for DB) and timestamp (for state) to avoid precision loss
+        const startTimeString = TimeUtils.getCurrentTimestamp();
+        const startTimeTimestamp = Date.now(); // Precise timestamp with milliseconds
         const entryId = await this.execute(
             `INSERT INTO TimeEntry (task_instance_id, start_time, end_time, duration, created_at)
              VALUES (?, ?, NULL, 0, ?)`,
-            [instanceId, startTime, now]
+            [instanceId, startTimeString, now]
         );
 
         // Clear saved time if exists
@@ -113,6 +116,7 @@ export class TimeTrackingService extends BaseService {
         }
 
         // Update state (single object)
+        // CRITICAL: Store timestamp (milliseconds) in state for precise elapsed calculation
         this.state.updateTrackingState({
             isTracking: true,
             currentTaskId: taskId,
@@ -120,7 +124,7 @@ export class TimeTrackingService extends BaseService {
             currentTaskInstanceId: instanceId,
             currentProjectId: validProjectId,
             currentClientId: validClientId,
-            startTime: startTime,
+            startTime: startTimeTimestamp, // Store as timestamp, not string
             savedTimeFromCrash: savedTime,
             pomodoroMode: pomodoroMode,
             pomodoroDuration: pomodoroDuration,
@@ -133,13 +137,14 @@ export class TimeTrackingService extends BaseService {
         this.startTimer();
 
         // Emit event
+        // CRITICAL: Send startTimeString (not timestamp) in event for UI compatibility
         this.events.emit(CoreEvents.TRACKING_STARTED, {
             taskId,
             taskName,
             taskInstanceId: instanceId,
             projectId: validProjectId,
             clientId: validClientId,
-            startTime,
+            startTime: startTimeString, // Send string format for UI compatibility
             timeEntryId: entryId,
         });
     }
@@ -156,19 +161,19 @@ export class TimeTrackingService extends BaseService {
 
         // CRITICAL: Calculate elapsed time DIRECTLY from startTime (don't stop timer first!)
         // Use startTime from state - it's the source of truth
+        // CRITICAL: startTime is now stored as timestamp (milliseconds) for precise calculation
         const savedTime = tracking.savedTimeFromCrash || 0;
         let elapsed = 0;
         
         if (!tracking.startTime) {
             console.error(`[Tracking] Stop: No startTime in tracking state!`);
-            elapsed = 1; // Force minimum
+            elapsed = 0; // No startTime - use 0 seconds
         } else {
-            // Parse startTime string to timestamp
-            // startTime is "YYYY-MM-DD HH:MM:SS" format from TimeUtils.getCurrentTimestamp()
+            // CRITICAL: startTime is stored as timestamp (milliseconds) for precision
+            // No need to parse string - use directly
             let startTimestamp;
             if (typeof tracking.startTime === 'string') {
-                // Parse "YYYY-MM-DD HH:MM:SS" format correctly
-                // Replace space with T for ISO format, add Z for UTC
+                // Legacy support: parse string format (should not happen with new code)
                 const isoString = tracking.startTime.replace(' ', 'T');
                 startTimestamp = new Date(isoString).getTime();
                 
@@ -183,26 +188,32 @@ export class TimeTrackingService extends BaseService {
                     }
                 }
             } else {
+                // startTime is already a timestamp (milliseconds) - use directly
                 startTimestamp = tracking.startTime;
             }
             
             const now = Date.now();
-            elapsed = Math.floor((now - startTimestamp) / 1000);
+            // CRITICAL: Use precise timestamp calculation (with milliseconds preserved)
+            // Now that startTime is stored as timestamp, we have full precision
+            // Math.floor is correct here - we want to count only full seconds
+            // Example: 0.7 seconds -> Math.floor(0.7) = 0 (correct, not 1)
+            // Example: 1.2 seconds -> Math.floor(1.2) = 1 (correct)
+            const elapsedMs = now - startTimestamp;
+            elapsed = Math.floor(elapsedMs / 1000); // Count only full seconds
             
-            
-            // CRITICAL: If elapsed is 0 or negative, use minimum (very fast start/stop or parsing error)
-            if (elapsed <= 0) {
-                console.warn(`[Tracking] Stop: elapsed=${elapsed}s is invalid, forcing to 1 second (startTime=${tracking.startTime})`);
-                elapsed = 1;
+            // CRITICAL: Only fix negative values (parsing error), allow 0 seconds (very fast start/stop)
+            if (elapsed < 0) {
+                console.warn(`[Tracking] Stop: elapsed=${elapsed}s is invalid (negative), setting to 0 (startTime=${tracking.startTime})`);
+                elapsed = 0;
             }
         }
         
-        // CRITICAL: duration must be at least 1 second, use elapsed + savedTime
-        let duration = Math.max(1, elapsed + savedTime);
-        // CRITICAL: If duration is still 0 after calculation, force to 1 (should not happen but safety check)
-        if (duration <= 0) {
-            console.error(`[Tracking] Stop: CRITICAL - duration=${duration} is invalid, forcing to 1 second!`);
-            duration = 1;
+        // CRITICAL: Use real elapsed time + savedTime (can be 0 for very fast start/stop)
+        let duration = elapsed + savedTime;
+        // CRITICAL: Only fix negative values (should not happen but safety check)
+        if (duration < 0) {
+            console.error(`[Tracking] Stop: CRITICAL - duration=${duration} is invalid (negative), setting to 0!`);
+            duration = 0;
         }
 
         // CRITICAL: Stop timer AFTER we've calculated elapsed (don't clear state before!)
@@ -416,7 +427,14 @@ export class TimeTrackingService extends BaseService {
         const tracking = this.state.state.tracking;
         
         if (tracking.isTracking && tracking.currentTimeEntryId === id && input.start_time) {
-            this.state.updateTrackingState({ startTime: input.start_time });
+            // CRITICAL: Convert start_time string to timestamp (milliseconds) for precise calculation
+            let startTimeTimestamp;
+            if (typeof input.start_time === 'string') {
+                startTimeTimestamp = new Date(input.start_time.replace(' ', 'T')).getTime();
+            } else {
+                startTimeTimestamp = input.start_time;
+            }
+            this.state.updateTrackingState({ startTime: startTimeTimestamp });
             
             // CRITICAL: Restart timer to recalculate _cachedStartTimestamp with new startTime
             // Without this, timer continues using old cached timestamp
@@ -469,11 +487,12 @@ export class TimeTrackingService extends BaseService {
 
         // Cache startTime as timestamp once (avoid Date creation every second)
         // Store as instance variable to avoid closure holding references
-        // CRITICAL: Parse "YYYY-MM-DD HH:MM:SS" format correctly
+        // CRITICAL: startTime is now stored as timestamp (milliseconds) for precision
         if (typeof tracking.startTime === 'string') {
-            // Parse "YYYY-MM-DD HH:MM:SS" format (replace space with T for ISO)
+            // Legacy support: parse string format (should not happen with new code)
             this._cachedStartTimestamp = new Date(tracking.startTime.replace(' ', 'T')).getTime();
         } else {
+            // startTime is already a timestamp (milliseconds) - use directly
             this._cachedStartTimestamp = tracking.startTime;
         }
         

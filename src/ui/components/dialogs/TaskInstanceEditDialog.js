@@ -32,6 +32,10 @@ export class TaskInstanceEditDialog {
         this.endDate = new Date();
         this.selectedProjectId = 1;
         this.selectedClientId = 1;
+        
+        // CRITICAL: Store original start time from database for tracked tasks
+        // This allows us to calculate time offset when user edits start time
+        this.originalStartTime = null; // Timestamp in milliseconds
 
         // Create UI template (one time, reused)
         this._createDialog();
@@ -110,6 +114,11 @@ export class TaskInstanceEditDialog {
         // Parse timestamps from latest entry or use defaults (use Core TimeUtils)
         if (this.latestEntry) {
             this.startDate = TimeUtils.parseTimestampFromDB(this.latestEntry.start_time);
+            
+            // CRITICAL: Store original start time from database (for tracked tasks)
+            // This is used to calculate time offset when user edits start time
+            this.originalStartTime = this.startDate.getTime();
+            
             // Check if this is the active entry (no end_time = still tracking)
             const trackingState = this.coreBridge.getTrackingState();
             this.isActiveEntry = trackingState.isTracking && 
@@ -212,12 +221,30 @@ export class TaskInstanceEditDialog {
             // For actively tracked tasks: calculate elapsed time from startDate
             // For completed tasks: use total_time
             if (this.isActiveEntry && this.startDate) {
-                const now = Date.now();
-                const elapsedMs = now - this.startDate.getTime();
-                const elapsedSeconds = Math.floor(elapsedMs / 1000);
-                // Animate to new duration (with pulse effect on first display)
-                if (this.durationAnimator) {
-                    this.durationAnimator.animateTo(elapsedSeconds, false);
+                // CRITICAL: Use trackingState.elapsedSeconds + time offset (if user edited start time)
+                const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+                if (trackingState && trackingState.elapsedSeconds !== undefined) {
+                    // Calculate time offset: difference between edited startDate and original startTime
+                    let timeOffset = 0; // in seconds
+                    if (this.originalStartTime && this.startDate) {
+                        timeOffset = Math.floor((this.originalStartTime - this.startDate.getTime()) / 1000);
+                    }
+                    
+                    // Combine: elapsedSeconds from global timer + user's time offset
+                    const elapsedSeconds = Math.max(0, trackingState.elapsedSeconds + timeOffset);
+                    
+                    // Animate to new duration (with pulse effect on first display)
+                    if (this.durationAnimator) {
+                        this.durationAnimator.animateTo(elapsedSeconds, false);
+                    }
+                } else {
+                    // Fallback: calculate from startDate if trackingState not available
+                    const now = Date.now();
+                    const elapsedMs = now - this.startDate.getTime();
+                    const elapsedSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+                    if (this.durationAnimator) {
+                        this.durationAnimator.animateTo(elapsedSeconds, false);
+                    }
                 }
             } else {
                 this.durationLabel.set_label(TimeUtils.formatDuration(this.taskInstance.total_time || 0));
@@ -473,18 +500,32 @@ export class TaskInstanceEditDialog {
 
             this.startTimeButton.connect('clicked', () => {
                 this._showTimePicker(this.startDate, (hours, minutes) => {
-                    this.startDate.setHours(hours);
-                    this.startDate.setMinutes(minutes);
-                    this.startDate.setSeconds(0);
+                    const newStartDate = new Date(this.startDate);
+                    newStartDate.setHours(hours);
+                    newStartDate.setMinutes(minutes);
+                    newStartDate.setSeconds(0);
                     
                     // For actively tracked tasks: End time is always "now" (don't move it)
                     // For completed tasks: preserve duration by moving End time
-                    if (!this.isActiveEntry) {
-                        const currentDuration = this.endDate.getTime() - this.startDate.getTime();
-                        this.endDate = new Date(this.startDate.getTime() + currentDuration);
-                    } else {
+                    if (this.isActiveEntry) {
+                        const now = new Date();
+                        
+                        // CRITICAL: For tracked tasks - don't allow start time to exceed current time
+                        // If selected time is in future, clamp to current time
+                        if (newStartDate.getTime() > now.getTime()) {
+                            // Clamp to current time
+                            this.startDate = new Date(now);
+                            this.startDate.setSeconds(0);
+                        } else {
+                            this.startDate = newStartDate;
+                        }
+                        
                         // Active task: End time = current time
                         this.endDate = new Date();
+                    } else {
+                        this.startDate = newStartDate;
+                        const currentDuration = this.endDate.getTime() - this.startDate.getTime();
+                        this.endDate = new Date(this.startDate.getTime() + currentDuration);
                     }
                     
                     this._onDateTimeChanged();
@@ -502,7 +543,16 @@ export class TaskInstanceEditDialog {
                 // For actively tracked tasks: only move Start time, End stays = "now"
                 // For completed tasks: use Core logic to preserve duration
                 if (this.isActiveEntry) {
-                    this.startDate = new Date(this.startDate.getTime() + minutesDelta * 60 * 1000);
+                    const newStartDate = new Date(this.startDate.getTime() + minutesDelta * 60 * 1000);
+                    const now = new Date();
+                    
+                    // CRITICAL: For tracked tasks - don't allow start time to exceed current time
+                    // Stop scrolling if it would create negative duration
+                    if (newStartDate.getTime() > now.getTime()) {
+                        return true; // Stop scrolling - can't go beyond current time
+                    }
+                    
+                    this.startDate = newStartDate;
                     this.endDate = new Date(); // Always "now" for active tasks
                 } else {
                     const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, minutesDelta, 'minutes');
@@ -560,7 +610,18 @@ export class TaskInstanceEditDialog {
                     // For actively tracked tasks: only move Start date, End stays = "now"
                     // For completed tasks: use Core logic to preserve duration
                     if (this.isActiveEntry) {
-                        this.startDate = newDate;
+                        const now = new Date();
+                        
+                        // CRITICAL: For tracked tasks - don't allow start date/time to exceed current time
+                        // If selected date/time is in future, clamp to current time
+                        if (newDate.getTime() > now.getTime()) {
+                            // Clamp to current time (preserve date if same day, otherwise use current date)
+                            this.startDate = new Date(now);
+                            this.startDate.setSeconds(0);
+                        } else {
+                            this.startDate = newDate;
+                        }
+                        
                         this.endDate = new Date(); // Always "now" for active tasks
                     } else {
                         const adjusted = TimeUtils.adjustStartDateTime(
@@ -588,7 +649,16 @@ export class TaskInstanceEditDialog {
                 // For actively tracked tasks: only move Start date, End stays = "now"
                 // For completed tasks: use Core logic to preserve duration
                 if (this.isActiveEntry) {
-                    this.startDate = new Date(this.startDate.getTime() + daysDelta * 24 * 60 * 60 * 1000);
+                    const newStartDate = new Date(this.startDate.getTime() + daysDelta * 24 * 60 * 60 * 1000);
+                    const now = new Date();
+                    
+                    // CRITICAL: For tracked tasks - don't allow start date/time to exceed current time
+                    // Stop scrolling if it would create negative duration
+                    if (newStartDate.getTime() > now.getTime()) {
+                        return true; // Stop scrolling - can't go beyond current time
+                    }
+                    
+                    this.startDate = newStartDate;
                     this.endDate = new Date(); // Always "now" for active tasks
                 } else {
                     const adjusted = TimeUtils.adjustStartDateTime(this.startDate, this.endDate, daysDelta, 'days');
@@ -804,15 +874,34 @@ export class TaskInstanceEditDialog {
         // For actively tracked tasks: calculate from startDate to NOW (with animation)
         // For completed tasks: calculate from startDate to endDate
         if (this.isActiveEntry && this.startDate) {
-            const now = Date.now();
-            const elapsedMs = now - this.startDate.getTime();
-            const elapsedSeconds = Math.floor(elapsedMs / 1000);
-            // Animate duration change (smooth transition with pulse)
-            // FROM current displayed value TO new calculated value
-            if (this.durationAnimator) {
-                const currentSeconds = this.durationAnimator.getCurrentSeconds();
-                // Animate from current displayed time to new time (smooth transition without jumps)
-                this.durationAnimator.animateTo(elapsedSeconds, true, currentSeconds);
+            // CRITICAL: Use trackingState.elapsedSeconds + time offset (if user edited start time)
+            const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+            if (trackingState && trackingState.elapsedSeconds !== undefined) {
+                // Calculate time offset: difference between edited startDate and original startTime
+                let timeOffset = 0; // in seconds
+                if (this.originalStartTime && this.startDate) {
+                    timeOffset = Math.floor((this.originalStartTime - this.startDate.getTime()) / 1000);
+                }
+                
+                // Combine: elapsedSeconds from global timer + user's time offset
+                const elapsedSeconds = Math.max(0, trackingState.elapsedSeconds + timeOffset);
+                
+                // Animate duration change (smooth transition with pulse)
+                // FROM current displayed value TO new calculated value
+                if (this.durationAnimator) {
+                    const currentSeconds = this.durationAnimator.getCurrentSeconds();
+                    // Animate from current displayed time to new time (smooth transition without jumps)
+                    this.durationAnimator.animateTo(elapsedSeconds, true, currentSeconds);
+                }
+            } else {
+                // Fallback: calculate from startDate if trackingState not available
+                const now = Date.now();
+                const elapsedMs = now - this.startDate.getTime();
+                const elapsedSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+                if (this.durationAnimator) {
+                    const currentSeconds = this.durationAnimator.getCurrentSeconds();
+                    this.durationAnimator.animateTo(elapsedSeconds, true, currentSeconds);
+                }
             }
         } else {
             this.durationLabel.set_label(TimeUtils.formatDuration(validated.duration));
@@ -887,6 +976,8 @@ export class TaskInstanceEditDialog {
 
     /**
      * Subscribe to GlobalTimer for real-time Duration updates (for actively tracked tasks)
+     * CRITICAL: Use 'tracking-updated' event (same as other UI components)
+     * This event fires every second from Core TimeTrackingService
      */
     _subscribeToGlobalTimer() {
         // Unsubscribe first if already subscribed
@@ -894,7 +985,7 @@ export class TaskInstanceEditDialog {
             this._timerUnsubscribe();
         }
         
-        // Subscribe to GlobalTimer tick events
+        // Subscribe to tracking-updated events (fires every second from Core timer)
         const handler = (data) => {
             // Only update if this is still the active entry
             if (!this.isActiveEntry || !this.latestEntry || !this.coreBridge) return;
@@ -909,17 +1000,28 @@ export class TaskInstanceEditDialog {
                 return;
             }
             
-            // Update Duration label with current elapsed time (no animation, just increment)
-            if (this.durationAnimator && this.startDate) {
-                const now = Date.now();
-                const elapsedMs = now - this.startDate.getTime();
-                const elapsedSeconds = Math.floor(elapsedMs / 1000);
+            // CRITICAL: Use elapsedSeconds from data (updated by global timer every second)
+            // BUT: Add time offset if user edited start time
+            // Formula: displayedTime = elapsedSeconds (from global timer) + timeOffset (user edit)
+            if (this.durationAnimator && data && data.elapsedSeconds !== undefined) {
+                // Calculate time offset: difference between edited startDate and original startTime
+                let timeOffset = 0; // in seconds
+                if (this.originalStartTime && this.startDate) {
+                    // Offset = (originalStartTime - newStartDate) in seconds
+                    // If user moved start time earlier (e.g., -2 min), offset is positive (adds time)
+                    // If user moved start time later (e.g., +5 min), offset is negative (subtracts time)
+                    timeOffset = Math.floor((this.originalStartTime - this.startDate.getTime()) / 1000);
+                }
+                
+                // Combine: elapsedSeconds from global timer + user's time offset
+                const elapsedSeconds = Math.max(0, data.elapsedSeconds + timeOffset);
                 
                 // Direct update without animation (for regular 1-second ticks)
                 this.durationAnimator.setDirect(elapsedSeconds);
             }
             
-            // Update End time labels (End time = "now" for active tasks)
+            // CRITICAL: Update End time labels in real-time (End time = "now" for active tasks)
+            // This ensures End time always shows current time, even if dialog is open for a while
             this.endDate = new Date();
             if (this.endTimeLabel) {
                 this.endTimeLabel.set_label(this.endDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
@@ -929,12 +1031,12 @@ export class TaskInstanceEditDialog {
             }
         };
         
-        // Subscribe via CoreBridge events
-        this.coreBridge.onUIEvent('global-timer-tick', handler);
+        // Subscribe via CoreBridge events (same event as other UI components)
+        this.coreBridge.onUIEvent('tracking-updated', handler);
         
         // Store unsubscribe function
         this._timerUnsubscribe = () => {
-            this.coreBridge.offUIEvent('global-timer-tick', handler);
+            this.coreBridge.offUIEvent('tracking-updated', handler);
         };
     }
 
