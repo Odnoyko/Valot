@@ -1536,10 +1536,10 @@ export class ClientsPage {
      * Lightweight cleanup - clears data but keeps UI structure
      */
     onHide() {
-        // Cleanup tracking widget subscriptions
-        if (this.trackingWidget && typeof this.trackingWidget.cleanup === 'function') {
-            this.trackingWidget.cleanup();
-        }
+        // CRITICAL: Don't cleanup tracking widget subscriptions on hide
+        // Keep subscriptions active so widget continues to receive updates
+        // Widget will be refreshed in _onPageChanged() when page becomes visible
+        // This ensures time updates continue even when page is hidden
         
         // Clear data arrays
         this.clients = [];

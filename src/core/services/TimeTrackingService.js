@@ -753,8 +753,20 @@ export class TimeTrackingService extends BaseService {
 
     /**
      * Delete time entry
+     * CRITICAL: Check if deleted entry is currently tracked - stop tracking if so
      */
     async deleteTimeEntry(entryId) {
+        const tracking = this.state.state.tracking;
+        
+        // CRITICAL: Check if the deleted TimeEntry is currently tracked
+        // If yes, stop tracking (entry no longer exists)
+        if (tracking.isTracking && tracking.currentTimeEntryId === entryId) {
+            // The tracked entry is being deleted - stop tracking
+            await this.stop();
+            // Return early - stop() already handled everything
+            return;
+        }
+        
         const rows = await this.query(`SELECT task_instance_id FROM TimeEntry WHERE id = ?`, [entryId]);
         if (rows.length > 0) {
             const instanceId = rows[0].task_instance_id;

@@ -621,6 +621,7 @@ export const ValotMainWindow = GObject.registerClass({
     /**
      * Called when user navigates to a different page
      * Refreshes tracking widgets to sync with current state
+     * CRITICAL: Refresh ALL tracking widgets, not just current page
      */
     _onPageChanged() {
         const visiblePage = this.navigationView.get_visible_page();
@@ -633,27 +634,22 @@ export const ValotMainWindow = GObject.registerClass({
             this._cleanupPreviousPage(this._previousPageTag);
         }
 
-        // Refresh tracking widget on the current page
-        let pageInstance = null;
-        switch (pageTag) {
-            case 'tasks':
-                pageInstance = this.tasksPageInstance;
-                break;
-            case 'projects':
-                pageInstance = this.projectsPageInstance;
-                break;
-            case 'clients':
-                pageInstance = this.clientsPageInstance;
-                break;
-            case 'reports':
-                pageInstance = this.reportsPageInstance;
-                break;
-        }
+        // CRITICAL: Refresh ALL tracking widgets on ALL pages
+        // This ensures all widgets are synchronized with current tracking state
+        // Even if a page is hidden, its widget should be ready when shown
+        const allPages = [
+            { instance: this.tasksPageInstance, name: 'tasks' },
+            { instance: this.projectsPageInstance, name: 'projects' },
+            { instance: this.clientsPageInstance, name: 'clients' },
+            { instance: this.reportsPageInstance, name: 'reports' }
+        ];
 
-        // Refresh tracking widget if page has one
-        if (pageInstance && pageInstance.trackingWidget && pageInstance.trackingWidget.refresh) {
-            pageInstance.trackingWidget.refresh();
-        }
+        allPages.forEach(({ instance, name }) => {
+            if (instance && instance.trackingWidget && typeof instance.trackingWidget.refresh === 'function') {
+                // Refresh widget to restore subscriptions and update UI
+                instance.trackingWidget.refresh();
+            }
+        });
 
         // Store current page as previous for next navigation
         this._previousPageTag = pageTag;

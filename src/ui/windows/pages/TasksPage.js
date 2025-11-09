@@ -575,11 +575,10 @@ export class TasksPage {
     onHide() {
         // REMOVED: No timer to stop
         
-        // Cleanup tracking widget subscriptions to prevent multiple subscriptions
-        // Widget will resubscribe in refresh() when page becomes visible again
-        if (this.trackingWidget && typeof this.trackingWidget.cleanup === 'function') {
-            this.trackingWidget.cleanup();
-        }
+        // CRITICAL: Don't cleanup tracking widget subscriptions on hide
+        // Keep subscriptions active so widget continues to receive updates
+        // Widget will be refreshed in _onPageChanged() when page becomes visible
+        // This ensures time updates continue even when page is hidden
         
         // Clear data arrays (they will be reloaded when page is shown again)
         this.tasks = [];
@@ -2346,19 +2345,22 @@ export class TasksPage {
         dialog.connect('response', async (dialog, response) => {
             if (response === 'delete') {
                 try {
-                    // Check if any of the tasks being deleted is currently tracked
+                    // CRITICAL: Check if the tracked TaskInstance is being deleted
+                    // For stacks: only stop tracking if the tracked instance itself is deleted
+                    // If other instances in stack are deleted, just recalculate stack time
                     const trackingState = this.coreBridge.getTrackingState();
-                    if (trackingState.isTracking) {
-                        const isTrackingDeleted = tasksToDelete.some(t =>
-                            t.task_id === trackingState.currentTaskId &&
-                            t.project_id === trackingState.currentProjectId &&
-                            t.client_id === trackingState.currentClientId
+                    if (trackingState.isTracking && trackingState.currentTaskInstanceId) {
+                        // Check if the tracked TaskInstance ID is in the list of tasks to delete
+                        const isTrackedInstanceDeleted = tasksToDelete.some(t =>
+                            t.id === trackingState.currentTaskInstanceId
                         );
 
-                        // Stop tracking if deleting currently tracked task
-                        if (isTrackingDeleted) {
+                        // Stop tracking ONLY if the tracked instance itself is being deleted
+                        if (isTrackedInstanceDeleted) {
                             await this.coreBridge.stopTracking();
                         }
+                        // If tracked instance is NOT deleted, tracking continues
+                        // Stack time will be recalculated automatically after deletion
                     }
 
                     // Save task instance data for undo (without TimeEntries for now)

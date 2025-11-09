@@ -58,19 +58,25 @@ export class ReportsPage {
         if (!this.coreBridge) return;
         
         // Reload when tracking starts/stops (creates new time entries)
-        this._eventHandlers['tracking-started'] = (data) => {
-            
-            // Check if tracking is in current period filter
-            if (data && data.startTime) {
-                this._checkIfTrackingIsInPeriod(data.startTime);
+        this._eventHandlers['tracking-started'] = async (data) => {
+            try {
+                // Check if tracking is in current period filter
+                if (data && data.startTime) {
+                    this._checkIfTrackingIsInPeriod(data.startTime);
+                }
+                
+                // Cache client info for real-time income calculations
+                if (data && data.clientId) {
+                    await this._cacheTrackingClientFromData(data.clientId);
+                }
+                
+                // CRITICAL: Clear tracked task base time - will be set when list is updated
+                this._trackedTaskBaseTime = undefined;
+                
+                await this.updateChartsOnly();
+            } catch (error) {
+                console.error('[ReportsPage] Error in tracking-started handler:', error);
             }
-            
-            // Cache client info for real-time income calculations
-            if (data && data.clientId) {
-                this._cacheTrackingClientFromData(data.clientId);
-            }
-            
-            this.updateChartsOnly();
         };
 
         this._eventHandlers['tracking-stopped'] = () => {
@@ -86,6 +92,11 @@ export class ReportsPage {
 
             // Clean up currency cache arrays
             this._cachedCurrentCurrencies = null;
+            
+            // CRITICAL: Clear tracked task references (tracking stopped)
+            this._trackedTaskTimeLabel = null;
+            this._trackedTaskRow = null;
+            this._trackedTaskBaseTime = undefined;
 
             this.updateChartsOnly();
         };
@@ -96,6 +107,25 @@ export class ReportsPage {
                 return;
             }
             
+            // CRITICAL: Check if client changed during tracking - update currency
+            if (data.clientId !== undefined) {
+                const trackingState = this.coreBridge.getTrackingState();
+                if (trackingState && trackingState.isTracking) {
+                    // Client changed - recache client info and recalculate earnings
+                    this._cacheTrackingClientFromData(data.clientId).then(() => {
+                        // Clear realtime earnings map to force recalculation with new currency
+                        if (this._realtimeEarningsMap) {
+                            this._realtimeEarningsMap.clear();
+                            this._realtimeEarningsMap = null;
+                        }
+                        // Update earnings with new currency
+                        if (this._isTrackingInPeriod) {
+                            this._updateStatisticsRealtimeFromData(data);
+                        }
+                    });
+                    return; // Exit early - will update after client is cached
+                }
+            }
             
             // Only update if tracking is in current period filter
             if (!this._isTrackingInPeriod) {
@@ -104,6 +134,35 @@ export class ReportsPage {
             
             // OPTIMIZED: Update only labels, no getTrackingState() call, no DB queries
             this._updateStatisticsRealtimeFromData(data);
+            
+            // CRITICAL: Update tracked task time label in Recent Tasks list
+            // This ensures the last entry (tracked task) shows real-time updates
+            if (this._trackedTaskTimeLabel && !this._trackedTaskTimeLabel.is_destroyed?.()) {
+                const trackingState = this.coreBridge.getTrackingState();
+                if (trackingState && trackingState.isTracking && data.elapsedSeconds !== undefined) {
+                    // Get base time from cached tracking base time or find in allTasks
+                    let baseTime = 0;
+                    if (this._trackedTaskBaseTime !== undefined) {
+                        baseTime = this._trackedTaskBaseTime;
+                    } else {
+                        // Fallback: find tracked task in allTasks to get base time
+                        const trackedTask = this.allTasks.find(t =>
+                            t.task_id === trackingState.currentTaskId &&
+                            t.project_id === trackingState.currentProjectId &&
+                            t.client_id === trackingState.currentClientId
+                        );
+                        if (trackedTask) {
+                            baseTime = trackedTask.total_time || 0;
+                            // Cache base time for future updates
+                            this._trackedTaskBaseTime = baseTime;
+                        }
+                    }
+                    
+                    // Calculate total time: base time + elapsed seconds
+                    const totalTime = baseTime + data.elapsedSeconds;
+                    this._trackedTaskTimeLabel.set_label(this._formatDuration(totalTime));
+                }
+            }
         };
 
         this._eventHandlers['task-updated'] = async () => {
@@ -299,10 +358,10 @@ export class ReportsPage {
     onHide() {
         // REMOVED: No timer to stop
         
-        // Cleanup tracking widget subscriptions
-        if (this.trackingWidget && typeof this.trackingWidget.cleanup === 'function') {
-            this.trackingWidget.cleanup();
-        }
+        // CRITICAL: Don't cleanup tracking widget subscriptions on hide
+        // Keep subscriptions active so widget continues to receive updates
+        // Widget will be refreshed in _onPageChanged() when page becomes visible
+        // This ensures time updates continue even when page is hidden
         
         // Clear data arrays (they will be reloaded when page is shown again)
         this.allTasks = [];
@@ -343,9 +402,16 @@ export class ReportsPage {
 
     /**
      * Called when page becomes visible
+     * CRITICAL: Refresh tracking widget to sync UI with current state
      */
     onPageShown() {
         this._updateSidebarToggleButton();
+        
+        // CRITICAL: Refresh tracking widget to ensure it's synchronized with current tracking state
+        // This updates time display and restores subscriptions if needed
+        if (this.trackingWidget && typeof this.trackingWidget.refresh === 'function') {
+            this.trackingWidget.refresh();
+        }
     }
 
     /**
@@ -507,7 +573,9 @@ export class ReportsPage {
                 this.customDateBox.set_visible(false);
             }
 
-            this._updateReports();
+            this._updateReports().catch(error => {
+                console.error('[ReportsPage] Error updating reports from period change:', error);
+            });
         });
 
         // Project filter dropdown
@@ -825,7 +893,9 @@ export class ReportsPage {
             this._updateFilterDropdowns();
 
             // Update all reports
-            this._updateReports();
+            this._updateReports().catch(error => {
+                console.error('[ReportsPage] Error updating reports from loadReports:', error);
+            });
 
             // Check if tracking is active and in current period
             const trackingState = this.coreBridge.getTrackingState();
@@ -857,7 +927,9 @@ export class ReportsPage {
         this.projectFilter.connect('notify::selected', () => {
             const selected = this.projectFilter.get_selected();
             this.chartFilters.projectId = selected === 0 ? null : this.allProjects[selected - 1]?.id;
-            this._updateReports();
+            this._updateReports().catch(error => {
+                console.error('[ReportsPage] Error updating reports from project filter:', error);
+            });
         });
 
         // Client filter
@@ -871,7 +943,9 @@ export class ReportsPage {
         this.clientFilter.connect('notify::selected', () => {
             const selected = this.clientFilter.get_selected();
             this.chartFilters.clientId = selected === 0 ? null : this.allClients[selected - 1]?.id;
-            this._updateReports();
+            this._updateReports().catch(error => {
+                console.error('[ReportsPage] Error updating reports from period filter:', error);
+            });
         });
     }
 
@@ -879,23 +953,27 @@ export class ReportsPage {
      * Update all report sections
      */
     async _updateReports() {
-        const filteredTasks = this._getFilteredTasks();
-        
-        // Get tracking state to include tracked task in Recent Tasks
-        const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+        try {
+            const filteredTasks = this._getFilteredTasks();
+            
+            // Get tracking state to include tracked task in Recent Tasks
+            const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
 
-        // Update statistics (async - calls Core)
-        await this._updateStatistics(filteredTasks).catch(error => {
-            console.error('[ReportsPage] Error updating statistics:', error);
-        });
+            // Update statistics (async - calls Core)
+            await this._updateStatistics(filteredTasks).catch(error => {
+                console.error('[ReportsPage] Error updating statistics:', error);
+            });
 
-        // DISABLED: No real-time updates of Recent Tasks with tracking time
-        // Recent Tasks shows only completed tasks, not active tracking
-        // Update recent tasks list (only completed tasks, no tracking time)
-        this._updateRecentTasksList(filteredTasks);
+            // DISABLED: No real-time updates of Recent Tasks with tracking time
+            // Recent Tasks shows only completed tasks, not active tracking
+            // Update recent tasks list (only completed tasks, no tracking time)
+            this._updateRecentTasksList(filteredTasks);
 
-        // Update chart visualization
-        this._updateChartVisualization();
+            // Update chart visualization
+            this._updateChartVisualization();
+        } catch (error) {
+            console.error('[ReportsPage] Error in _updateReports:', error);
+        }
     }
 
     /**
@@ -1911,7 +1989,9 @@ export class ReportsPage {
                 }
 
                 this._updateCustomDateButtons();
-                this._updateReports();
+                this._updateReports().catch(error => {
+                    console.error('[ReportsPage] Error updating reports from custom date:', error);
+                });
             }
             dlg.close();
         });
@@ -2420,6 +2500,11 @@ export class ReportsPage {
      * Update recent tasks list
      */
     _updateRecentTasksList(tasks) {
+        // CRITICAL: Clear tracked task references before rebuilding list
+        this._trackedTaskTimeLabel = null;
+        this._trackedTaskRow = null;
+        this._trackedTaskBaseTime = undefined;
+        
         // Clear existing list
         let child = this.recentTasksList.get_first_child();
         while (child) {
@@ -2476,11 +2561,14 @@ export class ReportsPage {
             const currentTrackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
             let displayTime = task.total_time || 0;
             
+            // CRITICAL: Declare isTracked outside if block so it's available later
+            let isTracked = false;
+            
             // If this is the tracked task, ensure time includes current elapsedSeconds
             if (currentTrackingState && currentTrackingState.isTracking) {
-                const isTracked = task.task_id === currentTrackingState.currentTaskId &&
-                                 task.project_id === currentTrackingState.currentProjectId &&
-                                 task.client_id === currentTrackingState.currentClientId;
+                isTracked = task.task_id === currentTrackingState.currentTaskId &&
+                           task.project_id === currentTrackingState.currentProjectId &&
+                           task.client_id === currentTrackingState.currentClientId;
                 
                 if (isTracked) {
                     // Always use fresh elapsedSeconds from tracking state
@@ -2504,6 +2592,17 @@ export class ReportsPage {
                 valign: Gtk.Align.CENTER,
             });
             row.add_suffix(timeLabel);
+            
+            // CRITICAL: Store reference to timeLabel and task info for real-time updates
+            // This allows us to update the last entry (tracked task) in real-time
+            if (currentTrackingState && currentTrackingState.isTracking && isTracked) {
+                // Store reference to tracked task's time label for real-time updates
+                this._trackedTaskTimeLabel = timeLabel;
+                this._trackedTaskRow = row;
+                // CRITICAL: Cache base time (total_time without elapsedSeconds) for real-time updates
+                // This ensures we always add elapsedSeconds to the correct base value
+                this._trackedTaskBaseTime = task.total_time || 0;
+            }
 
             this.recentTasksList.append(row);
         });
@@ -2620,7 +2719,7 @@ export class ReportsPage {
             this.allTimeEntries = await this.coreBridge.getAllTimeEntries() || [];
 
             // Update all reports
-            this._updateReports();
+            await this._updateReports();
         } catch (error) {
             console.error('[ReportsPage] Error updating charts:', error);
         }
