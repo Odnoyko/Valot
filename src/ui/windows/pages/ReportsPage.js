@@ -82,10 +82,12 @@ export class ReportsPage {
                 
                 // CRITICAL: Update Recent Tasks list to include tracked task and set up real-time updates
                 // This ensures the tracked task appears in Recent Tasks and gets real-time time updates
+                // First, reload tasks to get the new tracked task instance
+                await this.updateChartsOnly();
+                
+                // Then update Recent Tasks list with fresh data including the new tracked task
                 const filteredTasks = this._getFilteredTasks();
                 this._updateRecentTasksList(filteredTasks);
-                
-                await this.updateChartsOnly();
             } catch (error) {
                 console.error('[ReportsPage] Error in tracking-started handler:', error);
             }
@@ -429,10 +431,15 @@ export class ReportsPage {
     onPageShown() {
         this._updateSidebarToggleButton();
         
-        // CRITICAL: Clear cached date range and task IDs to force recalculation
+        // CRITICAL: Clear ALL cached filter state to force recalculation
         // This ensures filters are applied correctly after page changes
+        // Without this, filters may stop working after navigation
         this._currentDateRange = null;
         this._currentTaskInstanceIds = null;
+        this._isTrackingInPeriod = false;
+        this._cachedStatsTotal = 0;
+        this._cachedEarningsByCurrency = new Map();
+        this._cachedTrackingClient = null;
         
         // CRITICAL: Refresh tracking widget to ensure it's synchronized with current tracking state
         // This updates time display and restores subscriptions if needed
@@ -440,19 +447,11 @@ export class ReportsPage {
             this.trackingWidget.refresh();
         }
         
-        // CRITICAL: If data arrays are empty (after onHide()), reload data first
-        // Then update reports to ensure filters work correctly
-        if (!this.allTasks || this.allTasks.length === 0) {
-            // Data was cleared in onHide() - reload it first
-            this.loadReports().catch(error => {
-                console.error('[ReportsPage] Error loading reports in onPageShown:', error);
-            });
-        } else {
-            // Data is already loaded - just update reports with current filters
-            this._updateReports().catch(error => {
-                console.error('[ReportsPage] Error updating reports in onPageShown:', error);
-            });
-        }
+        // CRITICAL: Always reload data and update reports to ensure filters work correctly
+        // Even if data arrays are not empty, they may be stale or incomplete
+        this.loadReports().catch(error => {
+            console.error('[ReportsPage] Error loading reports in onPageShown:', error);
+        });
     }
 
     /**
@@ -997,19 +996,21 @@ export class ReportsPage {
      */
     async _updateReports() {
         try {
-            const filteredTasks = this._getFilteredTasks();
-            
-            // Get tracking state to include tracked task in Recent Tasks
-            const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+            // CRITICAL: Get filtered tasks for statistics (may not have _currentTaskInstanceIds yet)
+            const filteredTasksForStats = this._getFilteredTasks();
 
             // Update statistics (async - calls Core)
-            await this._updateStatistics(filteredTasks).catch(error => {
+            // This will set _currentTaskInstanceIds based on TimeEntry.end_time filtering
+            await this._updateStatistics(filteredTasksForStats).catch(error => {
                 console.error('[ReportsPage] Error updating statistics:', error);
             });
 
-            // DISABLED: No real-time updates of Recent Tasks with tracking time
-            // Recent Tasks shows only completed tasks, not active tracking
+            // CRITICAL: Get filtered tasks AGAIN after _updateStatistics completes
+            // This ensures _currentTaskInstanceIds is set and Recent Tasks uses correct filtering
+            const filteredTasks = this._getFilteredTasks();
+
             // Update recent tasks list (only completed tasks, no tracking time)
+            // Now uses _currentTaskInstanceIds from _updateStatistics for correct period filtering
             this._updateRecentTasksList(filteredTasks);
 
             // Update chart visualization
@@ -1761,21 +1762,66 @@ export class ReportsPage {
      * Get filtered tasks based on current filters
      */
     _getFilteredTasks() {
+        // CRITICAL: Filter tasks using the same logic as statistics
+        // This ensures Recent Tasks shows only tasks that match ALL active filters (project, client, period)
+        // Use _currentTaskInstanceIds if available (from _updateStatistics), otherwise filter by last_used_at
         let filtered = [...this.allTasks];
-
-        // Filter by project
+        
+        // Step 1: Filter by project
         if (this.chartFilters.projectId) {
             filtered = filtered.filter(t => t.project_id === this.chartFilters.projectId);
         }
-
-        // Filter by client
+        
+        // Step 2: Filter by client
         if (this.chartFilters.clientId) {
             filtered = filtered.filter(t => t.client_id === this.chartFilters.clientId);
         }
-
-        // Filter by period
-        filtered = this._filterByPeriod(filtered, this.chartFilters.period);
-
+        
+        // Step 3: CRITICAL: Filter by period using taskInstanceIds (from TimeEntry.end_time) if available
+        // This ensures we use the same filtering logic as statistics
+        // _currentTaskInstanceIds already contains tasks filtered by project/client AND period
+        if (this._currentTaskInstanceIds !== null && this._currentTaskInstanceIds !== undefined) {
+            // Use taskInstanceIds from _updateStatistics (already filtered by project/client AND period)
+            if (this._currentTaskInstanceIds.length === 0) {
+                // No tasks match ALL filters - return empty array
+                filtered = [];
+            } else {
+                // Filter by taskInstanceIds that match ALL filters (project/client AND period)
+                const taskIdsSet = new Set(this._currentTaskInstanceIds);
+                filtered = filtered.filter(t => taskIdsSet.has(t.id));
+            }
+        } else {
+            // Fallback: filter by last_used_at (for cases where _currentTaskInstanceIds is not set yet)
+            filtered = this._filterByPeriod(filtered, this.chartFilters.period);
+        }
+        
+        // CRITICAL: Include currently tracked task ONLY if it's actually being tracked
+        // AND it matches ALL filters (project, client, period)
+        // Do NOT add tracked task if it doesn't match filters (user wants to see only filtered data)
+        const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+        if (trackingState && trackingState.isTracking && trackingState.currentTaskInstanceId) {
+            // Check if tracked task matches ALL filters
+            const trackedTask = this.allTasks.find(t => t.id === trackingState.currentTaskInstanceId);
+            if (trackedTask) {
+                // Check if tracked task matches project filter
+                const matchesProject = !this.chartFilters.projectId || trackedTask.project_id === this.chartFilters.projectId;
+                // Check if tracked task matches client filter
+                const matchesClient = !this.chartFilters.clientId || trackedTask.client_id === this.chartFilters.clientId;
+                // Check if tracked task matches period filter (is in _currentTaskInstanceIds)
+                const matchesPeriod = !this._currentTaskInstanceIds || 
+                                     (this._currentTaskInstanceIds.length > 0 && 
+                                      this._currentTaskInstanceIds.includes(trackedTask.id));
+                
+                // Only add if it matches ALL active filters
+                if (matchesProject && matchesClient && matchesPeriod) {
+                    const isTrackedTaskInList = filtered.some(t => t.id === trackingState.currentTaskInstanceId);
+                    if (!isTrackedTaskInList) {
+                        filtered.push(trackedTask);
+                    }
+                }
+            }
+        }
+        
         return filtered;
     }
 
@@ -2167,13 +2213,15 @@ export class ReportsPage {
             
             this._currentTaskInstanceIds = filteredTaskIds;
         } else {
-            // CRITICAL: Explicitly set to null when no project/client filters are active
-            // This ensures we get ALL time entries in the period, not filtered by task IDs
-            this._currentTaskInstanceIds = null;
+            // CRITICAL: When no project/client filters, get ALL taskInstanceIds that have TimeEntry records in the period
+            // This ensures Recent Tasks uses the same filtering logic as statistics (by TimeEntry.end_time, not last_used_at)
+            const allTaskIdsInPeriod = await this.coreBridge.getTaskInstanceIdsForPeriod(this._currentDateRange);
+            this._currentTaskInstanceIds = allTaskIdsInPeriod;
         }
 
-        // CRITICAL: Double-check that taskInstanceIds is correct before calling getStatsForPeriod
-        // If no project/client filters, ensure it's null (not an empty array or stale value)
+        // CRITICAL: For getStatsForPeriod, pass null when no project/client filters
+        // (Core will handle period filtering internally)
+        // But _currentTaskInstanceIds is still set for Recent Tasks filtering
         const taskInstanceIdsToPass = (this.chartFilters.projectId || this.chartFilters.clientId) 
             ? this._currentTaskInstanceIds 
             : null;
@@ -2432,13 +2480,22 @@ export class ReportsPage {
         let filtered = [...tasksArray];
         
         // Remember tracked task before filtering (if provided)
+        // CRITICAL: Find by taskInstanceId first (exact match), then fallback to task_id/project_id/client_id
         let trackedTask = null;
         if (trackingState && trackingState.isTracking) {
-            trackedTask = tasksArray.find(t =>
-                t.task_id === trackingState.currentTaskId &&
-                t.project_id === trackingState.currentProjectId &&
-                t.client_id === trackingState.currentClientId
-            );
+            // First try to find by exact taskInstanceId (if available)
+            if (trackingState.currentTaskInstanceId) {
+                trackedTask = tasksArray.find(t => t.id === trackingState.currentTaskInstanceId);
+            }
+            
+            // Fallback to task_id/project_id/client_id if not found by ID
+            if (!trackedTask) {
+                trackedTask = tasksArray.find(t =>
+                    t.task_id === trackingState.currentTaskId &&
+                    t.project_id === trackingState.currentProjectId &&
+                    t.client_id === trackingState.currentClientId
+                );
+            }
             
             // Update tracked task's time with accurate calculation
             if (trackedTask) {
@@ -2474,12 +2531,18 @@ export class ReportsPage {
         filtered = this._filterByPeriod(filtered, this.chartFilters.period);
         
         // Always include currently tracked task if it exists and not already in list
+        // CRITICAL: Check by taskInstanceId first (exact match), then by task_id/project_id/client_id
         if (trackedTask) {
-            const isTrackedTaskInList = filtered.some(t =>
-                t.task_id === trackedTask.task_id &&
-                t.project_id === trackedTask.project_id &&
-                t.client_id === trackedTask.client_id
-            );
+            const isTrackedTaskInList = filtered.some(t => {
+                // Check by exact ID first
+                if (trackingState && trackingState.currentTaskInstanceId) {
+                    return t.id === trackingState.currentTaskInstanceId;
+                }
+                // Fallback to task_id/project_id/client_id
+                return t.task_id === trackedTask.task_id &&
+                       t.project_id === trackedTask.project_id &&
+                       t.client_id === trackedTask.client_id;
+            });
             if (!isTrackedTaskInList) {
                 // Add tracked task to list even if it doesn't match filters
                 filtered.push(trackedTask);
@@ -2497,13 +2560,22 @@ export class ReportsPage {
         let filtered = [...tasksArray];
         
         // Remember tracked task before filtering (if provided)
+        // CRITICAL: Find by taskInstanceId first (exact match), then fallback to task_id/project_id/client_id
         let trackedTask = null;
         if (trackingState && trackingState.isTracking) {
-            trackedTask = tasksArray.find(t =>
-                t.task_id === trackingState.currentTaskId &&
-                t.project_id === trackingState.currentProjectId &&
-                t.client_id === trackingState.currentClientId
-            );
+            // First try to find by exact taskInstanceId (if available)
+            if (trackingState.currentTaskInstanceId) {
+                trackedTask = tasksArray.find(t => t.id === trackingState.currentTaskInstanceId);
+            }
+            
+            // Fallback to task_id/project_id/client_id if not found by ID
+            if (!trackedTask) {
+                trackedTask = tasksArray.find(t =>
+                    t.task_id === trackingState.currentTaskId &&
+                    t.project_id === trackingState.currentProjectId &&
+                    t.client_id === trackingState.currentClientId
+                );
+            }
             
             // Use cached total_time + elapsedSeconds as fallback
             if (trackedTask) {
@@ -2525,12 +2597,18 @@ export class ReportsPage {
         filtered = this._filterByPeriod(filtered, this.chartFilters.period);
         
         // Always include currently tracked task if it exists and not already in list
+        // CRITICAL: Check by taskInstanceId first (exact match), then by task_id/project_id/client_id
         if (trackedTask) {
-            const isTrackedTaskInList = filtered.some(t =>
-                t.task_id === trackedTask.task_id &&
-                t.project_id === trackedTask.project_id &&
-                t.client_id === trackedTask.client_id
-            );
+            const isTrackedTaskInList = filtered.some(t => {
+                // Check by exact ID first
+                if (trackingState && trackingState.currentTaskInstanceId) {
+                    return t.id === trackingState.currentTaskInstanceId;
+                }
+                // Fallback to task_id/project_id/client_id
+                return t.task_id === trackedTask.task_id &&
+                       t.project_id === trackedTask.project_id &&
+                       t.client_id === trackedTask.client_id;
+            });
             if (!isTrackedTaskInList) {
                 filtered.push(trackedTask);
             }
@@ -2726,11 +2804,20 @@ export class ReportsPage {
             // CRITICAL: Declare isTracked outside if block so it's available later
             let isTracked = false;
             
-            // If this is the tracked task, ensure time includes current elapsedSeconds
+            // CRITICAL: Check if this is the EXACT tracked task instance (by taskInstanceId, not just task_id)
+            // If there are 4 different entries for 1 task, only the current tracked instance should show real-time updates
             if (currentTrackingState && currentTrackingState.isTracking) {
-                isTracked = task.task_id === currentTrackingState.currentTaskId &&
-                           task.project_id === currentTrackingState.currentProjectId &&
-                           task.client_id === currentTrackingState.currentClientId;
+                // Check if this is the exact tracked TaskInstance (by ID, not just task_id/project_id/client_id)
+                const isExactTrackedInstance = task.id === currentTrackingState.currentTaskInstanceId;
+                
+                // Also check if it matches by task_id/project_id/client_id (for backward compatibility)
+                const matchesTaskCriteria = task.task_id === currentTrackingState.currentTaskId &&
+                                          task.project_id === currentTrackingState.currentProjectId &&
+                                          task.client_id === currentTrackingState.currentClientId;
+                
+                // CRITICAL: Only mark as tracked if it's the EXACT instance being tracked
+                // This ensures real-time updates work only for the current tracked entry, not all entries for the task
+                isTracked = isExactTrackedInstance || (matchesTaskCriteria && !currentTrackingState.currentTaskInstanceId);
                 
                 if (isTracked) {
                     // Always use fresh elapsedSeconds from tracking state
