@@ -637,19 +637,21 @@ export const ValotMainWindow = GObject.registerClass({
         // CRITICAL: Refresh ALL tracking widgets on ALL pages
         // This ensures all widgets are synchronized with current tracking state
         // Even if a page is hidden, its widget should be ready when shown
-        const allPages = [
-            { instance: this.tasksPageInstance, name: 'tasks' },
-            { instance: this.projectsPageInstance, name: 'projects' },
-            { instance: this.clientsPageInstance, name: 'clients' },
-            { instance: this.reportsPageInstance, name: 'reports' }
+        // OPTIMIZED: Don't create array of objects - iterate directly to avoid object creation
+        const pages = [
+            this.tasksPageInstance,
+            this.projectsPageInstance,
+            this.clientsPageInstance,
+            this.reportsPageInstance
         ];
 
-        allPages.forEach(({ instance, name }) => {
+        for (let i = 0; i < pages.length; i++) {
+            const instance = pages[i];
             if (instance && instance.trackingWidget && typeof instance.trackingWidget.refresh === 'function') {
                 // Refresh widget to restore subscriptions and update UI
                 instance.trackingWidget.refresh();
             }
-        });
+        }
         
         // CRITICAL: Call onPageShown() on the current page instance
         // This ensures pages reload data if needed (e.g., TasksPage reloads tasks)

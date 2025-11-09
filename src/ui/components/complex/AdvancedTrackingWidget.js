@@ -654,13 +654,16 @@ export class AdvancedTrackingWidget {
         } else {
             // Even if handlers exist, ensure they are subscribed (in case subscriptions were lost)
             // This handles edge cases where handlers exist but subscriptions were removed
+            // OPTIMIZED: Use for...in loop instead of Object.keys().forEach() to avoid creating array
             if (this.coreBridge && this._coreEventHandlers) {
-                Object.keys(this._coreEventHandlers).forEach(event => {
-                    // Remove old subscription first (if exists) to prevent duplicates
-                    this.coreBridge.offUIEvent(event, this._coreEventHandlers[event]);
-                    // Add new subscription
-                    this.coreBridge.onUIEvent(event, this._coreEventHandlers[event]);
-                });
+                for (const event in this._coreEventHandlers) {
+                    if (this._coreEventHandlers.hasOwnProperty(event)) {
+                        // Remove old subscription first (if exists) to prevent duplicates
+                        this.coreBridge.offUIEvent(event, this._coreEventHandlers[event]);
+                        // Add new subscription
+                        this.coreBridge.onUIEvent(event, this._coreEventHandlers[event]);
+                    }
+                }
             }
         }
         // Always update UI to current state

@@ -1478,18 +1478,19 @@ export class ProjectsPage {
         // Widget will be refreshed in _onPageChanged() when page becomes visible
         // This ensures time updates continue even when page is hidden
         
-        // Clear data arrays
-        this.projects = [];
-        this.filteredProjects = [];
+        // OPTIMIZED: Don't clear data arrays on hide - they will be reused when page is shown again
+        // Clearing and reloading creates new objects every time, causing RAM growth
+        // Arrays will be updated in-place when data changes, not replaced
+        // Only clear Maps that track UI state (not data arrays)
         this.selectedProjects.clear();
         
-        // Clear time labels map
+        // Clear time labels map (UI state, not data)
         this.projectTimeLabels.clear();
         
-        // Clear project rows map
+        // Clear project rows map (UI state, not data)
         this.projectRowMap.clear();
         
-        // Clear CSS providers map
+        // Clear CSS providers map (UI state, not data)
         this._cssProviders.clear();
         this._lastDisplayedProjects = [];
         
@@ -1502,9 +1503,13 @@ export class ProjectsPage {
      * CRITICAL: Reload projects if arrays are empty and restore real-time updates
      */
     onPageShown() {
-        // CRITICAL: Always reload projects when returning to page to ensure all data is fresh
-        // This ensures projectTimeLabels map is rebuilt and real-time updates work correctly
-        this.loadProjects().then(() => {
+        // OPTIMIZED: Only reload projects if array is empty
+        // Reusing existing arrays prevents creating new objects on every page switch
+        // If projects array is not empty, data is still valid and can be reused
+        if (this.projects.length === 0) {
+            // CRITICAL: Reload projects when array is empty to ensure all data is fresh
+            // This ensures projectTimeLabels map is rebuilt and real-time updates work correctly
+            this.loadProjects().then(() => {
             // CRITICAL: Restore real-time updates for tracked project AFTER loadProjects completes
             // loadProjects() will rebuild projectTimeLabels map via _updateProjectsDisplay()
             // Then we restore tracking state so real-time updates work
@@ -1525,9 +1530,29 @@ export class ProjectsPage {
                     }
                 }
             }
-        }).catch(error => {
-            console.error('[ProjectsPage] Error loading projects in onPageShown:', error);
-        });
+            }).catch(error => {
+                console.error('[ProjectsPage] Error loading projects in onPageShown:', error);
+            });
+        } else {
+            // OPTIMIZED: Data already loaded - restore real-time updates for tracked project
+            const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+            if (trackingState && trackingState.isTracking && trackingState.currentProjectId) {
+                const trackedProject = this.projects.find(p => p.id === trackingState.currentProjectId);
+                if (trackedProject) {
+                    // Restore tracking state
+                    this._trackingProjectId = trackingState.currentProjectId;
+                    // Recalculate base time: current total - elapsed seconds
+                    this._trackingProjectBaseTime = (trackedProject.total_time || 0) - (trackingState.elapsedSeconds || 0);
+                    
+                    // Update time label for tracked project
+                    const timeLabel = this.projectTimeLabels.get(trackingState.currentProjectId);
+                    if (timeLabel && !timeLabel.is_destroyed?.()) {
+                        const totalTime = this._trackingProjectBaseTime + (trackingState.elapsedSeconds || 0);
+                        timeLabel.set_label(this._formatDurationHMS(totalTime));
+                    }
+                }
+            }
+        }
         
         // CRITICAL: Refresh tracking widget to ensure it's synchronized with current tracking state
         // This updates time display and restores subscriptions if needed

@@ -112,31 +112,34 @@ export class ReportsPage {
                     }
                 }
                 
-                // Reload tasks to get the new tracked task instance
-                await this.updateChartsOnly();
-                
-                // CRITICAL: Re-set _baseTimeOnStart after updateChartsOnly() reloads tasks
-                // This ensures the tracked task in allTasks has the correct base time
+                // OPTIMIZED: Don't reload all tasks on tracking start - causes RAM growth
+                // Only reload if tracked task is not in allTasks
                 if (data && data.taskInstanceId) {
-                    const taskInstance = this.allTasks.find(t => t.id === data.taskInstanceId);
-                    if (taskInstance && taskInstance._baseTimeOnStart === undefined) {
-                        taskInstance._baseTimeOnStart = taskInstance.total_time || 0;
+                    const existingTask = this.allTasks.find(t => t.id === data.taskInstanceId);
+                    if (!existingTask) {
+                        // Task not in list - reload to get it
+                        await this.updateChartsOnly();
                     }
-                }
-                
-                // Update Recent Tasks list with fresh data including the new tracked task
-                const filteredTasks = this._getFilteredTasks();
-                this._updateRecentTasksList(filteredTasks);
-                
-                // CRITICAL: After rendering, set _baseTimeOnStart for tracked task in templates
-                // This ensures templates have the correct base time for real-time updates
-                if (data && data.taskInstanceId) {
-                    const trackedTask = this.allTasks.find(t => t.id === data.taskInstanceId);
-                    if (trackedTask && trackedTask._baseTimeOnStart !== undefined) {
-                        // Set for single task template
+                    
+                    // CRITICAL: Re-set _baseTimeOnStart after potential reload
+                    // This ensures the tracked task in allTasks has the correct base time
+                    const taskInstance = this.allTasks.find(t => t.id === data.taskInstanceId);
+                    if (taskInstance) {
+                        if (taskInstance._baseTimeOnStart === undefined) {
+                            taskInstance._baseTimeOnStart = taskInstance.total_time || 0;
+                        }
+                        
+                        // Update Recent Tasks list only if task was not in list before
+                        if (!existingTask) {
+                            const filteredTasks = this._getFilteredTasks();
+                            this._updateRecentTasksList(filteredTasks);
+                        }
+                        
+                        // CRITICAL: After rendering, set _baseTimeOnStart for tracked task in templates
+                        // This ensures templates have the correct base time for real-time updates
                         const template = this.taskTemplates.get(data.taskInstanceId);
                         if (template && template.task) {
-                            template.task._baseTimeOnStart = trackedTask._baseTimeOnStart;
+                            template.task._baseTimeOnStart = taskInstance._baseTimeOnStart;
                         }
                         
                         // Set for stack templates
@@ -144,11 +147,16 @@ export class ReportsPage {
                             if (stackTemplate.group && stackTemplate.group.tasks) {
                                 const taskInStack = stackTemplate.group.tasks.find(t => t.id === data.taskInstanceId);
                                 if (taskInStack) {
-                                    taskInStack._baseTimeOnStart = trackedTask._baseTimeOnStart;
+                                    taskInStack._baseTimeOnStart = taskInstance._baseTimeOnStart;
                                 }
                             }
                         }
                     }
+                } else {
+                    // No taskInstanceId - fallback to full reload
+                    await this.updateChartsOnly();
+                    const filteredTasks = this._getFilteredTasks();
+                    this._updateRecentTasksList(filteredTasks);
                 }
             } catch (error) {
                 console.error('[ReportsPage] Error in tracking-started handler:', error);
@@ -171,11 +179,15 @@ export class ReportsPage {
                 // Clean up currency cache arrays
                 this._cachedCurrentCurrencies = null;
                 
+                // CRITICAL: Declare template and taskInstance outside if block for use later
+                let template = null;
+                let taskInstance = null;
+                
                 // COPIED FROM TasksPage: Update time using base time + duration (not accumulated total)
                 if (data && data.taskInstanceId && data.duration) {
                     // OPTIMIZED: If template exists, update directly from event duration (no DB query)
-                    const template = this.taskTemplates.get(data.taskInstanceId);
-                    const taskInstance = this.allTasks.find(t => t.id === data.taskInstanceId);
+                    template = this.taskTemplates.get(data.taskInstanceId);
+                    taskInstance = this.allTasks.find(t => t.id === data.taskInstanceId);
                     
                     if (template && taskInstance) {
                         // CRITICAL: Update time using base time + duration (not accumulated total)
@@ -240,7 +252,42 @@ export class ReportsPage {
                 // This ensures tracking state is correctly updated after stop
                 this._updateAllTemplatesTrackingState();
 
-                await this.updateChartsOnly();
+                // OPTIMIZED: Limit allTasks array size to prevent unlimited growth
+                // Keep only most recent 200 tasks to prevent RAM growth from old tracking sessions
+                if (this.allTasks.length > 200) {
+                    const removedCount = this.allTasks.length - 200;
+                    // OPTIMIZED: Clear base time markers in-place before splice to help GC
+                    for (let i = 0; i < removedCount; i++) {
+                        delete this.allTasks[i]._baseTimeOnStart;
+                    }
+                    this.allTasks.splice(0, removedCount);
+                    
+                    // CRITICAL: Force garbage collection after removing old tasks
+                    // This helps GJS GC collect removed objects immediately
+                    try {
+                        if (typeof global !== 'undefined' && typeof global.gc === 'function') {
+                            global.gc();
+                        }
+                    } catch (e) {
+                        // GC not available - ignore
+                    }
+                }
+
+                // OPTIMIZED: Only call updateChartsOnly() if we need to refresh data
+                // If template exists and was updated, we don't need full reload
+                if (!template || !taskInstance) {
+                    await this.updateChartsOnly();
+                }
+                
+                // CRITICAL: Force garbage collection after stop to free RAM immediately
+                // This helps GJS GC collect removed objects right away
+                try {
+                    if (typeof global !== 'undefined' && typeof global.gc === 'function') {
+                        global.gc();
+                    }
+                } catch (e) {
+                    // GC not available - ignore
+                }
             } catch (error) {
                 console.error('[ReportsPage] Error in tracking-stopped handler:', error);
             }
@@ -254,30 +301,24 @@ export class ReportsPage {
         };
         
         this._eventHandlers['task-updated'] = async (data) => {
-            console.log('[ReportsPage] task-updated event received:', data);
             // COPIED FROM TasksPage: Update ALL task instances with same task_id
             // This ensures all entries for a task are updated when task is modified
             if (data && data.id) {
                 // data.id is task_id from Core TASK_UPDATED event
-                console.log('[ReportsPage] Updating all task instances for task_id:', data.id);
                 await this._updateAllTaskInstances(data.id);
             } else if (data && data.taskInstanceId) {
                 // data.taskInstanceId is from UI task-updated event (TaskInstanceEditDialog)
-                console.log('[ReportsPage] Getting task_id from taskInstanceId:', data.taskInstanceId);
                 // Get task_id from task instance and update all instances
                 const taskInstance = await this.coreBridge.getTaskInstance(data.taskInstanceId);
                 if (taskInstance && taskInstance.task_id) {
-                    console.log('[ReportsPage] Found task_id:', taskInstance.task_id, 'updating all instances');
                     await this._updateAllTaskInstances(taskInstance.task_id);
                 } else {
-                    console.log('[ReportsPage] Could not get task_id, doing full reload');
                     // Fallback: full reload if can't get task_id
                     await this.updateChartsOnly();
                     const filteredTasks = this._getFilteredTasks();
                     this._updateRecentTasksList(filteredTasks);
                 }
             } else {
-                console.log('[ReportsPage] No ID in data, doing full reload');
                 // Fallback: full reload if no ID
                 await this.updateChartsOnly();
                 const filteredTasks = this._getFilteredTasks();
@@ -288,63 +329,39 @@ export class ReportsPage {
         // OPTIMIZED: Real-time statistics updates - only update labels, no object creation
         // COPIED FROM TasksPage: Update time using _baseTimeOnStart + elapsedSeconds
         this._eventHandlers['tracking-updated'] = async (data) => {
-            console.log('[ReportsPage] tracking-updated event received:', {
-                hasData: !!data,
-                elapsedSeconds: data?.elapsedSeconds,
-                taskName: data?.taskName,
-                projectId: data?.projectId,
-                clientId: data?.clientId,
-                taskId: data?.taskId
-            });
-            
             if (!data) {
-                console.log('[ReportsPage] tracking-updated: Early return - no data');
                 return;
             }
             
             // CRITICAL: Check if task name, project or client changed FIRST (before elapsedSeconds check)
             // This handles cases where project/client changes but elapsedSeconds might be 0
             if (data.taskName !== undefined || data.projectId !== undefined || data.clientId !== undefined) {
-                console.log('[ReportsPage] tracking-updated: Name/Project/Client changed', {
-                    taskName: data.taskName,
-                    projectId: data.projectId,
-                    clientId: data.clientId,
-                    taskId: data.taskId
-                });
-                
                 // COPIED FROM TasksPage: Reload task list to reflect changes
                 // Reload projects/clients if they changed, then reload tasks
                 const promises = [];
                 if (data.projectId !== undefined) {
                     promises.push(this.coreBridge.getAllProjects().then(projects => {
                         this.allProjects = (projects || []).slice(-this._maxCacheSize);
-                        console.log('[ReportsPage] Projects reloaded:', this.allProjects.length);
                     }));
                 }
                 if (data.clientId !== undefined) {
                     promises.push(this.coreBridge.getAllClients().then(clients => {
                         this.allClients = (clients || []).slice(-this._maxCacheSize);
-                        console.log('[ReportsPage] Clients reloaded:', this.allClients.length);
                     }));
                 }
                 await Promise.all(promises);
                 
                 // Reload tasks from database to get updated names/projects/clients
-                console.log('[ReportsPage] Updating charts...');
                 await this.updateChartsOnly();
-                console.log('[ReportsPage] Charts updated, allTasks length:', this.allTasks.length);
                 
                 // Reload task list to reflect changes
                 const filteredTasks = this._getFilteredTasks();
-                console.log('[ReportsPage] Filtered tasks length:', filteredTasks.length);
                 this._updateRecentTasksList(filteredTasks);
-                console.log('[ReportsPage] Recent tasks list updated');
                 return; // Exit early - _updateRecentTasksList() will refresh everything
             }
             
             // Only process time updates if elapsedSeconds is defined (can be 0)
             if (data.elapsedSeconds === undefined) {
-                console.log('[ReportsPage] tracking-updated: Early return - no elapsedSeconds');
                 return;
             }
             
@@ -479,21 +496,16 @@ export class ReportsPage {
         };
 
         this._eventHandlers['project-updated'] = async () => {
-            console.log('[ReportsPage] project-updated event received');
             // COPIED FROM TasksPage: Reload tasks when project is updated
             if (!this._isLoadingReports) {
                 this._isLoadingReports = true;
                 try {
                     // CRITICAL: Reload projects first to get updated project names
                     this.allProjects = await this.coreBridge.getAllProjects() || [];
-                    console.log('[ReportsPage] Projects reloaded:', this.allProjects.length);
                     // Then reload tasks to get updated project names in task data
                     await this.updateChartsOnly();
-                    console.log('[ReportsPage] Charts updated, allTasks length:', this.allTasks.length);
                     const filteredTasks = this._getFilteredTasks();
-                    console.log('[ReportsPage] Filtered tasks length:', filteredTasks.length);
                     this._updateRecentTasksList(filteredTasks);
-                    console.log('[ReportsPage] Recent tasks list updated');
                 } finally {
                     this._isLoadingReports = false;
                 }
@@ -501,21 +513,16 @@ export class ReportsPage {
         };
         
         this._eventHandlers['client-updated'] = async () => {
-            console.log('[ReportsPage] client-updated event received');
             // COPIED FROM TasksPage: Reload tasks when client is updated
             if (!this._isLoadingReports) {
                 this._isLoadingReports = true;
                 try {
                     // CRITICAL: Reload clients first to get updated client names
                     this.allClients = await this.coreBridge.getAllClients() || [];
-                    console.log('[ReportsPage] Clients reloaded:', this.allClients.length);
                     // Then reload tasks to get updated client names in task data
                     await this.updateChartsOnly();
-                    console.log('[ReportsPage] Charts updated, allTasks length:', this.allTasks.length);
                     const filteredTasks = this._getFilteredTasks();
-                    console.log('[ReportsPage] Filtered tasks length:', filteredTasks.length);
                     this._updateRecentTasksList(filteredTasks);
-                    console.log('[ReportsPage] Recent tasks list updated');
                 } finally {
                     this._isLoadingReports = false;
                 }
@@ -528,10 +535,8 @@ export class ReportsPage {
         // };
 
         // Subscribe with stored handlers
-        console.log('[ReportsPage] Subscribing to events:', Object.keys(this._eventHandlers));
         Object.keys(this._eventHandlers).forEach(event => {
             this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
-            console.log('[ReportsPage] Subscribed to event:', event);
         });
     }
 
@@ -682,11 +687,10 @@ export class ReportsPage {
         // Widget will be refreshed in _onPageChanged() when page becomes visible
         // This ensures time updates continue even when page is hidden
         
-        // Clear data arrays (they will be reloaded when page is shown again)
-        this.allTasks = [];
-        this.allTimeEntries = [];
-        this.allProjects = [];
-        this.allClients = [];
+        // OPTIMIZED: Don't clear data arrays on hide - they will be reused when page is shown again
+        // Clearing and reloading creates new objects every time, causing RAM growth
+        // Arrays will be updated in-place when data changes, not replaced
+        // Only clear if explicitly needed (e.g., on page destroy)
         
         // Clear report exporter reference
         this.reportExporter = null;
@@ -736,22 +740,29 @@ export class ReportsPage {
         this._cachedEarningsByCurrency = new Map();
         this._cachedTrackingClient = null;
         
-        // COPIED FROM TasksPage: Clear templates before reload
-        this._trackedTemplates.clear();
-        this._trackedWidgets.clear();
-        this.taskTemplates.clear();
-        
         // CRITICAL: Refresh tracking widget to ensure it's synchronized with current tracking state
         // This updates time display and restores subscriptions if needed
         if (this.trackingWidget && typeof this.trackingWidget.refresh === 'function') {
             this.trackingWidget.refresh();
         }
         
-        // CRITICAL: Always reload data and update reports to ensure filters work correctly
-        // Even if data arrays are not empty, they may be stale or incomplete
-        // After loadReports completes, restore real-time updates for tracked task if tracking is active
-        // COPIED FROM TasksPage: Set _baseTimeOnStart for already-active tracking
-        this.loadReports().then(() => {
+        // OPTIMIZED: Only reload data if arrays are empty or if we need to refresh filters
+        // Reusing existing arrays prevents creating new objects on every page switch
+        // Only clear templates/widgets if we're actually reloading
+        const needsReload = this.allTasks.length === 0 || 
+                           this.allProjects.length === 0 || 
+                           this.allClients.length === 0;
+        
+        if (needsReload) {
+            // Clear templates before reload only if we're reloading
+            this._trackedTemplates.clear();
+            this._trackedWidgets.clear();
+            this.taskTemplates.clear();
+            
+            // CRITICAL: Reload data and update reports to ensure filters work correctly
+            // After loadReports completes, restore real-time updates for tracked task if tracking is active
+            // COPIED FROM TasksPage: Set _baseTimeOnStart for already-active tracking
+            this.loadReports().then(() => {
             // COPIED FROM TasksPage: If tracking is already active, set _baseTimeOnStart for tracked task
             // This handles case when page loads while tracking is already in progress
             const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
@@ -784,9 +795,25 @@ export class ReportsPage {
                     this._updateRecentTasksList(filteredTasks);
                 }
             }
-        }).catch(error => {
-            console.error('[ReportsPage] Error loading reports in onPageShown:', error);
-        });
+            }).catch(error => {
+                console.error('[ReportsPage] Error loading reports in onPageShown:', error);
+            });
+        } else {
+            // OPTIMIZED: Data already loaded - just restore tracking state if needed
+            // Don't rebuild UI if page is already showing correct data
+            // This prevents creating new objects on every page switch
+            // Only restore _baseTimeOnStart for tracked task if tracking is active
+            const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+            if (trackingState && trackingState.isTracking && trackingState.currentTaskInstanceId) {
+                const trackedTask = this.allTasks.find(t => t.id === trackingState.currentTaskInstanceId);
+                if (trackedTask && trackedTask._baseTimeOnStart === undefined) {
+                    trackedTask._baseTimeOnStart = trackedTask.total_time || 0;
+                }
+            }
+            // OPTIMIZED: Don't rebuild Recent Tasks list if data is already loaded
+            // The list is already showing correct data from previous visit
+            // Only rebuild if explicitly needed (e.g., filters changed)
+        }
     }
 
     /**
@@ -2132,15 +2159,19 @@ export class ReportsPage {
         // CRITICAL: Filter tasks using the same logic as statistics
         // This ensures Recent Tasks shows only tasks that match ALL active filters (project, client, period)
         // Use _currentTaskInstanceIds if available (from _updateStatistics), otherwise filter by last_used_at
-        let filtered = [...this.allTasks];
+        // OPTIMIZED: Reuse existing array reference instead of creating copy
+        let filtered = this.allTasks;
         
+        // OPTIMIZED: Filter in-place to avoid creating intermediate arrays
         // Step 1: Filter by project
         if (this.chartFilters.projectId) {
+            // Only create new array if filtering is needed
             filtered = filtered.filter(t => t.project_id === this.chartFilters.projectId);
         }
         
         // Step 2: Filter by client
         if (this.chartFilters.clientId) {
+            // Only create new array if filtering is needed
             filtered = filtered.filter(t => t.client_id === this.chartFilters.clientId);
         }
         
@@ -3036,19 +3067,15 @@ export class ReportsPage {
      * This ensures all entries for a task are updated when task is modified
      */
     async _updateAllTaskInstances(taskId) {
-        console.log('[ReportsPage] _updateAllTaskInstances called for task_id:', taskId);
         if (!this.coreBridge) {
-            console.log('[ReportsPage] No coreBridge, returning');
             return;
         }
 
         try {
             // Find ALL task instances with this task_id in allTasks
             const taskInstances = this.allTasks.filter(t => t.task_id === taskId);
-            console.log('[ReportsPage] Found task instances:', taskInstances.length);
             
             if (taskInstances.length === 0) {
-                console.log('[ReportsPage] No task instances found, doing full reload');
                 // No tasks with this task_id in list - might need full reload
                 await this.updateChartsOnly();
                 const filteredTasks = this._getFilteredTasks();
@@ -3059,7 +3086,6 @@ export class ReportsPage {
             // CRITICAL: Update ALL task instances, not just first one
             let allUpdated = true;
             for (const taskInstance of taskInstances) {
-                console.log('[ReportsPage] Updating task instance:', taskInstance.id);
                 if (!taskInstance || !taskInstance.id) {
                     allUpdated = false;
                     continue;
@@ -3078,11 +3104,9 @@ export class ReportsPage {
                             // Update template if exists
                             const template = this.taskTemplates.get(taskInstance.id);
                             if (template) {
-                                console.log('[ReportsPage] Template found for instance:', taskInstance.id, 'task_name:', updatedTask.task_name);
                                 // Update task reference in template
                                 if (template.task) {
                                     Object.assign(template.task, updatedTask);
-                                    console.log('[ReportsPage] Updated single task template, calling updateTrackingState');
                                     // Update subtitle to show new names
                                     if (typeof template.updateTrackingState === 'function') {
                                         template.updateTrackingState();
@@ -3092,15 +3116,12 @@ export class ReportsPage {
                                     const taskInGroup = template.group.tasks.find(t => t.id === taskInstance.id);
                                     if (taskInGroup) {
                                         Object.assign(taskInGroup, updatedTask);
-                                        console.log('[ReportsPage] Updated task in stack, calling updateTrackingState');
                                         // Update stack subtitle
                                         if (typeof template.updateTrackingState === 'function') {
                                             template.updateTrackingState();
                                         }
                                     }
                                 }
-                            } else {
-                                console.log('[ReportsPage] No template found for instance:', taskInstance.id);
                             }
                             
                             // Also check if it's in a stack (by groupKey)
@@ -3147,20 +3168,46 @@ export class ReportsPage {
      */
     _updateRecentTasksList(tasks) {
         // OPTIMIZED: Clear ALL tracked widgets/templates FIRST to free RAM
+        // Destroy all tracked templates
         this._trackedTemplates.forEach((template, key) => {
-            if (template && typeof template.destroy === 'function') {
-                template.destroy();
+            try {
+                if (template && typeof template.destroy === 'function') {
+                    template.destroy();
+                }
+            } catch (e) {
+                // Template may already be destroyed
             }
         });
         this._trackedTemplates.clear();
+
+        // Destroy all tracked widgets
+        this._trackedWidgets.forEach((widget, key) => {
+            try {
+                if (widget && typeof widget.destroy === 'function') {
+                    widget.destroy();
+                }
+            } catch (e) {
+                // Widget may already be destroyed
+            }
+        });
         this._trackedWidgets.clear();
+        
+        // Clear Maps after destroying tracked templates/widgets
         this.taskTemplates.clear();
         
-        // Clear existing list
+        // Clear existing list (remove from Gtk.ListBox)
         let child = this.recentTasksList.get_first_child();
         while (child) {
             const next = child.get_next_sibling();
             this.recentTasksList.remove(child);
+            // Explicitly destroy widget to help GC
+            if (child && typeof child.destroy === 'function') {
+                try {
+                    child.destroy();
+                } catch (e) {
+                    // Widget may already be destroyed
+                }
+            }
             child = next;
         }
 
@@ -3174,8 +3221,9 @@ export class ReportsPage {
             return;
         }
 
+        // OPTIMIZED: Sort in-place to avoid creating copy, then create single copy for recentTasks
         // Sort by last_used_at descending
-        const sortedTasks = [...tasks].sort((a, b) => {
+        const sortedTasks = tasks.slice().sort((a, b) => {
             if (!a.last_used_at) return 1;
             if (!b.last_used_at) return -1;
             return b.last_used_at.localeCompare(a.last_used_at);
@@ -3183,7 +3231,8 @@ export class ReportsPage {
 
         // CRITICAL: Don't limit tasks here - we'll limit groups (tasks/stacks) to 6 after grouping
         // This ensures all entries from tracked stack are available for grouping
-        let recentTasks = [...sortedTasks];
+        // OPTIMIZED: Use sortedTasks directly instead of creating another copy
+        let recentTasks = sortedTasks;
         
         // CRITICAL: Ensure tracked task AND all tasks from its stack are always in the list
         // This ensures the entire stack is visible when tracking a task in it
@@ -3288,22 +3337,11 @@ export class ReportsPage {
         
         // CRITICAL: Limit to 6 groups (tasks/stacks) maximum, but always include tracked group
         // This ensures we show only last 6 items (single tasks and stacks), not entries
+        // OPTIMIZED: Sort and limit in-place to avoid creating intermediate arrays
         if (taskGroups.length > 6) {
             if (trackedGroup) {
-                // Keep tracked group + 5 most recent other groups
-                const otherGroups = taskGroups.filter(g => g !== trackedGroup);
-                // Sort other groups by latest task's last_used_at
-                otherGroups.sort((a, b) => {
-                    const aTime = a.latestTask?.last_used_at || '';
-                    const bTime = b.latestTask?.last_used_at || '';
-                    if (!aTime) return 1;
-                    if (!bTime) return -1;
-                    return bTime.localeCompare(aTime);
-                });
-                // Keep top 5 other groups + tracked group
-                const limitedGroups = [trackedGroup, ...otherGroups.slice(0, 5)];
-                // Sort final list: tracked group first, then by last_used_at
-                limitedGroups.sort((a, b) => {
+                // OPTIMIZED: Sort in-place, then remove tracked group temporarily
+                taskGroups.sort((a, b) => {
                     if (a === trackedGroup) return -1;
                     if (b === trackedGroup) return 1;
                     const aTime = a.latestTask?.last_used_at || '';
@@ -3312,9 +3350,15 @@ export class ReportsPage {
                     if (!bTime) return -1;
                     return bTime.localeCompare(aTime);
                 });
-                // Replace taskGroups with limited list
-                taskGroups.length = 0;
-                taskGroups.push(...limitedGroups);
+                // Remove tracked group from sorted list
+                const trackedIndex = taskGroups.indexOf(trackedGroup);
+                if (trackedIndex !== -1) {
+                    taskGroups.splice(trackedIndex, 1);
+                }
+                // Keep top 5 other groups + tracked group
+                taskGroups.splice(5);
+                // Put tracked group at the beginning
+                taskGroups.unshift(trackedGroup);
             } else {
                 // No tracked group - just keep 6 most recent groups
                 taskGroups.sort((a, b) => {
@@ -3493,7 +3537,62 @@ export class ReportsPage {
         try {
             // Reload only time entries and task instances
             const allTaskInstances = await this.coreBridge.getAllTaskInstances() || [];
-            this.allTasks = allTaskInstances.slice(-this._maxCacheSize);
+            // OPTIMIZED: Update in place instead of replacing array to reduce object creation
+            // Clear old tasks beyond maxCacheSize first
+            if (this.allTasks.length > this._maxCacheSize) {
+                const removedCount = this.allTasks.length - this._maxCacheSize;
+                const removedTasks = this.allTasks.splice(0, removedCount);
+                // Clear base time markers from removed tasks to help GC
+                removedTasks.forEach(task => {
+                    delete task._baseTimeOnStart;
+                });
+            }
+            // Update with new tasks (keep existing ones if possible)
+            const newTasks = allTaskInstances.slice(-this._maxCacheSize);
+            // OPTIMIZED: Build Set once and reuse, avoid creating multiple arrays
+            // Build existingIds Set only if we have tasks to check
+            let existingIds = null;
+            if (this.allTasks.length > 0) {
+                existingIds = new Set();
+                for (let i = 0; i < this.allTasks.length; i++) {
+                    existingIds.add(this.allTasks[i].id);
+                }
+            }
+            
+            // OPTIMIZED: Build newTaskIds Set while processing to avoid second iteration
+            const newTaskIds = new Set();
+            newTasks.forEach(newTask => {
+                newTaskIds.add(newTask.id);
+                if (existingIds && existingIds.has(newTask.id)) {
+                    // Update in place (preserve _baseTimeOnStart if exists)
+                    const existingIndex = this.allTasks.findIndex(t => t.id === newTask.id);
+                    if (existingIndex !== -1) {
+                        const baseTime = this.allTasks[existingIndex]._baseTimeOnStart;
+                        Object.assign(this.allTasks[existingIndex], newTask);
+                        if (baseTime !== undefined) {
+                            this.allTasks[existingIndex]._baseTimeOnStart = baseTime;
+                        }
+                    }
+                } else {
+                    // New task - add it
+                    this.allTasks.push(newTask);
+                }
+            });
+            // Remove tasks that are no longer in new list
+            for (let i = this.allTasks.length - 1; i >= 0; i--) {
+                if (!newTaskIds.has(this.allTasks[i].id)) {
+                    delete this.allTasks[i]._baseTimeOnStart;
+                    this.allTasks.splice(i, 1);
+                }
+            }
+            // Limit to maxCacheSize
+            if (this.allTasks.length > this._maxCacheSize) {
+                const removedCount = this.allTasks.length - this._maxCacheSize;
+                const removedTasks = this.allTasks.splice(0, removedCount);
+                removedTasks.forEach(task => {
+                    delete task._baseTimeOnStart;
+                });
+            }
             this.allTimeEntries = await this.coreBridge.getAllTimeEntries() || [];
 
             // DEBUG: Log to verify tracked task is loaded

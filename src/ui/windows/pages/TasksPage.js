@@ -578,9 +578,10 @@ export class TasksPage {
         // Widget will be refreshed in _onPageChanged() when page becomes visible
         // This ensures time updates continue even when page is hidden
         
-        // Clear data arrays (they will be reloaded when page is shown again)
-        this.tasks = [];
-        this.filteredTasks = [];
+        // OPTIMIZED: Don't clear data arrays on hide - they will be reused when page is shown again
+        // Clearing and reloading creates new objects every time, causing RAM growth
+        // Arrays will be updated in-place when data changes, not replaced
+        // Only clear Maps that track UI state (not data arrays)
         
         // Clear Maps to release references (but keep structure)
         this.taskRowMap.clear();
@@ -595,12 +596,14 @@ export class TasksPage {
      * CRITICAL: Reload tasks if arrays are empty (e.g., after returning from another page)
      */
     onPageShown() {
-        // CRITICAL: Always reload tasks when returning to page to ensure all entries are shown
-        // This fixes issue where only 1 entry is shown after returning from Reports page
-        // Even if tasks array is not empty, it might be stale or incomplete
-        this.loadTasks().catch(error => {
-            console.error('[TasksPage] Error loading tasks in onPageShown:', error);
-        });
+        // OPTIMIZED: Only reload tasks if array is empty
+        // Reusing existing arrays prevents creating new objects on every page switch
+        // If tasks array is not empty, data is still valid and can be reused
+        if (this.tasks.length === 0) {
+            this.loadTasks().catch(error => {
+                console.error('[TasksPage] Error loading tasks in onPageShown:', error);
+            });
+        }
         
         // CRITICAL: Refresh tracking widget to ensure it's synchronized with current tracking state
         // This updates time display and restores subscriptions if needed

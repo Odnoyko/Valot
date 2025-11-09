@@ -1541,9 +1541,9 @@ export class ClientsPage {
         // Widget will be refreshed in _onPageChanged() when page becomes visible
         // This ensures time updates continue even when page is hidden
         
-        // Clear data arrays
-        this.clients = [];
-        this.filteredClients = [];
+        // OPTIMIZED: Don't clear data arrays on hide - they will be reused when page is shown again
+        // Clearing and reloading creates new objects every time, causing RAM growth
+        // Arrays will be updated in-place when data changes, not replaced
         this.selectedClients.clear();
     }
 }
