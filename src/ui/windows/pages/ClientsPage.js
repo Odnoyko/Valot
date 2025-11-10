@@ -533,7 +533,6 @@ export class ClientsPage {
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 12,
             halign: Gtk.Align.FILL,
-            margin_top: 12,
             visible: false, // Hidden by default
         });
 

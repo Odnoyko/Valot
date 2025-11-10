@@ -1,14 +1,14 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
+# This file is distributed under the same license as the valot package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
+"Project-Id-Version: valot\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-27 05:10+0100\n"
+"POT-Creation-Date: 2025-11-10 02:30+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: data/com.odnoyko.valot.desktop.in:2 src/ui/windows/MainWindow.js:27
+#: data/com.odnoyko.valot.desktop.in:2 src/ui/windows/MainWindow.js:28
 msgid "Valot"
 msgstr ""
 
@@ -115,25 +115,33 @@ msgstr ""
 msgid "Last selected client ID for tracking widget persistence"
 msgstr ""
 
-#: src/ui/windows/Application.js:289 src/ui/utils/commonStrings.js:36
+#: data/com.odnoyko.valot.gschema.xml:56
+msgid "Enable experimental features"
+msgstr ""
+
+#: data/com.odnoyko.valot.gschema.xml:57
+msgid "Enable experimental features like extensions and addons"
+msgstr ""
+
+#: src/ui/windows/Application.js:297 src/ui/utils/commonStrings.js:36
 msgid "Database Error"
 msgstr ""
 
-#: src/ui/windows/Application.js:290
+#: src/ui/windows/Application.js:298
 msgid "Failed to initialize database"
 msgstr ""
 
-#: src/ui/windows/Application.js:332
+#: src/ui/windows/Application.js:340
 msgid "Migration failed - database not created"
 msgstr ""
 
-#: src/ui/windows/Application.js:350
+#: src/ui/windows/Application.js:358
 msgid "Delete operation failed"
 msgstr ""
 
 #: src/ui/windows/CompactTracker.js:17
 #: src/ui/windows/CompactTrackerWindow.js:17
-#: src/ui/components/dialogs/CarouselDialog.js:202
+#: src/ui/components/dialogs/CarouselDialog.js:203
 msgid "Compact Tracker"
 msgstr ""
 
@@ -141,70 +149,74 @@ msgstr ""
 msgid "Open main window"
 msgstr ""
 
-#: src/ui/windows/CompactTracker.js:61 src/ui/windows/CompactTracker.js:228
+#: src/ui/windows/CompactTracker.js:61 src/ui/windows/CompactTracker.js:315
 msgid "No task selected"
 msgstr ""
 
-#: src/ui/windows/CompactTracker.js:77 src/ui/windows/CompactTracker.js:230
-#: src/ui/windows/pages/ClientsPage.js:198
-#: src/ui/windows/pages/ClientsPage.js:267
-#: src/ui/windows/pages/ProjectsPage.js:233
-#: src/ui/windows/pages/ProjectsPage.js:295
-#: src/ui/windows/pages/TasksPage.js:434 src/ui/windows/pages/TasksPage.js:533
-#: src/ui/components/complex/TaskRowTemplate.js:159
-#: src/ui/components/complex/TaskRowTemplate.js:194
-#: src/ui/components/complex/TaskStackTemplate.js:148
-#: src/ui/components/complex/TaskStackTemplate.js:183
-#: src/ui/components/complex/TrackingWidget.js:86
-#: src/ui/components/complex/TrackingWidget.js:180
+#: src/ui/windows/CompactTracker.js:77 src/ui/windows/CompactTracker.js:317
+#: src/ui/windows/pages/ClientsPage.js:241
+#: src/ui/windows/pages/ClientsPage.js:314
+#: src/ui/windows/pages/ProjectsPage.js:316
+#: src/ui/windows/pages/ProjectsPage.js:377
+#: src/ui/windows/pages/TasksPage.js:821 src/ui/windows/pages/TasksPage.js:911
+#: src/ui/components/complex/TaskRowTemplate.js:141
+#: src/ui/components/complex/TaskRowTemplate.js:175
+#: src/ui/components/complex/TaskRowTemplate.js:310
+#: src/ui/components/complex/TaskStackTemplate.js:121
+#: src/ui/components/complex/TaskStackTemplate.js:151
+#: src/ui/components/complex/TaskStackTemplate.js:310
+#: src/ui/components/complex/TrackingWidget.js:85
+#: src/ui/components/complex/TrackingWidget.js:189
 #: src/ui/utils/widgetFactory.js:542
 msgid "Start tracking"
 msgstr ""
 
 #. Update UI to tracking mode
-#: src/ui/windows/CompactTracker.js:222
-#: src/ui/components/complex/HeaderTrackingWidget.js:154
-#: src/ui/components/complex/TrackingWidget.js:145
+#: src/ui/windows/CompactTracker.js:309
+#: src/ui/components/complex/HeaderTrackingWidget.js:162
+#: src/ui/components/complex/TrackingWidget.js:149
 msgid "Tracking..."
 msgstr ""
 
-#: src/ui/windows/CompactTracker.js:224 src/ui/windows/pages/ClientsPage.js:251
-#: src/ui/windows/pages/ProjectsPage.js:282
-#: src/ui/windows/pages/TasksPage.js:181 src/ui/windows/pages/TasksPage.js:222
-#: src/ui/windows/pages/TasksPage.js:507
-#: src/ui/components/complex/AdvancedTrackingWidget.js:284
-#: src/ui/components/complex/HeaderTrackingWidget.js:173
+#: src/ui/windows/CompactTracker.js:311 src/ui/windows/pages/ClientsPage.js:296
+#: src/ui/windows/pages/ProjectsPage.js:363
+#: src/ui/windows/pages/TasksPage.js:400 src/ui/windows/pages/TasksPage.js:884
+#: src/ui/components/complex/AdvancedTrackingWidget.js:364
+#: src/ui/components/complex/HeaderTrackingWidget.js:187
+#: src/ui/components/complex/TaskRowTemplate.js:154
 #: src/ui/components/complex/TaskRowTemplate.js:172
-#: src/ui/components/complex/TaskRowTemplate.js:191
-#: src/ui/components/complex/TaskStackTemplate.js:161
-#: src/ui/components/complex/TaskStackTemplate.js:180
-#: src/ui/components/complex/TrackingWidget.js:156
+#: src/ui/components/complex/TaskRowTemplate.js:307
+#: src/ui/components/complex/TaskStackTemplate.js:134
+#: src/ui/components/complex/TaskStackTemplate.js:307
+#: src/ui/components/complex/TrackingWidget.js:162
 msgid "Stop tracking"
 msgstr ""
 
-#: src/ui/windows/CompactTracker.js:257
-#: src/ui/components/dialogs/MultipleTasksEditDialog.js:182
+#: src/ui/windows/CompactTracker.js:351
+#: src/ui/components/complex/ModularDialogManager.js:323
+#: src/ui/components/dialogs/MultipleTasksEditDialog.js:150
 #: src/ui/utils/commonStrings.js:35
 msgid "Error"
 msgstr ""
 
-#: src/ui/windows/CompactTracker.js:260
-#: src/ui/components/dialogs/MultipleTasksEditDialog.js:185
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:531
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:840
+#: src/ui/windows/CompactTracker.js:354
+#: src/ui/components/complex/ModularDialogManager.js:326
+#: src/ui/components/dialogs/MultipleTasksEditDialog.js:153
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:1099
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:1408
 #: src/ui/utils/commonStrings.js:11
 msgid "OK"
 msgstr ""
 
-#: src/ui/windows/CompactTrackerWindow.js:54
+#: src/ui/windows/CompactTrackerWindow.js:75
 msgid "Close compact tracker and open main window"
 msgstr ""
 
-#: src/ui/windows/MainWindow.js:90
+#: src/ui/windows/MainWindow.js:102
 msgid "Tracking in Progress"
 msgstr ""
 
-#: src/ui/windows/MainWindow.js:91
+#: src/ui/windows/MainWindow.js:103
 msgid ""
 "Time tracking is currently active. Closing the app will stop the timer and "
 "save your tracked time.\n"
@@ -213,74 +225,78 @@ msgid ""
 msgstr ""
 
 #. Add buttons
-#: src/ui/windows/MainWindow.js:94 src/ui/windows/pages/ClientsPage.js:522
-#: src/ui/windows/pages/ClientsPage.js:910
-#: src/ui/windows/pages/ClientsPage.js:947
-#: src/ui/windows/pages/ClientsPage.js:1063
-#: src/ui/windows/pages/ClientsPage.js:1192
-#: src/ui/windows/pages/ClientsPage.js:1360
-#: src/ui/windows/pages/ProjectsPage.js:525
-#: src/ui/windows/pages/ProjectsPage.js:927
-#: src/ui/windows/pages/ReportsPage.js:1552
-#: src/ui/windows/pages/TasksPage.js:914 src/ui/windows/pages/TasksPage.js:1662
-#: src/ui/components/complex/ModularDialogManager.js:209
+#: src/ui/windows/MainWindow.js:106 src/ui/windows/pages/ClientsPage.js:577
+#: src/ui/windows/pages/ClientsPage.js:965
+#: src/ui/windows/pages/ClientsPage.js:1002
+#: src/ui/windows/pages/ClientsPage.js:1118
+#: src/ui/windows/pages/ClientsPage.js:1247
+#: src/ui/windows/pages/ClientsPage.js:1415
+#: src/ui/windows/pages/ProjectsPage.js:594
+#: src/ui/windows/pages/ProjectsPage.js:1191
+#: src/ui/windows/pages/ReportsPage.js:2538
+#: src/ui/windows/pages/TasksPage.js:1290
+#: src/ui/windows/pages/TasksPage.js:2427
+#: src/ui/components/complex/ModularDialogManager.js:276
 #: src/ui/components/complex/ProjectAppearanceDialog.js:44
-#: src/ui/components/complex/ProjectAppearanceDialog.js:446
+#: src/ui/components/complex/ProjectAppearanceDialog.js:478
 #: src/ui/components/dialogs/MultipleTasksEditDialog.js:107
-#: src/ui/components/dialogs/PreferencesDialog.js:1611
+#: src/ui/components/dialogs/PreferencesDialog.js:2082
+#: src/ui/components/dialogs/PreferencesDialog.js:2145
 #: src/ui/components/dialogs/QuickTaskSelector.js:122
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:420
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:530
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:839
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:419
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:1098
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:1407
 #: src/ui/utils/commonStrings.js:10 src/ui/utils/widgetFactory.js:304
 msgid "Cancel"
 msgstr ""
 
-#: src/ui/windows/MainWindow.js:95
+#: src/ui/windows/MainWindow.js:107
 msgid "Stop & Close"
 msgstr ""
 
-#: src/ui/windows/MainWindow.js:200
+#: src/ui/windows/MainWindow.js:212
 msgid "Navigation"
 msgstr ""
 
-#: src/ui/windows/MainWindow.js:214
+#: src/ui/windows/MainWindow.js:226
 msgid "Hide Sidebar"
 msgstr ""
 
-#: src/ui/windows/MainWindow.js:224
-#: src/ui/components/dialogs/PreferencesDialog.js:34
+#: src/ui/windows/MainWindow.js:236
+#: src/ui/components/dialogs/PreferencesDialog.js:72
 msgid "About"
 msgstr ""
 
-#: src/ui/windows/MainWindow.js:250 src/ui/windows/MainWindow.js:325
+#: src/ui/windows/MainWindow.js:262 src/ui/windows/MainWindow.js:337
 msgid "Tasks"
 msgstr ""
 
-#: src/ui/windows/MainWindow.js:251 src/ui/windows/MainWindow.js:326
+#: src/ui/windows/MainWindow.js:263 src/ui/windows/MainWindow.js:338
 msgid "Projects"
 msgstr ""
 
-#: src/ui/windows/MainWindow.js:252 src/ui/windows/MainWindow.js:327
-#: src/ui/components/dialogs/PreferencesDialog.js:50
+#. First time setup - create groups
+#: src/ui/windows/MainWindow.js:264 src/ui/windows/MainWindow.js:339
+#: src/ui/components/dialogs/PreferencesDialog.js:88
+#: src/ui/components/dialogs/PreferencesDialog.js:1051
 msgid "Clients"
 msgstr ""
 
-#: src/ui/windows/MainWindow.js:253 src/ui/windows/MainWindow.js:328
+#: src/ui/windows/MainWindow.js:265 src/ui/windows/MainWindow.js:340
 msgid "Reports"
 msgstr ""
 
-#: src/ui/windows/MainWindow.js:294
+#: src/ui/windows/MainWindow.js:306
 msgid "Quick Stats"
 msgstr ""
 
-#: src/ui/windows/MainWindow.js:301 src/ui/windows/pages/TasksPage.js:740
+#: src/ui/windows/MainWindow.js:313 src/ui/windows/pages/TasksPage.js:1117
 #: src/ui/components/complex/DateRangeSelector.js:63
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:139
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:146
 msgid "This Week"
 msgstr ""
 
-#: src/ui/windows/MainWindow.js:603
+#: src/ui/windows/MainWindow.js:615
 msgid "Page content will be implemented here"
 msgstr ""
 
@@ -293,241 +309,244 @@ msgstr ""
 msgid "Search"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:88
-#: src/ui/windows/pages/ProjectsPage.js:122
-#: src/ui/windows/pages/ReportsPage.js:138
-#: src/ui/windows/pages/TasksPage.js:306
+#: src/ui/windows/pages/ClientsPage.js:131
+#: src/ui/windows/pages/ProjectsPage.js:205
+#: src/ui/windows/pages/ReportsPage.js:835
+#: src/ui/windows/pages/TasksPage.js:694
 msgid "Show Sidebar"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:119
-#: src/ui/windows/pages/ProjectsPage.js:153
-#: src/ui/windows/pages/ReportsPage.js:168
-#: src/ui/windows/pages/TasksPage.js:337
+#: src/ui/windows/pages/ClientsPage.js:162
+#: src/ui/windows/pages/ProjectsPage.js:236
+#: src/ui/windows/pages/ReportsPage.js:865
+#: src/ui/windows/pages/TasksPage.js:725
 msgid "Open Compact Tracker (Shift: keep main window)"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:158
-#: src/ui/windows/pages/ProjectsPage.js:192
-#: src/ui/windows/pages/TasksPage.js:377
-#: src/ui/components/complex/AdvancedTrackingWidget.js:63
+#: src/ui/windows/pages/ClientsPage.js:201
+#: src/ui/windows/pages/ProjectsPage.js:275
+#: src/ui/windows/pages/TasksPage.js:764
+#: src/ui/components/complex/AdvancedTrackingWidget.js:72
 #: src/ui/components/complex/TrackingWidget.js:20
 msgid "Task name"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:168
-#: src/ui/windows/pages/ProjectsPage.js:203 src/ui/utils/commonStrings.js:63
+#: src/ui/windows/pages/ClientsPage.js:211
+#: src/ui/windows/pages/ProjectsPage.js:286 src/ui/utils/commonStrings.js:63
 #: src/ui/utils/widgetFactory.js:74
 msgid "Project"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:179
-#: src/ui/windows/pages/ProjectsPage.js:214 src/ui/utils/commonStrings.js:62
+#: src/ui/windows/pages/ClientsPage.js:222
+#: src/ui/windows/pages/ProjectsPage.js:297 src/ui/utils/commonStrings.js:62
 #: src/ui/utils/widgetFactory.js:87
 msgid "Client"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:412 src/ui/utils/commonStrings.js:87
+#: src/ui/windows/pages/ClientsPage.js:459 src/ui/utils/commonStrings.js:87
 msgid "Search clients..."
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:425
+#: src/ui/windows/pages/ClientsPage.js:480
 msgid "Add Client"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:436
+#: src/ui/windows/pages/ClientsPage.js:491
 msgid "Add client"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:493
-#: src/ui/windows/pages/ProjectsPage.js:495
-#: src/ui/windows/pages/TasksPage.js:884
+#: src/ui/windows/pages/ClientsPage.js:548
+#: src/ui/windows/pages/ProjectsPage.js:564
+#: src/ui/windows/pages/TasksPage.js:1260
 msgid "Back"
 msgstr ""
 
 #. Update pagination info
-#: src/ui/windows/pages/ClientsPage.js:500
-#: src/ui/windows/pages/ClientsPage.js:1274
-#: src/ui/windows/pages/ProjectsPage.js:811
-#: src/ui/windows/pages/ProjectsPage.js:841
+#: src/ui/windows/pages/ClientsPage.js:555
+#: src/ui/windows/pages/ClientsPage.js:1329
+#: src/ui/windows/pages/ProjectsPage.js:1075
+#: src/ui/windows/pages/ProjectsPage.js:1105
 #: src/ui/windows/pages/ProjectsPageInterface.js:221
-#: src/ui/windows/pages/TasksPage.js:1611 src/ui/utils/widgetFactory.js:365
+#: src/ui/windows/pages/TasksPage.js:2376 src/ui/utils/widgetFactory.js:365
 #, javascript-format
 msgid "Page %d of %d"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:507
-#: src/ui/windows/pages/ProjectsPage.js:507
-#: src/ui/windows/pages/TasksPage.js:896
+#: src/ui/windows/pages/ClientsPage.js:562
+#: src/ui/windows/pages/ProjectsPage.js:576
+#: src/ui/windows/pages/TasksPage.js:1272
 #: src/ui/components/dialogs/CarouselDialog.js:83
 #: src/ui/components/dialogs/CarouselDialog.js:138
 #: src/ui/utils/widgetFactory.js:231 src/ui/utils/widgetFactory.js:290
 msgid "Next"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:536
-#: src/ui/windows/pages/ClientsPage.js:1361
-#: src/ui/windows/pages/ProjectsPage.js:537
-#: src/ui/windows/pages/ProjectsPage.js:928
-#: src/ui/windows/pages/TasksPage.js:933 src/ui/windows/pages/TasksPage.js:1663
-#: src/ui/components/complex/ModularDialogManager.js:397
+#: src/ui/windows/pages/ClientsPage.js:591
+#: src/ui/windows/pages/ClientsPage.js:1416
+#: src/ui/windows/pages/ProjectsPage.js:606
+#: src/ui/windows/pages/ProjectsPage.js:1192
+#: src/ui/windows/pages/TasksPage.js:1309
+#: src/ui/windows/pages/TasksPage.js:2428
+#: src/ui/components/complex/ModularDialogManager.js:464
 #: src/ui/utils/commonStrings.js:14 src/ui/utils/commonStrings.js:100
 #: src/ui/utils/widgetFactory.js:318
 msgid "Delete"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:600
+#: src/ui/windows/pages/ClientsPage.js:655
 msgid "No clients found"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:601 src/ui/utils/commonStrings.js:115
+#: src/ui/windows/pages/ClientsPage.js:656 src/ui/utils/commonStrings.js:115
 msgid "Create your first client to get started"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:683
+#: src/ui/windows/pages/ClientsPage.js:738
 msgid "Click to change rate and currency"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:739
+#: src/ui/windows/pages/ClientsPage.js:794
 msgid "Default Client cannot be selected"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:820
-#: src/ui/windows/pages/ClientsPage.js:911
-#: src/ui/components/complex/ClientDialog.js:378
+#: src/ui/windows/pages/ClientsPage.js:875
+#: src/ui/windows/pages/ClientsPage.js:966
+#: src/ui/components/complex/ClientDialog.js:28
+#: src/ui/components/complex/ClientDialog.js:376
 #: src/ui/utils/commonStrings.js:18
 msgid "Create Client"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:821
+#: src/ui/windows/pages/ClientsPage.js:876
 msgid "Add a new client with name and currency"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:837
+#: src/ui/windows/pages/ClientsPage.js:892
 msgid "Client name"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:933
+#: src/ui/windows/pages/ClientsPage.js:988
 msgid "Edit Client Name"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:934
+#: src/ui/windows/pages/ClientsPage.js:989
 msgid "Enter a new name for this client"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:948
+#: src/ui/windows/pages/ClientsPage.js:1003
 #: src/ui/components/complex/ProjectAppearanceDialog.js:45
 #: src/ui/utils/commonStrings.js:12
 msgid "Save"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:970
+#: src/ui/windows/pages/ClientsPage.js:1025
 msgid "Client name updated"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:971
-#: src/ui/windows/pages/ClientsPage.js:1086
-#: src/ui/windows/pages/ClientsPage.js:1388
-#: src/ui/windows/pages/ProjectsPage.js:955
-#: src/ui/windows/pages/TasksPage.js:1718
+#: src/ui/windows/pages/ClientsPage.js:1026
+#: src/ui/windows/pages/ClientsPage.js:1141
+#: src/ui/windows/pages/ClientsPage.js:1443
+#: src/ui/windows/pages/ProjectsPage.js:1219
+#: src/ui/windows/pages/TasksPage.js:2486
 msgid "Undo"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:991
+#: src/ui/windows/pages/ClientsPage.js:1046
 msgid "Edit Rate - {name}"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:992
+#: src/ui/windows/pages/ClientsPage.js:1047
 msgid "Change hourly rate and currency for this client"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:1064
-#: src/ui/components/complex/ClientDialog.js:353
-#: src/ui/components/complex/ProjectDialog.js:315
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:421
+#: src/ui/windows/pages/ClientsPage.js:1119
+#: src/ui/components/complex/ClientDialog.js:28
+#: src/ui/components/complex/ClientDialog.js:351
+#: src/ui/components/complex/ProjectDialog.js:332
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:420
 #: src/ui/utils/commonStrings.js:13
 msgid "Save Changes"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:1085
+#: src/ui/windows/pages/ClientsPage.js:1140
 msgid "Client rate updated"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:1109
+#: src/ui/windows/pages/ClientsPage.js:1164
 msgid "Select Currency"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:1110
+#: src/ui/windows/pages/ClientsPage.js:1165
 msgid "Choose a currency for this client"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:1356
+#: src/ui/windows/pages/ClientsPage.js:1411
 msgid "Delete Clients"
 msgstr ""
 
-#: src/ui/windows/pages/ClientsPage.js:1384
+#: src/ui/windows/pages/ClientsPage.js:1439
 msgid "Client deleted"
 msgstr ""
 
-#: src/ui/windows/pages/ProjectsPage.js:419 src/ui/utils/commonStrings.js:86
+#: src/ui/windows/pages/ProjectsPage.js:480 src/ui/utils/commonStrings.js:86
 msgid "Search projects..."
 msgstr ""
 
-#: src/ui/windows/pages/ProjectsPage.js:432
+#: src/ui/windows/pages/ProjectsPage.js:501
 msgid "Add Project"
 msgstr ""
 
-#: src/ui/windows/pages/ProjectsPage.js:443
+#: src/ui/windows/pages/ProjectsPage.js:512
 msgid "Add project"
 msgstr ""
 
-#: src/ui/windows/pages/ProjectsPage.js:501
-#: src/ui/windows/pages/TasksPage.js:890 src/ui/utils/widgetFactory.js:223
+#: src/ui/windows/pages/ProjectsPage.js:570
+#: src/ui/windows/pages/TasksPage.js:1266 src/ui/utils/widgetFactory.js:223
 #: src/ui/utils/widgetFactory.js:282
 msgid "Page 1 of 1"
 msgstr ""
 
-#: src/ui/windows/pages/ProjectsPage.js:659
+#: src/ui/windows/pages/ProjectsPage.js:925
 msgid "Project settings - Change color and icon"
 msgstr ""
 
-#: src/ui/windows/pages/ProjectsPage.js:764
+#: src/ui/windows/pages/ProjectsPage.js:1030
 msgid "Default Project cannot be selected"
 msgstr ""
 
-#: src/ui/windows/pages/ProjectsPage.js:800
+#: src/ui/windows/pages/ProjectsPage.js:1064
 msgid "No projects found"
 msgstr ""
 
-#: src/ui/windows/pages/ProjectsPage.js:801 src/ui/utils/commonStrings.js:114
+#: src/ui/windows/pages/ProjectsPage.js:1065 src/ui/utils/commonStrings.js:114
 msgid "Create your first project to get started"
 msgstr ""
 
-#: src/ui/windows/pages/ProjectsPage.js:923
+#: src/ui/windows/pages/ProjectsPage.js:1187
 msgid "Delete Projects"
 msgstr ""
 
-#: src/ui/windows/pages/ProjectsPage.js:951
+#: src/ui/windows/pages/ProjectsPage.js:1215
 msgid "Project deleted"
 msgstr ""
 
-#: src/ui/windows/pages/ProjectsPage.js:1036
+#: src/ui/windows/pages/ProjectsPage.js:1300
 msgid "Failed to update project"
 msgstr ""
 
-#: src/ui/windows/pages/ProjectsPage.js:1085
+#: src/ui/windows/pages/ProjectsPage.js:1349
 msgid "Projektname bearbeiten"
 msgstr ""
 
-#: src/ui/windows/pages/ProjectsPage.js:1086
+#: src/ui/windows/pages/ProjectsPage.js:1350
 msgid "Name von \"{oldName}\" ändern"
 msgstr ""
 
-#: src/ui/windows/pages/ProjectsPage.js:1099
+#: src/ui/windows/pages/ProjectsPage.js:1363
 msgid "Abbrechen"
 msgstr ""
 
-#: src/ui/windows/pages/ProjectsPage.js:1100
+#: src/ui/windows/pages/ProjectsPage.js:1364
 msgid "Speichern"
 msgstr ""
 
@@ -535,241 +554,261 @@ msgstr ""
 msgid "Delete Selected"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:152
+#: src/ui/windows/pages/ReportsPage.js:849
 msgid "Export PDF Report"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:208
+#: src/ui/windows/pages/ReportsPage.js:905
 msgid "Task Reports"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:251
+#: src/ui/windows/pages/ReportsPage.js:948
 msgid "Week"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:252
+#: src/ui/windows/pages/ReportsPage.js:949
 msgid "Month"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:253
+#: src/ui/windows/pages/ReportsPage.js:950
 msgid "Year"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:254
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:142
+#: src/ui/windows/pages/ReportsPage.js:951
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:149
 msgid "Custom Range"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:259
+#: src/ui/windows/pages/ReportsPage.js:956
 msgid "Select time period"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:286
+#: src/ui/windows/pages/ReportsPage.js:988
 msgid "Filter by project"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:291
+#: src/ui/windows/pages/ReportsPage.js:993
 msgid "Filter by client"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:309
+#: src/ui/windows/pages/ReportsPage.js:1011
 msgid "bis"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:358
+#: src/ui/windows/pages/ReportsPage.js:1060
 msgid "Loading chart..."
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:384
+#: src/ui/windows/pages/ReportsPage.js:1086
 msgid "Total Time"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:392
+#: src/ui/windows/pages/ReportsPage.js:1094
 msgid "Active Projects"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:403
+#: src/ui/windows/pages/ReportsPage.js:1105
 msgid "Tracked Tasks"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:532
+#: src/ui/windows/pages/ReportsPage.js:1195
+msgid "Previous currency"
+msgstr ""
+
+#: src/ui/windows/pages/ReportsPage.js:1218
+msgid "Next currency"
+msgstr ""
+
+#: src/ui/windows/pages/ReportsPage.js:1303
 msgid "Total Earnings"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:552
+#: src/ui/windows/pages/ReportsPage.js:1326
 msgid "Recent Tasks"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:553
+#: src/ui/windows/pages/ReportsPage.js:1327
 msgid "Your most recent completed tasks"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:563 src/ui/utils/commonStrings.js:109
+#: src/ui/windows/pages/ReportsPage.js:1337 src/ui/utils/commonStrings.js:109
 msgid "No tasks yet"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:564
+#: src/ui/windows/pages/ReportsPage.js:1338
 msgid "Start tracking time to see your tasks here"
 msgstr ""
 
 #. Add "All Projects" option first
-#: src/ui/windows/pages/ReportsPage.js:609
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:440
+#: src/ui/windows/pages/ReportsPage.js:1389
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:447
 msgid "All Projects"
 msgstr ""
 
 #. Add "All Clients" option first
-#: src/ui/windows/pages/ReportsPage.js:623
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:457
+#: src/ui/windows/pages/ReportsPage.js:1409
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:464
 msgid "All Clients"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:667
+#: src/ui/windows/pages/ReportsPage.js:1504
 msgid ""
 "📊 No data for selected period\n"
 "Start tracking time to see your chart"
 msgstr ""
 
 #. Chart title with period-specific formatting
-#: src/ui/windows/pages/ReportsPage.js:1149
+#: src/ui/windows/pages/ReportsPage.js:1986
 msgid "📊 Weekly Activity"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:1153
+#: src/ui/windows/pages/ReportsPage.js:1990
 msgid "Weekly Activity"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:1155
+#: src/ui/windows/pages/ReportsPage.js:1992
 msgid "📊 Monthly Activity (4 weeks)"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:1157
+#: src/ui/windows/pages/ReportsPage.js:1994
 msgid "📊 Yearly Activity (12 months)"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:1523
+#: src/ui/windows/pages/ReportsPage.js:2509
 #: src/ui/components/complex/DateRangeSelector.js:209
 msgid "Select Start Date"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:1523
+#: src/ui/windows/pages/ReportsPage.js:2509
 #: src/ui/components/complex/DateRangeSelector.js:209
 msgid "Select End Date"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:1553
+#: src/ui/windows/pages/ReportsPage.js:2539
 msgid "Apply"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:2020
+#: src/ui/windows/pages/ReportsPage.js:3288
 msgid "No tasks found"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:2021
+#: src/ui/windows/pages/ReportsPage.js:3289
 msgid "Try adjusting your filters"
 msgstr ""
 
-#: src/ui/windows/pages/ReportsPage.js:2040
-msgid "Unnamed Task"
-msgstr ""
-
-#: src/ui/windows/pages/ReportsPage.js:2153
+#: src/ui/windows/pages/ReportsPage.js:3592
 msgid "PDF export failed"
 msgstr ""
 
-#: src/ui/windows/pages/TasksPage.js:724
+#: src/ui/windows/pages/TasksPage.js:1093
 msgid "Search tasks..."
 msgstr ""
 
-#: src/ui/windows/pages/TasksPage.js:740
+#: src/ui/windows/pages/TasksPage.js:1117
 #: src/ui/components/primitive/IconPicker.js:68
 msgid "All"
 msgstr ""
 
-#: src/ui/windows/pages/TasksPage.js:740
+#: src/ui/windows/pages/TasksPage.js:1117
 #: src/ui/components/complex/DateRangeSelector.js:61
 msgid "Today"
 msgstr ""
 
-#: src/ui/windows/pages/TasksPage.js:740
+#: src/ui/windows/pages/TasksPage.js:1117
 #: src/ui/components/complex/DateRangeSelector.js:65
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:140
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:147
 msgid "This Month"
 msgstr ""
 
-#: src/ui/windows/pages/TasksPage.js:791
+#: src/ui/windows/pages/TasksPage.js:1168
 msgid "No Tasks Yet"
 msgstr ""
 
-#: src/ui/windows/pages/TasksPage.js:800
+#: src/ui/windows/pages/TasksPage.js:1177
 msgid "Start tracking time to create your tasks"
 msgstr ""
 
-#: src/ui/windows/pages/TasksPage.js:927
+#: src/ui/windows/pages/TasksPage.js:1303
 msgid "Edit Selected"
 msgstr ""
 
-#: src/ui/windows/pages/TasksPage.js:1658 src/ui/utils/commonStrings.js:28
+#: src/ui/windows/pages/TasksPage.js:2423 src/ui/utils/commonStrings.js:28
 msgid "Delete Tasks"
 msgstr ""
 
-#: src/ui/windows/pages/TasksPage.js:1714
+#: src/ui/windows/pages/TasksPage.js:2482
 msgid "Task deleted"
 msgstr ""
 
-#: src/ui/components/complex/AdvancedTrackingWidget.js:116
-#: src/ui/components/complex/AdvancedTrackingWidget.js:310
-#: src/ui/components/complex/HeaderTrackingWidget.js:74
-#: src/ui/components/complex/HeaderTrackingWidget.js:192
+#: src/ui/windows/pages/TasksPage.js:2507
+msgid "Failed to restore: some referenced items were deleted"
+msgstr ""
+
+#: src/ui/components/complex/AdvancedTrackingWidget.js:129
+#: src/ui/components/complex/AdvancedTrackingWidget.js:389
+#: src/ui/components/complex/AdvancedTrackingWidget.js:456
+#: src/ui/components/complex/HeaderTrackingWidget.js:77
+#: src/ui/components/complex/HeaderTrackingWidget.js:208
 msgid "Start tracking (Long press or P for Pomodoro)"
 msgstr ""
 
-#: src/ui/components/complex/AdvancedTrackingWidget.js:275
-#: src/ui/components/complex/HeaderTrackingWidget.js:162
+#: src/ui/components/complex/AdvancedTrackingWidget.js:355
+#: src/ui/components/complex/HeaderTrackingWidget.js:173
 msgid "Stop Pomodoro"
 msgstr ""
 
-#: src/ui/components/complex/ClientDialog.js:90
-msgid "Client Name"
-msgstr ""
-
-#: src/ui/components/complex/ClientDialog.js:96
-msgid "Enter client name..."
-msgstr ""
-
-#: src/ui/components/complex/ClientDialog.js:110
-msgid "Hourly Rate & Currency"
-msgstr ""
-
-#. Error saving client
-#: src/ui/components/complex/ClientDialog.js:299
-msgid "Failed to save client. Please try again."
-msgstr ""
-
-#: src/ui/components/complex/ClientDialog.js:335
-msgid "Phone number too long"
-msgstr ""
-
 #. Update dialog title
-#: src/ui/components/complex/ClientDialog.js:351
+#: src/ui/components/complex/ClientDialog.js:25
+#: src/ui/components/complex/ClientDialog.js:349
 #: src/ui/utils/commonStrings.js:32
 msgid "Edit Client"
 msgstr ""
 
-#: src/ui/components/complex/ClientDialog.js:352
-msgid "Update client information"
-msgstr ""
-
 #. Update dialog title
-#: src/ui/components/complex/ClientDialog.js:376
+#: src/ui/components/complex/ClientDialog.js:25
+#: src/ui/components/complex/ClientDialog.js:374
 msgid "Create New Client"
 msgstr ""
 
-#: src/ui/components/complex/ClientDialog.js:377
+#: src/ui/components/complex/ClientDialog.js:26
+#: src/ui/components/complex/ClientDialog.js:350
+msgid "Update client information"
+msgstr ""
+
+#: src/ui/components/complex/ClientDialog.js:26
+msgid "Add a new client with billing rates"
+msgstr ""
+
+#: src/ui/components/complex/ClientDialog.js:34
+msgid "Dummy"
+msgstr ""
+
+#: src/ui/components/complex/ClientDialog.js:88
+msgid "Client Name"
+msgstr ""
+
+#: src/ui/components/complex/ClientDialog.js:94
+msgid "Enter client name..."
+msgstr ""
+
+#: src/ui/components/complex/ClientDialog.js:108
+msgid "Hourly Rate & Currency"
+msgstr ""
+
+#. Error saving client
+#: src/ui/components/complex/ClientDialog.js:297
+msgid "Failed to save client. Please try again."
+msgstr ""
+
+#: src/ui/components/complex/ClientDialog.js:333
+msgid "Phone number too long"
+msgstr ""
+
+#: src/ui/components/complex/ClientDialog.js:375
 msgid "Add a new client with contact details and billing rates"
 msgstr ""
 
-#: src/ui/components/complex/ClientDialog.js:399
+#: src/ui/components/complex/ClientDialog.js:397
 msgid "A client with this name already exists"
 msgstr ""
 
@@ -843,67 +882,67 @@ msgid "Choose the end date for the report range"
 msgstr ""
 
 #. Update UI to idle mode
-#: src/ui/components/complex/HeaderTrackingWidget.js:43
-#: src/ui/components/complex/HeaderTrackingWidget.js:186
+#: src/ui/components/complex/HeaderTrackingWidget.js:46
+#: src/ui/components/complex/HeaderTrackingWidget.js:200
 msgid "Select task..."
 msgstr ""
 
-#: src/ui/components/complex/HeaderTrackingWidget.js:52
+#: src/ui/components/complex/HeaderTrackingWidget.js:55
 msgid "Select project"
 msgstr ""
 
-#: src/ui/components/complex/HeaderTrackingWidget.js:60
+#: src/ui/components/complex/HeaderTrackingWidget.js:63
 msgid "Select client"
 msgstr ""
 
-#: src/ui/components/complex/HeaderTrackingWidget.js:105
+#: src/ui/components/complex/HeaderTrackingWidget.js:108
 msgid "Open compact tracker (Shift: keep main window)"
 msgstr ""
 
-#: src/ui/components/complex/ModularDialogManager.js:139
+#: src/ui/components/complex/ModularDialogManager.js:206
 msgid "Task Name"
 msgstr ""
 
-#: src/ui/components/complex/ModularDialogManager.js:140
+#: src/ui/components/complex/ModularDialogManager.js:207
 #: src/ui/components/dialogs/QuickTaskSelector.js:53
 msgid "Enter task name..."
 msgstr ""
 
-#: src/ui/components/complex/ModularDialogManager.js:148
+#: src/ui/components/complex/ModularDialogManager.js:215
 #: src/ui/utils/commonStrings.js:65
 msgid "Description"
 msgstr ""
 
-#: src/ui/components/complex/ModularDialogManager.js:149
+#: src/ui/components/complex/ModularDialogManager.js:216
 msgid "Optional task description..."
 msgstr ""
 
-#: src/ui/components/complex/ModularDialogManager.js:167
+#: src/ui/components/complex/ModularDialogManager.js:234
 msgid "No client"
 msgstr ""
 
-#: src/ui/components/complex/ModularDialogManager.js:206
+#: src/ui/components/complex/ModularDialogManager.js:273
 msgid "Confirm Action"
 msgstr ""
 
-#: src/ui/components/complex/ModularDialogManager.js:207
+#: src/ui/components/complex/ModularDialogManager.js:274
 msgid "Are you sure?"
 msgstr ""
 
-#: src/ui/components/complex/ModularDialogManager.js:208
+#: src/ui/components/complex/ModularDialogManager.js:275
 msgid "Confirm"
 msgstr ""
 
-#: src/ui/components/complex/ModularDialogManager.js:249
+#: src/ui/components/complex/ModularDialogManager.js:316
 msgid "Error Details"
 msgstr ""
 
-#: src/ui/components/complex/ModularDialogManager.js:395
+#: src/ui/components/complex/ModularDialogManager.js:462
 #, javascript-format
 msgid "Delete %s"
 msgstr ""
 
-#: src/ui/components/complex/ModularDialogManager.js:396
+#: src/ui/components/complex/ModularDialogManager.js:463
 #, javascript-format
 msgid "Are you sure you want to delete \"%s\"? This action cannot be undone."
 msgstr ""
@@ -932,40 +971,40 @@ msgstr ""
 msgid "Click to choose symbol"
 msgstr ""
 
-#: src/ui/components/complex/ProjectAppearanceDialog.js:166
+#: src/ui/components/complex/ProjectAppearanceDialog.js:198
 msgid "Select Project Color"
 msgstr ""
 
-#: src/ui/components/complex/ProjectAppearanceDialog.js:195
+#: src/ui/components/complex/ProjectAppearanceDialog.js:227
 msgid "Choose Symbol"
 msgstr ""
 
-#: src/ui/components/complex/ProjectAppearanceDialog.js:196
+#: src/ui/components/complex/ProjectAppearanceDialog.js:228
 msgid "Select an icon or emoji for the project"
 msgstr ""
 
-#: src/ui/components/complex/ProjectAppearanceDialog.js:222
+#: src/ui/components/complex/ProjectAppearanceDialog.js:254
 msgid "Clear"
 msgstr ""
 
-#: src/ui/components/complex/ProjectAppearanceDialog.js:234
+#: src/ui/components/complex/ProjectAppearanceDialog.js:266
 #: src/ui/utils/selectorFactory.js:418
 msgid "Icons"
 msgstr ""
 
-#: src/ui/components/complex/ProjectAppearanceDialog.js:246
+#: src/ui/components/complex/ProjectAppearanceDialog.js:278
 msgid "Emojis"
 msgstr ""
 
-#: src/ui/components/complex/ProjectAppearanceDialog.js:271
+#: src/ui/components/complex/ProjectAppearanceDialog.js:303
 msgid "Clear mode selected - No icon will be displayed"
 msgstr ""
 
-#: src/ui/components/complex/ProjectAppearanceDialog.js:273
+#: src/ui/components/complex/ProjectAppearanceDialog.js:305
 msgid "Icon selected"
 msgstr ""
 
-#: src/ui/components/complex/ProjectAppearanceDialog.js:275
+#: src/ui/components/complex/ProjectAppearanceDialog.js:307
 msgid "Emoji selected"
 msgstr ""
 
@@ -1003,28 +1042,28 @@ msgstr ""
 msgid "Enter project name..."
 msgstr ""
 
-#: src/ui/components/complex/ProjectDialog.js:261
+#: src/ui/components/complex/ProjectDialog.js:278
 msgid "Failed to save project. Please try again."
 msgstr ""
 
 #. Update dialog title
-#: src/ui/components/complex/ProjectDialog.js:313
-#: src/ui/components/complex/ProjectDialog.js:337
+#: src/ui/components/complex/ProjectDialog.js:330
+#: src/ui/components/complex/ProjectDialog.js:354
 #: src/ui/utils/commonStrings.js:17
 msgid "Create Project"
 msgstr ""
 
-#: src/ui/components/complex/ProjectDialog.js:314
+#: src/ui/components/complex/ProjectDialog.js:331
 msgid "Update project name and appearance"
 msgstr ""
 
 #. Update dialog title
-#: src/ui/components/complex/ProjectDialog.js:335
+#: src/ui/components/complex/ProjectDialog.js:352
 #: src/ui/utils/commonStrings.js:33
 msgid "Create New Project"
 msgstr ""
 
-#: src/ui/components/complex/ProjectDialog.js:336
+#: src/ui/components/complex/ProjectDialog.js:353
 msgid "Create a new project"
 msgstr ""
 
@@ -1312,12 +1351,12 @@ msgstr ""
 msgid "Show preview before creating"
 msgstr ""
 
-#: src/ui/components/complex/TrackingWidget.js:56
+#: src/ui/components/complex/TrackingWidget.js:55
 #: src/ui/utils/selectorFactory.js:113
 msgid "Select Project"
 msgstr ""
 
-#: src/ui/components/complex/TrackingWidget.js:68
+#: src/ui/components/complex/TrackingWidget.js:67
 #: src/ui/utils/selectorFactory.js:131
 msgid "Select Client"
 msgstr ""
@@ -1327,7 +1366,7 @@ msgid "Skip"
 msgstr ""
 
 #: src/ui/components/dialogs/CarouselDialog.js:100
-#: src/ui/components/dialogs/PreferencesDialog.js:99
+#: src/ui/components/dialogs/PreferencesDialog.js:148
 msgid "Donate"
 msgstr ""
 
@@ -1335,70 +1374,70 @@ msgstr ""
 msgid "Get Started"
 msgstr ""
 
-#: src/ui/components/dialogs/CarouselDialog.js:184
+#: src/ui/components/dialogs/CarouselDialog.js:185
 msgid "Welcome to Valot"
 msgstr ""
 
-#: src/ui/components/dialogs/CarouselDialog.js:185
+#: src/ui/components/dialogs/CarouselDialog.js:186
 msgid "Track your time efficiently and boost your productivity"
 msgstr ""
 
-#: src/ui/components/dialogs/CarouselDialog.js:186
+#: src/ui/components/dialogs/CarouselDialog.js:187
 msgid ""
 "Right-click to select multiple items • Use filters to find tasks quickly"
 msgstr ""
 
-#: src/ui/components/dialogs/CarouselDialog.js:190
+#: src/ui/components/dialogs/CarouselDialog.js:191
 msgid "Organize Projects"
 msgstr ""
 
-#: src/ui/components/dialogs/CarouselDialog.js:191
+#: src/ui/components/dialogs/CarouselDialog.js:192
 msgid "Create and manage projects with custom colors and icons"
 msgstr ""
 
-#: src/ui/components/dialogs/CarouselDialog.js:192
+#: src/ui/components/dialogs/CarouselDialog.js:193
 msgid "Double-click project names to edit • Click icons to change color"
 msgstr ""
 
-#: src/ui/components/dialogs/CarouselDialog.js:196
+#: src/ui/components/dialogs/CarouselDialog.js:197
 msgid "Manage Clients"
 msgstr ""
 
-#: src/ui/components/dialogs/CarouselDialog.js:197
+#: src/ui/components/dialogs/CarouselDialog.js:198
 msgid "Add clients with billing rates and contact information"
 msgstr ""
 
-#: src/ui/components/dialogs/CarouselDialog.js:198
+#: src/ui/components/dialogs/CarouselDialog.js:199
 msgid "Set custom currencies in settings • Edit multiple tasks at once"
 msgstr ""
 
-#: src/ui/components/dialogs/CarouselDialog.js:203
+#: src/ui/components/dialogs/CarouselDialog.js:204
 msgid "Launch with terminal command or setup system hotkey"
 msgstr ""
 
-#: src/ui/components/dialogs/CarouselDialog.js:208
-#: src/ui/components/dialogs/PreferencesDialog.js:421
+#: src/ui/components/dialogs/CarouselDialog.js:209
+#: src/ui/components/dialogs/PreferencesDialog.js:472
 msgid "Pomodoro Timer"
 msgstr ""
 
-#: src/ui/components/dialogs/CarouselDialog.js:209
+#: src/ui/components/dialogs/CarouselDialog.js:210
 msgid "Long press track button to activate Pomodoro mode"
 msgstr ""
 
-#: src/ui/components/dialogs/CarouselDialog.js:210
+#: src/ui/components/dialogs/CarouselDialog.js:211
 msgid "Configure duration in settings • Auto-stops after timer ends"
 msgstr ""
 
-#: src/ui/components/dialogs/CarouselDialog.js:310
-#: src/ui/components/dialogs/PreferencesDialog.js:569
+#: src/ui/components/dialogs/CarouselDialog.js:311
+#: src/ui/components/dialogs/PreferencesDialog.js:585
 msgid "Copy command"
 msgstr ""
 
-#: src/ui/components/dialogs/CarouselDialog.js:385
+#: src/ui/components/dialogs/CarouselDialog.js:386
 msgid "Slide"
 msgstr ""
 
-#: src/ui/components/dialogs/CarouselDialog.js:391
+#: src/ui/components/dialogs/CarouselDialog.js:392
 #, javascript-format
 msgid "This is slide %d content. The carousel is working!"
 msgstr ""
@@ -1442,13 +1481,13 @@ msgid "s"
 msgstr ""
 
 #: src/ui/components/dialogs/MultipleTasksEditDialog.js:45
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:66
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:361
 #: src/ui/utils/commonStrings.js:74
 msgid "Duration"
 msgstr ""
 
 #: src/ui/components/dialogs/MultipleTasksEditDialog.js:66
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:88
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:394
 msgid "Task name...."
 msgstr ""
 
@@ -1460,165 +1499,165 @@ msgstr ""
 msgid "Save changes"
 msgstr ""
 
-#: src/ui/components/dialogs/MultipleTasksEditDialog.js:183
+#: src/ui/components/dialogs/MultipleTasksEditDialog.js:151
 #: src/ui/utils/commonStrings.js:54
 msgid "Failed to save changes"
 msgstr ""
 
 #: src/ui/components/dialogs/PDFExportPreferencesDialog.js:15
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:61
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:68
 msgid "PDF Export Preferences"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:74
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:81
 msgid "Export PDF"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:121
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:195
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:128
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:202
 msgid "Time Range"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:127
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:134
 msgid "Report Period"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:128
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:135
 msgid "Select the time period for your report"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:133
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:140
 msgid "Time Period"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:134
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:141
 msgid "Choose predefined period or custom range"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:141
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:148
 msgid "This Year"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:157
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:164
 msgid "Custom Date Range"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:158
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:165
 msgid "Specify exact start and end dates"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:164
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:171
 msgid "Start Date"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:165
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:172
 msgid "Beginning of the report period"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:169
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:182
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:176
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:189
 msgid "Select Date"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:177
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:184
 msgid "End Date"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:178
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:185
 msgid "End of the report period"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:200
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:272
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:207
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:279
 msgid "Content"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:206
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:213
 msgid "Report Sections"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:207
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:214
 msgid "Choose which sections to include in your PDF report"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:212
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:219
 msgid "Analytics and Statistics"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:213
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:220
 msgid "Include summary statistics and analysis"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:222
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:229
 msgid "Charts and Visualizations"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:223
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:230
 msgid "Include time tracking charts and graphs"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:232
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:239
 msgid "Task Details"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:233
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:240
 msgid "Include detailed task information"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:242
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:249
 msgid "Project Information"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:243
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:250
 msgid "Include project details and summaries"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:252
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:259
 msgid "Billing and Financial Data"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:253
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:260
 msgid "Include rates, costs, and financial calculations"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:277
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:284
 msgid "Billing Currencies"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:278
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:285
 msgid "Select which currencies to include in billing report"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:306
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:313
 msgid "All Currencies"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:396
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:432
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:403
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:439
 msgid "Filters"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:402
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:409
 msgid "Project Filter"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:403
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:410
 msgid "Limit report to specific projects"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:408
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:415
 msgid "Select a specific project or include all projects"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:417
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:424
 msgid "Client Filter"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:418
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:425
 msgid "Limit report to specific clients"
 msgstr ""
 
-#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:423
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:430
 msgid "Select a specific client or include all clients"
 msgstr ""
 
@@ -1626,413 +1665,512 @@ msgstr ""
 msgid "Preferences"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:42
+#: src/ui/components/dialogs/PreferencesDialog.js:80
 msgid "Global"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:117
-#: src/ui/components/dialogs/PreferencesDialog.js:639
+#: src/ui/components/dialogs/PreferencesDialog.js:96
+msgid "Integrations"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:166
+#: src/ui/components/dialogs/PreferencesDialog.js:656
 msgid "Details"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:131
-#: src/ui/components/dialogs/PreferencesDialog.js:738
+#: src/ui/components/dialogs/PreferencesDialog.js:180
+#: src/ui/components/dialogs/PreferencesDialog.js:755
 msgid "Credits"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:145
-#: src/ui/components/dialogs/PreferencesDialog.js:815
+#: src/ui/components/dialogs/PreferencesDialog.js:194
+#: src/ui/components/dialogs/PreferencesDialog.js:832
 msgid "Legal"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:163
+#: src/ui/components/dialogs/PreferencesDialog.js:215
 msgid "Appearance"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:168
+#: src/ui/components/dialogs/PreferencesDialog.js:220
 msgid "Theme"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:169
+#: src/ui/components/dialogs/PreferencesDialog.js:221
 msgid "Choose your preferred theme"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:181
+#: src/ui/components/dialogs/PreferencesDialog.js:233
 msgid "Auto"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:186
+#: src/ui/components/dialogs/PreferencesDialog.js:238
 msgid "Light"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:191
+#: src/ui/components/dialogs/PreferencesDialog.js:243
 msgid "Dark"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:248
+#: src/ui/components/dialogs/PreferencesDialog.js:299
 msgid "Accent Color"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:249
+#: src/ui/components/dialogs/PreferencesDialog.js:300
 msgid "Choose system accent or custom color"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:260
+#: src/ui/components/dialogs/PreferencesDialog.js:311
 msgid "Standard"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:264
+#: src/ui/components/dialogs/PreferencesDialog.js:315
 msgid "Custom"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:276
+#: src/ui/components/dialogs/PreferencesDialog.js:327
 msgid "Custom Color"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:277
+#: src/ui/components/dialogs/PreferencesDialog.js:328
 msgid "Pick your preferred accent color"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:347
+#: src/ui/components/dialogs/PreferencesDialog.js:398
 msgid "Behavior"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:352
+#: src/ui/components/dialogs/PreferencesDialog.js:403
 msgid "Sidebar"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:353
+#: src/ui/components/dialogs/PreferencesDialog.js:404
 msgid "Choose sidebar behavior on launch"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:364
+#: src/ui/components/dialogs/PreferencesDialog.js:415
 msgid "Opened"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:365
+#: src/ui/components/dialogs/PreferencesDialog.js:416
 msgid "Always open on launch"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:369
+#: src/ui/components/dialogs/PreferencesDialog.js:420
 msgid "Closed"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:370
+#: src/ui/components/dialogs/PreferencesDialog.js:421
 msgid "Always closed on launch"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:374
+#: src/ui/components/dialogs/PreferencesDialog.js:425
 msgid "Dynamic"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:375
+#: src/ui/components/dialogs/PreferencesDialog.js:426
 msgid "Remember last state"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:426
+#: src/ui/components/dialogs/PreferencesDialog.js:477
 msgid "Timer Duration"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:427
+#: src/ui/components/dialogs/PreferencesDialog.js:478
 msgid "Default pomodoro session length in minutes"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:455
-msgid "Database"
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:456
-msgid "Backup and manage your data"
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:461
-#: src/ui/components/dialogs/PreferencesDialog.js:1274
-msgid "Export Database"
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:462
-msgid "Save a backup of your database"
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:466
-#: src/ui/components/dialogs/PreferencesDialog.js:1275
-msgid "Export"
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:480
-#: src/ui/components/dialogs/PreferencesDialog.js:1325
-#: src/ui/components/dialogs/PreferencesDialog.js:1373
-msgid "Import Database"
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:481
-msgid "Restore a backup of your database"
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:485
-msgid "Import"
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:499
-#: src/ui/components/dialogs/PreferencesDialog.js:1612
-msgid "Reset Database"
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:500
-msgid "Delete all data and start fresh"
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:504
-msgid "Reset"
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:520
+#: src/ui/components/dialogs/PreferencesDialog.js:535
 msgid "Welcome Info"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:521
+#: src/ui/components/dialogs/PreferencesDialog.js:536
 msgid "View the app welcome tour and getting started guide"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:525
+#: src/ui/components/dialogs/PreferencesDialog.js:540
 msgid "Show Welcome Tour"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:526
+#: src/ui/components/dialogs/PreferencesDialog.js:541
 msgid "View the introductory slides and features overview"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:530
+#: src/ui/components/dialogs/PreferencesDialog.js:545
 msgid "Show Tour"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:545
+#: src/ui/components/dialogs/PreferencesDialog.js:560
 msgid "Compact Tracker Command"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:546
+#: src/ui/components/dialogs/PreferencesDialog.js:561
 msgid "Terminal command for launching compact tracker"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:550
+#: src/ui/components/dialogs/PreferencesDialog.js:565
 msgid "Terminal Command"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:551
+#: src/ui/components/dialogs/PreferencesDialog.js:566
 msgid "Use this command for hotkeys or scripts"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:600
-#: src/ui/components/dialogs/PreferencesDialog.js:1025
+#: src/ui/components/dialogs/PreferencesDialog.js:617
+#: src/ui/components/dialogs/PreferencesDialog.js:1056
 msgid "Currency Settings"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:601
-#: src/ui/components/dialogs/PreferencesDialog.js:1026
+#: src/ui/components/dialogs/PreferencesDialog.js:618
+#: src/ui/components/dialogs/PreferencesDialog.js:1057
 msgid "Manage available currencies for client billing"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:615
+#: src/ui/components/dialogs/PreferencesDialog.js:632
+#: src/ui/components/dialogs/PreferencesDialog.js:1073
 msgid "Hidden Currencies"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:616
+#: src/ui/components/dialogs/PreferencesDialog.js:633
+#: src/ui/components/dialogs/PreferencesDialog.js:1074
 msgid "Click to unhide currencies"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:621
-#: src/ui/components/dialogs/PreferencesDialog.js:1048
+#: src/ui/components/dialogs/PreferencesDialog.js:638
+#: src/ui/components/dialogs/PreferencesDialog.js:1078
 msgid "Hidden"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:622
-#: src/ui/components/dialogs/PreferencesDialog.js:1049
+#: src/ui/components/dialogs/PreferencesDialog.js:639
+#: src/ui/components/dialogs/PreferencesDialog.js:1079
 msgid "0 currencies hidden"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:666
-#: src/ui/components/dialogs/PreferencesDialog.js:765
+#: src/ui/components/dialogs/PreferencesDialog.js:683
+#: src/ui/components/dialogs/PreferencesDialog.js:782
 msgid "Creator"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:671
-#: src/ui/components/dialogs/PreferencesDialog.js:770
+#: src/ui/components/dialogs/PreferencesDialog.js:688
+#: src/ui/components/dialogs/PreferencesDialog.js:787
 msgid "Designer &amp; Developer"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:678
+#: src/ui/components/dialogs/PreferencesDialog.js:695
 msgid "Copyright"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:682
+#: src/ui/components/dialogs/PreferencesDialog.js:699
 msgid "Copyright © 2025 Vitaly Odnoyko"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:683
+#: src/ui/components/dialogs/PreferencesDialog.js:700
 msgid "All rights reserved under MIT License"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:690
+#: src/ui/components/dialogs/PreferencesDialog.js:707
 msgid "Repository"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:694
+#: src/ui/components/dialogs/PreferencesDialog.js:711
 msgid "Source Code"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:710
+#: src/ui/components/dialogs/PreferencesDialog.js:727
 #: src/ui/utils/commonStrings.js:71
 msgid "Website"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:714
+#: src/ui/components/dialogs/PreferencesDialog.js:731
 msgid "Visit Website"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:777
+#: src/ui/components/dialogs/PreferencesDialog.js:794
 msgid "Special Thanks"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:781
+#: src/ui/components/dialogs/PreferencesDialog.js:798
 msgid "GNOME &amp; GTK Developers"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:782
+#: src/ui/components/dialogs/PreferencesDialog.js:799
 msgid "For the amazing toolkit and desktop environment"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:787
+#: src/ui/components/dialogs/PreferencesDialog.js:804
 msgid "Libadwaita Contributors"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:788
+#: src/ui/components/dialogs/PreferencesDialog.js:805
 msgid "For beautiful and consistent UI components"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:793
+#: src/ui/components/dialogs/PreferencesDialog.js:810
 msgid "Flatpak Community"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:794
+#: src/ui/components/dialogs/PreferencesDialog.js:811
 msgid "For modern app distribution and sandboxing"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:799
+#: src/ui/components/dialogs/PreferencesDialog.js:816
 msgid "Weblate"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:800
+#: src/ui/components/dialogs/PreferencesDialog.js:817
 msgid "For translation management and localization"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:842
+#: src/ui/components/dialogs/PreferencesDialog.js:859
 msgid "License"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:847
+#: src/ui/components/dialogs/PreferencesDialog.js:864
 msgid "Free and open source software"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:862
+#: src/ui/components/dialogs/PreferencesDialog.js:879
 msgid "Third Party"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:867
+#: src/ui/components/dialogs/PreferencesDialog.js:884
 msgid "Licensed under LGPL 2.1"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1083
+#: src/ui/components/dialogs/PreferencesDialog.js:1181
 #, javascript-format
 msgid "%d currencies hidden"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1300
+#: src/ui/components/dialogs/PreferencesDialog.js:1418
+msgid "Extensions"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1427
+#: src/ui/components/dialogs/PreferencesDialog.js:1492
+msgid "Installed Extensions"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1428
+msgid "Manage addons and plugins"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1440
+msgid "Reload Extensions"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1452
+#: src/ui/components/dialogs/PreferencesDialog.js:2141
+msgid "Add Extension"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1469
+#: src/ui/components/dialogs/PreferencesDialog.js:1500
+msgid "Available Extensions"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1470
+msgid "Extensions available for download from GitLab"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1535
+#: src/ui/components/dialogs/PreferencesDialog.js:1542
+msgid "Development Extensions"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1543
+msgid "Extensions from development environment"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1560
+#: src/ui/components/dialogs/PreferencesDialog.js:1567
+msgid "System Extensions"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1568
+msgid "Extensions installed via Flatpak"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1594
+#: src/ui/components/dialogs/PreferencesDialog.js:2224
+msgid "Addon"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1594
+#: src/ui/components/dialogs/PreferencesDialog.js:2224
+msgid "Plugin"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1617
+msgid "Extension Settings"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1640
+msgid "Database"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1641
+msgid "Backup and manage your data"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1646
+#: src/ui/components/dialogs/PreferencesDialog.js:1735
+msgid "Export Database"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1647
+msgid "Save a backup of your database"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1651
+#: src/ui/components/dialogs/PreferencesDialog.js:1736
+msgid "Export"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1665
+#: src/ui/components/dialogs/PreferencesDialog.js:1779
+#: src/ui/components/dialogs/PreferencesDialog.js:1827
+msgid "Import Database"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1666
+msgid "Restore a backup of your database"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1670
+msgid "Import"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1684
+#: src/ui/components/dialogs/PreferencesDialog.js:2083
+msgid "Reset Database"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1685
+msgid "Delete all data and start fresh"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1689
+msgid "Reset"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1752
 msgid "Database exported successfully"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1312
+#: src/ui/components/dialogs/PreferencesDialog.js:1760
 msgid "Failed to export database"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1326
+#: src/ui/components/dialogs/PreferencesDialog.js:1780
 #: src/ui/utils/commonStrings.js:19
 msgid "Select"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1331
+#: src/ui/components/dialogs/PreferencesDialog.js:1785
 msgid "Database files"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1357
+#: src/ui/components/dialogs/PreferencesDialog.js:1811
 msgid "Failed to select file"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1374
+#: src/ui/components/dialogs/PreferencesDialog.js:1828
 msgid "Choose how to import the database"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1375
+#: src/ui/components/dialogs/PreferencesDialog.js:1829
 msgid "Replace Data"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1376
+#: src/ui/components/dialogs/PreferencesDialog.js:1830
 msgid "Save and Add Data"
 msgstr ""
 
-#. Update progress
-#: src/ui/components/dialogs/PreferencesDialog.js:1401
-msgid "Replacing database..."
-msgstr ""
-
-#. Update progress to complete
-#: src/ui/components/dialogs/PreferencesDialog.js:1412
-#: src/ui/components/dialogs/PreferencesDialog.js:1573
-msgid "Complete"
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:1426
+#: src/ui/components/dialogs/PreferencesDialog.js:1888
 msgid "Failed to replace database"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1437
-msgid "Opening databases..."
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:1451
-msgid "Reading clients..."
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:1494
-msgid "Reading projects..."
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:1534
-msgid "Reading tasks..."
-msgstr ""
-
-#: src/ui/components/dialogs/PreferencesDialog.js:1568
-msgid "Finalizing..."
-msgstr ""
-
 #. Show summary toast
-#: src/ui/components/dialogs/PreferencesDialog.js:1576
+#: src/ui/components/dialogs/PreferencesDialog.js:1915
 #, javascript-format
-msgid "Import complete: %d clients, %d projects, %d tasks added"
+msgid ""
+"Import complete: %d clients, %d projects, %d tasks, %d time entries added"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1598
+#: src/ui/components/dialogs/PreferencesDialog.js:1967
 #, javascript-format
 msgid "Failed to merge database: %s"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1607
+#: src/ui/components/dialogs/PreferencesDialog.js:1976
+msgid "Select Extension File"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1977
+msgid "Load"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1982
+msgid "JavaScript files"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2002
+#, javascript-format
+msgid "Extension loaded: %s"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2020
+#, javascript-format
+msgid "Failed to load extension: %s"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2078
 msgid "Reset Database?"
 msgstr ""
 
-#: src/ui/components/dialogs/PreferencesDialog.js:1608
+#: src/ui/components/dialogs/PreferencesDialog.js:2079
 msgid ""
 "This will delete all your tasks, projects, clients, and time entries. This "
 "action cannot be undone."
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2107
+msgid "Database reset complete"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2129
+msgid "Failed to reload extensions"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2142
+msgid "Select how to add the extension"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2146
+msgid "From File"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2147
+msgid "From URL"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2233
+msgid "Installed"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2241
+msgid "Install"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2254
+#, javascript-format
+msgid "Extension installed: %s"
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2261
+#, javascript-format
+msgid "Failed to install extension: %s"
 msgstr ""
 
 #: src/ui/components/dialogs/QuickTaskSelector.js:26
@@ -2056,27 +2194,29 @@ msgstr ""
 msgid "Client:"
 msgstr ""
 
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:56
+#. Update dialog heading
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:212
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:344
 msgid "Edit Task "
 msgstr ""
 
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:126
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:466
 msgid "Start"
 msgstr ""
 
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:271
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:695
 msgid "End"
 msgstr ""
 
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:477
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:1045
 msgid "Choose date"
 msgstr ""
 
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:478
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:1046
 msgid "Select the date for this task"
 msgstr ""
 
-#: src/ui/components/dialogs/TaskInstanceEditDialog.js:549
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:1117
 msgid "Choose time"
 msgstr ""
 

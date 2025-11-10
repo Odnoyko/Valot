@@ -320,10 +320,10 @@ export class ModularDialogManager {
         }
 
         return this.showFormDialog({
-            title: title || 'Error',
+            title: title || _('Error'),
             subtitle: message,
             fields,
-            submitLabel: 'OK',
+            submitLabel: _('OK'),
             cancelLabel: null, // Hide cancel button
             width: 450,
             cssClasses: ['error-dialog'],

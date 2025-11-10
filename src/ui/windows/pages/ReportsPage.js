@@ -1180,6 +1180,26 @@ export class ReportsPage {
             margin_end: 12,
         });
 
+        // Container for carousel with navigation buttons overlay
+        const carouselContainer = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            halign: Gtk.Align.CENTER,
+            valign: Gtk.Align.CENTER,
+        });
+
+        // Previous button (left side)
+        const prevButton = new Gtk.Button({
+            icon_name: 'go-previous-symbolic',
+            css_classes: ['flat', 'circular'],
+            valign: Gtk.Align.CENTER,
+            tooltip_text: _('Previous currency'),
+            margin_start: 2,
+            margin_end: 2,
+            margin_top: 2,
+            margin_bottom: 2,
+        });
+        prevButton.set_size_request(32, 32);
+
         // Currency carousel (without dots, no icon)
         this.currencyCarousel = new Adw.Carousel({
             halign: Gtk.Align.CENTER,
@@ -1187,7 +1207,56 @@ export class ReportsPage {
             height_request: 80,
             allow_long_swipes: true,
             allow_scroll_wheel: false, // Disable built-in scroll, we'll handle it manually
+            hexpand: true,
         });
+
+        // Next button (right side)
+        const nextButton = new Gtk.Button({
+            icon_name: 'go-next-symbolic',
+            css_classes: ['flat', 'circular'],
+            valign: Gtk.Align.CENTER,
+            tooltip_text: _('Next currency'),
+            margin_start: 2,
+            margin_end: 2,
+            margin_top: 2,
+            margin_bottom: 2,
+        });
+        nextButton.set_size_request(32, 32);
+
+        // Connect navigation buttons
+        prevButton.connect('clicked', () => {
+            const nPages = this.currencyCarousel.get_n_pages();
+            if (nPages <= 1) return;
+
+            const currentPage = Math.round(this.currencyCarousel.get_position());
+            const prevPage = currentPage - 1 < 0 ? nPages - 1 : currentPage - 1;
+            this.currencyCarousel.scroll_to(this.currencyCarousel.get_nth_page(prevPage), true);
+        });
+
+        nextButton.connect('clicked', () => {
+            const nPages = this.currencyCarousel.get_n_pages();
+            if (nPages <= 1) return;
+
+            const currentPage = Math.round(this.currencyCarousel.get_position());
+            const nextPage = (currentPage + 1) % nPages;
+            this.currencyCarousel.scroll_to(this.currencyCarousel.get_nth_page(nextPage), true);
+        });
+
+        // Update button visibility when carousel pages change
+        const updateButtonVisibility = () => {
+            const nPages = this.currencyCarousel.get_n_pages();
+            const visible = nPages > 1;
+            prevButton.set_visible(visible);
+            nextButton.set_visible(visible);
+        };
+
+        // Connect to carousel page changes
+        this.currencyCarousel.connect('notify::n-pages', updateButtonVisibility);
+
+        // Assemble carousel container
+        carouselContainer.append(prevButton);
+        carouselContainer.append(this.currencyCarousel);
+        carouselContainer.append(nextButton);
 
         // Add scroll event controller to card to change slides on scroll
         const scrollController = new Gtk.EventControllerScroll({
@@ -1235,13 +1304,16 @@ export class ReportsPage {
             css_classes: ['caption'],
         });
 
-        contentBox.append(this.currencyCarousel);
+        contentBox.append(carouselContainer);
         contentBox.append(descLabel);
 
         card.append(contentBox);
 
         // Initialize with 0.00
         this._updateCurrencyCarousel(new Map());
+
+        // Initial button visibility update
+        updateButtonVisibility();
 
         return card;
     }

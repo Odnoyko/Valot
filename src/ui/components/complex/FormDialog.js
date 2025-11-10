@@ -15,13 +15,13 @@ import { ValidationUtils } from 'resource:///com/odnoyko/valot/ui/utils/CoreImpo
 export class FormDialog {
     constructor(config = {}) {
         const defaultConfig = {
-            title: 'Form Dialog',
+            title: _('Form Dialog'),
             subtitle: '',
             width: 500,
             height: -1,
             fields: [],
-            submitLabel: 'Submit',
-            cancelLabel: 'Cancel',
+            submitLabel: _('Submit'),
+            cancelLabel: _('Cancel'),
             onSubmit: null,
             onCancel: null,
             showIcons: true,
