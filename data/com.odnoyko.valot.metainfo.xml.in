@@ -83,14 +83,15 @@
     <display_length compare="ge">768</display_length>
   </recommends>
   <releases>
-    <release version="0.9.1b2" date="2025-10-30">
+    <release version="0.9.1" date="2025-11-10">
       <description>
         <ul>
-          <li>Reset, Import, Export Database fully available</li>
+          <li>Performance improvements</li>
+          <li>Reset, Import, Export Database fully implemented</li>
           <li>Preference dialog changed</li>
           <li>Experimental features available</li>
           <li>Bug Fixes</li>
-          <li>UA/IT Localisation fix</li>
+          <li>Localisations fixes</li>
         </ul>
       </description>
     </release>
