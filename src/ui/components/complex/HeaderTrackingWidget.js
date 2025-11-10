@@ -16,14 +16,17 @@ export class HeaderTrackingWidget {
         this.parentWindow = config.parentWindow;
         this.coreBridge = config.coreBridge;
 
-        // UI update timer (NOT state!)
-        this.updateTimerId = null;
-
         // Pomodoro configuration
         this.pomodoroDuration = 1200; // Default 20 minutes in seconds
         this.pomodoroActivated = false; // Flag to prevent click after long press
         this.pendingPomodoroMode = false; // Flag for pending pomodoro start
         this.pomodoroConfigMonitor = null; // File monitor for config changes
+        
+        // OPTIMIZED: Cache UI state to prevent unnecessary updates
+        this._cachedPomodoroMode = false;
+        this._cachedTimeText = '';
+        this._cachedIconName = '';
+        this._cachedTooltipText = '';
 
         this._buildWidget();
         this._connectToCore();
@@ -120,22 +123,27 @@ export class HeaderTrackingWidget {
 
     _connectToCore() {
         if (!this.coreBridge) {
-            console.error('❌ CoreBridge not available - tracking widget cannot work');
+            console.error('[HeaderTrackingWidget] CoreBridge not available - tracking widget cannot work');
             this.widget.set_sensitive(false);
             return;
         }
 
+        // Store event handlers for cleanup
+        this._coreEventHandlers = {
+            'tracking-started': (data) => {
+                this._onTrackingStarted(data);
+            },
+            'tracking-stopped': (data) => {
+                this._onTrackingStopped(data);
+            },
+            'tracking-updated': (data) => {
+                this._onTrackingUpdated(data);
+            }
+        };
+
         // Subscribe to Core events for synchronization
-        this.coreBridge.onUIEvent('tracking-started', (data) => {
-            this._onTrackingStarted(data);
-        });
-
-        this.coreBridge.onUIEvent('tracking-stopped', (data) => {
-            this._onTrackingStopped(data);
-        });
-
-        this.coreBridge.onUIEvent('tracking-updated', (data) => {
-            this._onTrackingUpdated(data);
+        Object.keys(this._coreEventHandlers).forEach(event => {
+            this.coreBridge.onUIEvent(event, this._coreEventHandlers[event]);
         });
 
     }
@@ -158,7 +166,10 @@ export class HeaderTrackingWidget {
 
                 // Pomodoro mode UI
                 if (state.pomodoroMode) {
-                    this.trackBtn.set_icon_name('media-playback-stop-symbolic');
+                    // OPTIMIZED: Only update icon if needed
+                    if (this.trackBtn.get_icon_name() !== 'media-playback-stop-symbolic') {
+                        this.trackBtn.set_icon_name('media-playback-stop-symbolic');
+                    }
                     this.trackBtn.set_tooltip_text(_('Stop Pomodoro'));
                     this.trackBtn.remove_css_class('suggested-action');
                     this.trackBtn.remove_css_class('destructive-action');
@@ -169,7 +180,10 @@ export class HeaderTrackingWidget {
                     this.timeLabel.set_label('🍅 ' + this._formatDuration(remaining, true));
                 } else {
                     // Normal tracking mode
-                    this.trackBtn.set_icon_name('media-playback-stop-symbolic');
+                    // OPTIMIZED: Only update icon if needed
+                    if (this.trackBtn.get_icon_name() !== 'media-playback-stop-symbolic') {
+                        this.trackBtn.set_icon_name('media-playback-stop-symbolic');
+                    }
                     this.trackBtn.set_tooltip_text(_('Stop tracking'));
                     this.trackBtn.remove_css_class('suggested-action');
                     this.trackBtn.remove_css_class('pomodoro-active');
@@ -180,7 +194,7 @@ export class HeaderTrackingWidget {
                 }
 
                 // Start UI update timer
-                this._startUIUpdateTimer();
+                this._subscribeToGlobalTimer();
             } else {
                 // Update UI to idle mode
                 this.taskButton.set_label(_('Select task...'));
@@ -188,19 +202,23 @@ export class HeaderTrackingWidget {
                 this.projectBtn.set_sensitive(true);
                 this.clientBtn.set_sensitive(true);
 
-                this.trackBtn.set_icon_name('media-playback-start-symbolic');
-                this.trackBtn.set_tooltip_text(_('Start tracking (Long press or P for Pomodoro)'));
+                // OPTIMIZED: Only update icon if needed
+                if (this.trackBtn.get_icon_name() !== 'media-playback-start-symbolic') {
+                    this.trackBtn.set_icon_name('media-playback-start-symbolic');
+                    this.trackBtn.set_tooltip_text(_('Start tracking (Long press or P for Pomodoro)'));
+                }
                 this.trackBtn.remove_css_class('destructive-action');
                 this.trackBtn.remove_css_class('pomodoro-active');
                 this.trackBtn.add_css_class('suggested-action');
 
-                this.timeLabel.set_label('00:00:00');
-
-                // Stop UI update timer
-                this._stopUIUpdateTimer();
+                const timeText = '00:00:00';
+                if (this._cachedTimeText !== timeText) {
+                    this.timeLabel.set_label(timeText);
+                    this._cachedTimeText = timeText;
+                }
             }
         } catch (error) {
-            console.error('Error updating UI from Core:', error);
+            console.error('[HeaderTrackingWidget] Error updating UI from Core:', error);
         }
     }
 
@@ -208,6 +226,13 @@ export class HeaderTrackingWidget {
      * Core event: tracking started (from ANY widget/window)
      */
     _onTrackingStarted(data) {
+        // OPTIMIZED: Clear cached UI state when starting new session
+        // This prevents memory leaks when starting new Pomodoro session
+        this._cachedPomodoroMode = null; // Force re-check
+        this._cachedTimeText = '';
+        this._cachedIconName = '';
+        this._cachedTooltipText = '';
+        
         this._updateUIFromCore();
     }
 
@@ -220,18 +245,30 @@ export class HeaderTrackingWidget {
 
     /**
      * Core event: tracking timer updated
+     * NOTE: Time updates come from global TimeTrackingService timer via tracking-updated event
+     * UI components subscribe to events, not create separate timers
      */
     _onTrackingUpdated(data) {
-        // Update time display (Core increments elapsedSeconds every second)
-        const state = this.coreBridge.getTrackingState();
-
-        if (state.pomodoroMode) {
-            // Show countdown in Pomodoro mode
-            const remaining = state.pomodoroRemaining || 0;
-            this.timeLabel.set_label('🍅 ' + this._formatDuration(remaining));
-        } else {
-            // Show elapsed time in normal mode
-            this.timeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+        // tracking-updated fires every second from Core timer
+        // Core timer calculates elapsedSeconds (currentTime - startTime), we just show it
+        // No calculation in UI, no RAM storage - just display Core timer result
+        // OPTIMIZED: Only update label text if it actually changed to prevent unnecessary redraws
+        
+        if (data && this.timeLabel) {
+            let newTimeText = '';
+            if (data.pomodoroRemaining !== undefined && data.pomodoroRemaining > 0) {
+                // Pomodoro mode - show remaining time
+                newTimeText = '🍅 ' + this._formatDuration(data.pomodoroRemaining, true);
+            } else if (data.elapsedSeconds !== undefined) {
+                // Normal tracking mode - show elapsed time
+                newTimeText = this._formatDuration(data.elapsedSeconds);
+            }
+            
+            // OPTIMIZED: Only update label if text actually changed
+            if (newTimeText && newTimeText !== this._cachedTimeText) {
+                this.timeLabel.set_label(newTimeText);
+                this._cachedTimeText = newTimeText;
+            }
         }
     }
 
@@ -258,7 +295,7 @@ export class HeaderTrackingWidget {
                 this._selectTask();
             }
         } catch (error) {
-            console.error('Error toggling tracking:', error);
+            console.error('[HeaderTrackingWidget] Error toggling tracking:', error);
             this._showError(error.message);
         }
     }
@@ -276,19 +313,25 @@ export class HeaderTrackingWidget {
             // Clear pending flag
             this.pendingPomodoroMode = false;
         } catch (error) {
-            console.error('Error starting tracking:', error);
+            console.error('[HeaderTrackingWidget] Error starting tracking:', error);
             this._showError(error.message);
         }
     }
 
     /**
-     * UI update timer - refreshes display from Core state
-     * (Core updates elapsedSeconds internally, we just read it)
+     * Subscribe to GlobalTimer for real-time UI updates
+     * CRITICAL FIX: Only subscribe once, prevent listener accumulation
      */
-    _startUIUpdateTimer() {
-        if (this.updateTimerId) return;
+    _subscribeToGlobalTimer() {
+        // CRITICAL: Check if already subscribed to prevent memory leak
+        if (this._isSubscribedToGlobalTimer) {
+            return;
+        }
 
-        this.updateTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+        this._isSubscribedToGlobalTimer = true;
+
+        // Listen to TRACKING_UPDATED events (emitted by GlobalTimer via TimeTrackingService)
+        this.coreBridge.onUIEvent('tracking-updated', (data) => {
             const state = this.coreBridge.getTrackingState();
             if (state.isTracking) {
                 // Update time display based on mode
@@ -298,19 +341,9 @@ export class HeaderTrackingWidget {
                 } else {
                     this.timeLabel.set_label(this._formatDuration(state.elapsedSeconds));
                 }
-                return true; // Continue timer
-            } else {
-                this.updateTimerId = null;
-                return false; // Stop timer
             }
         });
-    }
 
-    _stopUIUpdateTimer() {
-        if (this.updateTimerId) {
-            GLib.Source.remove(this.updateTimerId);
-            this.updateTimerId = null;
-        }
     }
 
     _formatDuration(seconds, useShortFormat = false) {
@@ -349,7 +382,7 @@ export class HeaderTrackingWidget {
 
             selector.present(this.parentWindow);
         } catch (error) {
-            console.error('Error opening task selector:', error);
+            console.error('[HeaderTrackingWidget] Error opening task selector:', error);
             this._showError(error.message);
         }
     }
@@ -364,7 +397,7 @@ export class HeaderTrackingWidget {
 
     _openCompactTracker(shiftMode = false) {
         if (!this.parentWindow || !this.parentWindow.application) {
-            console.error('Cannot open compact tracker: no application reference');
+            console.error('[HeaderTrackingWidget] Cannot open compact tracker: no application reference');
             return;
         }
 
@@ -373,7 +406,7 @@ export class HeaderTrackingWidget {
     }
 
     _showError(message) {
-        console.error('Tracking error:', message);
+        console.error('[HeaderTrackingWidget] Tracking error:', message);
         // TODO: Show toast notification
     }
 
@@ -410,7 +443,7 @@ export class HeaderTrackingWidget {
             // Setup file monitor to watch for changes
             this._setupConfigMonitor(file);
         } catch (error) {
-            console.error('Error loading Pomodoro config:', error);
+            console.error('[HeaderTrackingWidget] Error loading Pomodoro config:', error);
             // Fallback to default
             this.pomodoroDuration = 1200; // 20 minutes
         }
@@ -433,16 +466,14 @@ export class HeaderTrackingWidget {
                 }
             });
         } catch (error) {
-            console.error('Error setting up config monitor:', error);
+            console.error('[HeaderTrackingWidget] Error setting up config monitor:', error);
         }
     }
 
     cleanup() {
-        this._stopUIUpdateTimer();
         if (this.pomodoroConfigMonitor) {
             this.pomodoroConfigMonitor.cancel();
             this.pomodoroConfigMonitor = null;
         }
-        // CoreBridge events are cleaned up by CoreBridge itself
     }
 }

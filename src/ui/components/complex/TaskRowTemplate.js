@@ -2,6 +2,7 @@ import Gtk from 'gi://Gtk';
 import Gdk from 'gi://Gdk';
 import Adw from 'gi://Adw';
 import { WidgetFactory } from 'resource:///com/odnoyko/valot/ui/utils/widgetFactory.js';
+import { DurationAnimator } from 'resource:///com/odnoyko/valot/ui/utils/DurationAnimator.js';
 
 /**
  * Template component for individual task rows
@@ -54,32 +55,17 @@ export class TaskRowTemplate {
         const clientName = this.task.client_name || 'No Client';
         const dotColor = this.task.project_color || '#9a9996';
 
-        // Check if currently tracking (use Core)
-        // Must match unique combination of task + project + client
-        const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : { isTracking: false };
-        const isCurrentlyTracking = trackingState.isTracking &&
-            trackingState.currentTaskId === this.task.task_id &&
-            trackingState.currentProjectId === this.task.project_id &&
-            trackingState.currentClientId === this.task.client_id;
-
-        // Create subtitle with colored dot (SAME UI as before)
+        // Create subtitle with colored dot (same for all tasks)
         const dateText = this._formatDate(this.task.last_used_at);
-        const subtitle = isCurrentlyTracking
-            ? `<span foreground="${dotColor}">●</span> ${projectName} • ${clientName} • <b>Currently Tracking</b> • ${dateText}`
-            : `<span foreground="${dotColor}">●</span> ${projectName} • ${clientName} • ${dateText}`;
+        const subtitle = `<span foreground="${dotColor}">●</span> ${projectName} • ${clientName} • ${dateText}`;
 
-        // Create main row (SAME UI)
+        // Create main row (same for all tasks)
         const row = new Adw.ActionRow({
             title: this._escapeMarkup(this.task.task_name),
             subtitle: subtitle,
             use_markup: true,
             css_classes: ['bright-subtitle']
         });
-
-        // Apply tracking state styling (SAME UI)
-        if (isCurrentlyTracking) {
-            row.add_css_class('tracking-active');
-        }
 
         // Create and add suffix box
         const suffixBox = this._createSuffixBox(cost);
@@ -123,10 +109,6 @@ export class TaskRowTemplate {
             const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
             moneyText = `${currencySymbol}${cost.toFixed(2)}`;
         }
-
-        // Store references for real-time updates
-        this.timeLabel = null;
-        this.moneyLabel = null;
 
         // Use accent color for time when tracking
         const timeCssClasses = isCurrentlyTracking ? ['caption'] : ['caption', 'dim-label'];
@@ -173,7 +155,6 @@ export class TaskRowTemplate {
                             }
                         }
                     } catch (error) {
-                        console.error('Error toggling tracking:', error);
                     }
                 }
             }
@@ -220,6 +201,64 @@ export class TaskRowTemplate {
     }
 
     /**
+     * Update time label in real-time during tracking (elapsed seconds only)
+     * OPTIMIZED: Updates only time text, no state changes, no object creation
+     * CRITICAL: Uses base time from tracking start to prevent accumulation
+     */
+    updateTimeLabel(elapsedSeconds) {
+        if (!this.timeLabel || elapsedSeconds === undefined) return;
+        
+        // CRITICAL: Use base time from start (prevents accumulation)
+        // _baseTimeOnStart is set when tracking starts in TasksPage
+        const baseTime = this.task._baseTimeOnStart !== undefined ? this.task._baseTimeOnStart : (this.task.total_time || 0);
+        const currentTotal = baseTime + elapsedSeconds;
+        
+        // Create animator if not exists (for when task starts tracking mid-session)
+        if (!this.durationAnimator && this.timeLabel) {
+            this.durationAnimator = new DurationAnimator(this.timeLabel, '● ');
+        }
+        
+        // Update via animator (smooth, with pulse effect on every second)
+        if (this.durationAnimator) {
+            this.durationAnimator.setDirect(currentTotal);
+        } else {
+            // Fallback to direct update if animator not available
+            const timeText = '● ' + this._formatDuration(currentTotal);
+            this.timeLabel.set_text(timeText);
+        }
+        
+        // Ensure green dot is visible (remove dim-label)
+        if (this.timeLabel.has_css_class('dim-label')) {
+            this.timeLabel.remove_css_class('dim-label');
+        }
+        
+        // CRITICAL: Update money label (currency) in real-time during tracking
+        if (this.moneyLabel) {
+            const cost = (currentTotal / 3600) * (this.task.client_rate || 0);
+            if (cost > 0) {
+                const currency = this.task.client_currency || 'EUR';
+                const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
+                const moneyText = `${currencySymbol}${cost.toFixed(2)}`;
+                this.moneyLabel.set_text(moneyText);
+                
+                // CRITICAL: Make label visible (was created with visible=false if moneyText was empty)
+                if (!this.moneyLabel.get_visible()) {
+                    this.moneyLabel.set_visible(true);
+                }
+                
+                // Remove dim-label to show normal color when tracking
+                if (this.moneyLabel.has_css_class('dim-label')) {
+                    this.moneyLabel.remove_css_class('dim-label');
+                }
+            } else {
+                // No cost - hide money label
+                this.moneyLabel.set_text('');
+                this.moneyLabel.set_visible(false);
+            }
+        }
+    }
+
+    /**
      * Update project color for this task row
      */
     updateProjectColor(newColor) {
@@ -239,11 +278,225 @@ export class TaskRowTemplate {
             trackingState.currentProjectId === this.task.project_id &&
             trackingState.currentClientId === this.task.client_id;
 
+        // Keep original design with "Currently Tracking" text
         const subtitle = isCurrentlyTracking
             ? `<span foreground="${newColor}">●</span> ${projectName} • ${clientName} • <b>Currently Tracking</b> • ${dateText}`
             : `<span foreground="${newColor}">●</span> ${projectName} • ${clientName} • ${dateText}`;
 
         // Update subtitle in widget
         this.widget.set_subtitle(subtitle);
+    }
+
+    /**
+     * Update tracking state (icon, time label, and subtitle)
+     * Called when tracking starts/stops to update UI without recreating widget
+     */
+    updateTrackingState() {
+        if (!this.coreBridge) return;
+
+        const trackingState = this.coreBridge.getTrackingState();
+        const isCurrentlyTracking = trackingState.isTracking &&
+            trackingState.currentTaskId === this.task.task_id &&
+            trackingState.currentProjectId === this.task.project_id &&
+            trackingState.currentClientId === this.task.client_id;
+
+        // Update button icon
+        if (this.trackButton) {
+            if (isCurrentlyTracking) {
+                this.trackButton.set_icon_name('media-playback-stop-symbolic');
+                this.trackButton.set_tooltip_text(_('Stop tracking'));
+            } else {
+                this.trackButton.set_icon_name('media-playback-start-symbolic');
+                this.trackButton.set_tooltip_text(_('Start tracking'));
+            }
+        }
+
+        // Update time label (remove/add green dot and dim-label)
+        if (this.timeLabel) {
+            if (isCurrentlyTracking) {
+                // Create animator with green dot prefix if starting tracking
+                if (!this.durationAnimator) {
+                    this.durationAnimator = new DurationAnimator(this.timeLabel, '● ');
+                    // Animate from current total_time to current total_time (will show with glitch effect)
+                    // Pass fromSeconds = current time to initialize animator properly
+                    this.durationAnimator.animateTo(this.task.total_time, true, this.task.total_time);
+                }
+                // Remove dim-label to show green color
+                if (this.timeLabel.has_css_class('dim-label')) {
+                    this.timeLabel.remove_css_class('dim-label');
+                }
+            } else {
+                // Cleanup animator when stopping tracking
+                if (this.durationAnimator) {
+                    this.durationAnimator.destroy();
+                    this.durationAnimator = null;
+                }
+                // Set text without animator (not tracking)
+                const timeText = this._formatDuration(this.task.total_time);
+                this.timeLabel.set_text(timeText);
+                // Add dim-label if not tracking
+                if (!this.timeLabel.has_css_class('dim-label')) {
+                    this.timeLabel.add_css_class('dim-label');
+                }
+            }
+        }
+        
+        // CRITICAL: Update money label (currency) based on tracking state
+        if (this.moneyLabel) {
+            const cost = (this.task.total_time / 3600) * (this.task.client_rate || 0);
+            if (cost > 0) {
+                const currency = this.task.client_currency || 'EUR';
+                const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
+                const moneyText = `${currencySymbol}${cost.toFixed(2)}`;
+                this.moneyLabel.set_text(moneyText);
+                
+                // CRITICAL: Make label visible (was created with visible=false if moneyText was empty)
+                if (!this.moneyLabel.get_visible()) {
+                    this.moneyLabel.set_visible(true);
+                }
+                
+                // Update CSS classes based on tracking state
+                if (isCurrentlyTracking) {
+                    // Remove dim-label to show normal color when tracking
+                    if (this.moneyLabel.has_css_class('dim-label')) {
+                        this.moneyLabel.remove_css_class('dim-label');
+                    }
+                } else {
+                    // Add dim-label if not tracking
+                    if (!this.moneyLabel.has_css_class('dim-label')) {
+                        this.moneyLabel.add_css_class('dim-label');
+                    }
+                }
+            } else {
+                // No cost - hide money label
+                this.moneyLabel.set_text('');
+                this.moneyLabel.set_visible(false);
+            }
+        }
+
+        // CRITICAL: Update title (task name) and subtitle with current data
+        if (this.widget) {
+            // Update title (task name) if changed
+            const taskName = this._escapeMarkup(this.task.task_name);
+            this.widget.set_title(taskName);
+            
+            // Update subtitle with current project/client names
+            const projectName = this.task.project_name || 'No Project';
+            const clientName = this.task.client_name || 'No Client';
+            const dotColor = this.task.project_color || '#9a9996';
+            const dateText = this._formatDate(this.task.last_used_at);
+
+            const subtitle = isCurrentlyTracking
+                ? `<span foreground="${dotColor}">●</span> ${projectName} • ${clientName} • <b>Currently Tracking</b> • ${dateText}`
+                : `<span foreground="${dotColor}">●</span> ${projectName} • ${clientName} • ${dateText}`;
+
+            this.widget.set_subtitle(subtitle);
+        }
+    }
+
+    /**
+     * Update time directly (without recreating widget)
+     * OPTIMIZED: Updates time label text when total_time changes
+     * CRITICAL: Always updates time text, tracking state checked separately
+     */
+    updateTime(newTotalTime) {
+        if (!this.timeLabel) return;
+        
+        // CRITICAL: Validate newTotalTime
+        if (newTotalTime === undefined || newTotalTime === null || isNaN(newTotalTime)) {
+            console.warn(`[TaskRowTemplate] updateTime: Invalid newTotalTime=${newTotalTime}, using 0`);
+            newTotalTime = 0;
+        }
+        
+        // Ensure newTotalTime is a number
+        newTotalTime = Number(newTotalTime);
+        
+        // Update task object
+        this.task.total_time = newTotalTime;
+        
+        // Update time label text
+        const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : { isTracking: false };
+        const isCurrentlyTracking = trackingState.isTracking &&
+            trackingState.currentTaskId === this.task.task_id &&
+            trackingState.currentProjectId === this.task.project_id &&
+            trackingState.currentClientId === this.task.client_id;
+        
+        
+        // CRITICAL: Always show time, even if 0 or tracking state
+        let timeText = '';
+        if (isCurrentlyTracking) {
+            timeText = '● ' + this._formatDuration(newTotalTime);
+            // Remove dim-label to show green color
+            if (this.timeLabel.has_css_class('dim-label')) {
+                this.timeLabel.remove_css_class('dim-label');
+            }
+        } else {
+            // NOT tracking - show time WITHOUT green dot
+            timeText = this._formatDuration(newTotalTime);
+            // Add dim-label if not tracking
+            if (!this.timeLabel.has_css_class('dim-label')) {
+                this.timeLabel.add_css_class('dim-label');
+            }
+        }
+        
+        this.timeLabel.set_text(timeText);
+        
+        // CRITICAL: Update money label (currency) based on new total_time
+        if (this.moneyLabel) {
+            const cost = (newTotalTime / 3600) * (this.task.client_rate || 0);
+            if (cost > 0) {
+                const currency = this.task.client_currency || 'EUR';
+                const currencySymbol = WidgetFactory.getCurrencySymbol(currency);
+                const moneyText = `${currencySymbol}${cost.toFixed(2)}`;
+                this.moneyLabel.set_text(moneyText);
+                
+                // CRITICAL: Make label visible (was created with visible=false if moneyText was empty)
+                if (!this.moneyLabel.get_visible()) {
+                    this.moneyLabel.set_visible(true);
+                }
+                
+                // Update CSS classes based on tracking state
+                if (isCurrentlyTracking) {
+                    // Remove dim-label to show normal color when tracking
+                    if (this.moneyLabel.has_css_class('dim-label')) {
+                        this.moneyLabel.remove_css_class('dim-label');
+                    }
+                } else {
+                    // Add dim-label if not tracking
+                    if (!this.moneyLabel.has_css_class('dim-label')) {
+                        this.moneyLabel.add_css_class('dim-label');
+                    }
+                }
+            } else {
+                // No cost - hide money label
+                this.moneyLabel.set_text('');
+                this.moneyLabel.set_visible(false);
+            }
+        }
+    }
+
+    /**
+     * Cleanup: destroy widget and clear references to free RAM
+     */
+    destroy() {
+        // Cleanup duration animator
+        if (this.durationAnimator) {
+            this.durationAnimator.destroy();
+            this.durationAnimator = null;
+        }
+        
+        if (this.widget) {
+            try {
+                if (typeof this.widget.destroy === 'function') {
+                    this.widget.destroy();
+                }
+            } catch (e) {
+                // Widget may already be destroyed
+            }
+            this.widget = null;
+        }
+        this.task = null;
+        this.parentWindow = null;
+        this.coreBridge = null;
     }
 }

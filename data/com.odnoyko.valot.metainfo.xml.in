@@ -83,6 +83,18 @@
     <display_length compare="ge">768</display_length>
   </recommends>
   <releases>
+    <release version="0.9.1" date="2025-11-10">
+      <description>
+        <ul>
+          <li>Performance improvements</li>
+          <li>Reset, Import, Export Database fully implemented</li>
+          <li>Preference dialog changed</li>
+          <li>Experimental features available</li>
+          <li>Bug Fixes</li>
+          <li>Localisations fixes</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.0" date="2025-10-26">
       <description>
         <ul>
@@ -91,13 +103,7 @@
           <li>Created Migration tool for adopt old DB version to new</li>
           <li>New Database architecture</li>
           <li>Pomodoro timer Update</li>
-          <li>Task tracking improvements:
-            <ul>
-              <li>Change name, project or Clients while you track a time</li>
-              <li>Notification when user try close the App when Time Tracking in progress</li>
-              <li>App remember last tracked Project &amp; Client</li>
-            </ul>
-          </li>
+          <li>Task tracking improvements: Change name, project or Clients while you track a time; Notification when user try close the App when Time Tracking in progress; App remember last tracked Project &amp; Client</li>
           <li>Added multiple Tasks Edit</li>
           <li>Updated Task editor UI</li>
           <li>Project page improvements</li>

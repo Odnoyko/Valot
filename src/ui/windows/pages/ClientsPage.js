@@ -23,6 +23,15 @@ export class ClientsPage {
         this.currentClientsPage = 0;
         this.clientsPerPage = 10;
 
+        // Store event handler references for cleanup
+        this._eventHandlers = {};
+        
+        // Store GTK signal handler IDs for cleanup (GLib timers)
+        this._signalHandlerIds = [];
+        
+        // Store widget handler connections for cleanup (widget -> handlerId)
+        this._widgetConnections = new Map();
+
         // Subscribe to Core events for automatic updates
         this._subscribeToCore();
     }
@@ -33,22 +42,56 @@ export class ClientsPage {
     _subscribeToCore() {
         if (!this.coreBridge) return;
 
-        // Reload when clients are created/updated/deleted
-        this.coreBridge.onUIEvent('client-created', () => {
+        // Store handlers for cleanup
+        this._eventHandlers['client-created'] = () => {
             this.loadClients();
-        });
+        };
+        this._eventHandlers['client-updated'] = () => {
+            this.loadClients();
+        };
+        this._eventHandlers['client-deleted'] = () => {
+            this.loadClients();
+        };
+        this._eventHandlers['clients-deleted'] = () => {
+            this.loadClients();
+        };
+        this._eventHandlers['tracking-started'] = () => {
+            // OPTIMIZED: Don't reload clients - tracking doesn't change client list
+            // Reloading creates new objects every time, causing RAM growth
+            // setTimeout(() => this.loadClients(), 300); // DISABLED
+        };
+        this._eventHandlers['tracking-stopped'] = () => {
+            // OPTIMIZED: Don't reload clients - stopping tracking doesn't change clients
+            // this.loadClients(); // DISABLED - causes RAM growth
+        };
+        // DISABLED: tracking-updated handler removed - causes RAM growth
+        // Handler was empty but still registered, causing unnecessary processing
+        // this._eventHandlers['tracking-updated'] = () => {
+        //     // tracking-updated fires every second during tracking
+        //     // Handler removed to prevent RAM growth
+        // };
 
-        this.coreBridge.onUIEvent('client-updated', () => {
-            this.loadClients();
+        // Subscribe with stored handlers
+        Object.keys(this._eventHandlers).forEach(event => {
+            this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
         });
+    }
 
-        this.coreBridge.onUIEvent('client-deleted', () => {
-            this.loadClients();
-        });
-
-        this.coreBridge.onUIEvent('clients-deleted', () => {
-            this.loadClients();
-        });
+    /**
+     * Helper method to track GTK signal handler IDs for cleanup
+     * @param {GObject.Object} widget - Widget to connect to
+     * @param {string} signal - Signal name
+     * @param {Function} callback - Callback function
+     * @returns {number} Handler ID
+     */
+    _trackConnection(widget, signal, callback) {
+        const handlerId = widget.connect(signal, callback);
+        // Store widget reference and handler ID for cleanup
+        if (!this._widgetConnections.has(widget)) {
+            this._widgetConnections.set(widget, []);
+        }
+        this._widgetConnections.get(widget).push(handlerId);
+        return handlerId;
     }
 
     /**
@@ -105,7 +148,7 @@ export class ClientsPage {
             updateSidebarButtonVisibility();
 
             // Listen for sidebar visibility changes
-            this.parentWindow.splitView.connect('notify::show-sidebar', updateSidebarButtonVisibility);
+            this._trackConnection(this.parentWindow.splitView, 'notify::show-sidebar', updateSidebarButtonVisibility);
         }
 
         // Tracking widget (title area)
@@ -223,9 +266,11 @@ export class ClientsPage {
             this._onTrackingStopped(data);
         });
 
-        this.coreBridge.onUIEvent('tracking-updated', (data) => {
-            this._onTrackingUpdated(data);
-        });
+        // DISABLED: tracking-updated handler removed - causes RAM growth
+        // Handler calls getTrackingState() which creates objects every second
+        // this.coreBridge.onUIEvent('tracking-updated', (data) => {
+        //     this._onTrackingUpdated(data);
+        // });
 
         // Load initial state
         this._updateTrackingUIFromCore();
@@ -252,10 +297,12 @@ export class ClientsPage {
             this.trackButton.remove_css_class('suggested-action');
             this.trackButton.add_css_class('destructive-action');
 
-            this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+            // DISABLED: Time updates in ClientsPage (only header widget shows time)
+            // this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
 
+            // DISABLED: Time updates in ClientsPage (only header widget shows time)
             // Start UI update timer
-            this._startTrackingUITimer();
+            this._subscribeToGlobalTimer();
         } else {
             // Tracking idle
             this.taskNameEntry.set_text('');
@@ -270,8 +317,6 @@ export class ClientsPage {
 
             this.actualTimeLabel.set_label('00:00:00');
 
-            // Stop UI update timer
-            this._stopTrackingUITimer();
         }
     }
 
@@ -291,10 +336,14 @@ export class ClientsPage {
 
     /**
      * Core event: tracking updated (every second)
+     * DISABLED: Time updates disabled - only header widget shows time
      */
     _onTrackingUpdated(data) {
-        const state = this.coreBridge.getTrackingState();
-        this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+        // DISABLED: Time updates in ClientsPage (only header widget shows time)
+        return;
+        
+        // const state = this.coreBridge.getTrackingState();
+        // this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
     }
 
     /**
@@ -337,26 +386,24 @@ export class ClientsPage {
     /**
      * UI update timer - refreshes time display from Core
      */
-    _startTrackingUITimer() {
-        if (this.trackingTimerId) return;
+    /**
+     * Subscribe to GlobalTimer for real-time tracking display
+     * CRITICAL FIX: Only subscribe once, prevent listener accumulation
+     */
+    _subscribeToGlobalTimer() {
+        // CRITICAL: Check if already subscribed to prevent memory leak
+        if (this._isSubscribedToGlobalTimer) {
+            return;
+        }
 
-        this.trackingTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
-            const state = this.coreBridge.getTrackingState();
-            if (state.isTracking) {
-                this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-                return true; // Continue
-            } else {
-                this.trackingTimerId = null;
-                return false; // Stop
+        this._isSubscribedToGlobalTimer = true;
+
+        this.coreBridge.onUIEvent('tracking-updated', (data) => {
+            if (this.actualTimeLabel) {
+                this.actualTimeLabel.set_label(this._formatDuration(data.elapsedSeconds));
             }
         });
-    }
 
-    _stopTrackingUITimer() {
-        if (this.trackingTimerId) {
-            GLib.Source.remove(this.trackingTimerId);
-            this.trackingTimerId = null;
-        }
     }
 
     _formatDuration(seconds) {
@@ -413,10 +460,18 @@ export class ClientsPage {
             hexpand: true,
         });
 
-        this.clientSearch.connect('search-changed', () => {
-            const query = this.clientSearch.get_text();
-            this._filterClients(query);
-        });
+        // Debounce search to avoid excessive filtering
+        (async () => {
+            const { Debouncer } = await import('resource:///com/odnoyko/valot/core/utils/Debouncer.js');
+            const debouncedFilter = Debouncer.debounce((query) => {
+                this._filterClients(query);
+            }, 300); // 300ms debounce
+            
+            this.clientSearch.connect('search-changed', () => {
+                const query = this.clientSearch.get_text();
+                debouncedFilter(query);
+            });
+        })();
 
         box.append(this.clientSearch);
 
@@ -478,7 +533,6 @@ export class ClientsPage {
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 12,
             halign: Gtk.Align.FILL,
-            margin_top: 12,
             visible: false, // Hidden by default
         });
 
@@ -1417,5 +1471,78 @@ export class ClientsPage {
         if (this.clientSearch) {
             this.clientSearch.grab_focus();
         }
+    }
+
+    /**
+     * Cleanup: unsubscribe from events and clear references
+     */
+    destroy() {
+        // Unsubscribe from CoreBridge events
+        if (this.coreBridge && this._eventHandlers) {
+            Object.keys(this._eventHandlers).forEach(event => {
+                this.coreBridge.offUIEvent(event, this._eventHandlers[event]);
+            });
+            this._eventHandlers = {};
+        }
+
+        // REMOVED: No timer to stop
+
+        // Disconnect GTK signal handlers
+        // Disconnect tracked widget connections
+        if (this._widgetConnections && this._widgetConnections.size > 0) {
+            this._widgetConnections.forEach((handlerIds, widget) => {
+                handlerIds.forEach(id => {
+                    try {
+                        if (widget && !widget.is_destroyed?.()) {
+                            widget.disconnect(id);
+                        }
+                    } catch (e) {
+                        // Widget may already be destroyed
+                    }
+                });
+            });
+            this._widgetConnections.clear();
+        }
+
+        // Remove GLib timers
+        if (this._signalHandlerIds.length > 0) {
+            this._signalHandlerIds.forEach(id => {
+                try {
+                    GLib.Source.remove(id);
+                } catch (e) {
+                    // Handler may already be removed
+                }
+            });
+            this._signalHandlerIds = [];
+        }
+
+        // Clear Maps/Sets to release references
+        this.selectedClients.clear();
+
+        // Clear arrays
+        this.clients = [];
+        this.filteredClients = [];
+
+        // Cleanup tracking widget if exists
+        if (this.trackingWidget && typeof this.trackingWidget.cleanup === 'function') {
+            this.trackingWidget.cleanup();
+            this.trackingWidget = null;
+        }
+    }
+
+    /**
+     * Called when page is hidden (navigated away from)
+     * Lightweight cleanup - clears data but keeps UI structure
+     */
+    onHide() {
+        // CRITICAL: Don't cleanup tracking widget subscriptions on hide
+        // Keep subscriptions active so widget continues to receive updates
+        // Widget will be refreshed in _onPageChanged() when page becomes visible
+        // This ensures time updates continue even when page is hidden
+        
+        // OPTIMIZED: Don't clear data arrays on hide - they will be reused when page is shown again
+        // Clearing and reloading creates new objects every time, causing RAM growth
+        // Arrays will be updated in-place when data changes, not replaced
+        this.selectedClients.clear();
     }
 }

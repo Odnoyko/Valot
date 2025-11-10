@@ -22,7 +22,7 @@ export class PDFExporter {
 
     async exportToPDF(parentWindow) {
         const dialog = new Gtk.FileDialog({
-            title: 'Export Time Report (Text)'
+            title: _('Export Time Report (Text)')
         });
 
         // Set initial folder to user documents (localized)

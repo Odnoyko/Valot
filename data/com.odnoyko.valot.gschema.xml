@@ -51,5 +51,10 @@
 			<summary>Last selected client ID</summary>
 			<description>Last selected client ID for tracking widget persistence</description>
 		</key>
+	<key name="experimental-features" type="b">
+		<default>false</default>
+		<summary>Enable experimental features</summary>
+		<description>Enable experimental features like extensions and addons</description>
+	</key>
 	</schema>
 </schemalist>

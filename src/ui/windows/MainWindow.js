@@ -8,6 +8,7 @@ import Adw from 'gi://Adw?version=1';
 import Gtk from 'gi://Gtk?version=4.0';
 import Gdk from 'gi://Gdk';
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import { Config } from 'resource:///com/odnoyko/valot/config.js';
 import { PreferencesDialog } from 'resource:///com/odnoyko/valot/ui/components/dialogs/PreferencesDialog.js';
 import { GestureController } from 'resource:///com/odnoyko/valot/ui/utils/GestureController.js';
@@ -59,8 +60,14 @@ export const ValotMainWindow = GObject.registerClass({
         // Load pages
         this._loadPages();
 
+        // Track previous page for cleanup on navigation
+        this._previousPageTag = null;
+
         // Setup global keyboard shortcuts using application-level accelerators
         this._setupGlobalKeyboardShortcuts();
+
+        // Store event handlers for cleanup
+        this._eventHandlers = {};
 
         // Subscribe to Core events for sidebar updates
         this._subscribeToCore();
@@ -70,6 +77,11 @@ export const ValotMainWindow = GObject.registerClass({
 
         // Handle window close - check if tracking is active
         this.connect('close-request', () => this._onCloseRequest());
+        
+        // Cleanup when window is actually destroyed (not just close-request)
+        this.connect('destroy', () => {
+            this.cleanup();
+        });
     }
 
     /**
@@ -609,6 +621,7 @@ export const ValotMainWindow = GObject.registerClass({
     /**
      * Called when user navigates to a different page
      * Refreshes tracking widgets to sync with current state
+     * CRITICAL: Refresh ALL tracking widgets, not just current page
      */
     _onPageChanged() {
         const visiblePage = this.navigationView.get_visible_page();
@@ -616,7 +629,60 @@ export const ValotMainWindow = GObject.registerClass({
 
         const pageTag = visiblePage.get_tag();
 
-        // Refresh tracking widget on the current page
+        // Cleanup previous page (close dialogs and clear data)
+        if (this._previousPageTag && this._previousPageTag !== pageTag) {
+            this._cleanupPreviousPage(this._previousPageTag);
+        }
+
+        // CRITICAL: Refresh ALL tracking widgets on ALL pages
+        // This ensures all widgets are synchronized with current tracking state
+        // Even if a page is hidden, its widget should be ready when shown
+        // OPTIMIZED: Don't create array of objects - iterate directly to avoid object creation
+        const pages = [
+            this.tasksPageInstance,
+            this.projectsPageInstance,
+            this.clientsPageInstance,
+            this.reportsPageInstance
+        ];
+
+        for (let i = 0; i < pages.length; i++) {
+            const instance = pages[i];
+            if (instance && instance.trackingWidget && typeof instance.trackingWidget.refresh === 'function') {
+                // Refresh widget to restore subscriptions and update UI
+                instance.trackingWidget.refresh();
+            }
+        }
+        
+        // CRITICAL: Call onPageShown() on the current page instance
+        // This ensures pages reload data if needed (e.g., TasksPage reloads tasks)
+        let currentPageInstance = null;
+        switch (pageTag) {
+            case 'tasks':
+                currentPageInstance = this.tasksPageInstance;
+                break;
+            case 'projects':
+                currentPageInstance = this.projectsPageInstance;
+                break;
+            case 'clients':
+                currentPageInstance = this.clientsPageInstance;
+                break;
+            case 'reports':
+                currentPageInstance = this.reportsPageInstance;
+                break;
+        }
+        
+        if (currentPageInstance && typeof currentPageInstance.onPageShown === 'function') {
+            currentPageInstance.onPageShown();
+        }
+
+        // Store current page as previous for next navigation
+        this._previousPageTag = pageTag;
+    }
+
+    /**
+     * Cleanup previous page: close dialogs and clear data
+     */
+    _cleanupPreviousPage(pageTag) {
         let pageInstance = null;
         switch (pageTag) {
             case 'tasks':
@@ -633,10 +699,45 @@ export const ValotMainWindow = GObject.registerClass({
                 break;
         }
 
-        // Refresh tracking widget if page has one
-        if (pageInstance && pageInstance.trackingWidget && pageInstance.trackingWidget.refresh) {
-            pageInstance.trackingWidget.refresh();
+        if (!pageInstance) return;
+
+        // Close all open dialogs
+        this._closeAllDialogs();
+
+        // Call onHide() if page has it (lightweight cleanup - clears data, keeps UI)
+        if (pageInstance && typeof pageInstance.onHide === 'function') {
+            pageInstance.onHide();
         }
+    }
+
+    /**
+     * Close all open dialogs (TaskInstanceEditDialog, ProjectDialog, etc.)
+     */
+    _closeAllDialogs() {
+        // Close TaskInstanceEditDialog if open
+        try {
+            // Use dynamic import to avoid loading module if not needed
+            import('resource:///com/odnoyko/valot/ui/components/dialogs/TaskInstanceEditDialog.js').then(module => {
+                if (module.TaskInstanceEditDialog && module.TaskInstanceEditDialog.closeAll) {
+                    module.TaskInstanceEditDialog.closeAll();
+                }
+            }).catch(() => {
+                // Module not loaded or no closeAll method - ignore
+            });
+        } catch (e) {
+            // Ignore errors
+        }
+
+        // Close PreferencesDialog if open
+        try {
+            if (PreferencesDialog._instance && PreferencesDialog._instance.dialog) {
+                PreferencesDialog._instance.dialog.close();
+            }
+        } catch (e) {
+            // Dialog not open - ignore
+        }
+
+        // TODO: Close other dialogs (ProjectDialog, ClientDialog, etc.) if they have static close methods
     }
 
     /**
@@ -675,49 +776,132 @@ export const ValotMainWindow = GObject.registerClass({
     _subscribeToCore() {
         if (!this.coreBridge) return;
 
-        // Update sidebar on tracking start/stop
-        this.coreBridge.onUIEvent('tracking-started', () => {
+        // Store handlers for cleanup
+        this._eventHandlers['tracking-started'] = (data) => {
+            
+            // Check if tracked task is in current week
+            if (data && data.startTime) {
+                this._checkIfTrackingIsInCurrentWeek(data.startTime);
+            }
             this._updateSidebarStats();
-        });
+        };
 
-        this.coreBridge.onUIEvent('tracking-stopped', () => {
+        this._eventHandlers['tracking-stopped'] = () => {
+            // Clear cached week stats
+            this._cachedWeekStats = null;
+            this._isTrackingInCurrentWeek = false;
+
             this._updateSidebarStats();
 
             // Update reports page chart if it's loaded
             if (this.reportsPageInstance && this.reportsPageInstance.updateChartsOnly) {
                 this.reportsPageInstance.updateChartsOnly();
             }
-        });
+        };
+        
+        // OPTIMIZED: Real-time sidebar updates - only update label text, no object creation
+        this._eventHandlers['tracking-updated'] = (data) => {
+            if (!data || data.elapsedSeconds === undefined) {
+                return;
+            }
+            
+            
+            // Only update if tracking is in current week
+            if (!this._isTrackingInCurrentWeek) {
+                return;
+            }
+            
+            // OPTIMIZED: Update only label text, no getTrackingState() call
+            if (!this._cachedWeekStats) {
+                return;
+            }
+            
+            const totalTime = this._cachedWeekStats.totalTime + data.elapsedSeconds;
+            const hours = Math.floor(totalTime / 3600);
+            const minutes = Math.floor((totalTime % 3600) / 60);
+            const secs = totalTime % 60;
+            const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            
+            this.weeklyTimeRow.set_subtitle(`${timeStr} • ${this._cachedWeekStats.taskCount} tasks`);
+        };
+        
+        // IMPORTANT: After database import/replace, reload sidebar stats
+        this._eventHandlers['task-updated'] = async () => {
+            this._cachedWeekStats = null;
+            this._isTrackingInCurrentWeek = false;
+            await this._updateSidebarStats();
+        };
 
-        // Real-time updates every second while tracking
-        this.coreBridge.onUIEvent('tracking-updated', () => {
-            this._updateSidebarStatsRealtime();
-        });
+        // DISABLED: tracking-updated handler removed - causes RAM growth
+        // Even empty handler is registered and called every second
+        // this._eventHandlers['tracking-updated'] = () => {
+        //     // Handler removed to prevent RAM growth
+        // };
 
-        // Update sidebar when tasks are updated/deleted (affects This Week stats)
-        this.coreBridge.onUIEvent('task-updated', () => {
+        this._eventHandlers['task-updated'] = () => {
             this._updateSidebarStats();
-        });
+        };
 
-        this.coreBridge.onUIEvent('task-deleted', () => {
+        this._eventHandlers['task-deleted'] = () => {
             this._updateSidebarStats();
-        });
+        };
 
-        this.coreBridge.onUIEvent('tasks-deleted', () => {
+        this._eventHandlers['tasks-deleted'] = () => {
             this._updateSidebarStats();
             this._refreshAllPages();
-        });
+        };
 
-        this.coreBridge.onUIEvent('projects-deleted', () => {
+        this._eventHandlers['projects-deleted'] = () => {
             this._updateSidebarStats();
             this._refreshAllPages();
-        });
+        };
 
-        this.coreBridge.onUIEvent('clients-deleted', () => {
+        this._eventHandlers['clients-deleted'] = () => {
             this._updateSidebarStats();
             this._refreshAllPages();
-        });
+        };
 
+        // Subscribe with stored handlers
+        Object.keys(this._eventHandlers).forEach(event => {
+            this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
+        });
+    }
+
+    /**
+     * Cleanup: unsubscribe from events and cleanup pages
+     */
+    cleanup() {
+        // Unsubscribe from CoreBridge events
+        if (this.coreBridge && this._eventHandlers) {
+            Object.keys(this._eventHandlers).forEach(event => {
+                this.coreBridge.offUIEvent(event, this._eventHandlers[event]);
+            });
+            this._eventHandlers = {};
+        }
+
+        // Cleanup pages
+        if (this.tasksPageInstance && typeof this.tasksPageInstance.destroy === 'function') {
+            this.tasksPageInstance.destroy();
+            this.tasksPageInstance = null;
+        }
+        if (this.projectsPageInstance && typeof this.projectsPageInstance.destroy === 'function') {
+            this.projectsPageInstance.destroy();
+            this.projectsPageInstance = null;
+        }
+        if (this.clientsPageInstance && typeof this.clientsPageInstance.destroy === 'function') {
+            this.clientsPageInstance.destroy();
+            this.clientsPageInstance = null;
+        }
+        if (this.reportsPageInstance && typeof this.reportsPageInstance.destroy === 'function') {
+            this.reportsPageInstance.destroy();
+            this.reportsPageInstance = null;
+        }
+
+        // Cleanup gesture controller if exists
+        if (this.gestureController && typeof this.gestureController.cleanup === 'function') {
+            this.gestureController.cleanup();
+            this.gestureController = null;
+        }
     }
 
     /**
@@ -750,6 +934,54 @@ export const ValotMainWindow = GObject.registerClass({
     }
 
     /**
+     * Check if tracking start time is in current week
+     */
+    _checkIfTrackingIsInCurrentWeek(startTime) {
+        
+        try {
+            const now = GLib.DateTime.new_now_local();
+            const dayOfWeek = now.get_day_of_week(); // 1=Monday, 7=Sunday
+            const daysToMonday = dayOfWeek - 1;
+            const monday = now.add_days(-daysToMonday);
+            
+            const weekStart = GLib.DateTime.new_local(
+                monday.get_year(),
+                monday.get_month(),
+                monday.get_day_of_month(),
+                0, 0, 0
+            );
+            
+            // CRITICAL: startTime can be timestamp (number) or string format
+            // Convert to ISO 8601 format with timezone for GLib
+            let isoStartTime;
+            if (typeof startTime === 'number') {
+                // startTime is timestamp (milliseconds) - convert to ISO string
+                const date = new Date(startTime);
+                isoStartTime = date.toISOString(); // Already in ISO format with Z
+            } else if (typeof startTime === 'string') {
+                // startTime is string "2025-11-03 18:53:35" - convert to ISO 8601
+                isoStartTime = startTime.replace(' ', 'T') + 'Z';
+            } else {
+                console.error('Invalid startTime format:', startTime);
+                this._isTrackingInCurrentWeek = false;
+                return;
+            }
+            
+            const startDateTime = GLib.DateTime.new_from_iso8601(isoStartTime, null);
+            
+            if (!startDateTime) {
+                this._isTrackingInCurrentWeek = false;
+                return;
+            }
+            
+            this._isTrackingInCurrentWeek = startDateTime.compare(weekStart) >= 0;
+        } catch (error) {
+            console.error('Error checking if tracking is in current week:', error);
+            this._isTrackingInCurrentWeek = false;
+        }
+    }
+    
+    /**
      * Update sidebar statistics (full reload)
      */
     async _updateSidebarStats() {
@@ -758,6 +990,9 @@ export const ValotMainWindow = GObject.registerClass({
         try {
             // Get This Week stats from Core
             const weekStats = await this.coreBridge.getThisWeekStats();
+            
+            // Cache for real-time updates
+            this._cachedWeekStats = weekStats;
 
             const hours = Math.floor(weekStats.totalTime / 3600);
             const minutes = Math.floor((weekStats.totalTime % 3600) / 60);
@@ -765,6 +1000,15 @@ export const ValotMainWindow = GObject.registerClass({
             const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 
             this.weeklyTimeRow.set_subtitle(`${timeStr} • ${weekStats.taskCount} tasks`);
+            
+            // CRITICAL: Check if tracking is currently active and in current week
+            const trackingState = this.coreBridge.getTrackingState();
+            
+            if (trackingState.isTracking && trackingState.startTime) {
+                this._checkIfTrackingIsInCurrentWeek(trackingState.startTime);
+            } else {
+                this._isTrackingInCurrentWeek = false;
+            }
         } catch (error) {
             console.error('Error updating sidebar stats:', error);
         }
@@ -772,6 +1016,7 @@ export const ValotMainWindow = GObject.registerClass({
 
     /**
      * Update sidebar stats in real-time (without full reload)
+     * OPTIMIZED: Cache base stats, only add current elapsed time
      */
     async _updateSidebarStatsRealtime() {
         if (!this.coreBridge) return;
@@ -780,17 +1025,23 @@ export const ValotMainWindow = GObject.registerClass({
         if (!trackingState.isTracking) return;
 
         try {
-            // Get This Week stats from Core
-            const weekStats = await this.coreBridge.getThisWeekStats();
+            // CRITICAL FIX: Don't query DB every second!
+            // Cache base stats and reuse them
+            if (!this._cachedWeekStats) {
+                // Load once and cache
+                this._cachedWeekStats = await this.coreBridge.getThisWeekStats();
+            }
+
+            // Use cached stats + current elapsed (NO DB QUERY)
             const currentElapsed = trackingState.elapsedSeconds || 0;
-            const totalTime = weekStats.totalTime + currentElapsed;
+            const totalTime = this._cachedWeekStats.totalTime + currentElapsed;
 
             const hours = Math.floor(totalTime / 3600);
             const minutes = Math.floor((totalTime % 3600) / 60);
             const secs = totalTime % 60;
             const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 
-            this.weeklyTimeRow.set_subtitle(`${timeStr} • ${weekStats.taskCount} tasks`);
+            this.weeklyTimeRow.set_subtitle(`${timeStr} • ${this._cachedWeekStats.taskCount} tasks`);
         } catch (error) {
             console.error('Error updating sidebar stats realtime:', error);
         }

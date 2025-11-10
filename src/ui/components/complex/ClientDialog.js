@@ -22,16 +22,16 @@ export class ClientDialog extends FormDialog {
         const isEdit = mode === 'edit' && client;
         
         const dialogConfig = {
-            title: isEdit ? 'Edit Client' : 'Create New Client',
-            subtitle: isEdit ? 'Update client information' : 'Add a new client with billing rates',
+            title: isEdit ? _('Edit Client') : _('Create New Client'),
+            subtitle: isEdit ? _('Update client information') : _('Add a new client with billing rates'),
             width: 400,
-            submitLabel: isEdit ? 'Save Changes' : 'Create Client',
+            submitLabel: isEdit ? _('Save Changes') : _('Create Client'),
             fields: [
                 // Dummy field to ensure form container is created
                 {
                     type: 'entry',
                     name: 'dummy',
-                    label: 'Dummy',
+                    label: _('Dummy'),
                     value: ''
                 }
             ],
@@ -50,10 +50,8 @@ export class ClientDialog extends FormDialog {
         // Load available currencies
         this.availableCurrencies = this._getAvailableCurrencies();
         
-        // Create custom layout after form is ready
-        setTimeout(() => {
-            this._setupCustomLayout(isEdit, client);
-        }, 0);
+        // Create custom layout
+        this._setupCustomLayout(isEdit, client);
     }
 
     _setupCustomLayout(isEdit, client) {

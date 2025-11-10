@@ -8,6 +8,8 @@ export const CoreEvents = {
     TRACKING_PAUSED: 'tracking:paused',
     TRACKING_RESUMED: 'tracking:resumed',
     TRACKING_UPDATED: 'tracking:updated',
+    // Global Timer events
+    GLOBAL_TIMER_TICK: 'global-timer:tick',
     // Project events
     PROJECT_CREATED: 'project:created',
     PROJECT_UPDATED: 'project:updated',

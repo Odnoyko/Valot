@@ -128,7 +128,7 @@ export class QuickTaskSelector {
             if (response === 'start') {
                 this._startTracking();
             }
-            dialog.close();
+            // Note: AdwAlertDialog closes automatically after response, no need to call close()
         });
     }
 

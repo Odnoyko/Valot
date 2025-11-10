@@ -49,7 +49,7 @@ export class ProjectAppearanceDialog {
             if (response === 'save' && this.onSave) {
                 await this.onSave(this.project);
             }
-            dialog.close();
+            // Note: AdwAlertDialog closes automatically after response, no need to call close()
         });
 
         dialog.present(this.parentWindow);
@@ -112,6 +112,9 @@ export class ProjectAppearanceDialog {
             tooltip_text: _('Click to choose symbol'),
         });
 
+        // Create icon widget once and reuse it (prevents "snapshot symbolic icon" messages)
+        this._iconPreviewWidget = null;
+
         this._updateIconPreview();
 
         this.iconPreview.connect('clicked', () => {
@@ -138,27 +141,56 @@ export class ProjectAppearanceDialog {
     }
 
     _updateIconPreview() {
+        // OPTIMIZED: Reuse existing icon widget if possible
+        const existingChild = this.iconPreview.get_child();
+        const isEmoji = this.project.icon && this.project.icon.startsWith('emoji:');
+
         let iconWidget;
+
         if (!this.project.icon) {
-            // Empty icon - show placeholder icon
-            iconWidget = new Gtk.Image({
-                icon_name: 'applications-graphics-symbolic',
-                pixel_size: 24,
-                css_classes: ['dim-label'],
-            });
-        } else if (this.project.icon.startsWith('emoji:')) {
+            // Empty icon - reuse existing image or create new
+            if (existingChild instanceof Gtk.Image) {
+                existingChild.set_from_icon_name('applications-graphics-symbolic');
+                existingChild.set_pixel_size(24);
+                existingChild.set_css_classes(['dim-label']);
+                iconWidget = existingChild;
+            } else {
+                iconWidget = new Gtk.Image({
+                    icon_name: 'applications-graphics-symbolic',
+                    pixel_size: 24,
+                    css_classes: ['dim-label'],
+                });
+                this.iconPreview.set_child(iconWidget);
+            }
+        } else if (isEmoji) {
             const emoji = this.project.icon.substring(6);
-            iconWidget = new Gtk.Label({
-                label: emoji,
-                css_classes: ['emoji-preview'],
-            });
+            // Reuse existing label or create new
+            if (existingChild instanceof Gtk.Label) {
+                existingChild.set_label(emoji);
+                existingChild.set_css_classes(['emoji-preview']);
+                iconWidget = existingChild;
+            } else {
+                iconWidget = new Gtk.Label({
+                    label: emoji,
+                    css_classes: ['emoji-preview'],
+                });
+                this.iconPreview.set_child(iconWidget);
+            }
         } else {
-            iconWidget = new Gtk.Image({
-                icon_name: this.project.icon,
-                pixel_size: 24,
-            });
+            // Reuse existing image or create new
+            if (existingChild instanceof Gtk.Image) {
+                existingChild.set_from_icon_name(this.project.icon);
+                existingChild.set_pixel_size(24);
+                existingChild.set_css_classes([]);
+                iconWidget = existingChild;
+            } else {
+                iconWidget = new Gtk.Image({
+                    icon_name: this.project.icon,
+                    pixel_size: 24,
+                });
+                this.iconPreview.set_child(iconWidget);
+            }
         }
-        this.iconPreview.set_child(iconWidget);
     }
 
     _showColorPicker() {

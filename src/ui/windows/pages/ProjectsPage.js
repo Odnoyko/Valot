@@ -6,6 +6,7 @@ import { ProjectDialog } from 'resource:///com/odnoyko/valot/ui/components/compl
 import { ProjectAppearanceDialog } from 'resource:///com/odnoyko/valot/ui/components/complex/ProjectAppearanceDialog.js';
 import { AdvancedTrackingWidget } from 'resource:///com/odnoyko/valot/ui/components/complex/AdvancedTrackingWidget.js';
 import { createProjectIconWidget } from 'resource:///com/odnoyko/valot/ui/utils/widgetFactory.js';
+import { stringCache } from 'resource:///com/odnoyko/valot/ui/utils/StringCache.js';
 
 /**
  * Projects management page
@@ -26,9 +27,31 @@ export class ProjectsPage {
 
         // Map to store time labels for real-time updates
         this.projectTimeLabels = new Map(); // projectId -> timeLabel widget
+        
+        // Map to store project rows for reuse (projectId -> row widget)
+        this.projectRowMap = new Map(); // projectId -> Gtk.ListBoxRow
+        this._cssProviders = new Map(); // settingsButton -> CssProvider (for cleanup)
 
+        // Track currently tracked project for real-time time updates
+        this._trackingProjectId = null;
+        this._trackingProjectBaseTime = 0;
+        
         // Track last tracking project to reset its time when switching
         this.lastTrackingProjectId = null;
+        
+        // Cache last displayed projects to avoid unnecessary redraws
+        this._lastDisplayedProjects = [];
+
+        // Store event handler references for cleanup
+        this._eventHandlers = {};
+        
+        // Store GTK signal handler IDs for cleanup (GLib timers)
+        this._signalHandlerIds = [];
+        
+        // Store widget handler connections for cleanup (widget -> handlerId)
+        this._widgetConnections = new Map();
+
+        // REMOVED: trackingTimerToken - no longer using separate timers
 
         // Subscribe to Core events for automatic updates
         this._subscribeToCore();
@@ -40,49 +63,109 @@ export class ProjectsPage {
     _subscribeToCore() {
         if (!this.coreBridge) return;
 
-        // Reload projects when tracking starts/stops
-        this.coreBridge.onUIEvent('tracking-started', () => {
-            setTimeout(() => this.loadProjects(), 300);
-        });
-
-        this.coreBridge.onUIEvent('tracking-stopped', () => {
+        // Store handlers for cleanup
+        this._eventHandlers['tracking-started'] = (data) => {
+            // OPTIMIZED: Don't reload projects - tracking doesn't change project list
+            // Reloading creates new objects every time, causing RAM growth
+            // CRITICAL: Save base time for tracked project to add elapsed seconds to it
+            if (data && data.projectId) {
+                const project = this.projects.find(p => p.id === data.projectId);
+                if (project) {
+                    // Store base time before tracking started
+                    this._trackingProjectBaseTime = project.total_time || 0;
+                    this._trackingProjectId = data.projectId;
+                }
+            }
+        };
+        this._eventHandlers['tracking-stopped'] = () => {
+            // OPTIMIZED: Don't reload projects - stopping tracking doesn't change projects
+            // Clear tracking state
+            this._trackingProjectId = null;
+            this._trackingProjectBaseTime = 0;
+        };
+        // OPTIMIZED: tracking-updated handler for real-time project time updates
+        // Only updates time label, no object creation, no DB queries
+        this._eventHandlers['tracking-updated'] = (data) => {
+            if (!data) return;
+            
+            // Check if project changed during tracking
+            if (data.projectId !== undefined && data.projectId !== this._trackingProjectId) {
+                // CRITICAL: Clear tracking state before reload to prevent reset in loadProjects()
+                this._trackingProjectId = null;
+                this._trackingProjectBaseTime = 0;
+                
+                // Reload projects to get updated total_time after old time entry was saved
+                // Then set new tracking project
+                this.loadProjects().then(() => {
+                    const newProject = this.projects.find(p => p.id === data.projectId);
+                    if (newProject) {
+                        // Set new tracking project and base time
+                        this._trackingProjectId = data.projectId;
+                        this._trackingProjectBaseTime = newProject.total_time || 0;
+                    }
+                }).catch(err => {
+                    console.error('[ProjectsPage] Error reloading projects after project change:', err);
+                });
+                return; // Exit - will update after reload
+            }
+            
+            // CRITICAL: Early return if not tracking or no elapsed seconds
+            if (!this._trackingProjectId || data.elapsedSeconds === undefined) {
+                return;
+            }
+            
+            // OPTIMIZED: Update only time label for currently tracked project
+            // No getTrackingState() call, no object creation, just update label text
+            const timeLabel = this.projectTimeLabels.get(this._trackingProjectId);
+            if (timeLabel && !timeLabel.is_destroyed?.()) {
+                // Calculate current total time: base time + elapsed seconds
+                const currentTotal = (this._trackingProjectBaseTime || 0) + data.elapsedSeconds;
+                timeLabel.set_label(this._formatDurationHMS(currentTotal));
+            }
+        };
+        this._eventHandlers['task-updated'] = () => {
             this.loadProjects();
-        });
-
-        // Real-time tracking updates
-        this.coreBridge.onUIEvent('tracking-updated', () => {
-            this._updateTrackingProjectTime();
-        });
-
-        // Reload when tasks are updated/deleted (affects project time)
-        this.coreBridge.onUIEvent('task-updated', () => {
+        };
+        this._eventHandlers['task-deleted'] = () => {
             this.loadProjects();
-        });
-
-        this.coreBridge.onUIEvent('task-deleted', () => {
+        };
+        this._eventHandlers['tasks-deleted'] = () => {
             this.loadProjects();
-        });
-
-        this.coreBridge.onUIEvent('tasks-deleted', () => {
+        };
+        this._eventHandlers['project-created'] = () => {
             this.loadProjects();
-        });
-
-        // Reload when projects are created/updated
-        this.coreBridge.onUIEvent('project-created', () => {
+        };
+        this._eventHandlers['project-updated'] = () => {
             this.loadProjects();
-        });
-
-        this.coreBridge.onUIEvent('project-updated', () => {
+        };
+        this._eventHandlers['project-deleted'] = () => {
             this.loadProjects();
-        });
-
-        this.coreBridge.onUIEvent('project-deleted', () => {
+        };
+        this._eventHandlers['projects-deleted'] = () => {
             this.loadProjects();
-        });
+        };
 
-        this.coreBridge.onUIEvent('projects-deleted', () => {
-            this.loadProjects();
+        // Subscribe with stored handlers
+        Object.keys(this._eventHandlers).forEach(event => {
+            this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
         });
+    }
+
+    /**
+     * Helper method to track GTK signal handler IDs for cleanup
+     * @param {GObject.Object} widget - Widget to connect to
+     * @param {string} signal - Signal name
+     * @param {Function} callback - Callback function
+     * @returns {number} Handler ID
+     */
+    _trackConnection(widget, signal, callback) {
+        const handlerId = widget.connect(signal, callback);
+        // Store widget reference and handler ID for cleanup
+        if (!this._widgetConnections.has(widget)) {
+            this._widgetConnections.set(widget, []);
+        }
+        this._widgetConnections.get(widget).push(handlerId);
+        return handlerId;
     }
 
     /**
@@ -139,7 +222,7 @@ export class ProjectsPage {
             updateSidebarButtonVisibility();
 
             // Listen for sidebar visibility changes
-            this.parentWindow.splitView.connect('notify::show-sidebar', updateSidebarButtonVisibility);
+            this._trackConnection(this.parentWindow.splitView, 'notify::show-sidebar', updateSidebarButtonVisibility);
         }
 
         // Tracking widget (title area)
@@ -169,7 +252,7 @@ export class ProjectsPage {
             if (this.parentWindow?.application) {
                 this.parentWindow.application._launchCompactTracker(shiftPressed);
             } else {
-                console.error('❌ No application reference!');
+                console.error('[ProjectsPage] No application reference!');
             }
         });
 
@@ -255,14 +338,12 @@ export class ProjectsPage {
             this._updateTrackingUIFromCore();
         });
 
-        this.coreBridge.onUIEvent('tracking-updated', (data) => {
-            const state = this.coreBridge.getTrackingState();
-            this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-
-            if (state.currentTaskName && this.taskNameEntry.get_text() !== state.currentTaskName) {
-                this.taskNameEntry.set_text(state.currentTaskName);
-            }
-        });
+        // DISABLED: tracking-updated handler removed - causes RAM growth
+        // getTrackingState() creates objects every second
+        // this.coreBridge.onUIEvent('tracking-updated', (data) => {
+        //     // tracking-updated fires every second during tracking
+        //     // Handler removed to prevent RAM growth
+        // });
 
         this._updateTrackingUIFromCore();
     }
@@ -283,8 +364,9 @@ export class ProjectsPage {
             this.trackButton.remove_css_class('suggested-action');
             this.trackButton.add_css_class('destructive-action');
 
-            this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-            this._startTrackingUITimer();
+            // DISABLED: Time updates in ProjectsPage (only header widget shows time)
+            // this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+            // this._startTrackingUITimer();
         } else {
             this.taskNameEntry.set_text('');
             this.taskNameEntry.set_sensitive(true);
@@ -297,7 +379,7 @@ export class ProjectsPage {
             this.trackButton.add_css_class('suggested-action');
 
             this.actualTimeLabel.set_label('00:00:00');
-            this._stopTrackingUITimer();
+            // REMOVED: No timer to stop
         }
     }
 
@@ -310,7 +392,7 @@ export class ProjectsPage {
             try {
                 await this.coreBridge.stopTracking();
             } catch (error) {
-                console.error('Error stopping tracking:', error);
+                console.error('[ProjectsPage] Error stopping tracking:', error);
             }
         } else {
             try {
@@ -325,38 +407,17 @@ export class ProjectsPage {
 
                 await this.coreBridge.startTracking(task.id, null, null);
             } catch (error) {
-                console.error('Error starting tracking:', error);
+                console.error('[ProjectsPage] Error starting tracking:', error);
             }
         }
     }
 
-    _startTrackingUITimer() {
-        if (this.trackingTimerId) return;
-
-        this.trackingTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
-            const state = this.coreBridge.getTrackingState();
-            if (state.isTracking) {
-                this.actualTimeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-                return true;
-            } else {
-                this.trackingTimerId = null;
-                return false;
-            }
-        });
-    }
-
-    _stopTrackingUITimer() {
-        if (this.trackingTimerId) {
-            GLib.Source.remove(this.trackingTimerId);
-            this.trackingTimerId = null;
-        }
-    }
+    // REMOVED: _startTrackingUITimer() and _stopTrackingUITimer()
+    // No separate timers needed - only header widget shows time
 
     _formatDuration(seconds) {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        // OPTIMIZED: Use string cache to avoid creating new strings
+        return stringCache.getTimeString(seconds);
     }
 
     async _onTaskNameChanged() {
@@ -371,7 +432,7 @@ export class ProjectsPage {
         try {
             await this.coreBridge.updateCurrentTaskName(newName);
         } catch (error) {
-            console.error('Error updating task name:', error);
+            console.error('[ProjectsPage] Error updating task name:', error);
         }
     }
 
@@ -420,10 +481,18 @@ export class ProjectsPage {
             hexpand: true,
         });
 
-        this.projectSearch.connect('search-changed', () => {
-            const query = this.projectSearch.get_text();
-            this._filterProjects(query);
-        });
+        // Debounce search to avoid excessive filtering
+        (async () => {
+            const { Debouncer } = await import('resource:///com/odnoyko/valot/core/utils/Debouncer.js');
+            const debouncedFilter = Debouncer.debounce((query) => {
+                this._filterProjects(query);
+            }, 300); // 300ms debounce
+            
+            this.projectSearch.connect('search-changed', () => {
+                const query = this.projectSearch.get_text();
+                debouncedFilter(query);
+            });
+        })();
 
         toolbar.append(this.projectSearch);
 
@@ -480,7 +549,6 @@ export class ProjectsPage {
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 12,
             halign: Gtk.Align.FILL,
-            margin_top: 12,
             visible: false, // Hidden by default
         });
 
@@ -555,7 +623,7 @@ export class ProjectsPage {
      */
     async loadProjects() {
         if (!this.coreBridge) {
-            console.error('No coreBridge available');
+            console.error('[ProjectsPage] No coreBridge available');
             return;
         }
 
@@ -563,19 +631,43 @@ export class ProjectsPage {
             // Get projects with calculated total_time from Core
             const projects = await this.coreBridge.getAllProjectsWithTime();
             this.projects = projects || [];
-            this.filteredProjects = [...this.projects];
+            // OPTIMIZED: Direct reference instead of spread operator (will be filtered later if needed)
+            this.filteredProjects = this.projects;
+            
+            // Clear cached project times when reloading
+            this._cachedProjectBaseTimes = null;
+            
+            // CRITICAL: Restore tracking state after reload
+            // If tracking is active, update base time for tracked project
+            if (this._trackingProjectId) {
+                const trackingState = this.coreBridge.getTrackingState();
+                if (trackingState && trackingState.isTracking && trackingState.currentProjectId === this._trackingProjectId) {
+                    const trackedProject = this.projects.find(p => p.id === this._trackingProjectId);
+                    if (trackedProject) {
+                        // Recalculate base time: current total - elapsed seconds
+                        this._trackingProjectBaseTime = (trackedProject.total_time || 0) - (trackingState.elapsedSeconds || 0);
+                    }
+                } else {
+                    // Tracking stopped or changed - clear state
+                    this._trackingProjectId = null;
+                    this._trackingProjectBaseTime = 0;
+                }
+            }
+            
             this._updateProjectsDisplay();
         } catch (error) {
-            console.error('Error loading projects:', error);
+            console.error('[ProjectsPage] Error loading projects:', error);
         }
     }
 
     /**
      * Filter projects based on search query
+     * OPTIMIZED: Direct reference when no filter, only create new array when filtering
      */
     _filterProjects(query = '') {
         if (!query.trim()) {
-            this.filteredProjects = [...this.projects];
+            // OPTIMIZED: Direct reference instead of spread operator
+            this.filteredProjects = this.projects;
         } else {
             const lowerQuery = query.toLowerCase();
             this.filteredProjects = this.projects.filter(project =>
@@ -589,20 +681,21 @@ export class ProjectsPage {
 
     /**
      * Update projects display (ORIGINAL UI from main branch)
+     * Optimized to reuse rows and avoid recreating icon widgets
      */
     _updateProjectsDisplay() {
-        // Clear existing projects
-        let child = this.projectList.get_first_child();
-        while (child) {
-            const next = child.get_next_sibling();
-            this.projectList.remove(child);
-            child = next;
-        }
-
-        // Clear time labels map
-        this.projectTimeLabels.clear();
-
         if (!this.filteredProjects || this.filteredProjects.length === 0) {
+            // Clear all rows
+            let child = this.projectList.get_first_child();
+            while (child) {
+                const next = child.get_next_sibling();
+                this.projectList.remove(child);
+                child = next;
+            }
+            this.projectTimeLabels.clear();
+            this.projectRowMap.clear();
+            this._lastDisplayedProjects = [];
+            
             this._showEmptyState();
             this._updatePaginationInfo();
             this._updateSelectionUI();
@@ -620,14 +713,186 @@ export class ProjectsPage {
         const end = Math.min(start + this.projectsPerPage, this.filteredProjects.length);
         const projectsToShow = this.filteredProjects.slice(start, end);
 
-        // Render each project (SAME UI as main branch)
-        projectsToShow.forEach(project => {
-            const row = this._createProjectRow(project);
-            this.projectList.append(row);
-        });
+        // Check if displayed projects changed (by ID only, to detect adds/removes/reorders)
+        const currentIds = projectsToShow.map(p => p.id).join(',');
+        const lastIds = this._lastDisplayedProjects.map(p => p.id).join(',');
+        const projectsChanged = currentIds !== lastIds;
+
+        if (projectsChanged) {
+            // Projects list changed - need to rebuild rows
+            // Clear existing rows from list (but keep in map for potential reuse)
+            let child = this.projectList.get_first_child();
+            while (child) {
+                const next = child.get_next_sibling();
+                this.projectList.remove(child);
+                child = next;
+            }
+
+            // Remove rows for projects that are no longer displayed
+            const currentProjectIds = new Set(projectsToShow.map(p => p.id));
+            for (const [projectId, row] of this.projectRowMap.entries()) {
+                if (!currentProjectIds.has(projectId)) {
+                    // Row is no longer needed - remove from map
+                    this.projectRowMap.delete(projectId);
+                    this.projectTimeLabels.delete(projectId);
+                }
+            }
+
+            // Add or reuse rows for current projects
+            projectsToShow.forEach(project => {
+                let row = this.projectRowMap.get(project.id);
+                if (row) {
+                    // Reuse existing row - just update data
+                    this._updateProjectRowData(row, project);
+                } else {
+                    // Create new row
+                    row = this._createProjectRow(project);
+                    this.projectRowMap.set(project.id, row);
+                }
+                this.projectList.append(row);
+            });
+
+            this._lastDisplayedProjects = [...projectsToShow];
+        } else {
+            // Projects list didn't change - just update data in existing rows
+            projectsToShow.forEach(project => {
+                const row = this.projectRowMap.get(project.id);
+                if (row) {
+                    this._updateProjectRowData(row, project);
+                }
+            });
+        }
 
         this._updatePaginationInfo();
         this._updateSelectionUI();
+    }
+    
+    /**
+     * Update existing project row data without recreating widgets
+     */
+    _updateProjectRowData(row, project) {
+        const mainBox = row.get_child();
+        if (!mainBox) return;
+
+        // Update project name (index 1: settingsButton, 2: nameLabel, 3: timeLabel)
+        const nameLabel = mainBox.get_first_child()?.get_next_sibling();
+        if (nameLabel && nameLabel instanceof Gtk.Label) {
+            nameLabel.set_label(project.name);
+        }
+
+        // Update time label (index 3)
+        const timeLabel = mainBox.get_last_child();
+        if (timeLabel && timeLabel instanceof Gtk.Label) {
+            const totalTime = project.total_time || 0;
+            timeLabel.set_label(this._formatDurationHMS(totalTime));
+            this.projectTimeLabels.set(project.id, timeLabel);
+        }
+
+        // Update settings button icon and color (first child)
+        const settingsButton = mainBox.get_first_child();
+        if (settingsButton && settingsButton instanceof Gtk.Button) {
+            const iconWidget = settingsButton.get_child();
+            if (iconWidget && !iconWidget.is_destroyed?.()) {
+                // Update icon widget without recreating it
+                this._updateProjectIconWidget(iconWidget, project);
+            }
+
+            // Update CSS color
+            const iconColor = this._getProjectIconColor(project);
+            
+            // Remove old provider if exists (GTK4 doesn't have remove_all_providers)
+            const oldProvider = this._cssProviders.get(settingsButton);
+            if (oldProvider) {
+                settingsButton.get_style_context().remove_provider(oldProvider);
+                this._cssProviders.delete(settingsButton);
+            }
+            
+            const provider = new Gtk.CssProvider();
+            provider.load_from_string(
+                `.project-settings-button {
+                    background-color: ${project.color};
+                    border-radius: 6px;
+                    color: ${iconColor};
+                    min-width: 40px;
+                    min-height: 40px;
+                    padding: 0;
+                }
+                .project-settings-button:hover {
+                    filter: brightness(1.1);
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                .emoji-icon {
+                    font-size: 18px;
+                }`
+            );
+            settingsButton.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+            this._cssProviders.set(settingsButton, provider);
+        }
+
+        // Update selection styling
+        if (this.selectedProjects.has(project.id)) {
+            row.add_css_class('selected-project');
+        } else {
+            row.remove_css_class('selected-project');
+        }
+    }
+    
+    /**
+     * Update existing icon widget without recreating it
+     */
+    _updateProjectIconWidget(iconWidget, project) {
+        if (!project.icon) {
+            // Empty icon - should be empty box
+            if (!(iconWidget instanceof Gtk.Box)) {
+                // Type changed - need to recreate
+                const parent = iconWidget.get_parent();
+                if (parent) {
+                    parent.remove(iconWidget);
+                    const newWidget = new Gtk.Box({
+                        width_request: 20,
+                        height_request: 20,
+                    });
+                    parent.set_child(newWidget);
+                }
+            }
+            return;
+        }
+
+        if (project.icon.startsWith('emoji:')) {
+            const emoji = project.icon.substring(6);
+            if (iconWidget instanceof Gtk.Label) {
+                // Reuse Label - just update emoji
+                iconWidget.set_label(emoji);
+            } else {
+                // Type changed - need to recreate
+                const parent = iconWidget.get_parent();
+                if (parent) {
+                    parent.remove(iconWidget);
+                    const newWidget = new Gtk.Label({
+                        label: emoji,
+                        css_classes: ['emoji-icon'],
+                    });
+                    parent.set_child(newWidget);
+                }
+            }
+        } else {
+            // Symbolic icon
+            if (iconWidget instanceof Gtk.Image) {
+                // Reuse Image - just update icon_name
+                iconWidget.set_from_icon_name(project.icon);
+            } else {
+                // Type changed - need to recreate
+                const parent = iconWidget.get_parent();
+                if (parent) {
+                    parent.remove(iconWidget);
+                    const newWidget = new Gtk.Image({
+                        icon_name: project.icon,
+                        pixel_size: 20,
+                    });
+                    parent.set_child(newWidget);
+                }
+            }
+        }
     }
 
     /**
@@ -789,10 +1054,8 @@ export class ProjectsPage {
     }
 
     _formatDurationHMS(seconds) {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        // OPTIMIZED: Use string cache to avoid creating new strings
+        return stringCache.getTimeString(seconds);
     }
 
     _showEmptyState() {
@@ -969,7 +1232,7 @@ export class ProjectsPage {
                         });
                     }
                 } catch (error) {
-                    console.error('Error deleting projects:', error);
+                    console.error('[ProjectsPage] Error deleting projects:', error);
                 }
             }
             dialog.close();
@@ -1032,7 +1295,7 @@ export class ProjectsPage {
                         wasSaved = true;
                         return true;
                     } catch (error) {
-                        console.error('Error updating project:', error);
+                        console.error('[ProjectsPage] Error updating project:', error);
                         dialogInstance.showFieldError('name', _('Failed to update project'));
                         return false;
                     }
@@ -1046,7 +1309,7 @@ export class ProjectsPage {
                         await this.coreBridge.deleteProject(createdProject.id);
                         await this.loadProjects();
                     } catch (error) {
-                        console.error('Error deleting cancelled project:', error);
+                        console.error('[ProjectsPage] Error deleting cancelled project:', error);
                     }
                 }
             });
@@ -1054,7 +1317,7 @@ export class ProjectsPage {
             dialog.present(this.parentWindow);
 
         } catch (error) {
-            console.error('Error in add project flow:', error);
+            console.error('[ProjectsPage] Error in add project flow:', error);
         }
     }
 
@@ -1072,7 +1335,7 @@ export class ProjectsPage {
 
                     await this.loadProjects();
                 } catch (error) {
-                    console.error('Error updating project:', error);
+                    console.error('[ProjectsPage] Error updating project:', error);
                 }
             }
         });
@@ -1116,7 +1379,7 @@ export class ProjectsPage {
 
                     await this.loadProjects();
                 } catch (error) {
-                    console.error('Error updating project name:', error);
+                    console.error('[ProjectsPage] Error updating project name:', error);
                 }
             }
             dialog.close();
@@ -1125,64 +1388,8 @@ export class ProjectsPage {
         dialog.present(this.parentWindow);
     }
 
-    /**
-     * Update currently tracking project time in real-time
-     */
-    async _updateTrackingProjectTime() {
-        if (!this.coreBridge) return;
-
-        const trackingState = this.coreBridge.getTrackingState();
-        if (!trackingState.isTracking || !trackingState.currentProjectId) {
-            // Reset last tracking project when stopped
-            this.lastTrackingProjectId = null;
-            return;
-        }
-
-        const currentProjectId = trackingState.currentProjectId;
-
-        try {
-            // Get all task instances
-            const taskInstances = await this.coreBridge.getAllTaskInstances();
-
-            // If project changed, reset old project time to saved value
-            if (this.lastTrackingProjectId && this.lastTrackingProjectId !== currentProjectId) {
-                const oldTimeLabel = this.projectTimeLabels.get(this.lastTrackingProjectId);
-                if (oldTimeLabel) {
-                    // Calculate saved time for old project (without tracking time)
-                    const oldProjectTasks = taskInstances.filter(t => t.project_id === this.lastTrackingProjectId);
-                    let oldTotalSeconds = 0;
-                    oldProjectTasks.forEach(task => {
-                        oldTotalSeconds += task.total_time || 0;
-                    });
-                    // Reset to saved value
-                    oldTimeLabel.set_label(this._formatDurationHMS(oldTotalSeconds));
-                }
-            }
-
-            // Update current project time with tracking time
-            const timeLabel = this.projectTimeLabels.get(currentProjectId);
-            if (timeLabel) {
-                // Calculate total saved time for current project
-                const projectTasks = taskInstances.filter(t => t.project_id === currentProjectId);
-                let totalSeconds = 0;
-                projectTasks.forEach(task => {
-                    totalSeconds += task.total_time || 0;
-                });
-
-                // Add current tracking time
-                const currentElapsed = trackingState.elapsedSeconds || 0;
-                totalSeconds += currentElapsed;
-
-                // Update label
-                timeLabel.set_label(this._formatDurationHMS(totalSeconds));
-            }
-
-            // Update last tracking project
-            this.lastTrackingProjectId = currentProjectId;
-        } catch (error) {
-            console.error('Error updating tracking project time:', error);
-        }
-    }
+    // REMOVED: _updateTrackingProjectTime()
+    // No real-time time updates in pages - only header widget shows time
 
     /**
      * Refresh page data
@@ -1197,6 +1404,159 @@ export class ProjectsPage {
     _focusSearch() {
         if (this.projectSearch) {
             this.projectSearch.grab_focus();
+        }
+    }
+
+    /**
+     * Cleanup: unsubscribe from events and clear references
+     */
+    destroy() {
+        // Unsubscribe from CoreBridge events
+        if (this.coreBridge && this._eventHandlers) {
+            Object.keys(this._eventHandlers).forEach(event => {
+                this.coreBridge.offUIEvent(event, this._eventHandlers[event]);
+            });
+            this._eventHandlers = {};
+        }
+
+        // REMOVED: No timer to stop
+
+        // Disconnect GTK signal handlers
+        // Disconnect tracked widget connections
+        if (this._widgetConnections && this._widgetConnections.size > 0) {
+            this._widgetConnections.forEach((handlerIds, widget) => {
+                handlerIds.forEach(id => {
+                    try {
+                        if (widget && !widget.is_destroyed?.()) {
+                            widget.disconnect(id);
+                        }
+                    } catch (e) {
+                        // Widget may already be destroyed
+                    }
+                });
+            });
+            this._widgetConnections.clear();
+        }
+
+        // Remove GLib timers
+        if (this._signalHandlerIds.length > 0) {
+            this._signalHandlerIds.forEach(id => {
+                try {
+                    GLib.Source.remove(id);
+                } catch (e) {
+                    // Handler may already be removed
+                }
+            });
+            this._signalHandlerIds = [];
+        }
+
+        // Clear Maps to release widget references
+        this.projectTimeLabels.clear();
+        this.selectedProjects.clear();
+
+        // Clear arrays
+        this.projects = [];
+        this.filteredProjects = [];
+
+        // Cleanup tracking widget if exists
+        if (this.trackingWidget && typeof this.trackingWidget.cleanup === 'function') {
+            this.trackingWidget.cleanup();
+            this.trackingWidget = null;
+        }
+    }
+
+    /**
+     * Called when page is hidden (navigated away from)
+     * Lightweight cleanup - clears data but keeps UI structure
+     */
+    onHide() {
+        // REMOVED: No timer to stop
+        
+        // CRITICAL: Don't cleanup tracking widget subscriptions on hide
+        // Keep subscriptions active so widget continues to receive updates
+        // Widget will be refreshed in _onPageChanged() when page becomes visible
+        // This ensures time updates continue even when page is hidden
+        
+        // OPTIMIZED: Don't clear data arrays on hide - they will be reused when page is shown again
+        // Clearing and reloading creates new objects every time, causing RAM growth
+        // Arrays will be updated in-place when data changes, not replaced
+        // Only clear Maps that track UI state (not data arrays)
+        this.selectedProjects.clear();
+        
+        // Clear time labels map (UI state, not data)
+        this.projectTimeLabels.clear();
+        
+        // Clear project rows map (UI state, not data)
+        this.projectRowMap.clear();
+        
+        // Clear CSS providers map (UI state, not data)
+        this._cssProviders.clear();
+        this._lastDisplayedProjects = [];
+        
+        // Reset tracking references
+        this.lastTrackingProjectId = null;
+    }
+    
+    /**
+     * Called when page becomes visible
+     * CRITICAL: Reload projects if arrays are empty and restore real-time updates
+     */
+    onPageShown() {
+        // OPTIMIZED: Only reload projects if array is empty
+        // Reusing existing arrays prevents creating new objects on every page switch
+        // If projects array is not empty, data is still valid and can be reused
+        if (this.projects.length === 0) {
+            // CRITICAL: Reload projects when array is empty to ensure all data is fresh
+            // This ensures projectTimeLabels map is rebuilt and real-time updates work correctly
+            this.loadProjects().then(() => {
+            // CRITICAL: Restore real-time updates for tracked project AFTER loadProjects completes
+            // loadProjects() will rebuild projectTimeLabels map via _updateProjectsDisplay()
+            // Then we restore tracking state so real-time updates work
+            const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+            if (trackingState && trackingState.isTracking && trackingState.currentProjectId) {
+                const trackedProject = this.projects.find(p => p.id === trackingState.currentProjectId);
+                if (trackedProject) {
+                    // Restore tracking state
+                    this._trackingProjectId = trackingState.currentProjectId;
+                    // Recalculate base time: current total - elapsed seconds
+                    this._trackingProjectBaseTime = (trackedProject.total_time || 0) - (trackingState.elapsedSeconds || 0);
+                    
+                    // Update time label for tracked project (should exist after _updateProjectsDisplay)
+                    const timeLabel = this.projectTimeLabels.get(trackingState.currentProjectId);
+                    if (timeLabel && !timeLabel.is_destroyed?.()) {
+                        const totalTime = this._trackingProjectBaseTime + (trackingState.elapsedSeconds || 0);
+                        timeLabel.set_label(this._formatDurationHMS(totalTime));
+                    }
+                }
+            }
+            }).catch(error => {
+                console.error('[ProjectsPage] Error loading projects in onPageShown:', error);
+            });
+        } else {
+            // OPTIMIZED: Data already loaded - restore real-time updates for tracked project
+            const trackingState = this.coreBridge ? this.coreBridge.getTrackingState() : null;
+            if (trackingState && trackingState.isTracking && trackingState.currentProjectId) {
+                const trackedProject = this.projects.find(p => p.id === trackingState.currentProjectId);
+                if (trackedProject) {
+                    // Restore tracking state
+                    this._trackingProjectId = trackingState.currentProjectId;
+                    // Recalculate base time: current total - elapsed seconds
+                    this._trackingProjectBaseTime = (trackedProject.total_time || 0) - (trackingState.elapsedSeconds || 0);
+                    
+                    // Update time label for tracked project
+                    const timeLabel = this.projectTimeLabels.get(trackingState.currentProjectId);
+                    if (timeLabel && !timeLabel.is_destroyed?.()) {
+                        const totalTime = this._trackingProjectBaseTime + (trackingState.elapsedSeconds || 0);
+                        timeLabel.set_label(this._formatDurationHMS(totalTime));
+                    }
+                }
+            }
+        }
+        
+        // CRITICAL: Refresh tracking widget to ensure it's synchronized with current tracking state
+        // This updates time display and restores subscriptions if needed
+        if (this.trackingWidget && typeof this.trackingWidget.refresh === 'function') {
+            this.trackingWidget.refresh();
         }
     }
 }

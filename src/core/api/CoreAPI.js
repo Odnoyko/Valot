@@ -8,6 +8,7 @@ import { TaskInstanceService } from '../services/TaskInstanceService.js';
 import { TimeTrackingService } from '../services/TimeTrackingService.js';
 import { ReportService } from '../services/ReportService.js';
 import { StatsService } from '../services/StatsService.js';
+import { CacheService } from '../services/CacheService.js';
 /**
  * Core API
  * Main interface for interacting with the application core
@@ -33,16 +34,24 @@ export class CoreAPI {
         }
         this.database = databaseAdapter;
         await this.database.initialize();
-        // Initialize services
+        
+        // Initialize cache service FIRST (other services will use it)
         this.services = {
-            projects: new ProjectService(this),
-            clients: new ClientService(this),
-            tasks: new TaskService(this),
-            taskInstances: new TaskInstanceService(this),
-            tracking: new TimeTrackingService(this),
-            reports: new ReportService(this),
-            stats: new StatsService(this),
+            cache: new CacheService(this),
         };
+        
+        // Initialize cache (loads all data from DB)
+        await this.services.cache.initialize();
+        
+        // Initialize other services (they will use cache)
+        this.services.projects = new ProjectService(this);
+        this.services.clients = new ClientService(this);
+        this.services.tasks = new TaskService(this);
+        this.services.taskInstances = new TaskInstanceService(this);
+        this.services.tracking = new TimeTrackingService(this);
+        this.services.reports = new ReportService(this);
+        this.services.stats = new StatsService(this);
+        
         this.events.emit(CoreEvents.DATABASE_CONNECTED);
         this.events.emit(CoreEvents.CORE_INITIALIZED);
         this.initialized = true;
@@ -57,6 +66,11 @@ export class CoreAPI {
      * Shutdown core
      */
     async shutdown() {
+        // Final cache sync and cleanup
+        if (this.services?.cache) {
+            this.services.cache.destroy();
+        }
+        
         if (this.database) {
             await this.database.close();
         }

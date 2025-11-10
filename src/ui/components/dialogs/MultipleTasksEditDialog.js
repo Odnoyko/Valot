@@ -109,10 +109,12 @@ export class MultipleTasksEditDialog {
         this.dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED);
 
         // Handle responses
-        this.dialog.connect('response', (dialog, response) => {
+        this.dialog.connect('response', async (dialog, response) => {
             if (response === 'save') {
-                this._saveChanges();
+                await this._saveChanges();
             }
+            // Cleanup dropdowns and resources AFTER save completes
+            this.cleanup();
         });
     }
 
@@ -124,43 +126,9 @@ export class MultipleTasksEditDialog {
                 this.newTaskName = newName;
             }
 
-            // Check if any of the edited tasks is currently being tracked
-            const trackingState = this.coreBridge.getTrackingState();
-            let isEditingTrackedTask = false;
-
-            if (trackingState.isTracking) {
-                isEditingTrackedTask = this.taskInstances.some(t =>
-                    t.task_id === trackingState.currentTaskId &&
-                    t.project_id === trackingState.currentProjectId &&
-                    t.client_id === trackingState.currentClientId
-                );
-            }
-
-            // Apply changes to all selected tasks
+            // Apply changes to all selected tasks using Core method with automatic tracking sync
+            // Core will handle tracking state synchronization for tracked instances automatically
             await this._applyChangesToAll();
-
-            // If editing currently tracked task, update tracking state in Core
-            if (isEditingTrackedTask) {
-                // Update task name in tracking state if changed
-                if (this.newTaskName) {
-                    await this.coreBridge.updateCurrentTaskName(this.newTaskName);
-                }
-
-                // Update project/client in tracking state if changed
-                if (this.selectedProjectId !== null || this.selectedClientId !== null) {
-                    await this.coreBridge.updateCurrentProjectClient(
-                        this.selectedProjectId !== null ? this.selectedProjectId : trackingState.currentProjectId,
-                        this.selectedClientId !== null ? this.selectedClientId : trackingState.currentClientId
-                    );
-                }
-
-                // Emit event to update AdvancedTrackingWidget UI
-                this.coreBridge.emitUIEvent('tracking-updated', {
-                    taskName: this.newTaskName || undefined,
-                    projectId: this.selectedProjectId !== null ? this.selectedProjectId : undefined,
-                    clientId: this.selectedClientId !== null ? this.selectedClientId : undefined,
-                });
-            }
 
             // Notify parent to refresh
             if (this.parent) {
@@ -192,10 +160,12 @@ export class MultipleTasksEditDialog {
             const updates = {};
 
             // Update task name if provided
+            let newTaskName = null;
             if (this.newTaskName) {
                 // Find or create task with new name
                 const newTask = await this.coreBridge.findOrCreateTask(this.newTaskName);
                 updates.task_id = newTask.id;
+                newTaskName = this.newTaskName;
             }
 
             // Update project if selected
@@ -208,9 +178,14 @@ export class MultipleTasksEditDialog {
                 updates.client_id = this.selectedClientId;
             }
 
-            // Apply updates to task instance
+            // Apply updates using Core method with automatic tracking sync
+            // Core will check if instance is tracked and apply changes globally if needed
             if (Object.keys(updates).length > 0) {
-                await this.coreBridge.updateTaskInstance(taskInstance.id, updates);
+                await this.coreBridge.updateTaskInstanceWithTrackingSync(
+                    taskInstance.id,
+                    updates,
+                    newTaskName
+                );
             }
         }
     }
@@ -224,5 +199,47 @@ export class MultipleTasksEditDialog {
 
     present(parent) {
         this.dialog.present(parent || this.parent);
+    }
+
+    /**
+     * Cleanup: cleanup dropdowns and clear references
+     * Note: Adw.AlertDialog closes automatically after response,
+     * so we only cleanup JS resources (dropdowns, references)
+     * GTK widgets will be destroyed by GTK automatically
+     */
+    cleanup() {
+        // Cleanup dropdowns (they have their own cleanup logic)
+        if (this.projectDropdown) {
+            try {
+                if (typeof this.projectDropdown.destroy === 'function') {
+                    this.projectDropdown.destroy();
+                }
+            } catch (e) {
+                // Already destroyed
+            }
+            this.projectDropdown = null;
+        }
+        
+        if (this.clientDropdown) {
+            try {
+                if (typeof this.clientDropdown.destroy === 'function') {
+                    this.clientDropdown.destroy();
+                }
+            } catch (e) {
+                // Already destroyed
+            }
+            this.clientDropdown = null;
+        }
+        
+        // Clear all references to allow GC
+        this.taskInstances = null;
+        this.parent = null;
+        this.coreBridge = null;
+        this.nameEntry = null;
+        this.durationLabel = null;
+        
+        // Note: this.dialog (Adw.AlertDialog) will be destroyed by GTK automatically
+        // after close(), so we don't need to explicitly destroy it
+        this.dialog = null;
     }
 }

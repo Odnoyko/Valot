@@ -88,6 +88,28 @@ export class CoreBridge {
     }
 
     /**
+     * Unregister UI callback
+     * @param {string} event - Event name
+     * @param {Function} callback - Callback function to remove
+     */
+    offUIEvent(event, callback) {
+        const callbacks = this.uiCallbacks.get(event);
+        if (callbacks) {
+            callbacks.delete(callback);
+            if (callbacks.size === 0) {
+                this.uiCallbacks.delete(event);
+            }
+        }
+    }
+
+    /**
+     * Clear all UI event callbacks (for cleanup)
+     */
+    clearUIEventCallbacks() {
+        this.uiCallbacks.clear();
+    }
+
+    /**
      * Emit UI event (public method for pages to trigger events)
      */
     emitUIEvent(event, data) {
@@ -108,6 +130,16 @@ export class CoreBridge {
                 }
             });
         }
+    }
+
+    // ==================== Timer Scheduler API ====================
+
+    subscribeTick(callback) {
+        return this.core.getScheduler().subscribe(callback);
+    }
+
+    unsubscribeTick(token) {
+        return this.core.getScheduler().unsubscribe(token);
     }
 
     // ==================== Projects API ====================
@@ -333,6 +365,19 @@ export class CoreBridge {
 
     async updateTaskInstance(instanceId, data) {
         return await this.core.services.taskInstances.update(instanceId, data);
+    }
+
+    /**
+     * Update TaskInstance with automatic tracking synchronization (if tracked)
+     * Logic is handled in Core - checks if instance is tracked and applies changes globally
+     * 
+     * @param {number} instanceId - TaskInstance ID
+     * @param {object} data - Update data (task_id, project_id, client_id, last_used_at, is_favorite, total_time)
+     * @param {string} newTaskName - Optional: new task name if task_id changed
+     * @returns {Promise<object>} Updated TaskInstance
+     */
+    async updateTaskInstanceWithTrackingSync(instanceId, data, newTaskName = null) {
+        return await this.core.services.taskInstances.updateWithTrackingSync(instanceId, data, newTaskName);
     }
 
     async updateTaskInstanceTotalTime(instanceId) {

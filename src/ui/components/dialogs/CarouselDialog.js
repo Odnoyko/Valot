@@ -157,13 +157,14 @@ export const CarouselDialog = GObject.registerClass({
     _connectCloseHandlers() {
         this.connect('close-request', () => {
             this._markAsShown();
+            // Allow default destroy behavior to unload from memory
             return false;
         });
     }
 
     _closeDialog() {
         this._markAsShown();
-        this.close();
+        this.close(); // Close will trigger destroy and unload from memory
     }
 
     _markAsShown() {
@@ -412,19 +413,18 @@ export const CarouselDialog = GObject.registerClass({
 
     static showIfNeeded(parent = null) {
         if (CarouselDialog.shouldShow()) {
-            const dialog = new CarouselDialog({
-                transient_for: parent,
-            });
-            dialog.present();
-            return dialog;
+            return CarouselDialog.show(parent);
         }
         return null;
     }
 
     static show(parent = null) {
+        // Always create new dialog to ensure fresh instance and memory cleanup
+        // Destroying old dialogs frees memory completely
         const dialog = new CarouselDialog({
             transient_for: parent,
         });
+        
         dialog.present();
         return dialog;
     }

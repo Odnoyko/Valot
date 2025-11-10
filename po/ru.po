@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: valot 0.6.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-26 18:00+0100\n"
+"POT-Creation-Date: 2025-11-10 02:30+0100\n"
 "PO-Revision-Date: 2025-10-04 04:57+0000\n"
 "Last-Translator: Vitalii  Odnoiko <kontakt@odnoyko.com>\n"
 "Language-Team: Russian <https://hosted.weblate.org/projects/valot/valot/ru/"
@@ -20,597 +20,9 @@ msgstr ""
 "n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Generator: Weblate 5.14-dev\n"
 
-#: data/com.odnoyko.valot.metainfo.xml.in:5 data/com.odnoyko.valot.desktop.in:2
+#: data/com.odnoyko.valot.desktop.in:2 src/ui/windows/MainWindow.js:28
 msgid "Valot"
 msgstr "Valot"
-
-#: data/com.odnoyko.valot.metainfo.xml.in:6
-msgid "Time tracking without the hassle"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:7
-msgid "Zeiterfassung ohne Aufwand"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:8
-msgid "Monitoraggio del tempo senza complicazioni"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:9
-msgid "Учёт времени без лишних хлопот"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:10
-msgid "Облік часу без зайвих клопотів"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:12
-msgid ""
-"Valot combines time tracking with earnings calculation in one clean app. Set "
-"your hourly rates, track your work time, and instantly see what you've "
-"earned. Simple tracking for professionals who value their time."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:13
-msgid ""
-"Valot kombiniert Zeiterfassung mit Einkommensberechnung in einer "
-"übersichtlichen App. Legen Sie Ihre Stundensätze fest, verfolgen Sie Ihre "
-"Arbeitszeit und sehen Sie sofort, was Sie verdient haben. Einfache Erfassung "
-"für Profis, die ihre Zeit schätzen."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:14
-msgid ""
-"Valot combina il monitoraggio del tempo con il calcolo dei guadagni in "
-"un'app pulita. Imposta le tue tariffe orarie, monitora il tuo tempo di "
-"lavoro e vedi istantaneamente quanto hai guadagnato. Monitoraggio semplice "
-"per professionisti che apprezzano il loro tempo."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:15
-msgid ""
-"Valot объединяет учёт времени и расчёт заработка в одном удобном приложении. "
-"Устанавливайте почасовые ставки, отслеживайте рабочее время и мгновенно "
-"видите свой заработок. Простой учёт для профессионалов, которые ценят своё "
-"время."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:16
-msgid ""
-"Valot поєднує облік часу та розрахунок заробітку в одному зручному "
-"застосунку. Встановлюйте погодинні ставки, відстежуйте робочий час та "
-"миттєво бачте свій заробіток. Простий облік для професіоналів, які цінують "
-"свій час."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:17
-msgid "Key Features:"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:18
-msgid "Hauptfunktionen:"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:19
-msgid "Caratteristiche principali:"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:20
-msgid "Основные возможности:"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:21
-msgid "Основні можливості:"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:23
-msgid "Compact tracker accessible via system hotkeys for quick time logging"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:24
-msgid ""
-"Kompakter Tracker über System-Tastenkombinationen für schnelle Zeiterfassung"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:25
-msgid ""
-"Tracker compatto accessibile tramite scorciatoie di sistema per una rapida "
-"registrazione del tempo"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:26
-msgid ""
-"Компактный трекер, доступный через системные горячие клавиши для быстрого "
-"учёта времени"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:27
-msgid ""
-"Компактний трекер, доступний через системні гарячі клавіші для швидкого "
-"обліку часу"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:28
-msgid "Real-time task tracking with live timer updates and instant feedback"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:29
-msgid ""
-"Echtzeit-Aufgabenverfolgung mit Live-Timer-Updates und sofortigem Feedback"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:30
-msgid ""
-"Monitoraggio delle attività in tempo reale con aggiornamenti del timer dal "
-"vivo e feedback istantaneo"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:31
-msgid ""
-"Отслеживание задач в реальном времени с обновлениями таймера и мгновенной "
-"обратной связью"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:32
-msgid ""
-"Відстеження завдань у реальному часі з оновленнями таймера та миттєвим "
-"зворотним зв'язком"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:33
-msgid ""
-"Project organization with custom colors and icons for easy identification"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:34
-msgid ""
-"Projektorganisation mit benutzerdefinierten Farben und Symbolen zur "
-"einfachen Identifizierung"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:35
-msgid ""
-"Organizzazione dei progetti con colori e icone personalizzati per una facile "
-"identificazione"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:36
-msgid ""
-"Организация проектов с пользовательскими цветами и значками для лёгкой "
-"идентификации"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:37
-msgid ""
-"Організація проектів із власними кольорами та значками для легкої "
-"ідентифікації"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:38
-msgid "Client management with custom currency support for international work"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:39
-msgid ""
-"Kundenverwaltung mit benutzerdefinierter Währungsunterstützung für "
-"internationale Arbeit"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:40
-msgid ""
-"Gestione clienti con supporto valuta personalizzato per lavoro internazionale"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:41
-msgid ""
-"Управление клиентами с поддержкой пользовательских валют для международной "
-"работы"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:42
-msgid "Керування клієнтами з підтримкою власних валют для міжнародної роботи"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:43
-msgid "Comprehensive reporting with detailed charts and statistics"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:44
-msgid "Umfassende Berichte mit detaillierten Diagrammen und Statistiken"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:45
-msgid "Reportistica completa con grafici dettagliati e statistiche"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:46
-msgid "Комплексные отчёты с подробными графиками и статистикой"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:47
-msgid "Комплексні звіти з детальними графіками та статистикою"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:48
-msgid "HTML/PDF export capabilities with professional formatting options"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:49
-msgid "HTML/PDF-Exportfunktionen mit professionellen Formatierungsoptionen"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:50
-msgid ""
-"Capacità di esportazione HTML/PDF con opzioni di formattazione professionale"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:51
-msgid ""
-"Возможности экспорта HTML/PDF с профессиональными опциями форматирования"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:52
-msgid "Можливості експорту HTML/PDF з професійними опціями форматування"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:53
-msgid ""
-"Built-in Pomodoro timer with customizable session lengths for focused work"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:54
-msgid ""
-"Integrierter Pomodoro-Timer mit anpassbaren Sitzungslängen für fokussiertes "
-"Arbeiten"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:55
-msgid ""
-"Timer Pomodoro integrato con durate di sessione personalizzabili per lavoro "
-"concentrato"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:56
-msgid ""
-"Встроенный таймер Pomodoro с настраиваемой длительностью сеансов для "
-"сосредоточенной работы"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:57
-msgid ""
-"Вбудований таймер Pomodoro з налаштовуваною тривалістю сеансів для "
-"зосередженої роботи"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:58
-msgid "Clear and intuitive interface designed for effortless daily use"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:59
-msgid "Klare und intuitive Oberfläche für mühelosen täglichen Gebrauch"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:60
-msgid ""
-"Interfaccia chiara e intuitiva progettata per un uso quotidiano senza sforzo"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:61
-msgid "Чистый и интуитивный интерфейс для лёгкого ежедневного использования"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:62
-msgid "Чистий та інтуїтивний інтерфейс для легкого щоденного використання"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:64
-msgid ""
-"Valot offers a clean, modern interface, making time tracking simple and "
-"efficient without getting in your way."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:65
-msgid ""
-"Valot bietet eine klare, moderne Oberfläche und macht die Zeiterfassung "
-"einfach und effizient, ohne Ihnen im Weg zu stehen."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:66
-msgid ""
-"Valot offre un'interfaccia pulita e moderna, rendendo il monitoraggio del "
-"tempo semplice ed efficiente senza intralciarti."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:67
-msgid ""
-"Valot предлагает чистый современный интерфейс, делая учёт времени простым и "
-"эффективным, не мешая вашей работе."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:68
-msgid ""
-"Valot пропонує чистий сучасний інтерфейс, роблячи облік часу простим та "
-"ефективним, не заважаючи вашій роботі."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:72
-msgid "Odnoyko"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:89
-msgid "Fixed critical performance bugs which crashes our App"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:90
-msgid ""
-"New Multiplatform Architecture, focused to make Plugins and Addons support"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:91
-msgid "Created Migration tool for adopt old DB version to new"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:92
-msgid "New Database architecture"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:93
-#, fuzzy
-msgid "Pomodoro timer Update"
-msgstr "Таймер Помодоро"
-
-#: data/com.odnoyko.valot.metainfo.xml.in:96
-#, fuzzy
-msgid "Change name, project or Clients while you track a time"
-msgstr "Выберите проект для отслеживания времени"
-
-#: data/com.odnoyko.valot.metainfo.xml.in:97
-msgid "Notification when user try close the App when Time Tracking in progress"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:98
-msgid "App remember last tracked Project & Client"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:101
-msgid "Added multiple Tasks Edit"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:102
-msgid "Updated Task editor UI"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:103
-#, fuzzy
-msgid "Project page improvements"
-msgstr "Не удалось обновить проект"
-
-#: data/com.odnoyko.valot.metainfo.xml.in:104
-#, fuzzy
-msgid "Updated Project Preferences UI"
-msgstr "Обновить имя проекта и его внешний вид"
-
-#: data/com.odnoyko.valot.metainfo.xml.in:105
-msgid "Reports page UI Update"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:106
-msgid "Updated Export to the PDF"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:107
-msgid "Added multi-currency export"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:108
-msgid "Added DB Navigator and Providers System"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:109
-msgid "Translations updated to new structure"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:115
-msgid ""
-"Fix App icon for KDE by Surjyadip Sen, App optimisations, Delete context "
-"menu update, updated Sidebar, updated Task page information,Updated "
-"Translations"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:120
-msgid ""
-"Selection context UI, Removed selection from Report page, Updated "
-"interface,Updated Translations"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:125
-msgid "Updated Ukrainian translation file"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:130
-msgid ""
-"Settings Dialog: Select mode, accent color, pomodoro timer. Currency editor, "
-"Ukrainian and Russian language support, Welcome screen."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:135
-msgid "App icon update, Branding colors update, Pommodoro timer update"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:140
-msgid ""
-"UI improvements: Added brand colors for Flathub, updated active tracking to "
-"use accent colors for better visual consistency."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:145
-msgid ""
-"Bug fixes and UI improvements: Fixed compact tracker button sync, improved "
-"page selection clearing, and enhanced overflow handling."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:150
-msgid ""
-"New App architecture with modular component system and various UI "
-"improvements."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:155
-msgid "Major update with improvements and enhancements."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:160
-msgid "Latest release with improvements and bug fixes."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:165
-msgid "Bug fixes and stability improvements."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:170
-msgid "Feature enhancements and fixes."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:175
-msgid "Fix Flatpak PDF Export Issues."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:180
-msgid "Bug fixes and improvements."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:185
-msgid "Initial stable release of Valot time tracking application."
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:203
-msgid ""
-"Main task tracking interface with active timer and comprehensive task "
-"management"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:204
-msgid ""
-"Hauptschnittstelle zur Aufgabenverfolgung mit aktivem Timer und umfassender "
-"Aufgabenverwaltung"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:205
-msgid ""
-"Interfaccia principale di monitoraggio delle attività con timer attivo e "
-"gestione completa delle attività"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:206
-msgid ""
-"Основной интерфейс отслеживания задач с активным таймером и комплексным "
-"управлением задачами"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:207
-msgid ""
-"Основний інтерфейс відстеження завдань з активним таймером та комплексним "
-"керуванням завданнями"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:211
-msgid ""
-"Projects management with easy project creation and colorful organization"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:212
-msgid ""
-"Projektverwaltung mit einfacher Projekterstellung und farbenfroher "
-"Organisation"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:213
-msgid "Gestione progetti con creazione semplice e organizzazione colorata"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:214
-msgid "Управление проектами с простым созданием проектов и яркой организацией"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:215
-msgid ""
-"Керування проектами з простим створенням проектів та яскравою організацією"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:219
-#, fuzzy
-msgid "Client management with billing rates and currency support"
-msgstr "Добавляйте клиентов со ставками и контактной информацией"
-
-#: data/com.odnoyko.valot.metainfo.xml.in:220
-msgid "Kundenverwaltung mit Abrechnungssätzen und Währungsunterstützung"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:221
-msgid "Gestione clienti con tariffe di fatturazione e supporto valuta"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:222
-msgid "Управление клиентами с тарифами на оплату и поддержкой валют"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:223
-msgid "Керування клієнтами з тарифами на оплату та підтримкою валют"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:227
-#, fuzzy
-msgid "Create new clients with custom hourly rates and currency settings"
-msgstr "Добавьте нового клиента с именем и валютой"
-
-#: data/com.odnoyko.valot.metainfo.xml.in:228
-msgid ""
-"Neue Kunden mit benutzerdefinierten Stundensätzen und Währungseinstellungen "
-"erstellen"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:229
-msgid ""
-"Crea nuovi clienti con tariffe orarie personalizzate e impostazioni valuta"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:230
-msgid ""
-"Создание новых клиентов с пользовательскими почасовыми ставками и "
-"настройками валют"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:231
-msgid ""
-"Створення нових клієнтів з власними погодинними ставками та налаштуваннями "
-"валют"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:235
-msgid ""
-"Comprehensive reports with interactive charts, statistics, and time analytics"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:236
-msgid ""
-"Umfassende Berichte mit interaktiven Diagrammen, Statistiken und Zeitanalysen"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:237
-msgid ""
-"Rapporti completi con grafici interattivi, statistiche e analisi del tempo"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:238
-msgid ""
-"Комплексные отчёты с интерактивными графиками, статистикой и аналитикой "
-"времени"
-msgstr ""
-
-#: data/com.odnoyko.valot.metainfo.xml.in:239
-msgid ""
-"Комплексні звіти з інтерактивними графіками, статистикою та аналітикою часу"
-msgstr ""
 
 #: data/com.odnoyko.valot.desktop.in:3
 msgid "Time Tracker"
@@ -624,2181 +36,2819 @@ msgstr "Отслеживайте время для задач и проекто�
 msgid "time;tracker;productivity;tasks;projects;timesheet;billing;"
 msgstr "время;учёт;продуктивность;задачи;проекты;табель;выставление счетов;"
 
-#~ msgid "Theme preference"
-#~ msgstr "Предпочтение темы"
+#: data/com.odnoyko.valot.gschema.xml:6
+msgid "Theme preference"
+msgstr "Предпочтение темы"
 
-#~ msgid "Theme preference: 0=Auto, 1=Light, 2=Dark"
-#~ msgstr "Предпочтение темы: 0=Авто, 1=Светлая, 2=Тёмная"
+#: data/com.odnoyko.valot.gschema.xml:7
+msgid "Theme preference: 0=Auto, 1=Light, 2=Dark"
+msgstr "Предпочтение темы: 0=Авто, 1=Светлая, 2=Тёмная"
 
-#~ msgid "Custom accent color"
-#~ msgstr "Пользовательский акцентный цвет"
+#: data/com.odnoyko.valot.gschema.xml:11
+msgid "Custom accent color"
+msgstr "Пользовательский акцентный цвет"
 
-#~ msgid "Custom accent color in hex format (empty for system default)"
-#~ msgstr ""
-#~ "Пользовательский акцентный цвет в шестнадцатеричном формате (пусто для "
-#~ "системного по умолчанию)"
+#: data/com.odnoyko.valot.gschema.xml:12
+msgid "Custom accent color in hex format (empty for system default)"
+msgstr "Пользовательский акцентный цвет в формате hex (пусто для системного по умолчанию)"
+"Пользовательский акцентный цвет в шестнадцатеричном формате (пусто для "
+"системного по умолчанию)"
 
-#~ msgid "Accent color mode"
-#~ msgstr "Режим акцентного цвета"
+#: data/com.odnoyko.valot.gschema.xml:16
+msgid "Accent color mode"
+msgstr "Режим акцентного цвета"
 
-#~ msgid "Accent color mode: 0=Standard, 1=Custom"
-#~ msgstr "Режим акцентного цвета: 0=Стандартный, 1=Пользовательский"
+#: data/com.odnoyko.valot.gschema.xml:17
+msgid "Accent color mode: 0=Standard, 1=Custom"
+msgstr "Режим акцентного цвета: 0=Стандартный, 1=Пользовательский"
 
-#~ msgid "Welcome dialog shown"
-#~ msgstr "Приветственный диалог показан"
+#: data/com.odnoyko.valot.gschema.xml:21
+msgid "Welcome dialog shown"
+msgstr "Приветственный диалог показан"
 
-#~ msgid "Whether the welcome carousel dialog has been shown to the user"
-#~ msgstr "Был ли показан пользователю приветственный диалог карусели"
+#: data/com.odnoyko.valot.gschema.xml:22
+msgid "Whether the welcome carousel dialog has been shown to the user"
+msgstr "Был ли показан пользователю приветственный диалог карусели"
 
-#~ msgid "Sidebar behavior mode"
-#~ msgstr "Режим поведения боковой панели"
+#: data/com.odnoyko.valot.gschema.xml:26
+msgid "Sidebar behavior mode"
+msgstr "Режим поведения боковой панели"
 
-#~ msgid ""
-#~ "Sidebar behavior: 0=Opened (always open on launch), 1=Closed (always "
-#~ "closed on launch), 2=Dynamic (remember last state)"
-#~ msgstr ""
-#~ "Поведение боковой панели: 0=Открыта (всегда открывать при запуске), "
-#~ "1=Закрыта (всегда закрывать при запуске), 2=Динамическая (запоминать "
-#~ "последнее состояние)"
+#: data/com.odnoyko.valot.gschema.xml:27
+msgid ""
+"Sidebar behavior: 0=Opened (always open on launch), 1=Closed (always closed "
+"on launch), 2=Dynamic (remember last state)"
+msgstr ""
+"Поведение боковой панели: 0=Открыта (всегда открывать при запуске), "
+"1=Закрыта (всегда закрывать при запуске), 2=Динамическая (запоминать "
+"последнее состояние)"
 
-#~ msgid "Sidebar last state"
-#~ msgstr "Последнее состояние боковой панели"
+#: data/com.odnoyko.valot.gschema.xml:31
+msgid "Sidebar last state"
+msgstr "Последнее состояние боковой панели"
 
-#~ msgid "Last sidebar visibility state (used in Dynamic mode)"
-#~ msgstr ""
-#~ "Последнее состояние видимости боковой панели (используется в динамическом "
-#~ "режиме)"
+#: data/com.odnoyko.valot.gschema.xml:32
+msgid "Last sidebar visibility state (used in Dynamic mode)"
+msgstr "Последнее состояние видимости боковой панели (используется в динамическом режиме)"
+"Последнее состояние видимости боковой панели (используется в динамическом "
+"режиме)"
 
-#~ msgid "Database Error"
-#~ msgstr "Ошибка базы данных"
+#: data/com.odnoyko.valot.gschema.xml:36
+msgid "Visible pages"
+msgstr "Видимые страницы"
 
-#~ msgid "Failed to initialize database"
-#~ msgstr "Не удалось инициализировать базу данных"
+#: data/com.odnoyko.valot.gschema.xml:37
+msgid "List of visible page IDs"
+msgstr "Список идентификаторов видимых страниц"
 
-#~ msgid "Compact Tracker"
-#~ msgstr "Компактный таймер"
+#: data/com.odnoyko.valot.gschema.xml:41
+msgid "Page order"
+msgstr "Порядок страниц"
 
+#: data/com.odnoyko.valot.gschema.xml:42
+msgid "Order of pages in the view switcher"
+msgstr "Порядок страниц в переключателе вида"
+
+#: data/com.odnoyko.valot.gschema.xml:46
 #, fuzzy
-#~ msgid "No task selected"
-#~ msgstr "Нет задач"
+msgid "Last selected project ID"
+msgstr "Удалить проект"
 
-#~ msgid "Start tracking"
-#~ msgstr "Начать отслеживание"
+#: data/com.odnoyko.valot.gschema.xml:47
+msgid "Last selected project ID for tracking widget persistence"
+msgstr "ID последнего выбранного проекта для сохранения виджета отслеживания"
 
+#: data/com.odnoyko.valot.gschema.xml:51
 #, fuzzy
-#~ msgid "Tracking..."
-#~ msgstr "Загрузка…"
+msgid "Last selected client ID"
+msgstr "Выбрать клиента"
 
-#~ msgid "Stop tracking"
-#~ msgstr "Остановить отслеживание"
+#: data/com.odnoyko.valot.gschema.xml:52
+msgid "Last selected client ID for tracking widget persistence"
+msgstr "ID последнего выбранного клиента для сохранения виджета отслеживания"
 
-#~ msgid "Error"
-#~ msgstr "Ошибка"
+#: data/com.odnoyko.valot.gschema.xml:56
+msgid "Enable experimental features"
+msgstr "Включить экспериментальные функции"
 
-#~ msgid "OK"
-#~ msgstr "ОК"
+#: data/com.odnoyko.valot.gschema.xml:57
+msgid "Enable experimental features like extensions and addons"
+msgstr "Включить экспериментальные функции, такие как расширения и дополнения"
 
-#~ msgid "Close compact tracker and open main window"
-#~ msgstr "Закрыть компактный таймер и открыть окно программы"
+#: src/ui/windows/Application.js:297 src/ui/utils/commonStrings.js:36
+msgid "Database Error"
+msgstr "Ошибка базы данных"
 
-#~ msgid "Cancel"
-#~ msgstr "Отменить"
+#: src/ui/windows/Application.js:298
+msgid "Failed to initialize database"
+msgstr "Не удалось инициализировать базу данных"
 
-#~ msgid "Navigation"
-#~ msgstr "Навигация"
+#: src/ui/windows/Application.js:340
+msgid "Migration failed - database not created"
+msgstr "Миграция не удалась - база данных не создана"
 
-#~ msgid "Hide Sidebar"
-#~ msgstr "Скрыть боковую панель"
+#: src/ui/windows/Application.js:358
+msgid "Delete operation failed"
+msgstr "Операция удаления не удалась"
 
-#~ msgid "About"
-#~ msgstr "О программе"
+#: src/ui/windows/CompactTracker.js:17
+#: src/ui/windows/CompactTrackerWindow.js:17
+#: src/ui/components/dialogs/CarouselDialog.js:203
+msgid "Compact Tracker"
+msgstr "Компактный таймер"
 
-#~ msgid "Tasks"
-#~ msgstr "Задачи"
+#: src/ui/windows/CompactTracker.js:53
+msgid "Open main window"
+msgstr "Открыть главное окно"
 
-#~ msgid "Projects"
-#~ msgstr "Проекты"
-
-#~ msgid "Clients"
-#~ msgstr "Клиенты"
-
-#~ msgid "Reports"
-#~ msgstr "Отсчеты"
-
-#~ msgid "Quick Stats"
-#~ msgstr "Быстрый обзор"
-
-#~ msgid "This Week"
-#~ msgstr "Эта неделя"
-
-#~ msgid "Refresh"
-#~ msgstr "Обновить"
-
-#~ msgid "Search"
-#~ msgstr "Поиск"
-
-#~ msgid "Show Sidebar"
-#~ msgstr "Показать боковую панель"
-
+#: src/ui/windows/CompactTracker.js:61 src/ui/windows/CompactTracker.js:315
 #, fuzzy
-#~ msgid "Open Compact Tracker (Shift: keep main window)"
-#~ msgstr "Закрыть компактный таймер и открыть окно программы"
+msgid "No task selected"
+msgstr "Нет задач"
 
-#~ msgid "Task name"
-#~ msgstr "Имя задачи"
+#: src/ui/windows/CompactTracker.js:77 src/ui/windows/CompactTracker.js:317
+#: src/ui/windows/pages/ClientsPage.js:241
+#: src/ui/windows/pages/ClientsPage.js:314
+#: src/ui/windows/pages/ProjectsPage.js:316
+#: src/ui/windows/pages/ProjectsPage.js:377
+#: src/ui/windows/pages/TasksPage.js:821 src/ui/windows/pages/TasksPage.js:911
+#: src/ui/components/complex/TaskRowTemplate.js:141
+#: src/ui/components/complex/TaskRowTemplate.js:175
+#: src/ui/components/complex/TaskRowTemplate.js:310
+#: src/ui/components/complex/TaskStackTemplate.js:121
+#: src/ui/components/complex/TaskStackTemplate.js:151
+#: src/ui/components/complex/TaskStackTemplate.js:310
+#: src/ui/components/complex/TrackingWidget.js:85
+#: src/ui/components/complex/TrackingWidget.js:189
+#: src/ui/utils/widgetFactory.js:542
+msgid "Start tracking"
+msgstr "Начать отслеживание"
 
-#~ msgid "Project"
-#~ msgstr "Проект"
+#. Update UI to tracking mode
+#: src/ui/windows/CompactTracker.js:309
+#: src/ui/components/complex/HeaderTrackingWidget.js:162
+#: src/ui/components/complex/TrackingWidget.js:149
+#, fuzzy
+msgid "Tracking..."
+msgstr "Загрузка…"
 
-#~ msgid "Client"
-#~ msgstr "Клиент"
+#: src/ui/windows/CompactTracker.js:311 src/ui/windows/pages/ClientsPage.js:296
+#: src/ui/windows/pages/ProjectsPage.js:363
+#: src/ui/windows/pages/TasksPage.js:400 src/ui/windows/pages/TasksPage.js:884
+#: src/ui/components/complex/AdvancedTrackingWidget.js:364
+#: src/ui/components/complex/HeaderTrackingWidget.js:187
+#: src/ui/components/complex/TaskRowTemplate.js:154
+#: src/ui/components/complex/TaskRowTemplate.js:172
+#: src/ui/components/complex/TaskRowTemplate.js:307
+#: src/ui/components/complex/TaskStackTemplate.js:134
+#: src/ui/components/complex/TaskStackTemplate.js:307
+#: src/ui/components/complex/TrackingWidget.js:162
+msgid "Stop tracking"
+msgstr "Остановить отслеживание"
 
-#~ msgid "Search clients..."
-#~ msgstr "Поиск клиентов…"
+#: src/ui/windows/CompactTracker.js:351
+#: src/ui/components/complex/ModularDialogManager.js:323
+#: src/ui/components/dialogs/MultipleTasksEditDialog.js:150
+#: src/ui/utils/commonStrings.js:35
+msgid "Error"
+msgstr "Ошибка"
 
-#~ msgid "Add Client"
-#~ msgstr "Добавить клиента"
+#: src/ui/windows/CompactTracker.js:354
+#: src/ui/components/complex/ModularDialogManager.js:326
+#: src/ui/components/dialogs/MultipleTasksEditDialog.js:153
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:1099
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:1408
+#: src/ui/utils/commonStrings.js:11
+msgid "OK"
+msgstr "ОК"
 
-#~ msgid "Add client"
-#~ msgstr "Добавить клиента"
+#: src/ui/windows/CompactTrackerWindow.js:75
+msgid "Close compact tracker and open main window"
+msgstr "Закрыть компактный таймер и открыть окно программы"
 
+#: src/ui/windows/MainWindow.js:102
+msgid "Tracking in Progress"
+msgstr "Идёт отслеживание"
+
+#: src/ui/windows/MainWindow.js:103
+msgid ""
+"Time tracking is currently active. Closing the app will stop the timer and "
+"save your tracked time.\n"
+"\n"
+"Are you sure you want to close?"
+msgstr ""
+"Учёт времени активен. Закрытие приложения остановит таймер и сохранит "
+"отслеженное время.\n"
+"\n"
+"Вы уверены, что хотите закрыть?"
+
+#. Add buttons
+#: src/ui/windows/MainWindow.js:106 src/ui/windows/pages/ClientsPage.js:577
+#: src/ui/windows/pages/ClientsPage.js:965
+#: src/ui/windows/pages/ClientsPage.js:1002
+#: src/ui/windows/pages/ClientsPage.js:1118
+#: src/ui/windows/pages/ClientsPage.js:1247
+#: src/ui/windows/pages/ClientsPage.js:1415
+#: src/ui/windows/pages/ProjectsPage.js:594
+#: src/ui/windows/pages/ProjectsPage.js:1191
+#: src/ui/windows/pages/ReportsPage.js:2538
+#: src/ui/windows/pages/TasksPage.js:1290
+#: src/ui/windows/pages/TasksPage.js:2427
+#: src/ui/components/complex/ModularDialogManager.js:276
+#: src/ui/components/complex/ProjectAppearanceDialog.js:44
+#: src/ui/components/complex/ProjectAppearanceDialog.js:478
+#: src/ui/components/dialogs/MultipleTasksEditDialog.js:107
+#: src/ui/components/dialogs/PreferencesDialog.js:2082
+#: src/ui/components/dialogs/PreferencesDialog.js:2145
+#: src/ui/components/dialogs/QuickTaskSelector.js:122
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:419
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:1098
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:1407
+#: src/ui/utils/commonStrings.js:10 src/ui/utils/widgetFactory.js:304
+msgid "Cancel"
+msgstr "Отменить"
+
+#: src/ui/windows/MainWindow.js:107
+msgid "Stop & Close"
+msgstr "Остановить и закрыть"
+
+#: src/ui/windows/MainWindow.js:212
+msgid "Navigation"
+msgstr "Навигация"
+
+#: src/ui/windows/MainWindow.js:226
+msgid "Hide Sidebar"
+msgstr "Скрыть боковую панель"
+
+#: src/ui/windows/MainWindow.js:236
+#: src/ui/components/dialogs/PreferencesDialog.js:72
+msgid "About"
+msgstr "О программе"
+
+#: src/ui/windows/MainWindow.js:262 src/ui/windows/MainWindow.js:337
+msgid "Tasks"
+msgstr "Задачи"
+
+#: src/ui/windows/MainWindow.js:263 src/ui/windows/MainWindow.js:338
+msgid "Projects"
+msgstr "Проекты"
+
+#. First time setup - create groups
+#: src/ui/windows/MainWindow.js:264 src/ui/windows/MainWindow.js:339
+#: src/ui/components/dialogs/PreferencesDialog.js:88
+#: src/ui/components/dialogs/PreferencesDialog.js:1051
+msgid "Clients"
+msgstr "Клиенты"
+
+#: src/ui/windows/MainWindow.js:265 src/ui/windows/MainWindow.js:340
+msgid "Reports"
+msgstr "Отсчеты"
+
+#: src/ui/windows/MainWindow.js:306
+msgid "Quick Stats"
+msgstr "Быстрый обзор"
+
+#: src/ui/windows/MainWindow.js:313 src/ui/windows/pages/TasksPage.js:1117
+#: src/ui/components/complex/DateRangeSelector.js:63
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:146
+msgid "This Week"
+msgstr "Эта неделя"
+
+#: src/ui/windows/MainWindow.js:615
+msgid "Page content will be implemented here"
+msgstr "Содержимое страницы будет реализовано здесь"
+
+#: src/ui/windows/pages/BasePage.js:70 src/ui/utils/commonStrings.js:97
+msgid "Refresh"
+msgstr "Обновить"
+
+#: src/ui/windows/pages/BasePage.js:83 src/ui/utils/commonStrings.js:77
+#: src/ui/utils/commonStrings.js:98
+msgid "Search"
+msgstr "Поиск"
+
+#: src/ui/windows/pages/ClientsPage.js:131
+#: src/ui/windows/pages/ProjectsPage.js:205
+#: src/ui/windows/pages/ReportsPage.js:835
+#: src/ui/windows/pages/TasksPage.js:694
+msgid "Show Sidebar"
+msgstr "Показать боковую панель"
+
+#: src/ui/windows/pages/ClientsPage.js:162
+#: src/ui/windows/pages/ProjectsPage.js:236
+#: src/ui/windows/pages/ReportsPage.js:865
+#: src/ui/windows/pages/TasksPage.js:725
+#, fuzzy
+msgid "Open Compact Tracker (Shift: keep main window)"
+msgstr "Закрыть компактный таймер и открыть окно программы"
+
+#: src/ui/windows/pages/ClientsPage.js:201
+#: src/ui/windows/pages/ProjectsPage.js:275
+#: src/ui/windows/pages/TasksPage.js:764
+#: src/ui/components/complex/AdvancedTrackingWidget.js:72
+#: src/ui/components/complex/TrackingWidget.js:20
+msgid "Task name"
+msgstr "Имя задачи"
+
+#: src/ui/windows/pages/ClientsPage.js:211
+#: src/ui/windows/pages/ProjectsPage.js:286 src/ui/utils/commonStrings.js:63
+#: src/ui/utils/widgetFactory.js:74
+msgid "Project"
+msgstr "Проект"
+
+#: src/ui/windows/pages/ClientsPage.js:222
+#: src/ui/windows/pages/ProjectsPage.js:297 src/ui/utils/commonStrings.js:62
+#: src/ui/utils/widgetFactory.js:87
+msgid "Client"
+msgstr "Клиент"
+
+#: src/ui/windows/pages/ClientsPage.js:459 src/ui/utils/commonStrings.js:87
+msgid "Search clients..."
+msgstr "Поиск клиентов…"
+
+#: src/ui/windows/pages/ClientsPage.js:480
+msgid "Add Client"
+msgstr "Добавить клиента"
+
+#: src/ui/windows/pages/ClientsPage.js:491
+msgid "Add client"
+msgstr "Добавить клиента"
+
+#: src/ui/windows/pages/ClientsPage.js:548
+#: src/ui/windows/pages/ProjectsPage.js:564
+#: src/ui/windows/pages/TasksPage.js:1260
+msgid "Back"
+msgstr "Назад"
+
+#. Update pagination info
+#: src/ui/windows/pages/ClientsPage.js:555
+#: src/ui/windows/pages/ClientsPage.js:1329
+#: src/ui/windows/pages/ProjectsPage.js:1075
+#: src/ui/windows/pages/ProjectsPage.js:1105
+#: src/ui/windows/pages/ProjectsPageInterface.js:221
+#: src/ui/windows/pages/TasksPage.js:2376 src/ui/utils/widgetFactory.js:365
 #, fuzzy, javascript-format
-#~ msgid "Page %d of %d"
-#~ msgstr "1 из 1"
+msgid "Page %d of %d"
+msgstr "1 из 1"
 
-#~ msgid "Next"
-#~ msgstr "Следующий"
+#: src/ui/windows/pages/ClientsPage.js:562
+#: src/ui/windows/pages/ProjectsPage.js:576
+#: src/ui/windows/pages/TasksPage.js:1272
+#: src/ui/components/dialogs/CarouselDialog.js:83
+#: src/ui/components/dialogs/CarouselDialog.js:138
+#: src/ui/utils/widgetFactory.js:231 src/ui/utils/widgetFactory.js:290
+msgid "Next"
+msgstr "Следующий"
 
-#~ msgid "Delete"
-#~ msgstr "Удалить"
+#: src/ui/windows/pages/ClientsPage.js:591
+#: src/ui/windows/pages/ClientsPage.js:1416
+#: src/ui/windows/pages/ProjectsPage.js:606
+#: src/ui/windows/pages/ProjectsPage.js:1192
+#: src/ui/windows/pages/TasksPage.js:1309
+#: src/ui/windows/pages/TasksPage.js:2428
+#: src/ui/components/complex/ModularDialogManager.js:464
+#: src/ui/utils/commonStrings.js:14 src/ui/utils/commonStrings.js:100
+#: src/ui/utils/widgetFactory.js:318
+msgid "Delete"
+msgstr "Удалить"
 
-#~ msgid "No clients found"
-#~ msgstr "Клиенты не найдены"
+#: src/ui/windows/pages/ClientsPage.js:655
+msgid "No clients found"
+msgstr "Клиенты не найдены"
 
-#~ msgid "Create your first client to get started"
-#~ msgstr "Создайте своего первого клиента для начала"
+#: src/ui/windows/pages/ClientsPage.js:656 src/ui/utils/commonStrings.js:115
+msgid "Create your first client to get started"
+msgstr "Создайте своего первого клиента для начала"
 
-#~ msgid "Click to change rate and currency"
-#~ msgstr "Щёлкните, чтобы изменить ставку и валюту"
+#: src/ui/windows/pages/ClientsPage.js:738
+msgid "Click to change rate and currency"
+msgstr "Щёлкните, чтобы изменить ставку и валюту"
 
+#: src/ui/windows/pages/ClientsPage.js:794
+msgid "Default Client cannot be selected"
+msgstr "Клиент по умолчанию нельзя выбрать"
+
+#: src/ui/windows/pages/ClientsPage.js:875
+#: src/ui/windows/pages/ClientsPage.js:966
+#: src/ui/components/complex/ClientDialog.js:28
+#: src/ui/components/complex/ClientDialog.js:376
+#: src/ui/utils/commonStrings.js:18
+msgid "Create Client"
+msgstr "Создать клиента"
+
+#: src/ui/windows/pages/ClientsPage.js:876
 #, fuzzy
-#~ msgid "Default Client cannot be selected"
-#~ msgstr "Клиент по умолчанию не может быть удалён."
+msgid "Add a new client with name and currency"
+msgstr "Добавить новую пользовательскую валюту"
 
-#~ msgid "Create Client"
-#~ msgstr "Создать клиента"
+#: src/ui/windows/pages/ClientsPage.js:892
+msgid "Client name"
+msgstr "Имя клиента"
 
-#~ msgid "Client name"
-#~ msgstr "Имя клиента"
+#: src/ui/windows/pages/ClientsPage.js:988
+msgid "Edit Client Name"
+msgstr "Изменить имя клиента"
 
-#~ msgid "Edit Client Name"
-#~ msgstr "Изменить имя клиента"
+#: src/ui/windows/pages/ClientsPage.js:989
+msgid "Enter a new name for this client"
+msgstr "Введите новое имя для этого клиента"
 
-#~ msgid "Enter a new name for this client"
-#~ msgstr "Введите новое имя для этого клиента"
+#: src/ui/windows/pages/ClientsPage.js:1003
+#: src/ui/components/complex/ProjectAppearanceDialog.js:45
+#: src/ui/utils/commonStrings.js:12
+msgid "Save"
+msgstr "Сохранить"
 
-#~ msgid "Save"
-#~ msgstr "Сохранить"
-
+#: src/ui/windows/pages/ClientsPage.js:1025
 #, fuzzy
-#~ msgid "Client name updated"
-#~ msgstr "Имя клиента"
+msgid "Client name updated"
+msgstr "Имя клиента"
 
+#: src/ui/windows/pages/ClientsPage.js:1026
+#: src/ui/windows/pages/ClientsPage.js:1141
+#: src/ui/windows/pages/ClientsPage.js:1443
+#: src/ui/windows/pages/ProjectsPage.js:1219
+#: src/ui/windows/pages/TasksPage.js:2486
+msgid "Undo"
+msgstr "Отменить"
+
+#: src/ui/windows/pages/ClientsPage.js:1046
+msgid "Edit Rate - {name}"
+msgstr "Редактировать тариф - {name}"
+
+#: src/ui/windows/pages/ClientsPage.js:1047
+msgid "Change hourly rate and currency for this client"
+msgstr "Изменить почасовую ставку и валюту для этого клиента"
+
+#: src/ui/windows/pages/ClientsPage.js:1119
+#: src/ui/components/complex/ClientDialog.js:28
+#: src/ui/components/complex/ClientDialog.js:351
+#: src/ui/components/complex/ProjectDialog.js:332
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:420
+#: src/ui/utils/commonStrings.js:13
+msgid "Save Changes"
+msgstr "Сохранить изменения"
+
+#: src/ui/windows/pages/ClientsPage.js:1140
 #, fuzzy
-#~ msgid "Edit Rate - {name}"
-#~ msgstr "Изменить ставку - %s"
+msgid "Client rate updated"
+msgstr "Клиент успешно обновлён"
 
-#~ msgid "Change hourly rate and currency for this client"
-#~ msgstr "Изменить почасовую ставку и валюту для этого клиента"
+#: src/ui/windows/pages/ClientsPage.js:1164
+msgid "Select Currency"
+msgstr "Выбрать валюту"
 
-#~ msgid "Save Changes"
-#~ msgstr "Сохранить изменения"
+#: src/ui/windows/pages/ClientsPage.js:1165
+msgid "Choose a currency for this client"
+msgstr "Выберите валюту для этого клиента"
 
+#: src/ui/windows/pages/ClientsPage.js:1411
+msgid "Delete Clients"
+msgstr "Удалить клиентов"
+
+#: src/ui/windows/pages/ClientsPage.js:1439
 #, fuzzy
-#~ msgid "Client rate updated"
-#~ msgstr "Требуется имя клиента"
+msgid "Client deleted"
+msgstr "Фильтр клиентов"
 
-#~ msgid "Select Currency"
-#~ msgstr "Выбрать валюту"
+#: src/ui/windows/pages/ProjectsPage.js:480 src/ui/utils/commonStrings.js:86
+msgid "Search projects..."
+msgstr "Найти проекты"
 
-#~ msgid "Choose a currency for this client"
-#~ msgstr "Выберите валюту для этого клиента"
+#: src/ui/windows/pages/ProjectsPage.js:501
+msgid "Add Project"
+msgstr "Добавить проект"
 
-#~ msgid "Delete Clients"
-#~ msgstr "Удалить клиентов"
+#: src/ui/windows/pages/ProjectsPage.js:512
+msgid "Add project"
+msgstr "Добавить проект"
 
+#: src/ui/windows/pages/ProjectsPage.js:570
+#: src/ui/windows/pages/TasksPage.js:1266 src/ui/utils/widgetFactory.js:223
+#: src/ui/utils/widgetFactory.js:282
+msgid "Page 1 of 1"
+msgstr "1 из 1"
+
+#: src/ui/windows/pages/ProjectsPage.js:925
+msgid "Project settings - Change color and icon"
+msgstr "Настройки проекта - Вы можете изменить его цвет и иконку"
+
+#: src/ui/windows/pages/ProjectsPage.js:1030
+msgid "Default Project cannot be selected"
+msgstr "Проект по умолчанию нельзя выбрать"
+
+#: src/ui/windows/pages/ProjectsPage.js:1064
+msgid "No projects found"
+msgstr "Не найдено проектов"
+
+#: src/ui/windows/pages/ProjectsPage.js:1065 src/ui/utils/commonStrings.js:114
+msgid "Create your first project to get started"
+msgstr "Создайте свой первый проект для начала"
+
+#: src/ui/windows/pages/ProjectsPage.js:1187
+msgid "Delete Projects"
+msgstr "Удалить проекты"
+
+#: src/ui/windows/pages/ProjectsPage.js:1215
 #, fuzzy
-#~ msgid "Client deleted"
-#~ msgstr "Фильтр клиентов"
+msgid "Project deleted"
+msgstr "Фильтр проектов"
 
-#~ msgid "Search projects..."
-#~ msgstr "Найти проекты"
+#: src/ui/windows/pages/ProjectsPage.js:1300
+msgid "Failed to update project"
+msgstr "Не удалось обновить проект"
 
-#~ msgid "Add Project"
-#~ msgstr "Добавить проект"
+#: src/ui/windows/pages/ProjectsPage.js:1349
+msgid "Projektname bearbeiten"
+msgstr "Редактировать название проекта"
 
-#~ msgid "Add project"
-#~ msgstr "Добавить проект"
+#: src/ui/windows/pages/ProjectsPage.js:1350
+msgid "Name von \"{oldName}\" ändern"
+msgstr "Переименовать из \"{oldName}\""
 
-#~ msgid "Page 1 of 1"
-#~ msgstr "1 из 1"
+#: src/ui/windows/pages/ProjectsPage.js:1363
+msgid "Abbrechen"
+msgstr "Отменить"
 
-#~ msgid "Project settings - Change color and icon"
-#~ msgstr "Настройки проекта - Вы можете изменить его цвет и иконку"
+#: src/ui/windows/pages/ProjectsPage.js:1364
+msgid "Speichern"
+msgstr "Сохранить"
 
+#: src/ui/windows/pages/ProjectsPageInterface.js:154
+msgid "Delete Selected"
+msgstr "Удалить выбранное"
+
+#: src/ui/windows/pages/ReportsPage.js:849
 #, fuzzy
-#~ msgid "Default Project cannot be selected"
-#~ msgstr "Проект по умолчанию не может быть удалён."
+msgid "Export PDF Report"
+msgstr "Экспортировать PDF"
 
-#~ msgid "No projects found"
-#~ msgstr "Не найдено проектов"
+#: src/ui/windows/pages/ReportsPage.js:905
+msgid "Task Reports"
+msgstr "Отсчет по задачам"
 
-#~ msgid "Create your first project to get started"
-#~ msgstr "Создайте свой первый проект для начала"
+#: src/ui/windows/pages/ReportsPage.js:948
+msgid "Week"
+msgstr "Неделя"
 
-#~ msgid "Delete Projects"
-#~ msgstr "Удалить проекты"
+#: src/ui/windows/pages/ReportsPage.js:949
+msgid "Month"
+msgstr "Месяц"
 
+#: src/ui/windows/pages/ReportsPage.js:950
+msgid "Year"
+msgstr "Год"
+
+#: src/ui/windows/pages/ReportsPage.js:951
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:149
+msgid "Custom Range"
+msgstr "Пользовательский диапазон"
+
+#: src/ui/windows/pages/ReportsPage.js:956
+msgid "Select time period"
+msgstr "Выбрать период времени"
+
+#: src/ui/windows/pages/ReportsPage.js:988
+msgid "Filter by project"
+msgstr "Фильтр по проектам"
+
+#: src/ui/windows/pages/ReportsPage.js:993
+msgid "Filter by client"
+msgstr "Фильтр по клиентам"
+
+#: src/ui/windows/pages/ReportsPage.js:1011
+msgid "bis"
+msgstr "до"
+
+#: src/ui/windows/pages/ReportsPage.js:1060
 #, fuzzy
-#~ msgid "Project deleted"
-#~ msgstr "Фильтр проектов"
+msgid "Loading chart..."
+msgstr "Загрузка…"
 
-#~ msgid "Failed to update project"
-#~ msgstr "Не удалось обновить проект"
+#: src/ui/windows/pages/ReportsPage.js:1086
+msgid "Total Time"
+msgstr "Общее время"
 
+#: src/ui/windows/pages/ReportsPage.js:1094
+msgid "Active Projects"
+msgstr "Активные проекты"
+
+#: src/ui/windows/pages/ReportsPage.js:1105
+msgid "Tracked Tasks"
+msgstr "Отслежено задач"
+
+#: src/ui/windows/pages/ReportsPage.js:1195
 #, fuzzy
-#~ msgid "Projektname bearbeiten"
-#~ msgstr "Требуется имя проекта"
+msgid "Previous currency"
+msgstr "Предыдущий"
 
-#~ msgid "Delete Selected"
-#~ msgstr "Удалить выбранное"
-
+#: src/ui/windows/pages/ReportsPage.js:1218
 #, fuzzy
-#~ msgid "Export PDF Report"
-#~ msgstr "Экспортировать PDF"
+msgid "Next currency"
+msgstr "Выбрать валюту"
 
-#~ msgid "Task Reports"
-#~ msgstr "Отсчет по задачам"
+#: src/ui/windows/pages/ReportsPage.js:1303
+msgid "Total Earnings"
+msgstr "Общий доход"
 
-#~ msgid "Week"
-#~ msgstr "Неделя"
+#: src/ui/windows/pages/ReportsPage.js:1326
+msgid "Recent Tasks"
+msgstr "Последние задачи"
 
-#~ msgid "Month"
-#~ msgstr "Месяц"
+#: src/ui/windows/pages/ReportsPage.js:1327
+msgid "Your most recent completed tasks"
+msgstr "Ваши самые последние задачи"
 
-#~ msgid "Year"
-#~ msgstr "Год"
+#: src/ui/windows/pages/ReportsPage.js:1337 src/ui/utils/commonStrings.js:109
+msgid "No tasks yet"
+msgstr "Нет задач"
 
-#~ msgid "Custom Range"
-#~ msgstr "Пользовательский диапазон"
+#: src/ui/windows/pages/ReportsPage.js:1338
+msgid "Start tracking time to see your tasks here"
+msgstr "Начните отслеживание для того что бы увидеть здесь свои задачи"
 
-#~ msgid "Select time period"
-#~ msgstr "Выбрать период времени"
+#. Add "All Projects" option first
+#: src/ui/windows/pages/ReportsPage.js:1389
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:447
+msgid "All Projects"
+msgstr "Все проекты"
 
-#~ msgid "Filter by project"
-#~ msgstr "Фильтр по проектам"
+#. Add "All Clients" option first
+#: src/ui/windows/pages/ReportsPage.js:1409
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:464
+msgid "All Clients"
+msgstr "Все клиенты"
 
-#~ msgid "Filter by client"
-#~ msgstr "Фильтр по клиентам"
-
+#: src/ui/windows/pages/ReportsPage.js:1504
 #, fuzzy
-#~ msgid "Loading chart..."
-#~ msgstr "Загрузка…"
+msgid ""
+"📊 No data for selected period\n"
+"Start tracking time to see your chart"
+msgstr "Начните отслеживание для того что бы увидеть здесь свои задачи"
 
-#~ msgid "Total Time"
-#~ msgstr "Общее время"
+#. Chart title with period-specific formatting
+#: src/ui/windows/pages/ReportsPage.js:1986
+msgid "📊 Weekly Activity"
+msgstr "📊 Активность на этой неделе"
 
-#~ msgid "Active Projects"
-#~ msgstr "Активные проекты"
-
-#~ msgid "Tracked Tasks"
-#~ msgstr "Отслежено задач"
-
-#~ msgid "Total Earnings"
-#~ msgstr "Общий доход"
-
-#~ msgid "Recent Tasks"
-#~ msgstr "Последние задачи"
-
-#~ msgid "Your most recent completed tasks"
-#~ msgstr "Ваши самые последние задачи"
-
-#~ msgid "No tasks yet"
-#~ msgstr "Нет задач"
-
-#~ msgid "Start tracking time to see your tasks here"
-#~ msgstr "Начните отслеживание для того что бы увидеть здесь свои задачи"
-
-#~ msgid "All Projects"
-#~ msgstr "Все проекты"
-
-#~ msgid "All Clients"
-#~ msgstr "Все клиенты"
-
+#: src/ui/windows/pages/ReportsPage.js:1990
 #, fuzzy
-#~ msgid ""
-#~ "📊 No data for selected period\n"
-#~ "Start tracking time to see your chart"
-#~ msgstr ""
-#~ "📊 Нет данных\n"
-#~ "Отследите хотя бы одну задачу для того что бы увидеть статистику"
+msgid "Weekly Activity"
+msgstr "📊 Активность на этой неделе"
 
-#~ msgid "📊 Weekly Activity"
-#~ msgstr "📊 Активность на этой неделе"
+#: src/ui/windows/pages/ReportsPage.js:1992
+msgid "📊 Monthly Activity (4 weeks)"
+msgstr "📊 Месячная активность (4 недели)"
 
+#: src/ui/windows/pages/ReportsPage.js:1994
+msgid "📊 Yearly Activity (12 months)"
+msgstr "📊 Активность за год (12 месяцев)"
+
+#: src/ui/windows/pages/ReportsPage.js:2509
+#: src/ui/components/complex/DateRangeSelector.js:209
+msgid "Select Start Date"
+msgstr "Выбрать дату начала"
+
+#: src/ui/windows/pages/ReportsPage.js:2509
+#: src/ui/components/complex/DateRangeSelector.js:209
+msgid "Select End Date"
+msgstr "Выбрать дату окончания"
+
+#: src/ui/windows/pages/ReportsPage.js:2539
+msgid "Apply"
+msgstr "Применить"
+
+#: src/ui/windows/pages/ReportsPage.js:3288
+msgid "No tasks found"
+msgstr "Задачи не найдены"
+
+#: src/ui/windows/pages/ReportsPage.js:3289
 #, fuzzy
-#~ msgid "Weekly Activity"
-#~ msgstr "📊 Активность на этой неделе"
+msgid "Try adjusting your filters"
+msgstr "Попробуйте настроить поиск или фильтр категорий"
 
-#~ msgid "📊 Monthly Activity (4 weeks)"
-#~ msgstr "📊 Месячная активность (4 недели)"
-
-#~ msgid "📊 Yearly Activity (12 months)"
-#~ msgstr "📊 Активность за год (12 месяцев)"
-
-#~ msgid "Select Start Date"
-#~ msgstr "Выбрать дату начала"
-
-#~ msgid "Select End Date"
-#~ msgstr "Выбрать дату окончания"
-
-#~ msgid "No tasks found"
-#~ msgstr "Задачи не найдены"
-
+#: src/ui/windows/pages/ReportsPage.js:3592
 #, fuzzy
-#~ msgid "Try adjusting your filters"
-#~ msgstr "Попробуйте настроить поиск или фильтр категорий"
+msgid "PDF export failed"
+msgstr "Параметры экспорта PDF"
 
+#: src/ui/windows/pages/TasksPage.js:1093
+msgid "Search tasks..."
+msgstr "Поиск задач…"
+
+#: src/ui/windows/pages/TasksPage.js:1117
+#: src/ui/components/primitive/IconPicker.js:68
+msgid "All"
+msgstr "Все"
+
+#: src/ui/windows/pages/TasksPage.js:1117
+#: src/ui/components/complex/DateRangeSelector.js:61
+msgid "Today"
+msgstr "Сегодня"
+
+#: src/ui/windows/pages/TasksPage.js:1117
+#: src/ui/components/complex/DateRangeSelector.js:65
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:147
+msgid "This Month"
+msgstr "Этот месяц"
+
+#: src/ui/windows/pages/TasksPage.js:1168
 #, fuzzy
-#~ msgid "Unnamed Task"
-#~ msgstr "Отслежено задач"
+msgid "No Tasks Yet"
+msgstr "Нет задач"
 
+#: src/ui/windows/pages/TasksPage.js:1177
 #, fuzzy
-#~ msgid "PDF export failed"
-#~ msgstr "Экспорт не удался"
+msgid "Start tracking time to create your tasks"
+msgstr "Начните отслеживание для того что бы увидеть здесь свои задачи"
 
-#~ msgid "Search tasks..."
-#~ msgstr "Поиск задач…"
-
-#~ msgid "All"
-#~ msgstr "Все"
-
-#~ msgid "Today"
-#~ msgstr "Сегодня"
-
-#~ msgid "This Month"
-#~ msgstr "Этот месяц"
-
+#: src/ui/windows/pages/TasksPage.js:1303
 #, fuzzy
-#~ msgid "No Tasks Yet"
-#~ msgstr "Нет задач"
+msgid "Edit Selected"
+msgstr "Выбрано: %d"
 
+#: src/ui/windows/pages/TasksPage.js:2423 src/ui/utils/commonStrings.js:28
+msgid "Delete Tasks"
+msgstr "Удалить задачи"
+
+#: src/ui/windows/pages/TasksPage.js:2482
 #, fuzzy
-#~ msgid "Start tracking time to create your tasks"
-#~ msgstr "Начните отслеживание для того что бы увидеть здесь свои задачи"
+msgid "Task deleted"
+msgstr "Задача успешно удалена"
 
+#: src/ui/windows/pages/TasksPage.js:2507
+msgid "Failed to restore: some referenced items were deleted"
+msgstr "Не удалось восстановить: некоторые связанные элементы были удалены"
+
+#: src/ui/components/complex/AdvancedTrackingWidget.js:129
+#: src/ui/components/complex/AdvancedTrackingWidget.js:389
+#: src/ui/components/complex/AdvancedTrackingWidget.js:456
+#: src/ui/components/complex/HeaderTrackingWidget.js:77
+#: src/ui/components/complex/HeaderTrackingWidget.js:208
+msgid "Start tracking (Long press or P for Pomodoro)"
+msgstr "Начать отслеживание (Долгое нажатие или P для Pomodoro)"
+
+#: src/ui/components/complex/AdvancedTrackingWidget.js:355
+#: src/ui/components/complex/HeaderTrackingWidget.js:173
+msgid "Stop Pomodoro"
+msgstr "Остановить Pomodoro"
+
+#. Update dialog title
+#: src/ui/components/complex/ClientDialog.js:25
+#: src/ui/components/complex/ClientDialog.js:349
+#: src/ui/utils/commonStrings.js:32
+msgid "Edit Client"
+msgstr "Редактирование клиента"
+
+#. Update dialog title
+#: src/ui/components/complex/ClientDialog.js:25
+#: src/ui/components/complex/ClientDialog.js:374
+msgid "Create New Client"
+msgstr "Создание нового клиента"
+
+#: src/ui/components/complex/ClientDialog.js:26
+#: src/ui/components/complex/ClientDialog.js:350
+msgid "Update client information"
+msgstr "Обновить информацию о клиенте"
+
+#: src/ui/components/complex/ClientDialog.js:26
 #, fuzzy
-#~ msgid "Edit Selected"
-#~ msgstr "Выбрано: %d"
+msgid "Add a new client with billing rates"
+msgstr "Добавьте нового клиента с именем и стоимостью своей работы для него"
 
-#~ msgid "Delete Tasks"
-#~ msgstr "Удалить задачи"
+#: src/ui/components/complex/ClientDialog.js:34
+msgid "Dummy"
+msgstr "Заглушка"
 
+#: src/ui/components/complex/ClientDialog.js:88
+msgid "Client Name"
+msgstr "Имя клиента"
+
+#: src/ui/components/complex/ClientDialog.js:94
+msgid "Enter client name..."
+msgstr "Введите имя клиента…"
+
+#: src/ui/components/complex/ClientDialog.js:108
+msgid "Hourly Rate & Currency"
+msgstr "Почасовая ставка и валюта"
+
+#. Error saving client
+#: src/ui/components/complex/ClientDialog.js:297
+msgid "Failed to save client. Please try again."
+msgstr "Не удалось сохранить клиента. Пожалуйста, попробуйте снова."
+
+#: src/ui/components/complex/ClientDialog.js:333
+msgid "Phone number too long"
+msgstr "Номер телефона слишком длинный"
+
+#: src/ui/components/complex/ClientDialog.js:375
+msgid "Add a new client with contact details and billing rates"
+msgstr "Добавьте нового клиента с именем и стоимостью своей работы для него"
+
+#: src/ui/components/complex/ClientDialog.js:397
+msgid "A client with this name already exists"
+msgstr "Клиент с таким именем уже существует"
+
+#: src/ui/components/complex/CurrencyDialog.js:26
+msgid "Edit Currency"
+msgstr "Изменить валюту"
+
+#: src/ui/components/complex/CurrencyDialog.js:26
+msgid "Create New Currency"
+msgstr "Создать новую валюту"
+
+#: src/ui/components/complex/CurrencyDialog.js:27
+msgid "Update currency information"
+msgstr "Обновить информацию о валюте"
+
+#: src/ui/components/complex/CurrencyDialog.js:27
+msgid "Add a new custom currency"
+msgstr "Добавить новую пользовательскую валюту"
+
+#: src/ui/components/complex/CurrencyDialog.js:38
+msgid "Create Currency"
+msgstr "Создать валюту"
+
+#: src/ui/components/complex/CurrencyDialog.js:63
+msgid "Full Name"
+msgstr "Полное имя"
+
+#: src/ui/components/complex/CurrencyDialog.js:69
+msgid "e.g. US Dollar, Euro, Bitcoin..."
+msgstr "напр. Доллар США, Евро, Биткоин…"
+
+#: src/ui/components/complex/CurrencyDialog.js:95
+msgid "Currency Symbol"
+msgstr "Символ валюты"
+
+#: src/ui/components/complex/CurrencyDialog.js:101
+msgid "e.g. $, €, ₿..."
+msgstr "напр. $, €, ₿…"
+
+#: src/ui/components/complex/CurrencyDialog.js:117
+msgid "Currency Code"
+msgstr "Код валюты"
+
+#: src/ui/components/complex/CurrencyDialog.js:123
+msgid "e.g. USD, EUR, BTC..."
+msgstr "напр. USD, EUR, BTC…"
+
+#: src/ui/components/complex/DateRangeSelector.js:62
+msgid "Yesterday"
+msgstr "Вчера"
+
+#: src/ui/components/complex/DateRangeSelector.js:64
+msgid "Last Week"
+msgstr "Прошлая неделя"
+
+#: src/ui/components/complex/DateRangeSelector.js:66
+msgid "Last Month"
+msgstr "Прошлый месяц"
+
+#: src/ui/components/complex/DateRangeSelector.js:101
+#: src/ui/components/complex/DateRangeSelector.js:134
+msgid "to"
+msgstr "до"
+
+#: src/ui/components/complex/DateRangeSelector.js:210
+msgid "Choose the start date for the report range"
+msgstr "Выберите дату начала для диапазона отчёта"
+
+#: src/ui/components/complex/DateRangeSelector.js:210
+msgid "Choose the end date for the report range"
+msgstr "Выберите дату окончания для диапазона отчёта"
+
+#. Update UI to idle mode
+#: src/ui/components/complex/HeaderTrackingWidget.js:46
+#: src/ui/components/complex/HeaderTrackingWidget.js:200
 #, fuzzy
-#~ msgid "Task deleted"
-#~ msgstr "Задача успешно удалена"
+msgid "Select task..."
+msgstr "Поиск задач…"
 
-#~ msgid "Client Name"
-#~ msgstr "Имя клиента"
-
-#~ msgid "Enter client name..."
-#~ msgstr "Введите имя клиента…"
-
-#~ msgid "Hourly Rate & Currency"
-#~ msgstr "Почасовая ставка и валюта"
-
+#: src/ui/components/complex/HeaderTrackingWidget.js:55
 #, fuzzy
-#~ msgid "Failed to save client. Please try again."
-#~ msgstr "Не удалось создать клиента. Пожалуйста, попробуйте снова."
+msgid "Select project"
+msgstr "Выбрать проект"
 
-#~ msgid "Edit Client"
-#~ msgstr "Редактирование клиента"
+#: src/ui/components/complex/HeaderTrackingWidget.js:63
+msgid "Select client"
+msgstr "Выбрать клиента"
 
-#~ msgid "Update client information"
-#~ msgstr "Обновить информацию о клиенте"
-
-#~ msgid "Create New Client"
-#~ msgstr "Создание нового клиента"
-
-#~ msgid "Add a new client with contact details and billing rates"
-#~ msgstr "Добавьте нового клиента с именем и стоимостью своей работы для него"
-
-#~ msgid "A client with this name already exists"
-#~ msgstr "Клиент с таким именем уже существует"
-
-#~ msgid "Edit Currency"
-#~ msgstr "Изменить валюту"
-
-#~ msgid "Create New Currency"
-#~ msgstr "Создать новую валюту"
-
-#~ msgid "Update currency information"
-#~ msgstr "Обновить информацию о валюте"
-
-#~ msgid "Add a new custom currency"
-#~ msgstr "Добавить новую пользовательскую валюту"
-
-#~ msgid "Create Currency"
-#~ msgstr "Создать валюту"
-
-#~ msgid "Full Name"
-#~ msgstr "Полное имя"
-
-#~ msgid "e.g. US Dollar, Euro, Bitcoin..."
-#~ msgstr "напр. Доллар США, Евро, Биткоин…"
-
-#~ msgid "Currency Symbol"
-#~ msgstr "Символ валюты"
-
-#~ msgid "e.g. $, €, ₿..."
-#~ msgstr "напр. $, €, ₿…"
-
-#~ msgid "Currency Code"
-#~ msgstr "Код валюты"
-
-#~ msgid "e.g. USD, EUR, BTC..."
-#~ msgstr "напр. USD, EUR, BTC…"
-
-#~ msgid "Yesterday"
-#~ msgstr "Вчера"
-
-#~ msgid "Last Week"
-#~ msgstr "Прошлая неделя"
-
-#~ msgid "Last Month"
-#~ msgstr "Прошлый месяц"
-
-#~ msgid "to"
-#~ msgstr "до"
-
-#~ msgid "Choose the start date for the report range"
-#~ msgstr "Выберите дату начала для диапазона отчёта"
-
-#~ msgid "Choose the end date for the report range"
-#~ msgstr "Выберите дату окончания для диапазона отчёта"
-
+#: src/ui/components/complex/HeaderTrackingWidget.js:108
 #, fuzzy
-#~ msgid "Select task..."
-#~ msgstr "Поиск задач…"
+msgid "Open compact tracker (Shift: keep main window)"
+msgstr "Закрыть компактный таймер и открыть окно программы"
 
-#, fuzzy
-#~ msgid "Select project"
-#~ msgstr "Выбрать проект"
+#: src/ui/components/complex/ModularDialogManager.js:206
+msgid "Task Name"
+msgstr "Имя задачи"
 
-#~ msgid "Select client"
-#~ msgstr "Выбрать клиента"
+#: src/ui/components/complex/ModularDialogManager.js:207
+#: src/ui/components/dialogs/QuickTaskSelector.js:53
+msgid "Enter task name..."
+msgstr "Введите имя задачи…"
 
-#, fuzzy
-#~ msgid "Open compact tracker (Shift: keep main window)"
-#~ msgstr "Закрыть компактный таймер и открыть окно программы"
+#: src/ui/components/complex/ModularDialogManager.js:215
+#: src/ui/utils/commonStrings.js:65
+msgid "Description"
+msgstr "Описание"
 
-#~ msgid "Task Name"
-#~ msgstr "Имя задачи"
+#: src/ui/components/complex/ModularDialogManager.js:216
+msgid "Optional task description..."
+msgstr "Необязательное описание задачи..."
 
-#~ msgid "Enter task name..."
-#~ msgstr "Введите имя задачи…"
+#: src/ui/components/complex/ModularDialogManager.js:234
+msgid "No client"
+msgstr "Нет клиента"
 
-#~ msgid "Description"
-#~ msgstr "Описание"
+#: src/ui/components/complex/ModularDialogManager.js:273
+msgid "Confirm Action"
+msgstr "Подтвердить действие"
 
-#, fuzzy
-#~ msgid "Optional task description..."
-#~ msgstr "Описание задачи"
+#: src/ui/components/complex/ModularDialogManager.js:274
+msgid "Are you sure?"
+msgstr "Вы уверены?"
 
-#~ msgid "No client"
-#~ msgstr "Нет клиента"
+#: src/ui/components/complex/ModularDialogManager.js:275
+msgid "Confirm"
+msgstr "Подтвердить"
 
-#~ msgid "Confirm Action"
-#~ msgstr "Подтвердить действие"
+#: src/ui/components/complex/ModularDialogManager.js:316
+msgid "Error Details"
+msgstr "Подробности ошибки"
 
-#~ msgid "Are you sure?"
-#~ msgstr "Вы уверены?"
-
-#~ msgid "Confirm"
-#~ msgstr "Подтвердить"
-
-#~ msgid "Error Details"
-#~ msgstr "Подробности ошибки"
-
+#: src/ui/components/complex/ModularDialogManager.js:462
 #, fuzzy, javascript-format
-#~ msgid "Delete %s"
-#~ msgstr "Удалить задачу"
+msgid "Delete %s"
+msgstr "Удалить задачу"
 
+#: src/ui/components/complex/ModularDialogManager.js:463
 #, fuzzy, javascript-format
-#~ msgid ""
-#~ "Are you sure you want to delete \"%s\"? This action cannot be undone."
-#~ msgstr ""
-#~ "Вы уверены, что хотите удалить «%s»?\n"
-#~ "\n"
-#~ "Это действие нельзя отменить."
+msgid "Are you sure you want to delete \"%s\"? This action cannot be undone."
+msgstr "Вы уверены, что хотите удалить эту задачу?"
 
-#~ msgid "Project Appearance"
-#~ msgstr "Внешний вид проекта"
+#: src/ui/components/complex/ProjectAppearanceDialog.js:20
+msgid "Project Appearance"
+msgstr "Внешний вид проекта"
 
+#: src/ui/components/complex/ProjectAppearanceDialog.js:21
+msgid "Configure color and icon for \"{name}\""
+msgstr ""
+
+#: src/ui/components/complex/ProjectAppearanceDialog.js:66
+msgid "Project Color:"
+msgstr "Цвет проекта:"
+
+#: src/ui/components/complex/ProjectAppearanceDialog.js:76
+msgid "Click to change color"
+msgstr "Щёлкните, чтобы изменить цвет"
+
+#: src/ui/components/complex/ProjectAppearanceDialog.js:101
 #, fuzzy
-#~ msgid "Configure color and icon for \"{name}\""
-#~ msgstr "Настроить цвет и значок для "
+msgid "Project Symbol:"
+msgstr "Цвет проекта:"
 
-#~ msgid "Project Color:"
-#~ msgstr "Цвет проекта:"
-
-#~ msgid "Click to change color"
-#~ msgstr "Щёлкните, чтобы изменить цвет"
-
+#: src/ui/components/complex/ProjectAppearanceDialog.js:112
 #, fuzzy
-#~ msgid "Project Symbol:"
-#~ msgstr "Цвет проекта:"
+msgid "Click to choose symbol"
+msgstr "Щёлкните, чтобы изменить цвет"
 
+#: src/ui/components/complex/ProjectAppearanceDialog.js:198
+msgid "Select Project Color"
+msgstr "Выбрать цвет проекта"
+
+#: src/ui/components/complex/ProjectAppearanceDialog.js:227
 #, fuzzy
-#~ msgid "Click to choose symbol"
-#~ msgstr "Щёлкните, чтобы изменить цвет"
+msgid "Choose Symbol"
+msgstr "Символ валюты"
 
-#~ msgid "Select Project Color"
-#~ msgstr "Выбрать цвет проекта"
-
+#: src/ui/components/complex/ProjectAppearanceDialog.js:228
 #, fuzzy
-#~ msgid "Choose Symbol"
-#~ msgstr "Символ валюты"
+msgid "Select an icon or emoji for the project"
+msgstr "Выберите конкретный проект или включите все проекты"
 
+#: src/ui/components/complex/ProjectAppearanceDialog.js:254
+msgid "Clear"
+msgstr "Очистить"
+
+#: src/ui/components/complex/ProjectAppearanceDialog.js:266
+#: src/ui/utils/selectorFactory.js:418
+msgid "Icons"
+msgstr "Значки"
+
+#: src/ui/components/complex/ProjectAppearanceDialog.js:278
 #, fuzzy
-#~ msgid "Select an icon or emoji for the project"
-#~ msgstr "Выберите конкретный проект или включите все проекты"
+msgid "Emojis"
+msgstr "Эмодзи"
 
-#~ msgid "Icons"
-#~ msgstr "Значки"
+#: src/ui/components/complex/ProjectAppearanceDialog.js:303
+msgid "Clear mode selected - No icon will be displayed"
+msgstr "Выбран режим очистки - Значок не будет отображаться"
 
+#: src/ui/components/complex/ProjectAppearanceDialog.js:305
 #, fuzzy
-#~ msgid "Emojis"
-#~ msgstr "Эмодзи"
+msgid "Icon selected"
+msgstr "0 выбрано"
 
+#: src/ui/components/complex/ProjectAppearanceDialog.js:307
+#, fuzzy
+msgid "Emoji selected"
+msgstr "0 выбрано"
+
+#: src/ui/components/complex/ProjectCard.js:102
 #, javascript-format
-#~ msgid "Client: %s"
-#~ msgstr "Клиент: %s"
+msgid "Client: %s"
+msgstr "Клиент: %s"
 
-#~ msgid "Edit project"
-#~ msgstr "Редактировать проект"
+#: src/ui/components/complex/ProjectCard.js:117
+msgid "Edit project"
+msgstr "Редактировать проект"
 
-#~ msgid "Delete project"
-#~ msgstr "Удалить проект"
+#: src/ui/components/complex/ProjectCard.js:129
+msgid "Delete project"
+msgstr "Удалить проект"
 
+#: src/ui/components/complex/ProjectCard.js:155
+#: src/ui/components/complex/ProjectCard.js:255
 #, javascript-format
-#~ msgid "Total: %s"
-#~ msgstr "Всего: %s"
+msgid "Total: %s"
+msgstr "Всего: %s"
 
+#: src/ui/components/complex/ProjectCard.js:163
+#: src/ui/components/complex/ProjectCard.js:261
 #, javascript-format
-#~ msgid "Tasks: %d"
-#~ msgstr "Задачи: %d"
+msgid "Tasks: %d"
+msgstr "Задачи: %d"
 
-#~ msgid "Currently tracking"
-#~ msgstr "Отслеживается сейчас"
+#: src/ui/components/complex/ProjectCard.js:174
+#: src/ui/components/complex/ProjectCard.js:271
+msgid "Currently tracking"
+msgstr "Отслеживается сейчас"
 
-#~ msgid "Enter project name..."
-#~ msgstr "Введите имя проекта…"
+#: src/ui/components/complex/ProjectDialog.js:118
+msgid "Enter project name..."
+msgstr "Введите имя проекта…"
 
+#: src/ui/components/complex/ProjectDialog.js:278
 #, fuzzy
-#~ msgid "Failed to save project. Please try again."
-#~ msgstr "Не удалось создать проект. Пожалуйста, попробуйте снова."
+msgid "Failed to save project. Please try again."
+msgstr "Не удалось обновить проект"
 
-#~ msgid "Create Project"
-#~ msgstr "Создать проект"
+#. Update dialog title
+#: src/ui/components/complex/ProjectDialog.js:330
+#: src/ui/components/complex/ProjectDialog.js:354
+#: src/ui/utils/commonStrings.js:17
+msgid "Create Project"
+msgstr "Создать проект"
 
-#~ msgid "Create New Project"
-#~ msgstr "Создать новый проект"
+#: src/ui/components/complex/ProjectDialog.js:331
+#, fuzzy
+msgid "Update project name and appearance"
+msgstr "Внешний вид проекта"
 
-#~ msgid "Create a new project"
-#~ msgstr "Создать новый проект"
+#. Update dialog title
+#: src/ui/components/complex/ProjectDialog.js:352
+#: src/ui/utils/commonStrings.js:33
+msgid "Create New Project"
+msgstr "Создать новый проект"
 
-#~ msgid "Meeting"
-#~ msgstr "Встреча"
+#: src/ui/components/complex/ProjectDialog.js:353
+msgid "Create a new project"
+msgstr "Создать новый проект"
 
-#~ msgid "Team Meeting - [Date]"
-#~ msgstr "Командная встреча - [Дата]"
+#: src/ui/components/complex/TaskTemplate.js:9
+msgid "Meeting"
+msgstr "Встреча"
 
-#~ msgid ""
-#~ "Weekly team sync meeting\n"
-#~ "- Review progress\n"
-#~ "- Discuss blockers\n"
-#~ "- Plan next steps"
-#~ msgstr ""
-#~ "Еженедельная командная встреча\n"
-#~ "- Обзор прогресса\n"
-#~ "- Обсуждение препятствий\n"
-#~ "- Планирование следующих шагов"
+#: src/ui/components/complex/TaskTemplate.js:12
+msgid "Team Meeting - [Date]"
+msgstr "Командная встреча - [Дата]"
 
-#~ msgid "Development Task"
-#~ msgstr "Задача разработки"
+#: src/ui/components/complex/TaskTemplate.js:13
+msgid ""
+"Weekly team sync meeting\n"
+"- Review progress\n"
+"- Discuss blockers\n"
+"- Plan next steps"
+msgstr ""
+"Еженедельная командная встреча\n"
+"- Обзор прогресса\n"
+"- Обсуждение препятствий\n"
+"- Планирование следующих шагов"
 
-#~ msgid "Implement [Feature Name]"
-#~ msgstr "Реализовать [Название функции]"
+#: src/ui/components/complex/TaskTemplate.js:21
+msgid "Development Task"
+msgstr "Задача разработки"
 
-#~ msgid ""
-#~ "## Description\n"
-#~ "Implement new feature for the application\n"
-#~ "\n"
-#~ "## Requirements\n"
-#~ "- [ ] Requirement 1\n"
-#~ "- [ ] Requirement 2\n"
-#~ "- [ ] Requirement 3\n"
-#~ "\n"
-#~ "## Acceptance Criteria\n"
-#~ "- [ ] Feature works as expected\n"
-#~ "- [ ] Tests added\n"
-#~ "- [ ] Documentation updated"
-#~ msgstr ""
-#~ "## Описание\n"
-#~ "Реализовать новую функцию для приложения\n"
-#~ "\n"
-#~ "## Требования\n"
-#~ "- [ ] Требование 1\n"
-#~ "- [ ] Требование 2\n"
-#~ "- [ ] Требование 3\n"
-#~ "\n"
-#~ "## Критерии приёмки\n"
-#~ "- [ ] Функция работает как ожидается\n"
-#~ "- [ ] Тесты добавлены\n"
-#~ "- [ ] Документация обновлена"
+#: src/ui/components/complex/TaskTemplate.js:24
+msgid "Implement [Feature Name]"
+msgstr "Реализовать [Название функции]"
 
-#~ msgid "Bug Fix"
-#~ msgstr "Исправление ошибки"
+#: src/ui/components/complex/TaskTemplate.js:25
+msgid ""
+"## Description\n"
+"Implement new feature for the application\n"
+"\n"
+"## Requirements\n"
+"- [ ] Requirement 1\n"
+"- [ ] Requirement 2\n"
+"- [ ] Requirement 3\n"
+"\n"
+"## Acceptance Criteria\n"
+"- [ ] Feature works as expected\n"
+"- [ ] Tests added\n"
+"- [ ] Documentation updated"
+msgstr ""
+"## Описание\n"
+"Реализовать новую функцию для приложения\n"
+"\n"
+"## Требования\n"
+"- [ ] Требование 1\n"
+"- [ ] Требование 2\n"
+"- [ ] Требование 3\n"
+"\n"
+"## Критерии приёмки\n"
+"- [ ] Функция работает как ожидается\n"
+"- [ ] Тесты добавлены\n"
+"- [ ] Документация обновлена"
 
-#~ msgid "Fix: [Bug Description]"
-#~ msgstr "Исправление: [Описание ошибки]"
+#: src/ui/components/complex/TaskTemplate.js:33
+msgid "Bug Fix"
+msgstr "Исправление ошибки"
 
-#~ msgid ""
-#~ "## Bug Report\n"
-#~ "**Issue:** Description of the bug\n"
-#~ "**Steps to Reproduce:**\n"
-#~ "1. Step 1\n"
-#~ "2. Step 2\n"
-#~ "3. Step 3\n"
-#~ "\n"
-#~ "**Expected Behavior:** What should happen\n"
-#~ "**Actual Behavior:** What actually happens\n"
-#~ "\n"
-#~ "## Solution\n"
-#~ "- [ ] Investigate root cause\n"
-#~ "- [ ] Implement fix\n"
-#~ "- [ ] Test fix\n"
-#~ "- [ ] Verify no regression"
-#~ msgstr ""
-#~ "## Отчёт об ошибке\n"
-#~ "**Проблема:** Описание ошибки\n"
-#~ "**Шаги для воспроизведения:**\n"
-#~ "1. Шаг 1\n"
-#~ "2. Шаг 2\n"
-#~ "3. Шаг 3\n"
-#~ "\n"
-#~ "**Ожидаемое поведение:** Что должно произойти\n"
-#~ "**Фактическое поведение:** Что происходит на самом деле\n"
-#~ "\n"
-#~ "## Решение\n"
-#~ "- [ ] Исследовать первопричину\n"
-#~ "- [ ] Реализовать исправление\n"
-#~ "- [ ] Проверить исправление\n"
-#~ "- [ ] Убедиться в отсутствии регрессии"
+#: src/ui/components/complex/TaskTemplate.js:36
+msgid "Fix: [Bug Description]"
+msgstr "Исправление: [Описание ошибки]"
 
-#~ msgid "Research Task"
-#~ msgstr "Исследовательская задача"
+#: src/ui/components/complex/TaskTemplate.js:37
+msgid ""
+"## Bug Report\n"
+"**Issue:** Description of the bug\n"
+"**Steps to Reproduce:**\n"
+"1. Step 1\n"
+"2. Step 2\n"
+"3. Step 3\n"
+"\n"
+"**Expected Behavior:** What should happen\n"
+"**Actual Behavior:** What actually happens\n"
+"\n"
+"## Solution\n"
+"- [ ] Investigate root cause\n"
+"- [ ] Implement fix\n"
+"- [ ] Test fix\n"
+"- [ ] Verify no regression"
+msgstr ""
+"## Отчёт об ошибке\n"
+"**Проблема:** Описание ошибки\n"
+"**Шаги для воспроизведения:**\n"
+"1. Шаг 1\n"
+"2. Шаг 2\n"
+"3. Шаг 3\n"
+"\n"
+"**Ожидаемое поведение:** Что должно произойти\n"
+"**Фактическое поведение:** Что происходит на самом деле\n"
+"\n"
+"## Решение\n"
+"- [ ] Исследовать первопричину\n"
+"- [ ] Реализовать исправление\n"
+"- [ ] Проверить исправление\n"
+"- [ ] Убедиться в отсутствии регрессии"
 
-#~ msgid "Research: [Topic]"
-#~ msgstr "Исследование: [Тема]"
+#: src/ui/components/complex/TaskTemplate.js:45
+msgid "Research Task"
+msgstr "Исследовательская задача"
 
-#~ msgid ""
-#~ "## Research Objective\n"
-#~ "Investigate and analyze [topic]\n"
-#~ "\n"
-#~ "## Questions to Answer\n"
-#~ "- Question 1?\n"
-#~ "- Question 2?\n"
-#~ "- Question 3?\n"
-#~ "\n"
-#~ "## Deliverables\n"
-#~ "- [ ] Research summary\n"
-#~ "- [ ] Recommendations\n"
-#~ "- [ ] Next steps"
-#~ msgstr ""
-#~ "## Цель исследования\n"
-#~ "Исследовать и проанализировать [тема]\n"
-#~ "\n"
-#~ "## Вопросы для ответа\n"
-#~ "- Вопрос 1?\n"
-#~ "- Вопрос 2?\n"
-#~ "- Вопрос 3?\n"
-#~ "\n"
-#~ "## Результаты\n"
-#~ "- [ ] Сводка исследования\n"
-#~ "- [ ] Рекомендации\n"
-#~ "- [ ] Следующие шаги"
+#: src/ui/components/complex/TaskTemplate.js:48
+msgid "Research: [Topic]"
+msgstr "Исследование: [Тема]"
 
-#~ msgid "Code Review"
-#~ msgstr "Проверка кода"
+#: src/ui/components/complex/TaskTemplate.js:49
+msgid ""
+"## Research Objective\n"
+"Investigate and analyze [topic]\n"
+"\n"
+"## Questions to Answer\n"
+"- Question 1?\n"
+"- Question 2?\n"
+"- Question 3?\n"
+"\n"
+"## Deliverables\n"
+"- [ ] Research summary\n"
+"- [ ] Recommendations\n"
+"- [ ] Next steps"
+msgstr ""
+"## Цель исследования\n"
+"Исследовать и проанализировать [тема]\n"
+"\n"
+"## Вопросы для ответа\n"
+"- Вопрос 1?\n"
+"- Вопрос 2?\n"
+"- Вопрос 3?\n"
+"\n"
+"## Результаты\n"
+"- [ ] Сводка исследования\n"
+"- [ ] Рекомендации\n"
+"- [ ] Следующие шаги"
 
-#~ msgid "Review: [PR/MR Title]"
-#~ msgstr "Проверка: [Название PR/MR]"
+#: src/ui/components/complex/TaskTemplate.js:57
+msgid "Code Review"
+msgstr "Проверка кода"
 
-#~ msgid ""
-#~ "## Review Checklist\n"
-#~ "- [ ] Code quality and style\n"
-#~ "- [ ] Logic correctness\n"
-#~ "- [ ] Performance considerations\n"
-#~ "- [ ] Security implications\n"
-#~ "- [ ] Test coverage\n"
-#~ "- [ ] Documentation updates\n"
-#~ "\n"
-#~ "## Feedback\n"
-#~ "[Add specific feedback here]"
-#~ msgstr ""
-#~ "## Контрольный список проверки\n"
-#~ "- [ ] Качество и стиль кода\n"
-#~ "- [ ] Правильность логики\n"
-#~ "- [ ] Соображения производительности\n"
-#~ "- [ ] Влияние на безопасность\n"
-#~ "- [ ] Охват тестами\n"
-#~ "- [ ] Обновления документации\n"
-#~ "\n"
-#~ "## Обратная связь\n"
-#~ "[Добавьте конкретную обратную связь здесь]"
+#: src/ui/components/complex/TaskTemplate.js:60
+msgid "Review: [PR/MR Title]"
+msgstr "Проверка: [Название PR/MR]"
 
-#~ msgid "Documentation"
-#~ msgstr "Документация"
+#: src/ui/components/complex/TaskTemplate.js:61
+msgid ""
+"## Review Checklist\n"
+"- [ ] Code quality and style\n"
+"- [ ] Logic correctness\n"
+"- [ ] Performance considerations\n"
+"- [ ] Security implications\n"
+"- [ ] Test coverage\n"
+"- [ ] Documentation updates\n"
+"\n"
+"## Feedback\n"
+"[Add specific feedback here]"
+msgstr ""
+"## Контрольный список проверки\n"
+"- [ ] Качество и стиль кода\n"
+"- [ ] Правильность логики\n"
+"- [ ] Соображения производительности\n"
+"- [ ] Влияние на безопасность\n"
+"- [ ] Охват тестами\n"
+"- [ ] Обновления документации\n"
+"\n"
+"## Обратная связь\n"
+"[Добавьте конкретную обратную связь здесь]"
 
-#~ msgid "Document: [Topic]"
-#~ msgstr "Документ: [Тема]"
+#: src/ui/components/complex/TaskTemplate.js:69
+msgid "Documentation"
+msgstr "Документация"
 
-#~ msgid ""
-#~ "## Documentation Task\n"
-#~ "Create/update documentation for [topic]\n"
-#~ "\n"
-#~ "## Content to Cover\n"
-#~ "- [ ] Overview\n"
-#~ "- [ ] Usage examples\n"
-#~ "- [ ] Configuration options\n"
-#~ "- [ ] Troubleshooting\n"
-#~ "- [ ] FAQs\n"
-#~ "\n"
-#~ "## Target Audience\n"
-#~ "[Describe who will use this documentation]"
-#~ msgstr ""
-#~ "## Задача документации\n"
-#~ "Создать/обновить документацию для [тема]\n"
-#~ "\n"
-#~ "## Охватываемый контент\n"
-#~ "- [ ] Обзор\n"
-#~ "- [ ] Примеры использования\n"
-#~ "- [ ] Параметры конфигурации\n"
-#~ "- [ ] Устранение неполадок\n"
-#~ "- [ ] Часто задаваемые вопросы\n"
-#~ "\n"
-#~ "## Целевая аудитория\n"
-#~ "[Опишите, кто будет использовать эту документацию]"
+#: src/ui/components/complex/TaskTemplate.js:72
+msgid "Document: [Topic]"
+msgstr "Документ: [Тема]"
 
-#~ msgid "Testing Task"
-#~ msgstr "Задача тестирования"
+#: src/ui/components/complex/TaskTemplate.js:73
+msgid ""
+"## Documentation Task\n"
+"Create/update documentation for [topic]\n"
+"\n"
+"## Content to Cover\n"
+"- [ ] Overview\n"
+"- [ ] Usage examples\n"
+"- [ ] Configuration options\n"
+"- [ ] Troubleshooting\n"
+"- [ ] FAQs\n"
+"\n"
+"## Target Audience\n"
+"[Describe who will use this documentation]"
+msgstr ""
+"## Задача документации\n"
+"Создать/обновить документацию для [тема]\n"
+"\n"
+"## Охватываемый контент\n"
+"- [ ] Обзор\n"
+"- [ ] Примеры использования\n"
+"- [ ] Параметры конфигурации\n"
+"- [ ] Устранение неполадок\n"
+"- [ ] Часто задаваемые вопросы\n"
+"\n"
+"## Целевая аудитория\n"
+"[Опишите, кто будет использовать эту документацию]"
 
-#~ msgid "Test: [Feature/Component]"
-#~ msgstr "Тест: [Функция/Компонент]"
+#: src/ui/components/complex/TaskTemplate.js:81
+msgid "Testing Task"
+msgstr "Задача тестирования"
 
-#~ msgid ""
-#~ "## Testing Scope\n"
-#~ "Test [feature/component] thoroughly\n"
-#~ "\n"
-#~ "## Test Cases\n"
-#~ "- [ ] Unit tests\n"
-#~ "- [ ] Integration tests\n"
-#~ "- [ ] Edge cases\n"
-#~ "- [ ] Error handling\n"
-#~ "- [ ] Performance tests\n"
-#~ "\n"
-#~ "## Test Environment\n"
-#~ "- [ ] Development\n"
-#~ "- [ ] Staging\n"
-#~ "- [ ] Production-like"
-#~ msgstr ""
-#~ "## Область тестирования\n"
-#~ "Тщательно протестировать [функцию/компонент]\n"
-#~ "\n"
-#~ "## Тестовые случаи\n"
-#~ "- [ ] Модульные тесты\n"
-#~ "- [ ] Интеграционные тесты\n"
-#~ "- [ ] Граничные случаи\n"
-#~ "- [ ] Обработка ошибок\n"
-#~ "- [ ] Тесты производительности\n"
-#~ "\n"
-#~ "## Тестовая среда\n"
-#~ "- [ ] Разработка\n"
-#~ "- [ ] Промежуточная\n"
-#~ "- [ ] Как производственная"
+#: src/ui/components/complex/TaskTemplate.js:84
+msgid "Test: [Feature/Component]"
+msgstr "Тест: [Функция/Компонент]"
 
-#~ msgid "Deployment"
-#~ msgstr "Развёртывание"
+#: src/ui/components/complex/TaskTemplate.js:85
+msgid ""
+"## Testing Scope\n"
+"Test [feature/component] thoroughly\n"
+"\n"
+"## Test Cases\n"
+"- [ ] Unit tests\n"
+"- [ ] Integration tests\n"
+"- [ ] Edge cases\n"
+"- [ ] Error handling\n"
+"- [ ] Performance tests\n"
+"\n"
+"## Test Environment\n"
+"- [ ] Development\n"
+"- [ ] Staging\n"
+"- [ ] Production-like"
+msgstr ""
+"## Область тестирования\n"
+"Тщательно протестировать [функцию/компонент]\n"
+"\n"
+"## Тестовые случаи\n"
+"- [ ] Модульные тесты\n"
+"- [ ] Интеграционные тесты\n"
+"- [ ] Граничные случаи\n"
+"- [ ] Обработка ошибок\n"
+"- [ ] Тесты производительности\n"
+"\n"
+"## Тестовая среда\n"
+"- [ ] Разработка\n"
+"- [ ] Промежуточная\n"
+"- [ ] Как производственная"
 
-#~ msgid "Deploy: [Version/Release]"
-#~ msgstr "Развёртывание: [Версия/Релиз]"
+#: src/ui/components/complex/TaskTemplate.js:93
+msgid "Deployment"
+msgstr "Развёртывание"
 
-#~ msgid ""
-#~ "## Deployment Plan\n"
-#~ "Deploy [version] to [environment]\n"
-#~ "\n"
-#~ "## Pre-deployment Checklist\n"
-#~ "- [ ] Code reviewed and approved\n"
-#~ "- [ ] Tests passing\n"
-#~ "- [ ] Database migrations ready\n"
-#~ "- [ ] Configuration updated\n"
-#~ "- [ ] Rollback plan prepared\n"
-#~ "\n"
-#~ "## Post-deployment Checklist\n"
-#~ "- [ ] Verify deployment success\n"
-#~ "- [ ] Run smoke tests\n"
-#~ "- [ ] Monitor logs\n"
-#~ "- [ ] Update documentation"
-#~ msgstr ""
-#~ "## План развёртывания\n"
-#~ "Развернуть [версия] в [среда]\n"
-#~ "\n"
-#~ "## Контрольный список перед развёртыванием\n"
-#~ "- [ ] Код проверен и одобрен\n"
-#~ "- [ ] Тесты проходят\n"
-#~ "- [ ] Миграции базы данных готовы\n"
-#~ "- [ ] Конфигурация обновлена\n"
-#~ "- [ ] План отката подготовлен\n"
-#~ "\n"
-#~ "## Контрольный список после развёртывания\n"
-#~ "- [ ] Проверить успешное развёртывание\n"
-#~ "- [ ] Выполнить дымовые тесты\n"
-#~ "- [ ] Отслеживать журналы\n"
-#~ "- [ ] Обновить документацию"
+#: src/ui/components/complex/TaskTemplate.js:96
+msgid "Deploy: [Version/Release]"
+msgstr "Развёртывание: [Версия/Релиз]"
 
-#~ msgid "Planning Session"
-#~ msgstr "Сессия планирования"
+#: src/ui/components/complex/TaskTemplate.js:97
+msgid ""
+"## Deployment Plan\n"
+"Deploy [version] to [environment]\n"
+"\n"
+"## Pre-deployment Checklist\n"
+"- [ ] Code reviewed and approved\n"
+"- [ ] Tests passing\n"
+"- [ ] Database migrations ready\n"
+"- [ ] Configuration updated\n"
+"- [ ] Rollback plan prepared\n"
+"\n"
+"## Post-deployment Checklist\n"
+"- [ ] Verify deployment success\n"
+"- [ ] Run smoke tests\n"
+"- [ ] Monitor logs\n"
+"- [ ] Update documentation"
+msgstr ""
+"## План развёртывания\n"
+"Развернуть [версия] в [среда]\n"
+"\n"
+"## Контрольный список перед развёртыванием\n"
+"- [ ] Код проверен и одобрен\n"
+"- [ ] Тесты проходят\n"
+"- [ ] Миграции базы данных готовы\n"
+"- [ ] Конфигурация обновлена\n"
+"- [ ] План отката подготовлен\n"
+"\n"
+"## Контрольный список после развёртывания\n"
+"- [ ] Проверить успешное развёртывание\n"
+"- [ ] Выполнить дымовые тесты\n"
+"- [ ] Отслеживать журналы\n"
+"- [ ] Обновить документацию"
 
-#~ msgid "Planning: [Sprint/Project]"
-#~ msgstr "Планирование: [Спринт/Проект]"
+#: src/ui/components/complex/TaskTemplate.js:105
+msgid "Planning Session"
+msgstr "Сессия планирования"
 
-#~ msgid ""
-#~ "## Planning Session\n"
-#~ "Plan work for [sprint/project]\n"
-#~ "\n"
-#~ "## Agenda\n"
-#~ "- [ ] Review previous sprint\n"
-#~ "- [ ] Estimate new tasks\n"
-#~ "- [ ] Assign priorities\n"
-#~ "- [ ] Set sprint goals\n"
-#~ "- [ ] Identify blockers\n"
-#~ "\n"
-#~ "## Outcomes\n"
-#~ "- Sprint backlog defined\n"
-#~ "- Team capacity planned\n"
-#~ "- Goals communicated"
-#~ msgstr ""
-#~ "## Сессия планирования\n"
-#~ "Планирование работы для [спринт/проект]\n"
-#~ "\n"
-#~ "## Повестка дня\n"
-#~ "- [ ] Обзор предыдущего спринта\n"
-#~ "- [ ] Оценка новых задач\n"
-#~ "- [ ] Назначение приоритетов\n"
-#~ "- [ ] Установка целей спринта\n"
-#~ "- [ ] Определение препятствий\n"
-#~ "\n"
-#~ "## Результаты\n"
-#~ "- Определён беклог спринта\n"
-#~ "- Запланированы возможности команды\n"
-#~ "- Доведены цели"
+#: src/ui/components/complex/TaskTemplate.js:108
+msgid "Planning: [Sprint/Project]"
+msgstr "Планирование: [Спринт/Проект]"
 
-#~ msgid "Client Call"
-#~ msgstr "Звонок клиента"
+#: src/ui/components/complex/TaskTemplate.js:109
+msgid ""
+"## Planning Session\n"
+"Plan work for [sprint/project]\n"
+"\n"
+"## Agenda\n"
+"- [ ] Review previous sprint\n"
+"- [ ] Estimate new tasks\n"
+"- [ ] Assign priorities\n"
+"- [ ] Set sprint goals\n"
+"- [ ] Identify blockers\n"
+"\n"
+"## Outcomes\n"
+"- Sprint backlog defined\n"
+"- Team capacity planned\n"
+"- Goals communicated"
+msgstr ""
+"## Сессия планирования\n"
+"Планирование работы для [спринт/проект]\n"
+"\n"
+"## Повестка дня\n"
+"- [ ] Обзор предыдущего спринта\n"
+"- [ ] Оценка новых задач\n"
+"- [ ] Назначение приоритетов\n"
+"- [ ] Установка целей спринта\n"
+"- [ ] Определение препятствий\n"
+"\n"
+"## Результаты\n"
+"- Определён беклог спринта\n"
+"- Запланированы возможности команды\n"
+"- Доведены цели"
 
-#~ msgid "Call: [Client Name] - [Purpose]"
-#~ msgstr "Звонок: [Имя клиента] - [Цель]"
+#: src/ui/components/complex/TaskTemplate.js:117
+msgid "Client Call"
+msgstr "Звонок клиента"
 
-#~ msgid ""
-#~ "## Call Details\n"
-#~ "**Client:** [Client Name]\n"
-#~ "**Purpose:** [Call purpose]\n"
-#~ "**Date/Time:** [Schedule]\n"
-#~ "\n"
-#~ "## Agenda\n"
-#~ "- [ ] Item 1\n"
-#~ "- [ ] Item 2\n"
-#~ "- [ ] Item 3\n"
-#~ "\n"
-#~ "## Follow-up Actions\n"
-#~ "- [ ] Action 1\n"
-#~ "- [ ] Action 2\n"
-#~ "- [ ] Send meeting summary"
-#~ msgstr ""
-#~ "## Подробности звонка\n"
-#~ "**Клиент:** [Имя клиента]\n"
-#~ "**Цель:** [Цель звонка]\n"
-#~ "**Дата/время:** [Расписание]\n"
-#~ "\n"
-#~ "## Повестка дня\n"
-#~ "- [ ] Пункт 1\n"
-#~ "- [ ] Пункт 2\n"
-#~ "- [ ] Пункт 3\n"
-#~ "\n"
-#~ "## Последующие действия\n"
-#~ "- [ ] Действие 1\n"
-#~ "- [ ] Действие 2\n"
-#~ "- [ ] Отправить сводку встречи"
+#: src/ui/components/complex/TaskTemplate.js:120
+msgid "Call: [Client Name] - [Purpose]"
+msgstr "Звонок: [Имя клиента] - [Цель]"
 
-#~ msgid "Choose Task Template"
-#~ msgstr "Выбрать шаблон задачи"
+#: src/ui/components/complex/TaskTemplate.js:121
+msgid ""
+"## Call Details\n"
+"**Client:** [Client Name]\n"
+"**Purpose:** [Call purpose]\n"
+"**Date/Time:** [Schedule]\n"
+"\n"
+"## Agenda\n"
+"- [ ] Item 1\n"
+"- [ ] Item 2\n"
+"- [ ] Item 3\n"
+"\n"
+"## Follow-up Actions\n"
+"- [ ] Action 1\n"
+"- [ ] Action 2\n"
+"- [ ] Send meeting summary"
+msgstr ""
+"## Подробности звонка\n"
+"**Клиент:** [Имя клиента]\n"
+"**Цель:** [Цель звонка]\n"
+"**Дата/время:** [Расписание]\n"
+"\n"
+"## Повестка дня\n"
+"- [ ] Пункт 1\n"
+"- [ ] Пункт 2\n"
+"- [ ] Пункт 3\n"
+"\n"
+"## Последующие действия\n"
+"- [ ] Действие 1\n"
+"- [ ] Действие 2\n"
+"- [ ] Отправить сводку встречи"
 
-#~ msgid ""
-#~ "Select a template to quickly create a new task with predefined content"
-#~ msgstr ""
-#~ "Выберите шаблон для быстрого создания новой задачи с предопределённым "
-#~ "содержимым"
+#: src/ui/components/complex/TaskTemplateDialog.js:21
+msgid "Choose Task Template"
+msgstr "Выбрать шаблон задачи"
 
-#~ msgid "Search templates..."
-#~ msgstr "Поиск шаблонов…"
+#: src/ui/components/complex/TaskTemplateDialog.js:22
+msgid "Select a template to quickly create a new task with predefined content"
+msgstr "Выберите шаблон для быстрого создания новой задачи с предопределенным содержимым"
+"Выберите шаблон для быстрого создания новой задачи с предопределённым "
+"содержимым"
 
-#~ msgid "Select a template to see details"
-#~ msgstr "Выберите шаблон для просмотра подробностей"
+#: src/ui/components/complex/TaskTemplateDialog.js:38
+msgid "Search templates..."
+msgstr "Поиск шаблонов…"
 
-#~ msgid "Create Blank Task"
-#~ msgstr "Создать пустую задачу"
+#: src/ui/components/complex/TaskTemplateDialog.js:58
+msgid "Select a template to see details"
+msgstr "Выберите шаблон для просмотра подробностей"
 
-#~ msgid "Use Template"
-#~ msgstr "Использовать шаблон"
+#: src/ui/components/complex/TaskTemplateDialog.js:88
+msgid "Create Blank Task"
+msgstr "Создать пустую задачу"
 
-#~ msgid "Customize Template"
-#~ msgstr "Настроить шаблон"
+#: src/ui/components/complex/TaskTemplateDialog.js:89
+msgid "Use Template"
+msgstr "Использовать шаблон"
 
+#: src/ui/components/complex/TaskTemplateDialog.js:214
+msgid "Customize Template"
+msgstr "Настроить шаблон"
+
+#: src/ui/components/complex/TaskTemplateDialog.js:215
 #, javascript-format
-#~ msgid "Customize the \"%s\" template"
-#~ msgstr "Настроить шаблон «%s»"
+msgid "Customize the \"%s\" template"
+msgstr "Настроить шаблон «%s»"
 
+#: src/ui/components/complex/TaskTemplateDialog.js:239
 #, javascript-format
-#~ msgid "Enter %s..."
-#~ msgstr "Введите %s…"
-
-#~ msgid "Show preview before creating"
-#~ msgstr "Показать предварительный просмотр перед созданием"
-
-#~ msgid "Select Project"
-#~ msgstr "Выбрать проект"
-
-#~ msgid "Select Client"
-#~ msgstr "Выбрать клиента"
-
-#~ msgid "Skip"
-#~ msgstr "Пропустить"
-
-#~ msgid "Donate"
-#~ msgstr "Пожертвовать"
-
-#~ msgid "Get Started"
-#~ msgstr "Начать"
-
-#~ msgid "Welcome to Valot"
-#~ msgstr "Добро пожаловать в Valot"
-
-#~ msgid "Track your time efficiently and boost your productivity"
-#~ msgstr "Эффективно отслеживайте своё время и повышайте продуктивность"
-
-#~ msgid "Organize Projects"
-#~ msgstr "Организация проектов"
-
-#~ msgid "Create and manage projects with custom colors and icons"
-#~ msgstr "Создавайте и управляйте проектами с собственными цветами и иконками"
-
-#, fuzzy
-#~ msgid "Double-click project names to edit • Click icons to change color"
-#~ msgstr ""
-#~ "Дважды щёлкните по имени проекта для редактирования • Щёлкните по значкам "
-#~ "для изменения значка и цвета"
-
-#~ msgid "Manage Clients"
-#~ msgstr "Управление клиентами"
-
-#, fuzzy
-#~ msgid "Set custom currencies in settings • Edit multiple tasks at once"
-#~ msgstr "Установите пользовательские валюты в настройках"
-
-#~ msgid "Launch with terminal command or setup system hotkey"
-#~ msgstr "Запуск командой терминала или настройка системной горячей клавиши"
-
-#~ msgid "Copy command"
-#~ msgstr "Копировать команду"
-
-#, fuzzy
-#~ msgid "Please wait while your data is being migrated..."
-#~ msgstr ""
-#~ "Подготовка экспорта PDF…\n"
-#~ "Пожалуйста, подождите, пока ваш отчёт создаётся."
-
-#, fuzzy
-#~ msgid "Duration"
-#~ msgstr "Длительность:"
-
-#, fuzzy
-#~ msgid "Task name...."
-#~ msgstr "Имя задачи"
-
-#, fuzzy
-#~ msgid "Save changes"
-#~ msgstr "Сохранить изменения"
-
-#, fuzzy
-#~ msgid "Failed to save changes"
-#~ msgstr "Не удалось создать задачу"
-
-#~ msgid "PDF Export Preferences"
-#~ msgstr "Параметры экспорта PDF"
-
-#~ msgid "Export PDF"
-#~ msgstr "Экспортировать PDF"
-
-#~ msgid "Time Range"
-#~ msgstr "Временной диапазон"
-
-#~ msgid "Report Period"
-#~ msgstr "Период отчёта"
-
-#~ msgid "Select the time period for your report"
-#~ msgstr "Выберите временной период для вашего отчёта"
-
-#~ msgid "Time Period"
-#~ msgstr "Временной период"
-
-#~ msgid "Choose predefined period or custom range"
-#~ msgstr "Выберите предопределённый период или пользовательский диапазон"
-
-#~ msgid "This Year"
-#~ msgstr "Этот год"
-
-#~ msgid "Custom Date Range"
-#~ msgstr "Пользовательский диапазон дат"
-
-#~ msgid "Specify exact start and end dates"
-#~ msgstr "Укажите точные даты начала и окончания"
-
-#~ msgid "Start Date"
-#~ msgstr "Дата начала"
-
-#~ msgid "Beginning of the report period"
-#~ msgstr "Начало периода отчёта"
-
-#~ msgid "Select Date"
-#~ msgstr "Выбрать дату"
-
-#~ msgid "End Date"
-#~ msgstr "Дата окончания"
-
-#~ msgid "End of the report period"
-#~ msgstr "Окончание периода отчёта"
-
-#~ msgid "Content"
-#~ msgstr "Содержимое"
-
-#~ msgid "Report Sections"
-#~ msgstr "Разделы отчёта"
-
-#~ msgid "Choose which sections to include in your PDF report"
-#~ msgstr "Выберите, какие разделы включить в ваш PDF-отчёт"
-
-#~ msgid "Analytics and Statistics"
-#~ msgstr "Аналитика и статистика"
-
-#~ msgid "Include summary statistics and analysis"
-#~ msgstr "Включить сводную статистику и анализ"
-
-#~ msgid "Charts and Visualizations"
-#~ msgstr "Диаграммы и визуализации"
-
-#~ msgid "Include time tracking charts and graphs"
-#~ msgstr "Включить диаграммы и графики отслеживания времени"
-
-#~ msgid "Task Details"
-#~ msgstr "Подробности задачи"
-
-#~ msgid "Include detailed task information"
-#~ msgstr "Включить подробную информацию о задаче"
-
-#~ msgid "Project Information"
-#~ msgstr "Информация о проекте"
-
-#~ msgid "Include project details and summaries"
-#~ msgstr "Включить подробности и сводки проекта"
-
-#~ msgid "Billing and Financial Data"
-#~ msgstr "Данные о выставлении счетов и финансах"
-
-#~ msgid "Include rates, costs, and financial calculations"
-#~ msgstr "Включить ставки, затраты и финансовые расчёты"
-
-#, fuzzy
-#~ msgid "Billing Currencies"
-#~ msgstr "Скрытые валюты"
-
-#, fuzzy
-#~ msgid "Select which currencies to include in billing report"
-#~ msgstr "Выберите, какие разделы включить в ваш PDF-отчёт"
-
-#, fuzzy
-#~ msgid "All Currencies"
-#~ msgstr "Скрытые валюты"
-
-#~ msgid "Filters"
-#~ msgstr "Фильтры"
-
-#~ msgid "Project Filter"
-#~ msgstr "Фильтр проектов"
-
-#~ msgid "Limit report to specific projects"
-#~ msgstr "Ограничить отчёт конкретными проектами"
-
-#~ msgid "Select a specific project or include all projects"
-#~ msgstr "Выберите конкретный проект или включите все проекты"
-
-#~ msgid "Client Filter"
-#~ msgstr "Фильтр клиентов"
-
-#~ msgid "Limit report to specific clients"
-#~ msgstr "Ограничить отчёт конкретными клиентами"
-
-#~ msgid "Select a specific client or include all clients"
-#~ msgstr "Выберите конкретного клиента или включите всех клиентов"
-
-#~ msgid "Preferences"
-#~ msgstr "Параметры"
-
-#~ msgid "Global"
-#~ msgstr "Глобальные"
-
-#~ msgid "Details"
-#~ msgstr "Подробности"
-
-#~ msgid "Credits"
-#~ msgstr "Авторы"
-
-#~ msgid "Legal"
-#~ msgstr "Правовая информация"
-
-#~ msgid "Appearance"
-#~ msgstr "Внешний вид"
-
-#~ msgid "Theme"
-#~ msgstr "Тема"
-
-#~ msgid "Choose your preferred theme"
-#~ msgstr "Выберите предпочитаемую тему"
-
-#~ msgid "Auto"
-#~ msgstr "Авто"
-
-#~ msgid "Light"
-#~ msgstr "Светлая"
-
-#~ msgid "Dark"
-#~ msgstr "Тёмная"
-
-#~ msgid "Accent Color"
-#~ msgstr "Акцентный цвет"
-
-#~ msgid "Choose system accent or custom color"
-#~ msgstr "Выберите системный акцентный цвет или пользовательский цвет"
-
-#~ msgid "Standard"
-#~ msgstr "Стандартный"
-
-#~ msgid "Custom"
-#~ msgstr "Пользовательский"
-
-#~ msgid "Custom Color"
-#~ msgstr "Пользовательский цвет"
-
-#~ msgid "Pick your preferred accent color"
-#~ msgstr "Выберите предпочитаемый акцентный цвет"
-
-#~ msgid "Behavior"
-#~ msgstr "Поведение"
-
-#~ msgid "Sidebar"
-#~ msgstr "Боковая панель"
-
-#~ msgid "Choose sidebar behavior on launch"
-#~ msgstr "Выберите поведение боковой панели при запуске"
-
-#~ msgid "Opened"
-#~ msgstr "Открыта"
-
-#~ msgid "Always open on launch"
-#~ msgstr "Всегда открывать при запуске"
-
-#~ msgid "Closed"
-#~ msgstr "Закрыта"
-
-#~ msgid "Always closed on launch"
-#~ msgstr "Всегда закрывать при запуске"
-
-#~ msgid "Dynamic"
-#~ msgstr "Динамическая"
-
-#~ msgid "Remember last state"
-#~ msgstr "Запомнить последнее состояние"
-
-#~ msgid "Timer Duration"
-#~ msgstr "Продолжительность таймера"
-
-#~ msgid "Default pomodoro session length in minutes"
-#~ msgstr "Длительность сеанса помодоро по умолчанию в минутах"
-
-#~ msgid "Welcome Info"
-#~ msgstr "Приветственная информация"
-
-#~ msgid "View the app welcome tour and getting started guide"
-#~ msgstr ""
-#~ "Просмотреть приветственный тур приложения и руководство по началу работы"
-
-#~ msgid "Show Welcome Tour"
-#~ msgstr "Показать приветственный тур"
-
-#~ msgid "View the introductory slides and features overview"
-#~ msgstr "Просмотреть вводные слайды и обзор функций"
-
-#~ msgid "Show Tour"
-#~ msgstr "Показать тур"
-
-#~ msgid "Compact Tracker Command"
-#~ msgstr "Команда компактного таймера"
-
-#~ msgid "Terminal command for launching compact tracker"
-#~ msgstr "Команда терминала для запуска компактного таймера"
-
-#~ msgid "Terminal Command"
-#~ msgstr "Команда терминала"
-
-#~ msgid "Use this command for hotkeys or scripts"
-#~ msgstr "Используйте эту команду для горячих клавиш или скриптов"
-
-#, fuzzy
-#~ msgid "Database"
-#~ msgstr "Ошибка базы данных"
-
-#, fuzzy
-#~ msgid "Database Migration"
-#~ msgstr "Ошибка базы данных"
-
-#, fuzzy
-#~ msgid "No Database Found"
-#~ msgstr "Задачи не найдены"
-
-#, fuzzy
-#~ msgid "Failed to create backup"
-#~ msgstr "Не удалось создать задачу"
-
-#~ msgid "Currency Settings"
-#~ msgstr "Настройки валюты"
-
-#~ msgid "Manage available currencies for client billing"
-#~ msgstr "Управление доступными валютами для выставления счетов клиентам"
-
-#~ msgid "Hidden Currencies"
-#~ msgstr "Скрытые валюты"
-
-#~ msgid "Click to unhide currencies"
-#~ msgstr "Щёлкните, чтобы показать валюты"
-
-#~ msgid "Hidden"
-#~ msgstr "Скрыто"
-
-#~ msgid "0 currencies hidden"
-#~ msgstr "0 валют скрыто"
-
-#~ msgid "Creator"
-#~ msgstr "Создатель"
-
-#~ msgid "Designer &amp; Developer"
-#~ msgstr "Дизайнер и разработчик"
-
-#~ msgid "Copyright"
-#~ msgstr "Авторские права"
-
-#~ msgid "Copyright © 2025 Vitaly Odnoyko"
-#~ msgstr "Авторские права © 2025 Vitaly Odnoyko"
-
-#~ msgid "All rights reserved under MIT License"
-#~ msgstr "Все права защищены по лицензии MIT"
-
-#~ msgid "Repository"
-#~ msgstr "Репозиторий"
-
-#~ msgid "Source Code"
-#~ msgstr "Исходный код"
-
-#~ msgid "Website"
-#~ msgstr "Веб-сайт"
-
-#~ msgid "Visit Website"
-#~ msgstr "Посетить веб-сайт"
-
-#~ msgid "Special Thanks"
-#~ msgstr "Особая благодарность"
-
-#~ msgid "GNOME &amp; GTK Developers"
-#~ msgstr "Разработчики GNOME и GTK"
-
-#~ msgid "For the amazing toolkit and desktop environment"
-#~ msgstr "За удивительный инструментарий и среду рабочего стола"
-
-#~ msgid "Libadwaita Contributors"
-#~ msgstr "Участники Libadwaita"
-
-#~ msgid "For beautiful and consistent UI components"
-#~ msgstr "За красивые и согласованные компоненты пользовательского интерфейса"
-
-#~ msgid "Flatpak Community"
-#~ msgstr "Сообщество Flatpak"
-
-#~ msgid "For modern app distribution and sandboxing"
-#~ msgstr "За современное распространение приложений и изолированную среду"
-
-#~ msgid "Weblate"
-#~ msgstr "Weblate"
-
-#~ msgid "For translation management and localization"
-#~ msgstr "За управление переводами и локализацию"
-
-#~ msgid "License"
-#~ msgstr "Лицензия"
-
-#~ msgid "Free and open source software"
-#~ msgstr "Бесплатное программное обеспечение с открытым исходным кодом"
-
-#~ msgid "Third Party"
-#~ msgstr "Сторонние"
-
-#~ msgid "Licensed under LGPL 2.1"
-#~ msgstr "Лицензировано под LGPL 2.1"
-
+msgid "Enter %s..."
+msgstr "Введите %s…"
+
+#: src/ui/components/complex/TaskTemplateDialog.js:250
+msgid "Show preview before creating"
+msgstr "Показать предварительный просмотр перед созданием"
+
+#: src/ui/components/complex/TrackingWidget.js:55
+#: src/ui/utils/selectorFactory.js:113
+msgid "Select Project"
+msgstr "Выбрать проект"
+
+#: src/ui/components/complex/TrackingWidget.js:67
+#: src/ui/utils/selectorFactory.js:131
+msgid "Select Client"
+msgstr "Выбрать клиента"
+
+#: src/ui/components/dialogs/CarouselDialog.js:77
+msgid "Skip"
+msgstr "Пропустить"
+
+#: src/ui/components/dialogs/CarouselDialog.js:100
+#: src/ui/components/dialogs/PreferencesDialog.js:148
+msgid "Donate"
+msgstr "Пожертвовать"
+
+#: src/ui/components/dialogs/CarouselDialog.js:136
+msgid "Get Started"
+msgstr "Начать"
+
+#: src/ui/components/dialogs/CarouselDialog.js:185
+msgid "Welcome to Valot"
+msgstr "Добро пожаловать в Valot"
+
+#: src/ui/components/dialogs/CarouselDialog.js:186
+msgid "Track your time efficiently and boost your productivity"
+msgstr "Эффективно отслеживайте своё время и повышайте продуктивность"
+
+#: src/ui/components/dialogs/CarouselDialog.js:187
+msgid ""
+"Right-click to select multiple items • Use filters to find tasks quickly"
+msgstr ""
+"Правый клик для множественного выбора • Используйте фильтры для быстрого "
+"поиска задач"
+
+#: src/ui/components/dialogs/CarouselDialog.js:191
+msgid "Organize Projects"
+msgstr "Организация проектов"
+
+#: src/ui/components/dialogs/CarouselDialog.js:192
+msgid "Create and manage projects with custom colors and icons"
+msgstr "Создавайте и управляйте проектами с собственными цветами и иконками"
+
+#: src/ui/components/dialogs/CarouselDialog.js:193
+msgid "Double-click project names to edit • Click icons to change color"
+msgstr "Двойной клик по названию проекта для редактирования • Клик по иконкам для изменения цвета"
+
+#: src/ui/components/dialogs/CarouselDialog.js:197
+msgid "Manage Clients"
+msgstr "Управление клиентами"
+
+#: src/ui/components/dialogs/CarouselDialog.js:198
+msgid "Add clients with billing rates and contact information"
+msgstr "Добавляйте клиентов с тарифами и контактной информацией"
+
+#: src/ui/components/dialogs/CarouselDialog.js:199
+msgid "Set custom currencies in settings • Edit multiple tasks at once"
+msgstr "Установите пользовательские валюты в настройках • Редактируйте несколько задач одновременно"
+
+#: src/ui/components/dialogs/CarouselDialog.js:204
+msgid "Launch with terminal command or setup system hotkey"
+msgstr "Запуск командой терминала или настройка системной горячей клавиши"
+
+#: src/ui/components/dialogs/CarouselDialog.js:209
+#: src/ui/components/dialogs/PreferencesDialog.js:472
+msgid "Pomodoro Timer"
+msgstr "Таймер Pomodoro"
+
+#: src/ui/components/dialogs/CarouselDialog.js:210
+msgid "Long press track button to activate Pomodoro mode"
+msgstr "Долгое нажатие кнопки трекинга для активации режима Pomodoro"
+
+#: src/ui/components/dialogs/CarouselDialog.js:211
+msgid "Configure duration in settings • Auto-stops after timer ends"
+msgstr "Настройте длительность в настройках • Автоматически останавливается после окончания таймера"
+"Настройте длительность в настройках • Автоматически останавливается по "
+"окончании таймера"
+
+#: src/ui/components/dialogs/CarouselDialog.js:311
+#: src/ui/components/dialogs/PreferencesDialog.js:585
+msgid "Copy command"
+msgstr "Копировать команду"
+
+#: src/ui/components/dialogs/CarouselDialog.js:386
+msgid "Slide"
+msgstr "Слайд"
+
+#: src/ui/components/dialogs/CarouselDialog.js:392
 #, javascript-format
-#~ msgid "%d currencies hidden"
-#~ msgstr "%d валют скрыто"
+msgid "This is slide %d content. The carousel is working!"
+msgstr "Это содержимое слайда %d. Карусель работает!"
 
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:27
+msgid "Database Migration Tool"
+msgstr "Инструмент миграции базы данных"
+
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:28
+msgid "Valot was updated to the"
+msgstr "Valot обновлён до"
+
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:30
+msgid ""
+"Please choose your way to continue \n"
+"after update"
+msgstr ""
+"Пожалуйста, выберите способ продолжения \n"
+"после обновления"
+
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:31
+msgid "Delete & Fresh Start"
+msgstr "Удалить и начать заново"
+
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:32
+msgid "Backup & Migrate"
+msgstr "Резервировать и мигрировать"
+
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:210
+msgid "Migrating Database"
+msgstr "Миграция базы данных"
+
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:211
+msgid "Please wait while your data is being migrated..."
+msgstr "Пожалуйста, подождите, пока выполняется миграция ваших данных..."
+
+#: src/ui/components/dialogs/DatabaseMigrationDialog.js:236
+msgid "Initializing..."
+msgstr "Инициализация..."
+
+#: src/ui/components/dialogs/MultipleTasksEditDialog.js:32
+msgid "s"
+msgstr "с"
+
+#: src/ui/components/dialogs/MultipleTasksEditDialog.js:45
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:361
+#: src/ui/utils/commonStrings.js:74
 #, fuzzy
-#~ msgid "Start Tracking"
-#~ msgstr "Начать отслеживание"
+msgid "Duration"
+msgstr "Продолжительность таймера"
 
+#: src/ui/components/dialogs/MultipleTasksEditDialog.js:66
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:394
 #, fuzzy
-#~ msgid "Select task, project and client"
-#~ msgstr "Выберите дату и время начала"
+msgid "Task name...."
+msgstr "Имя задачи"
 
+#: src/ui/components/dialogs/MultipleTasksEditDialog.js:94
+msgid "Changes will be applied to all selected tasks"
+msgstr "Изменения будут применены ко всем выбранным задачам"
+
+#: src/ui/components/dialogs/MultipleTasksEditDialog.js:108
 #, fuzzy
-#~ msgid "Task:"
-#~ msgstr "Задачи"
+msgid "Save changes"
+msgstr "Сохранить изменения"
 
-#~ msgid "Project:"
-#~ msgstr "Проект:"
-
+#: src/ui/components/dialogs/MultipleTasksEditDialog.js:151
+#: src/ui/utils/commonStrings.js:54
 #, fuzzy
-#~ msgid "Client:"
-#~ msgstr "Клиент"
+msgid "Failed to save changes"
+msgstr "Не удалось обновить проект"
 
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:15
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:68
+msgid "PDF Export Preferences"
+msgstr "Параметры экспорта PDF"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:81
+msgid "Export PDF"
+msgstr "Экспортировать PDF"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:128
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:202
+msgid "Time Range"
+msgstr "Временной диапазон"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:134
+msgid "Report Period"
+msgstr "Период отчёта"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:135
+msgid "Select the time period for your report"
+msgstr "Выберите временной период для вашего отчёта"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:140
+msgid "Time Period"
+msgstr "Временной период"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:141
+msgid "Choose predefined period or custom range"
+msgstr "Выберите предопределённый период или пользовательский диапазон"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:148
+msgid "This Year"
+msgstr "Этот год"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:164
+msgid "Custom Date Range"
+msgstr "Пользовательский диапазон дат"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:165
+msgid "Specify exact start and end dates"
+msgstr "Укажите точные даты начала и окончания"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:171
+msgid "Start Date"
+msgstr "Дата начала"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:172
+msgid "Beginning of the report period"
+msgstr "Начало периода отчёта"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:176
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:189
+msgid "Select Date"
+msgstr "Выбрать дату"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:184
+msgid "End Date"
+msgstr "Дата окончания"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:185
+msgid "End of the report period"
+msgstr "Окончание периода отчёта"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:207
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:279
+msgid "Content"
+msgstr "Содержимое"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:213
+msgid "Report Sections"
+msgstr "Разделы отчёта"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:214
+msgid "Choose which sections to include in your PDF report"
+msgstr "Выберите, какие разделы включить в ваш PDF-отчёт"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:219
+msgid "Analytics and Statistics"
+msgstr "Аналитика и статистика"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:220
+msgid "Include summary statistics and analysis"
+msgstr "Включить сводную статистику и анализ"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:229
+msgid "Charts and Visualizations"
+msgstr "Диаграммы и визуализации"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:230
+msgid "Include time tracking charts and graphs"
+msgstr "Включить диаграммы и графики отслеживания времени"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:239
+msgid "Task Details"
+msgstr "Подробности задачи"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:240
+msgid "Include detailed task information"
+msgstr "Включить подробную информацию о задаче"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:249
+msgid "Project Information"
+msgstr "Информация о проекте"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:250
+msgid "Include project details and summaries"
+msgstr "Включить подробности и сводки проекта"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:259
+msgid "Billing and Financial Data"
+msgstr "Данные о выставлении счетов и финансах"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:260
+msgid "Include rates, costs, and financial calculations"
+msgstr "Включить ставки, затраты и финансовые расчёты"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:284
 #, fuzzy
-#~ msgid "Edit Task "
-#~ msgstr "Изменить задачу"
+msgid "Billing Currencies"
+msgstr "Скрытые валюты"
 
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:285
 #, fuzzy
-#~ msgid "Start"
-#~ msgstr "Дата начала"
+msgid "Select which currencies to include in billing report"
+msgstr "Выберите, какие разделы включить в ваш PDF-отчёт"
 
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:313
 #, fuzzy
-#~ msgid "Choose date"
-#~ msgstr "Выбрать шаблон задачи"
+msgid "All Currencies"
+msgstr "Скрытые валюты"
 
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:403
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:439
+msgid "Filters"
+msgstr "Фильтры"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:409
+msgid "Project Filter"
+msgstr "Фильтр проектов"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:410
+msgid "Limit report to specific projects"
+msgstr "Ограничить отчёт конкретными проектами"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:415
+msgid "Select a specific project or include all projects"
+msgstr "Выберите конкретный проект или включите все проекты"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:424
+msgid "Client Filter"
+msgstr "Фильтр клиентов"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:425
+msgid "Limit report to specific clients"
+msgstr "Ограничить отчёт конкретными клиентами"
+
+#: src/ui/components/dialogs/PDFExportPreferencesDialog.js:430
+msgid "Select a specific client or include all clients"
+msgstr "Выберите конкретного клиента или включите всех клиентов"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:21
+msgid "Preferences"
+msgstr "Параметры"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:80
+msgid "Global"
+msgstr "Глобальные"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:96
+msgid "Integrations"
+msgstr "Интеграции"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:166
+#: src/ui/components/dialogs/PreferencesDialog.js:656
+msgid "Details"
+msgstr "Подробности"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:180
+#: src/ui/components/dialogs/PreferencesDialog.js:755
+msgid "Credits"
+msgstr "Авторы"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:194
+#: src/ui/components/dialogs/PreferencesDialog.js:832
+msgid "Legal"
+msgstr "Правовая информация"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:215
+msgid "Appearance"
+msgstr "Внешний вид"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:220
+msgid "Theme"
+msgstr "Тема"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:221
+msgid "Choose your preferred theme"
+msgstr "Выберите предпочитаемую тему"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:233
+msgid "Auto"
+msgstr "Авто"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:238
+msgid "Light"
+msgstr "Светлая"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:243
+msgid "Dark"
+msgstr "Тёмная"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:299
+msgid "Accent Color"
+msgstr "Акцентный цвет"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:300
+msgid "Choose system accent or custom color"
+msgstr "Выберите системный акцентный цвет или пользовательский цвет"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:311
+msgid "Standard"
+msgstr "Стандартный"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:315
+msgid "Custom"
+msgstr "Пользовательский"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:327
+msgid "Custom Color"
+msgstr "Пользовательский цвет"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:328
+msgid "Pick your preferred accent color"
+msgstr "Выберите предпочитаемый акцентный цвет"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:398
+msgid "Behavior"
+msgstr "Поведение"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:403
+msgid "Sidebar"
+msgstr "Боковая панель"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:404
+msgid "Choose sidebar behavior on launch"
+msgstr "Выберите поведение боковой панели при запуске"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:415
+msgid "Opened"
+msgstr "Открыта"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:416
+msgid "Always open on launch"
+msgstr "Всегда открывать при запуске"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:420
+msgid "Closed"
+msgstr "Закрыта"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:421
+msgid "Always closed on launch"
+msgstr "Всегда закрывать при запуске"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:425
+msgid "Dynamic"
+msgstr "Динамическая"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:426
+msgid "Remember last state"
+msgstr "Запомнить последнее состояние"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:477
+msgid "Timer Duration"
+msgstr "Продолжительность таймера"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:478
+msgid "Default pomodoro session length in minutes"
+msgstr "Длительность сеанса помодоро по умолчанию в минутах"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:535
+msgid "Welcome Info"
+msgstr "Приветственная информация"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:536
+msgid "View the app welcome tour and getting started guide"
+msgstr "Просмотреть приветственный тур приложения и руководство для начала работы"
+"Просмотреть приветственный тур приложения и руководство по началу работы"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:540
+msgid "Show Welcome Tour"
+msgstr "Показать приветственный тур"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:541
+msgid "View the introductory slides and features overview"
+msgstr "Просмотреть вводные слайды и обзор функций"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:545
+msgid "Show Tour"
+msgstr "Показать тур"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:560
+msgid "Compact Tracker Command"
+msgstr "Команда компактного таймера"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:561
+msgid "Terminal command for launching compact tracker"
+msgstr "Команда терминала для запуска компактного таймера"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:565
+msgid "Terminal Command"
+msgstr "Команда терминала"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:566
+msgid "Use this command for hotkeys or scripts"
+msgstr "Используйте эту команду для горячих клавиш или скриптов"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:617
+#: src/ui/components/dialogs/PreferencesDialog.js:1056
+msgid "Currency Settings"
+msgstr "Настройки валюты"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:618
+#: src/ui/components/dialogs/PreferencesDialog.js:1057
+msgid "Manage available currencies for client billing"
+msgstr "Управление доступными валютами для выставления счетов клиентам"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:632
+#: src/ui/components/dialogs/PreferencesDialog.js:1073
+msgid "Hidden Currencies"
+msgstr "Скрытые валюты"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:633
+#: src/ui/components/dialogs/PreferencesDialog.js:1074
+msgid "Click to unhide currencies"
+msgstr "Щёлкните, чтобы показать валюты"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:638
+#: src/ui/components/dialogs/PreferencesDialog.js:1078
+msgid "Hidden"
+msgstr "Скрыто"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:639
+#: src/ui/components/dialogs/PreferencesDialog.js:1079
+msgid "0 currencies hidden"
+msgstr "0 валют скрыто"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:683
+#: src/ui/components/dialogs/PreferencesDialog.js:782
+msgid "Creator"
+msgstr "Создатель"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:688
+#: src/ui/components/dialogs/PreferencesDialog.js:787
+msgid "Designer &amp; Developer"
+msgstr "Дизайнер и разработчик"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:695
+msgid "Copyright"
+msgstr "Авторские права"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:699
+msgid "Copyright © 2025 Vitaly Odnoyko"
+msgstr "Авторские права © 2025 Vitaly Odnoyko"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:700
+msgid "All rights reserved under MIT License"
+msgstr "Все права защищены по лицензии MIT"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:707
+msgid "Repository"
+msgstr "Репозиторий"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:711
+msgid "Source Code"
+msgstr "Исходный код"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:727
+#: src/ui/utils/commonStrings.js:71
+msgid "Website"
+msgstr "Веб-сайт"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:731
+msgid "Visit Website"
+msgstr "Посетить веб-сайт"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:794
+msgid "Special Thanks"
+msgstr "Особая благодарность"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:798
+msgid "GNOME &amp; GTK Developers"
+msgstr "Разработчики GNOME и GTK"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:799
+msgid "For the amazing toolkit and desktop environment"
+msgstr "За удивительный инструментарий и среду рабочего стола"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:804
+msgid "Libadwaita Contributors"
+msgstr "Участники Libadwaita"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:805
+msgid "For beautiful and consistent UI components"
+msgstr "За красивые и согласованные компоненты пользовательского интерфейса"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:810
+msgid "Flatpak Community"
+msgstr "Сообщество Flatpak"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:811
+msgid "For modern app distribution and sandboxing"
+msgstr "За современное распространение приложений и изолированную среду"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:816
+msgid "Weblate"
+msgstr "Weblate"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:817
+msgid "For translation management and localization"
+msgstr "За управление переводами и локализацию"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:859
+msgid "License"
+msgstr "Лицензия"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:864
+msgid "Free and open source software"
+msgstr "Бесплатное программное обеспечение с открытым исходным кодом"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:879
+msgid "Third Party"
+msgstr "Сторонние"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:884
+msgid "Licensed under LGPL 2.1"
+msgstr "Лицензировано под LGPL 2.1"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1181
+#, javascript-format
+msgid "%d currencies hidden"
+msgstr "%d валют скрыто"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1418
+msgid "Extensions"
+msgstr "Расширения"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1427
+#: src/ui/components/dialogs/PreferencesDialog.js:1492
+msgid "Installed Extensions"
+msgstr "Установленные расширения"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1428
+msgid "Manage addons and plugins"
+msgstr "Управление дополнениями и плагинами"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1440
+msgid "Reload Extensions"
+msgstr "Перезагрузить расширения"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1452
+#: src/ui/components/dialogs/PreferencesDialog.js:2141
+msgid "Add Extension"
+msgstr "Добавить расширение"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1469
+#: src/ui/components/dialogs/PreferencesDialog.js:1500
+msgid "Available Extensions"
+msgstr "Доступные расширения"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1470
+msgid "Extensions available for download from GitLab"
+msgstr "Расширения доступны для загрузки с GitLab"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1535
+#: src/ui/components/dialogs/PreferencesDialog.js:1542
 #, fuzzy
-#~ msgid "Select the date for this task"
-#~ msgstr "Выберите дату и время окончания для этой задачи"
+msgid "Development Extensions"
+msgstr "Задача разработки"
 
-#~ msgid "Custom Color..."
-#~ msgstr "Пользовательский цвет…"
+#: src/ui/components/dialogs/PreferencesDialog.js:1543
+msgid "Extensions from development environment"
+msgstr "Расширения из среды разработки"
 
+#: src/ui/components/dialogs/PreferencesDialog.js:1560
+#: src/ui/components/dialogs/PreferencesDialog.js:1567
+msgid "System Extensions"
+msgstr "Системные расширения"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1568
+msgid "Extensions installed via Flatpak"
+msgstr "Расширения, установленные через Flatpak"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1594
+#: src/ui/components/dialogs/PreferencesDialog.js:2224
+msgid "Addon"
+msgstr "Дополнение"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1594
+#: src/ui/components/dialogs/PreferencesDialog.js:2224
+msgid "Plugin"
+msgstr "Плагин"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1617
 #, fuzzy
-#~ msgid "Search icons..."
-#~ msgstr "Поиск клиентов…"
+msgid "Extension Settings"
+msgstr "Настройки валюты"
 
-#~ msgid "Actions"
-#~ msgstr "Действия"
-
-#~ msgid "Apps"
-#~ msgstr "Приложения"
-
-#~ msgid "Devices"
-#~ msgstr "Устройства"
-
-#~ msgid "Emblems"
-#~ msgstr "Эмблемы"
-
-#~ msgid "Files"
-#~ msgstr "Файлы"
-
-#~ msgid "Places"
-#~ msgstr "Места"
-
-#~ msgid "Status"
-#~ msgstr "Состояние"
-
-#~ msgid "No icons found"
-#~ msgstr "Значки не найдены"
-
-#~ msgid "Try adjusting your search or category filter"
-#~ msgstr "Попробуйте настроить поиск или фильтр категорий"
-
-#~ msgid "Create"
-#~ msgstr "Создать"
-
-#~ msgid "Create Task"
-#~ msgstr "Создать задачу"
-
-#~ msgid "Select"
-#~ msgstr "Выбрать"
-
-#~ msgid "Close"
-#~ msgstr "Закрыть"
-
-#~ msgid "Open Folder"
-#~ msgstr "Открыть папку"
-
-#~ msgid "Invalid Input"
-#~ msgstr "Неверный ввод"
-
-#~ msgid "Delete Task"
-#~ msgstr "Удалить задачу"
-
-#~ msgid "Delete Project"
-#~ msgstr "Удалить проект"
-
-#~ msgid "Delete Client"
-#~ msgstr "Удалить клиента"
-
-#~ msgid "Edit Project"
-#~ msgstr "Редактировать проект"
-
-#~ msgid "Add New Task"
-#~ msgstr "Добавить новую задачу"
-
-#~ msgid "Validation Error"
-#~ msgstr "Ошибка проверки"
-
-#~ msgid "Duplicate Project"
-#~ msgstr "Дублировать проект"
-
-#~ msgid "Duplicate Client"
-#~ msgstr "Дублировать клиента"
-
-#~ msgid "Load Error"
-#~ msgstr "Ошибка загрузки"
-
-#~ msgid "Update Error"
-#~ msgstr "Ошибка обновления"
-
-#~ msgid "Delete Error"
-#~ msgstr "Ошибка удаления"
-
-#~ msgid "Are you sure you want to delete this task?"
-#~ msgstr "Вы уверены, что хотите удалить эту задачу?"
-
+#: src/ui/components/dialogs/PreferencesDialog.js:1640
 #, fuzzy
-#~ msgid "Are you sure you want to delete {0} tasks?"
-#~ msgstr "Вы уверены, что хотите удалить эту задачу?"
+msgid "Database"
+msgstr "Ошибка базы данных"
 
+#: src/ui/components/dialogs/PreferencesDialog.js:1641
+msgid "Backup and manage your data"
+msgstr "Резервное копирование и управление вашими данными"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1646
+#: src/ui/components/dialogs/PreferencesDialog.js:1735
 #, fuzzy
-#~ msgid "Are you sure you want to delete this project?"
-#~ msgstr "Вы уверены, что хотите удалить эту задачу?"
+msgid "Export Database"
+msgstr "Экспортировать PDF"
 
+#: src/ui/components/dialogs/PreferencesDialog.js:1647
+msgid "Save a backup of your database"
+msgstr "Сохранить резервную копию вашей базы данных"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1651
+#: src/ui/components/dialogs/PreferencesDialog.js:1736
 #, fuzzy
-#~ msgid "Are you sure you want to delete this client?"
-#~ msgstr "Вы уверены, что хотите удалить эту задачу?"
+msgid "Export"
+msgstr "Экспортировать PDF"
 
+#: src/ui/components/dialogs/PreferencesDialog.js:1665
+#: src/ui/components/dialogs/PreferencesDialog.js:1779
+#: src/ui/components/dialogs/PreferencesDialog.js:1827
+msgid "Import Database"
+msgstr "Импортировать базу данных"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1666
 #, fuzzy
-#~ msgid "No results found"
-#~ msgstr "Не найдено проектов"
+msgid "Restore a backup of your database"
+msgstr "Сохранить резервную копию вашей базы данных"
 
+#: src/ui/components/dialogs/PreferencesDialog.js:1670
 #, fuzzy
-#~ msgid "Failed to connect to database"
-#~ msgstr "Не удалось инициализировать базу данных"
+msgid "Import"
+msgstr "Отсчеты"
 
+#: src/ui/components/dialogs/PreferencesDialog.js:1684
+#: src/ui/components/dialogs/PreferencesDialog.js:2083
 #, fuzzy
-#~ msgid "Failed to load data"
-#~ msgstr "Не удалось загрузить задачи"
+msgid "Reset Database"
+msgstr "Выбрать дату"
 
+#: src/ui/components/dialogs/PreferencesDialog.js:1685
+msgid "Delete all data and start fresh"
+msgstr "Удалить все данные и начать заново"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1689
+msgid "Reset"
+msgstr "Сбросить"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1752
 #, fuzzy
-#~ msgid "Failed to delete"
-#~ msgstr "Не удалось удалить задачу"
+msgid "Database exported successfully"
+msgstr "Задача успешно создана"
 
+#: src/ui/components/dialogs/PreferencesDialog.js:1760
 #, fuzzy
-#~ msgid "Name"
-#~ msgstr "Полное имя"
+msgid "Failed to export database"
+msgstr "Не удалось инициализировать базу данных"
 
+#: src/ui/components/dialogs/PreferencesDialog.js:1780
+#: src/ui/utils/commonStrings.js:19
+msgid "Select"
+msgstr "Выбрать"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1785
 #, fuzzy
-#~ msgid "Task"
-#~ msgstr "Задачи"
+msgid "Database files"
+msgstr "Ошибка базы данных"
 
+#: src/ui/components/dialogs/PreferencesDialog.js:1811
 #, fuzzy
-#~ msgid "Color"
-#~ msgstr "Цвет значка:"
+msgid "Failed to select file"
+msgstr "Не удалось обновить проект"
 
+#: src/ui/components/dialogs/PreferencesDialog.js:1828
+msgid "Choose how to import the database"
+msgstr "Выберите способ импорта базы данных"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1829
 #, fuzzy
-#~ msgid "Currency"
-#~ msgstr "Изменить валюту"
+msgid "Replace Data"
+msgstr "Выбрать дату"
 
-#~ msgid "Hourly Rate"
-#~ msgstr "Почасовая ставка"
+#: src/ui/components/dialogs/PreferencesDialog.js:1830
+msgid "Save and Add Data"
+msgstr "Сохранить и добавить данные"
 
-#~ msgid "Email"
-#~ msgstr "Электронная почта"
-
+#: src/ui/components/dialogs/PreferencesDialog.js:1888
 #, fuzzy
-#~ msgid "Total"
-#~ msgstr "Всего: %s"
+msgid "Failed to replace database"
+msgstr "Не удалось инициализировать базу данных"
 
-#, fuzzy
-#~ msgid "Filter"
-#~ msgstr "Фильтры"
-
-#, fuzzy
-#~ msgid "Enter name..."
-#~ msgstr "Введите имя задачи…"
-
-#, fuzzy
-#~ msgid "Enter description..."
-#~ msgstr "Введите имя клиента…"
-
-#, fuzzy
-#~ msgid "Search..."
-#~ msgstr "Поиск"
-
-#, fuzzy
-#~ msgid "Select client..."
-#~ msgstr "Выбрать клиента"
-
-#, fuzzy
-#~ msgid "Select project..."
-#~ msgstr "Выбрать проект"
-
-#, fuzzy
-#~ msgid "Select color..."
-#~ msgstr "Выбрать значок"
-
-#, fuzzy
-#~ msgid "Select currency..."
-#~ msgstr "Выбрать валюту"
-
-#, fuzzy
-#~ msgid "Edit"
-#~ msgstr "Редактировать задачу"
-
-#, fuzzy
-#~ msgid "Settings"
-#~ msgstr "Встреча"
-
-#, fuzzy
-#~ msgid "Change color and icon"
-#~ msgstr "Щёлкните, чтобы изменить цвет и значок"
-
-#, fuzzy
-#~ msgid "No projects yet"
-#~ msgstr "Не найдено проектов"
-
-#, fuzzy
-#~ msgid "No clients yet"
-#~ msgstr "Нет клиента"
-
-#, fuzzy
-#~ msgid "No reports yet"
-#~ msgstr "Нет задач"
-
-#~ msgid "Create your first task to get started"
-#~ msgstr "Создайте свою первую задачу для начала"
-
-#~ msgid "Loading..."
-#~ msgstr "Загрузка…"
-
-#~ msgid "Task created successfully"
-#~ msgstr "Задача успешно создана"
-
-#~ msgid "Task updated successfully"
-#~ msgstr "Задача успешно обновлена"
-
-#~ msgid "Task deleted successfully"
-#~ msgstr "Задача успешно удалена"
-
-#~ msgid "Project created successfully"
-#~ msgstr "Проект успешно создан"
-
-#~ msgid "Project updated successfully"
-#~ msgstr "Проект успешно обновлён"
-
-#~ msgid "Project deleted successfully"
-#~ msgstr "Проект успешно удалён"
-
-#~ msgid "Client created successfully"
-#~ msgstr "Клиент успешно создан"
-
-#~ msgid "Client updated successfully"
-#~ msgstr "Клиент успешно обновлён"
-
-#~ msgid "Client deleted successfully"
-#~ msgstr "Клиент успешно удалён"
-
-#, fuzzy
-#~ msgid "Database error"
-#~ msgstr "Ошибка базы данных"
-
-#, fuzzy
-#~ msgid "Validation error"
-#~ msgstr "Ошибка проверки"
-
-#, fuzzy
-#~ msgid "Not found"
-#~ msgstr "Задачи не найдены"
-
-#, fuzzy
-#~ msgid "Active"
-#~ msgstr "Только активные"
-
-#, fuzzy
-#~ msgid "Completed"
-#~ msgstr "Экспорт PDF завершён"
-
-#~ msgid "This action cannot be undone."
-#~ msgstr "Это действие нельзя отменить."
-
-#~ msgid "No items available"
-#~ msgstr "Нет доступных элементов"
-
-#~ msgid "Go to the appropriate page to add items"
-#~ msgstr "Перейдите на соответствующую страницу, чтобы добавить элементы"
-
-#~ msgid "Choose a client for time tracking"
-#~ msgstr "Выберите клиента для отслеживания времени"
-
-#~ msgid "Select Icon"
-#~ msgstr "Выбрать значок"
-
-#~ msgid "Choose an appropriate icon or emoji"
-#~ msgstr "Выберите подходящий значок или эмодзи"
-
-#~ msgid "Emoji"
-#~ msgstr "Эмодзи"
-
+#. Show summary toast
+#: src/ui/components/dialogs/PreferencesDialog.js:1915
 #, fuzzy, javascript-format
-#~ msgid "Add %s"
-#~ msgstr "Добавить задачу"
+msgid ""
+"Import complete: %d clients, %d projects, %d tasks, %d time entries added"
+msgstr "Импорт завершён: добавлено %d клиентов, %d проектов, %d задач"
 
-#~ msgid "Previous"
-#~ msgstr "Предыдущий"
+#: src/ui/components/dialogs/PreferencesDialog.js:1967
+#, fuzzy, javascript-format
+msgid "Failed to merge database: %s"
+msgstr "Не удалось инициализировать базу данных"
 
-#~ msgid "0 selected"
-#~ msgstr "0 выбрано"
+#: src/ui/components/dialogs/PreferencesDialog.js:1976
+#, fuzzy
+msgid "Select Extension File"
+msgstr "Выбрать дату окончания"
 
+#: src/ui/components/dialogs/PreferencesDialog.js:1977
+msgid "Load"
+msgstr "Загрузить"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:1982
+msgid "JavaScript files"
+msgstr "Файлы JavaScript"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2002
 #, javascript-format
-#~ msgid "%d selected"
-#~ msgstr "Выбрано: %d"
+msgid "Extension loaded: %s"
+msgstr "Расширение загружено: %s"
 
-#~ msgid "Click to change color and icon"
-#~ msgstr "Щёлкните, чтобы изменить цвет и значок"
-
-#~ msgctxt "shortcut window"
-#~ msgid "General"
-#~ msgstr "Общие"
-
-#~ msgctxt "shortcut window"
-#~ msgid "Show Shortcuts"
-#~ msgstr "Показать сочетания клавиш"
-
-#~ msgctxt "shortcut window"
-#~ msgid "Quit"
-#~ msgstr "Выйти"
-
-#~ msgid "Creation Error"
-#~ msgstr "Ошибка создания"
-
-#~ msgid "Invalid Date/Time"
-#~ msgstr "Неверная дата/время"
-
-#~ msgid "Task name is required"
-#~ msgstr "Требуется имя задачи"
-
-#~ msgid "Please enter a task name and select a project"
-#~ msgstr "Пожалуйста, введите имя задачи и выберите проект"
-
-#~ msgid "End time must be after start time"
-#~ msgstr "Время окончания должно быть позже времени начала"
-
-#~ msgid "A project with this name already exists"
-#~ msgstr "Проект с таким именем уже существует"
-
-#~ msgid "No tasks selected. Right-click a task to select it first."
-#~ msgstr ""
-#~ "Задачи не выбраны. Щёлкните правой кнопкой мыши по задаче, чтобы выбрать "
-#~ "её."
-
-#~ msgid "Task Name:"
-#~ msgstr "Имя задачи:"
-
-#~ msgid "Project Name:"
-#~ msgstr "Имя проекта:"
-
-#~ msgid "Description (optional):"
-#~ msgstr "Описание (необязательно):"
-
-#~ msgid "Start Time:"
-#~ msgstr "Время начала:"
-
-#~ msgid "End Time:"
-#~ msgstr "Время окончания:"
-
-#~ msgid "Project Icon:"
-#~ msgstr "Значок проекта:"
-
-#~ msgid "Icon Mode:"
-#~ msgstr "Режим значка:"
-
-#~ msgid "Project name"
-#~ msgstr "Имя проекта"
-
-#~ msgid "Delete task"
-#~ msgstr "Удалить задачу"
-
-#~ msgid "Select end date and time"
-#~ msgstr "Выберите дату и время окончания"
-
-#~ msgid "Previous page"
-#~ msgstr "Предыдущая страница"
-
-#~ msgid "Next page"
-#~ msgstr "Следующая страница"
-
-#~ msgid "Click to change icon"
-#~ msgstr "Щёлкните, чтобы изменить значок"
-
-#~ msgid "Change project appearance"
-#~ msgstr "Изменить внешний вид проекта"
-
-#~ msgid "No Project"
-#~ msgstr "Нет проекта"
-
-#~ msgid "No data available"
-#~ msgstr "Нет доступных данных"
-
-#~ msgid "No activity data"
-#~ msgstr "Нет данных об активности"
-
-#~ msgid "Type a task name and click track to create one"
-#~ msgstr "Введите имя задачи и нажмите кнопку отслеживания, чтобы создать её"
-
-#~ msgid "Loading tasks..."
-#~ msgstr "Загрузка задач…"
-
-#~ msgid "Loading projects..."
-#~ msgstr "Загрузка проектов…"
-
-#~ msgid "Loading clients..."
-#~ msgstr "Загрузка клиентов…"
-
-#~ msgid "Failed to update task"
-#~ msgstr "Не удалось обновить задачу"
-
-#~ msgid "Failed to create project"
-#~ msgstr "Не удалось создать проект"
-
-#~ msgid "Failed to delete project"
-#~ msgstr "Не удалось удалить проект"
-
-#~ msgid "Failed to load projects"
-#~ msgstr "Не удалось загрузить проекты"
-
-#~ msgid "Failed to load clients"
-#~ msgstr "Не удалось загрузить клиентов"
-
-#~ msgid "Default"
-#~ msgstr "По умолчанию"
-
-#~ msgid "White"
-#~ msgstr "Белый"
-
-#~ msgid "Black"
-#~ msgstr "Чёрный"
-
-#~ msgid "Currently Tracking"
-#~ msgstr "Текущее отслеживание"
-
-#~ msgid "Invalid range"
-#~ msgstr "Неверный диапазон"
-
-#~ msgid "Invalid format"
-#~ msgstr "Неверный формат"
-
-#~ msgid "Create a new project with icon and color."
-#~ msgstr "Создайте новый проект со значком и цветом."
-
-#~ msgid "Update project name, icon, and color."
-#~ msgstr "Обновить имя проекта, значок и цвет."
-
-#~ msgid "Create a new task for tracking your work"
-#~ msgstr "Создайте новую задачу для отслеживания вашей работы"
-
-#~ msgid "Choose the start date and time for this task"
-#~ msgstr "Выберите дату и время начала для этой задачи"
-
-#~ msgid "Task description must be text"
-#~ msgstr "Описание задачи должно быть текстом"
-
-#~ msgid "Description contains potentially dangerous content"
-#~ msgstr "Описание содержит потенциально опасный контент"
-
-#~ msgid "Value must be a number"
-#~ msgstr "Значение должно быть числом"
-
-#~ msgid "Color is required"
-#~ msgstr "Требуется цвет"
-
-#~ msgid "Invalid color format (use #RRGGBB or #RGB)"
-#~ msgstr "Неверный формат цвета (используйте #RRGGBB или #RGB)"
-
-#~ msgid "Email address is required"
-#~ msgstr "Требуется адрес электронной почты"
-
-#~ msgid "Invalid email format"
-#~ msgstr "Неверный формат электронной почты"
-
-#~ msgid "Email address too long (max 255 characters)"
-#~ msgstr "Адрес электронной почты слишком длинный (максимум 255 символов)"
-
-#~ msgid "Rate must be a number"
-#~ msgstr "Ставка должна быть числом"
-
-#~ msgid "Rate cannot be negative"
-#~ msgstr "Ставка не может быть отрицательной"
-
-#~ msgid "Rate too high (max 10000)"
-#~ msgstr "Ставка слишком высокая (максимум 10000)"
-
-#~ msgid "Failed to update client. Please try again."
-#~ msgstr "Не удалось обновить клиента. Пожалуйста, попробуйте снова."
-
-#~ msgid "Cannot Delete Default Client"
-#~ msgstr "Невозможно удалить клиента по умолчанию"
-
-#~ msgid "Failed to delete client. Please try again."
-#~ msgstr "Не удалось удалить клиента. Пожалуйста, попробуйте снова."
-
-#~ msgid "Modify client details"
-#~ msgstr "Изменить данные клиента"
-
-#~ msgid ""
-#~ "Are you sure you want to delete this client? This action cannot be undone."
-#~ msgstr ""
-#~ "Вы уверены, что хотите удалить этого клиента? Это действие нельзя "
-#~ "отменить."
-
+#: src/ui/components/dialogs/PreferencesDialog.js:2020
 #, javascript-format
-#~ msgid "Track Time - %s"
-#~ msgstr "Учёт времени - %s"
+msgid "Failed to load extension: %s"
+msgstr "Не удалось загрузить расширение: %s"
 
+#: src/ui/components/dialogs/PreferencesDialog.js:2078
+#, fuzzy
+msgid "Reset Database?"
+msgstr "Выбрать дату"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2079
+msgid ""
+"This will delete all your tasks, projects, clients, and time entries. This "
+"action cannot be undone."
+msgstr ""
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2107
+msgid "Database reset complete"
+msgstr "Сброс базы данных завершен"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2129
+msgid "Failed to reload extensions"
+msgstr "Не удалось перезагрузить расширения"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2142
+msgid "Select how to add the extension"
+msgstr "Выберите способ добавления расширения"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2146
+#, fuzzy
+msgid "From File"
+msgstr "Фильтр проектов"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2147
+msgid "From URL"
+msgstr "Из URL"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2233
+msgid "Installed"
+msgstr "Установлено"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2241
+msgid "Install"
+msgstr "Установить"
+
+#: src/ui/components/dialogs/PreferencesDialog.js:2254
 #, javascript-format
-#~ msgid "Create a new time entry for %s"
-#~ msgstr "Создайте новую запись времени для %s"
+msgid "Extension installed: %s"
+msgstr "Расширение установлено: %s"
 
-#~ msgid "Describe what you worked on..."
-#~ msgstr "Опишите, над чем вы работали…"
+#: src/ui/components/dialogs/PreferencesDialog.js:2261
+#, fuzzy, javascript-format
+msgid "Failed to install extension: %s"
+msgstr "Не удалось инициализировать базу данных"
 
-#~ msgid "Hours"
-#~ msgstr "Часы"
+#: src/ui/components/dialogs/QuickTaskSelector.js:26
+#: src/ui/components/dialogs/QuickTaskSelector.js:123
+#, fuzzy
+msgid "Start Tracking"
+msgstr "Начать отслеживание"
 
-#~ msgid "Minutes"
-#~ msgstr "Минуты"
+#: src/ui/components/dialogs/QuickTaskSelector.js:27
+#, fuzzy
+msgid "Select task, project and client"
+msgstr "Выберите конкретный проект или включите все проекты"
 
-#~ msgid "Estimated Cost"
-#~ msgstr "Ориентировочная стоимость"
+#: src/ui/components/dialogs/QuickTaskSelector.js:47
+#, fuzzy
+msgid "Task:"
+msgstr "Задачи"
 
-#~ msgid "Create Entry"
-#~ msgstr "Создать запись"
+#: src/ui/components/dialogs/QuickTaskSelector.js:83
+msgid "Project:"
+msgstr "Проект:"
 
-#~ msgid "Please enter a time duration"
-#~ msgstr "Пожалуйста, введите продолжительность времени"
+#: src/ui/components/dialogs/QuickTaskSelector.js:98
+#, fuzzy
+msgid "Client:"
+msgstr "Клиент"
 
-#~ msgid "Time Entry Created"
-#~ msgstr "Запись времени создана"
+#. Update dialog heading
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:212
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:344
+msgid "Edit Task "
+msgstr "Редактировать задачу "
 
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:466
+#, fuzzy
+msgid "Start"
+msgstr "Дата начала"
+
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:695
+msgid "End"
+msgstr "Конец"
+
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:1045
+#, fuzzy
+msgid "Choose date"
+msgstr "Выбрать шаблон задачи"
+
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:1046
+#, fuzzy
+msgid "Select the date for this task"
+msgstr "Выберите шаблон для просмотра подробностей"
+
+#: src/ui/components/dialogs/TaskInstanceEditDialog.js:1117
+msgid "Choose time"
+msgstr "Выбрать время"
+
+#: src/ui/components/primitive/ColorPicker.js:100
+msgid "Custom Color..."
+msgstr "Пользовательский цвет…"
+
+#: src/ui/components/primitive/IconPicker.js:53
+#, fuzzy
+msgid "Search icons..."
+msgstr "Поиск клиентов…"
+
+#: src/ui/components/primitive/IconPicker.js:69
+msgid "Actions"
+msgstr "Действия"
+
+#: src/ui/components/primitive/IconPicker.js:70
+msgid "Apps"
+msgstr "Приложения"
+
+#: src/ui/components/primitive/IconPicker.js:71
+msgid "Devices"
+msgstr "Устройства"
+
+#: src/ui/components/primitive/IconPicker.js:72
+msgid "Emblems"
+msgstr "Эмблемы"
+
+#: src/ui/components/primitive/IconPicker.js:73
+msgid "Files"
+msgstr "Файлы"
+
+#: src/ui/components/primitive/IconPicker.js:74
+msgid "Places"
+msgstr "Места"
+
+#: src/ui/components/primitive/IconPicker.js:75
+#: src/ui/utils/commonStrings.js:73
+msgid "Status"
+msgstr "Состояние"
+
+#: src/ui/components/primitive/IconPicker.js:167
+msgid "No icons found"
+msgstr "Значки не найдены"
+
+#: src/ui/components/primitive/IconPicker.js:172
+msgid "Try adjusting your search or category filter"
+msgstr "Попробуйте настроить поиск или фильтр категорий"
+
+#: src/ui/utils/commonStrings.js:15
+msgid "Create"
+msgstr "Создать"
+
+#: src/ui/utils/commonStrings.js:16
+msgid "Create Task"
+msgstr "Создать задачу"
+
+#: src/ui/utils/commonStrings.js:20
+msgid "Close"
+msgstr "Закрыть"
+
+#: src/ui/utils/commonStrings.js:21
+msgid "Open Folder"
+msgstr "Открыть папку"
+
+#: src/ui/utils/commonStrings.js:26
+msgid "Invalid Input"
+msgstr "Неверный ввод"
+
+#: src/ui/utils/commonStrings.js:27
+msgid "Delete Task"
+msgstr "Удалить задачу"
+
+#: src/ui/utils/commonStrings.js:29
+msgid "Delete Project"
+msgstr "Удалить проект"
+
+#: src/ui/utils/commonStrings.js:30
+msgid "Delete Client"
+msgstr "Удалить клиента"
+
+#: src/ui/utils/commonStrings.js:31
+msgid "Edit Project"
+msgstr "Редактировать проект"
+
+#: src/ui/utils/commonStrings.js:34
+msgid "Add New Task"
+msgstr "Добавить новую задачу"
+
+#: src/ui/utils/commonStrings.js:37
+msgid "Validation Error"
+msgstr "Ошибка проверки"
+
+#: src/ui/utils/commonStrings.js:38
+msgid "Duplicate Project"
+msgstr "Дублировать проект"
+
+#: src/ui/utils/commonStrings.js:39
+msgid "Duplicate Client"
+msgstr "Дублировать клиента"
+
+#: src/ui/utils/commonStrings.js:40
+msgid "Load Error"
+msgstr "Ошибка загрузки"
+
+#: src/ui/utils/commonStrings.js:41
+msgid "Update Error"
+msgstr "Ошибка обновления"
+
+#: src/ui/utils/commonStrings.js:42
+msgid "Delete Error"
+msgstr "Ошибка удаления"
+
+#: src/ui/utils/commonStrings.js:47
+msgid "Are you sure you want to delete this task?"
+msgstr "Вы уверены, что хотите удалить эту задачу?"
+
+#: src/ui/utils/commonStrings.js:48
+#, fuzzy
+msgid "Are you sure you want to delete {0} tasks?"
+msgstr "Вы уверены, что хотите удалить эту задачу?"
+
+#: src/ui/utils/commonStrings.js:49
+#, fuzzy
+msgid "Are you sure you want to delete this project?"
+msgstr "Вы уверены, что хотите удалить эту задачу?"
+
+#: src/ui/utils/commonStrings.js:50
+#, fuzzy
+msgid "Are you sure you want to delete this client?"
+msgstr "Вы уверены, что хотите удалить эту задачу?"
+
+#: src/ui/utils/commonStrings.js:51
+#, fuzzy
+msgid "No results found"
+msgstr "Не найдено проектов"
+
+#: src/ui/utils/commonStrings.js:52
+#, fuzzy
+msgid "Failed to connect to database"
+msgstr "Не удалось инициализировать базу данных"
+
+#: src/ui/utils/commonStrings.js:53
+#, fuzzy
+msgid "Failed to load data"
+msgstr "Не удалось инициализировать базу данных"
+
+#: src/ui/utils/commonStrings.js:55
+#, fuzzy
+msgid "Failed to delete"
+msgstr "Не удалось обновить проект"
+
+#: src/ui/utils/commonStrings.js:56
+msgid "Please check your input and try again"
+msgstr "Пожалуйста, проверьте ввод и попробуйте снова"
+
+#: src/ui/utils/commonStrings.js:61
+#, fuzzy
+msgid "Name"
+msgstr "Полное имя"
+
+#: src/ui/utils/commonStrings.js:64
+#, fuzzy
+msgid "Task"
+msgstr "Задачи"
+
+#: src/ui/utils/commonStrings.js:66
+msgid "Color"
+msgstr "Цвет"
+
+#: src/ui/utils/commonStrings.js:67
+#, fuzzy
+msgid "Currency"
+msgstr "Изменить валюту"
+
+#: src/ui/utils/commonStrings.js:68
+msgid "Hourly Rate"
+msgstr "Почасовая ставка"
+
+#: src/ui/utils/commonStrings.js:69
+msgid "Email"
+msgstr "Электронная почта"
+
+#: src/ui/utils/commonStrings.js:70
+msgid "Phone"
+msgstr "Телефон"
+
+#: src/ui/utils/commonStrings.js:72
+msgid "Notes"
+msgstr "Заметки"
+
+#: src/ui/utils/commonStrings.js:75
+#, fuzzy
+msgid "Total"
+msgstr "Всего: %s"
+
+#: src/ui/utils/commonStrings.js:76 src/ui/utils/commonStrings.js:99
+#, fuzzy
+msgid "Filter"
+msgstr "Фильтры"
+
+#: src/ui/utils/commonStrings.js:78
+msgid "Sort by"
+msgstr "Сортировать по"
+
+#: src/ui/utils/commonStrings.js:83
+#, fuzzy
+msgid "Enter name..."
+msgstr "Введите имя задачи…"
+
+#: src/ui/utils/commonStrings.js:84
+#, fuzzy
+msgid "Enter description..."
+msgstr "Введите имя клиента…"
+
+#: src/ui/utils/commonStrings.js:85
+#, fuzzy
+msgid "Search..."
+msgstr "Поиск"
+
+#: src/ui/utils/commonStrings.js:88
+#, fuzzy
+msgid "Select client..."
+msgstr "Выбрать клиента"
+
+#: src/ui/utils/commonStrings.js:89
+#, fuzzy
+msgid "Select project..."
+msgstr "Выбрать проект"
+
+#: src/ui/utils/commonStrings.js:90
+#, fuzzy
+msgid "Select color..."
+msgstr "Выбрать значок"
+
+#: src/ui/utils/commonStrings.js:91
+#, fuzzy
+msgid "Select currency..."
+msgstr "Выбрать валюту"
+
+#: src/ui/utils/commonStrings.js:92
+msgid "Optional"
+msgstr "Необязательно"
+
+#: src/ui/utils/commonStrings.js:101
+msgid "Edit"
+msgstr "Редактировать"
+
+#: src/ui/utils/commonStrings.js:102
+msgid "Add"
+msgstr "Добавить"
+
+#: src/ui/utils/commonStrings.js:103
+#, fuzzy
+msgid "Settings"
+msgstr "Встреча"
+
+#: src/ui/utils/commonStrings.js:104
+#, fuzzy
+msgid "Change color and icon"
+msgstr "Щёлкните, чтобы изменить цвет и значок"
+
+#: src/ui/utils/commonStrings.js:110
+#, fuzzy
+msgid "No projects yet"
+msgstr "Не найдено проектов"
+
+#: src/ui/utils/commonStrings.js:111
+#, fuzzy
+msgid "No clients yet"
+msgstr "Нет клиента"
+
+#: src/ui/utils/commonStrings.js:112
+#, fuzzy
+msgid "No reports yet"
+msgstr "Нет задач"
+
+#: src/ui/utils/commonStrings.js:113
+msgid "Create your first task to get started"
+msgstr "Создайте свою первую задачу для начала"
+
+#: src/ui/utils/commonStrings.js:120
+msgid "Loading..."
+msgstr "Загрузка…"
+
+#: src/ui/utils/commonStrings.js:125
+msgid "Task created successfully"
+msgstr "Задача успешно создана"
+
+#: src/ui/utils/commonStrings.js:126
+msgid "Task updated successfully"
+msgstr "Задача успешно обновлена"
+
+#: src/ui/utils/commonStrings.js:127
+msgid "Task deleted successfully"
+msgstr "Задача успешно удалена"
+
+#: src/ui/utils/commonStrings.js:128
+msgid "Project created successfully"
+msgstr "Проект успешно создан"
+
+#: src/ui/utils/commonStrings.js:129
+msgid "Project updated successfully"
+msgstr "Проект успешно обновлён"
+
+#: src/ui/utils/commonStrings.js:130
+msgid "Project deleted successfully"
+msgstr "Проект успешно удалён"
+
+#: src/ui/utils/commonStrings.js:131
+msgid "Client created successfully"
+msgstr "Клиент успешно создан"
+
+#: src/ui/utils/commonStrings.js:132
+msgid "Client updated successfully"
+msgstr "Клиент успешно обновлён"
+
+#: src/ui/utils/commonStrings.js:133
+msgid "Client deleted successfully"
+msgstr "Клиент успешно удалён"
+
+#: src/ui/utils/commonStrings.js:138
+msgid "An unknown error occurred"
+msgstr "Произошла неизвестная ошибка"
+
+#: src/ui/utils/commonStrings.js:139
+#, fuzzy
+msgid "Database error"
+msgstr "Ошибка базы данных"
+
+#: src/ui/utils/commonStrings.js:140
+msgid "Network error"
+msgstr "Ошибка сети"
+
+#: src/ui/utils/commonStrings.js:141
+#, fuzzy
+msgid "Validation error"
+msgstr "Ошибка проверки"
+
+#: src/ui/utils/commonStrings.js:142
+#, fuzzy
+msgid "Not found"
+msgstr "Задачи не найдены"
+
+#: src/ui/utils/commonStrings.js:147
+#, fuzzy
+msgid "Active"
+msgstr "Действия"
+
+#: src/ui/utils/commonStrings.js:148
+msgid "Inactive"
+msgstr "Неактивно"
+
+#: src/ui/utils/commonStrings.js:149
+msgid "Completed"
+msgstr "Завершено"
+
+#: src/ui/utils/commonStrings.js:150
+msgid "Pending"
+msgstr "Ожидание"
+
+#: src/ui/utils/commonStrings.js:151
+msgid "In Progress"
+msgstr "В процессе"
+
+#: src/ui/utils/commonStrings.js:156
+msgid "This action cannot be undone."
+msgstr "Это действие нельзя отменить."
+
+#: src/ui/utils/commonStrings.js:157
+msgid "You have unsaved changes."
+msgstr "У вас есть несохраненные изменения."
+
+#: src/ui/utils/selectorFactory.js:60
+msgid "No items available"
+msgstr "Нет доступных элементов"
+
+#: src/ui/utils/selectorFactory.js:61
+msgid "Go to the appropriate page to add items"
+msgstr "Перейдите на соответствующую страницу, чтобы добавить элементы"
+
+#: src/ui/utils/selectorFactory.js:114
+#, fuzzy
+msgid "Choose a project for time tracking"
+msgstr "Выберите клиента для отслеживания времени"
+
+#: src/ui/utils/selectorFactory.js:132
+msgid "Choose a client for time tracking"
+msgstr "Выберите клиента для отслеживания времени"
+
+#: src/ui/utils/selectorFactory.js:198
+msgid "Select Icon"
+msgstr "Выбрать значок"
+
+#: src/ui/utils/selectorFactory.js:199
+msgid "Choose an appropriate icon or emoji"
+msgstr "Выберите подходящий значок или эмодзи"
+
+#: src/ui/utils/selectorFactory.js:423
+msgid "Emoji"
+msgstr "Эмодзи"
+
+#: src/ui/utils/widgetFactory.js:167
 #, javascript-format
-#~ msgid "Successfully created %dh %dm time entry for %s"
-#~ msgstr "Успешно создана запись времени %dч %dм для %s"
+msgid "Add %s"
+msgstr "Добавить %s"
 
-#~ msgid "Failed to create time entry. Please try again."
-#~ msgstr "Не удалось создать запись времени. Пожалуйста, попробуйте снова."
+#: src/ui/utils/widgetFactory.js:218 src/ui/utils/widgetFactory.js:277
+msgid "Previous"
+msgstr "Предыдущий"
 
-#~ msgid "Export Time Report (Text)"
-#~ msgstr "Экспорт отчёта о времени (текст)"
+#: src/ui/utils/widgetFactory.js:309
+msgid "0 selected"
+msgstr "0 выбрано"
 
-#~ msgid "Report Export Complete"
-#~ msgstr "Экспорт отчёта завершён"
-
-#~ msgid "Failed to create project: "
-#~ msgstr "Не удалось создать проект: "
-
-#~ msgid "Invalid Project ID"
-#~ msgstr "Неверный идентификатор проекта"
-
-#~ msgid "Invalid Project Name"
-#~ msgstr "Неверное имя проекта"
-
-#~ msgid "Invalid Project Color"
-#~ msgstr "Неверный цвет проекта"
-
-#~ msgid "Failed to update project: "
-#~ msgstr "Не удалось обновить проект: "
-
-#~ msgid "Cannot Delete Default Project"
-#~ msgstr "Невозможно удалить проект по умолчанию"
-
-#~ msgid "Select Emoji"
-#~ msgstr "Выбрать эмодзи"
-
-#~ msgid "Choose from our comprehensive emoji collection"
-#~ msgstr "Выберите из нашей полной коллекции эмодзи"
-
-#~ msgid "Choose an appropriate icon for the project"
-#~ msgstr "Выберите подходящий значок для проекта"
-
-#~ msgid "HTML Export Failed"
-#~ msgstr "Экспорт HTML не удался"
-
-#~ msgid "HTML Report Export Complete"
-#~ msgstr "Экспорт HTML-отчёта завершён"
-
-#~ msgid "PDF Export Fallback - HTML Generated"
-#~ msgstr "Резервный вариант экспорта PDF - создан HTML"
-
+#. Update counter
+#: src/ui/utils/widgetFactory.js:382 src/ui/utils/widgetFactory.js:394
 #, javascript-format
-#~ msgid ""
-#~ "PDF export is not available in your environment.\n"
-#~ "HTML report created instead.\n"
-#~ "\n"
-#~ "File: %s\n"
-#~ "Location: %s\n"
-#~ "\n"
-#~ "📄 To create PDF: Use the Print button in your browser to save as PDF."
-#~ msgstr ""
-#~ "Экспорт PDF недоступен в вашей среде.\n"
-#~ "Вместо этого создан HTML-отчёт.\n"
-#~ "\n"
-#~ "Файл: %s\n"
-#~ "Расположение: %s\n"
-#~ "\n"
-#~ "📄 Чтобы создать PDF: используйте кнопку Печать в вашем браузере для "
-#~ "сохранения как PDF."
+msgid "%d selected"
+msgstr "Выбрано: %d"
 
-#, javascript-format
-#~ msgid ""
-#~ "Report saved successfully!\n"
-#~ "\n"
-#~ "File: %s\n"
-#~ "Location: %s\n"
-#~ "\n"
-#~ "📄 To create PDF: Use the Print button in your browser to save as PDF."
-#~ msgstr ""
-#~ "Отчёт успешно сохранён!\n"
-#~ "\n"
-#~ "Файл: %s\n"
-#~ "Расположение: %s\n"
-#~ "\n"
-#~ "📄 Чтобы создать PDF: используйте кнопку Печать в вашем браузере для "
-#~ "сохранения как PDF."
-
-#~ msgid "Exporting PDF"
-#~ msgstr "Экспорт PDF"
-
-#~ msgid "PDF Export Complete"
-#~ msgstr "Экспорт PDF завершён"
-
-#, javascript-format
-#~ msgid ""
-#~ "Report saved successfully!\n"
-#~ "\n"
-#~ "File: %s\n"
-#~ "Location: %s\n"
-#~ "\n"
-#~ "Click \"Open Folder\" to view the file in your file manager."
-#~ msgstr ""
-#~ "Отчёт успешно сохранён!\n"
-#~ "\n"
-#~ "Файл: %s\n"
-#~ "Расположение: %s\n"
-#~ "\n"
-#~ "Нажмите «Открыть папку», чтобы просмотреть файл в вашем файловом "
-#~ "менеджере."
-
-#, javascript-format
-#~ msgid ""
-#~ "Your report has been saved successfully!\n"
-#~ "\n"
-#~ "Location: %s\n"
-#~ "\n"
-#~ "Please open this location manually in your file manager."
-#~ msgstr ""
-#~ "Ваш отчёт успешно сохранён!\n"
-#~ "\n"
-#~ "Расположение: %s\n"
-#~ "\n"
-#~ "Пожалуйста, откройте это расположение вручную в вашем файловом менеджере."
-
-#, javascript-format
-#~ msgid "📊 Weekly Activity (KW %d)"
-#~ msgstr "📊  Активность для рабочей недели %d"
-
-#~ msgid "Right-click to select items"
-#~ msgstr "Щёлкните правой кнопкой мыши для выбора элементов"
-
-#~ msgid ""
-#~ "Activate 20 minutes by default and you can customize it inside settings"
-#~ msgstr ""
-#~ "Активируйте 20 минут по умолчанию, и вы можете настроить это в параметрах"
-
-#~ msgid "Shift+click track button to track items in pomodoro mode"
-#~ msgstr ""
-#~ "Shift+щелчок по кнопке отслеживания для отслеживания элементов в режиме "
-#~ "помодоро"
-
-#, javascript-format
-#~ msgid "Project: %s"
-#~ msgstr "Проект: %s"
-
-#~ msgid "Manage your clients"
-#~ msgstr "Управление вашими клиентами"
-
-#~ msgid "Change Currency"
-#~ msgstr "Изменить валюту"
-
-#, javascript-format
-#~ msgid "Select a new currency for %s"
-#~ msgstr "Выберите новую валюту для %s"
-
-#~ msgid "Select Currency:"
-#~ msgstr "Выбрать валюту:"
-
-#, javascript-format
-#~ msgid ""
-#~ "Are you sure you want to delete %d selected client(s)? This cannot be "
-#~ "undone."
-#~ msgstr ""
-#~ "Вы уверены, что хотите удалить выбранных клиентов (%d)? Это нельзя "
-#~ "отменить."
-
-#~ msgid "Manage your projects"
-#~ msgstr "Управление вашими проектами"
-
-#, javascript-format
-#~ msgid ""
-#~ "Are you sure you want to delete %d selected project(s)? This cannot be "
-#~ "undone."
-#~ msgstr ""
-#~ "Вы уверены что хотите удалить %d выбранные проекты? Их потом не вернуть."
-
-#~ msgid "Edit Project Name"
-#~ msgstr "Редактирование имени проекта"
-
-#, javascript-format
-#~ msgid "Change the name of \"%s\""
-#~ msgstr "Изменение имени %s"
-
-#~ msgid "Manage and track your tasks"
-#~ msgstr "Управление и отслеживание ваших задач"
-
-#~ msgid "Add from Template"
-#~ msgstr "Добавить из шаблона"
-
-#~ msgid "All Tasks"
-#~ msgstr "Все задачи"
-
-#, javascript-format
-#~ msgid "Tags: %s"
-#~ msgstr "Теги: %s"
-
-#, javascript-format
-#~ msgid "No tasks found for \"%s\""
-#~ msgstr "Не найдено задач для «%s»"
-
-#~ msgid "No tasks for today"
-#~ msgstr "Нет задач на сегодня"
-
-#~ msgid "No tasks for this week"
-#~ msgstr "Нет задач на эту неделю"
-
-#~ msgid "No active tasks"
-#~ msgstr "Нет активных задач"
-
-#, javascript-format
-#~ msgid "Modify \"%s\""
-#~ msgstr "Изменить «%s»"
-
-#~ msgid "Select end time"
-#~ msgstr "Выберите время окончания"
-
-#~ msgid "Select Start Date & Time"
-#~ msgstr "Выберите дату и время начала"
-
-#~ msgid "Select End Date & Time"
-#~ msgstr "Выберите дату и время окончания"
-
-#, javascript-format
-#~ msgid "Are you sure you want to delete these %d tasks?"
-#~ msgstr "Вы уверены, что хотите удалить эти задачи (%d)?"
-
-#, javascript-format
-#~ msgid "%d tasks deleted successfully"
-#~ msgstr "%d задач успешно удалено"
-
-#, javascript-format
-#~ msgid "Task \"%s\" created successfully"
-#~ msgstr "Задача «%s» успешно создана"
-
-#~ msgid "No projects available"
-#~ msgstr "Нет доступных проектов"
-
-#~ msgid "Create a project first in the Projects page"
-#~ msgstr "Сначала создайте проект на странице Проекты"
-
-#~ msgid "No clients available"
-#~ msgstr "Нет доступных клиентов"
-
-#~ msgid "Create a client first in the Clients page"
-#~ msgstr "Сначала создайте клиента на странице Клиенты"
-
-#~ msgid "Error loading stats"
-#~ msgstr "Ошибка загрузки статистики"
-
-#~ msgid "No recent tasks"
-#~ msgstr "Нет последних задач"
-
-#~ msgid "Tasks matching your filters will appear here"
-#~ msgstr "Задачи, соответствующие вашим фильтрам, появятся здесь"
-
-#~ msgid "Open Compact Tracker"
-#~ msgstr "Открыть компактный таймер"
-
-#~ msgid "PDF Export Preview"
-#~ msgstr "Предпросмотр PDF экспорта"
-
-#~ msgid "📊 Chart Visualization"
-#~ msgstr "📊 Визуализация отсчета"
-
-#~ msgid "Time tracking data will be visualized here"
-#~ msgstr "Информация об отслеживании времени будет отображена здесь"
-
-#~ msgid "Summary Statistics"
-#~ msgstr "Итоговая Статистика"
+#: src/ui/utils/widgetFactory.js:409
+msgid "Click to change color and icon"
+msgstr "Щёлкните, чтобы изменить цвет и значок"

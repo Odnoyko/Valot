@@ -27,6 +27,27 @@ export const CompactTrackerWindow = GObject.registerClass({
 
         // Set minimal size after UI is built
         this.set_size_request(500, -1);
+
+        // CRITICAL: Don't cleanup on hide - keep subscriptions active
+        // Only cleanup on destroy to prevent memory leaks
+        // This ensures window works correctly when shown again
+        this.connect('hide', () => {
+            // Don't cleanup - keep subscriptions active for when window is shown again
+            // AdvancedTrackingWidget will handle its own cleanup on destroy
+        });
+        
+        // CRITICAL: Refresh when window is shown again to ensure UI is synchronized
+        this.connect('show', () => {
+            if (this.trackingWidget && typeof this.trackingWidget.refresh === 'function') {
+                // refresh() will resubscribe if needed and update UI
+                this.trackingWidget.refresh();
+            }
+        });
+        
+        // Cleanup when window is destroyed
+        this.connect('destroy', () => {
+            this.cleanup();
+        });
     }
 
     setShiftMode(shiftMode) {
@@ -66,6 +87,16 @@ export const CompactTrackerWindow = GObject.registerClass({
 
         windowHandle.set_child(mainBox);
         this.set_content(windowHandle);
+    }
+
+    /**
+     * Cleanup: cleanup tracking widget
+     */
+    cleanup() {
+        if (this.trackingWidget && typeof this.trackingWidget.cleanup === 'function') {
+            this.trackingWidget.cleanup();
+            this.trackingWidget = null;
+        }
     }
 
     _onCloseOpen() {

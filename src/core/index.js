@@ -14,7 +14,6 @@ export { TaskService } from './services/TaskService.js';
 export { TaskInstanceService } from './services/TaskInstanceService.js';
 export { TimeTrackingService } from './services/TimeTrackingService.js';
 export { ReportService } from './services/ReportService.js';
-export { GdaAdapter } from './database/GdaAdapter.js';
 // State
 export { StateManager } from './state/StateManager.js';
 // Events

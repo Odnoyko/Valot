@@ -1,83 +1,90 @@
+/**
+ * Project Service - Simplified
+ * Direct SQL, minimal object creation
+ */
 import { BaseService } from './BaseService.js';
 import { CoreEvents } from '../events/CoreEvents.js';
+
 export class ProjectService extends BaseService {
     constructor(core) {
         super(core);
     }
+
     /**
-     * Get all projects
+     * Get all projects (direct SQL)
      */
     async getAll() {
-        const sql = `SELECT * FROM Project ORDER BY name ASC`;
-        return await this.query(sql);
+        return await this.query(`SELECT * FROM Project ORDER BY name ASC`);
     }
+
     /**
-     * Get project by ID
+     * Get project by ID (direct SQL)
      */
     async getById(id) {
-        const sql = `SELECT * FROM Project WHERE id = ?`;
-        const results = await this.query(sql, [id]);
-        return results.length > 0 ? results[0] : null;
+        const rows = await this.query(`SELECT * FROM Project WHERE id = ?`, [id]);
+        return rows.length > 0 ? rows[0] : null;
     }
+
     /**
-     * Get project by name
+     * Get project by name (direct SQL)
      */
     async getByName(name) {
-        const sql = `SELECT * FROM Project WHERE name = ?`;
-        const results = await this.query(sql, [name]);
-        return results.length > 0 ? results[0] : null;
+        const rows = await this.query(`SELECT * FROM Project WHERE name = ?`, [name]);
+        return rows.length > 0 ? rows[0] : null;
     }
+
     /**
-     * Create a new project
+     * Create project (direct SQL)
      */
     async create(input) {
-        // Ensure unique name - add suffix if exists
+        // Ensure unique name
         let finalName = input.name;
         let suffix = 2;
 
         while (true) {
             const existing = await this.getByName(finalName);
-            if (!existing) {
-                break; // Name is unique
-            }
+            if (!existing) break;
             finalName = `${input.name} (${suffix})`;
             suffix++;
         }
 
-        const sql = `
-            INSERT INTO Project (name, color, icon, client_id, total_time, dark_icons, icon_color, icon_color_mode)
-            VALUES (?, ?, ?, ?, 0, ?, ?, ?)
-        `;
-        const projectId = await this.execute(sql, [
-            finalName,
-            input.color || '#cccccc',
-            input.icon !== undefined ? input.icon : null,
-            input.client_id || null,
-            input.dark_icons !== undefined ? (input.dark_icons ? 1 : 0) : 0,
-            input.icon_color || '#cccccc',
-            input.icon_color_mode || 'auto',
-        ]);
+        const projectId = await this.execute(
+            `INSERT INTO Project (name, color, icon, client_id, total_time, dark_icons, icon_color, icon_color_mode)
+             VALUES (?, ?, ?, ?, 0, ?, ?, ?)`,
+            [
+                finalName,
+                input.color || '#cccccc',
+                input.icon !== undefined ? input.icon : null,
+                input.client_id || null,
+                input.dark_icons !== undefined ? (input.dark_icons ? 1 : 0) : 0,
+                input.icon_color || '#cccccc',
+                input.icon_color_mode || 'auto',
+            ]
+        );
+
         this.events.emit(CoreEvents.PROJECT_CREATED, { id: projectId, name: finalName, ...input });
         return projectId;
     }
+
     /**
-     * Update a project
+     * Update project (direct SQL)
      */
     async update(id, input) {
-        // Check if project exists
         const project = await this.getById(id);
         if (!project) {
             throw new Error('Project not found');
         }
-        // Check for duplicate name if name is being changed
+
         if (input.name && input.name !== project.name) {
             const existing = await this.getByName(input.name);
             if (existing) {
                 throw new Error('Project with this name already exists');
             }
         }
+
         const updates = [];
         const params = [];
+
         if (input.name !== undefined) {
             updates.push('name = ?');
             params.push(input.name);
@@ -106,75 +113,63 @@ export class ProjectService extends BaseService {
             updates.push('icon_color_mode = ?');
             params.push(input.icon_color_mode);
         }
-        if (updates.length === 0)
-            return;
+
+        if (updates.length === 0) return;
+
         params.push(id);
-        const sql = `UPDATE Project SET ${updates.join(', ')} WHERE id = ?`;
-        await this.execute(sql, params);
+        await this.execute(`UPDATE Project SET ${updates.join(', ')} WHERE id = ?`, params);
+
         this.events.emit(CoreEvents.PROJECT_UPDATED, { id, ...input });
     }
+
     /**
-     * Delete a project
+     * Delete project (direct SQL)
      */
     async delete(id) {
-        // Prevent deletion of default project
         if (id === 1) {
             throw new Error('Cannot delete default project');
         }
 
-        // Reassign all TaskInstances using this project to default project (id=1)
-        const reassignSql = `UPDATE TaskInstance SET project_id = 1 WHERE project_id = ?`;
-        await this.execute(reassignSql, [id]);
+        await this.execute(`UPDATE TaskInstance SET project_id = 1 WHERE project_id = ?`, [id]);
+        await this.execute(`DELETE FROM Project WHERE id = ?`, [id]);
 
-        const sql = `DELETE FROM Project WHERE id = ?`;
-        await this.execute(sql, [id]);
         this.events.emit(CoreEvents.PROJECT_DELETED, { id });
     }
 
     /**
-     * Delete multiple projects
+     * Delete multiple projects (direct SQL)
      */
     async deleteMultiple(ids) {
-        if (!ids || ids.length === 0) {
-            return;
-        }
+        if (!ids || ids.length === 0) return;
 
-        // Filter out default project (ID = 1)
         const idsToDelete = ids.filter(id => id !== 1);
+        if (idsToDelete.length === 0) return;
 
-        if (idsToDelete.length === 0) {
-            return;
-        }
-
-        // Reassign all TaskInstances using these projects to default project (id=1)
         const placeholders = idsToDelete.map(() => '?').join(', ');
-        const reassignSql = `UPDATE TaskInstance SET project_id = 1 WHERE project_id IN (${placeholders})`;
-        await this.execute(reassignSql, idsToDelete);
-
-        const sql = `DELETE FROM Project WHERE id IN (${placeholders})`;
-        await this.execute(sql, idsToDelete);
+        await this.execute(`UPDATE TaskInstance SET project_id = 1 WHERE project_id IN (${placeholders})`, idsToDelete);
+        await this.execute(`DELETE FROM Project WHERE id IN (${placeholders})`, idsToDelete);
 
         this.events.emit(CoreEvents.PROJECTS_DELETED, { ids: idsToDelete });
     }
+
     /**
-     * Update project total time
+     * Update total time (direct SQL)
      */
     async updateTotalTime(id, totalTime) {
-        const sql = `UPDATE Project SET total_time = ? WHERE id = ?`;
-        await this.execute(sql, [totalTime, id]);
+        await this.execute(`UPDATE Project SET total_time = ? WHERE id = ?`, [totalTime, id]);
     }
+
     /**
-     * Get projects by client
+     * Get projects by client (direct SQL)
      */
     async getByClient(clientId) {
-        const sql = `SELECT * FROM Project WHERE client_id = ? ORDER BY name ASC`;
-        return await this.query(sql, [clientId]);
+        return await this.query(`SELECT * FROM Project WHERE client_id = ? ORDER BY name ASC`, [clientId]);
     }
+
     /**
-     * Search projects by name
+     * Search projects (direct SQL)
      */
     async search(query) {
-        const sql = `SELECT * FROM Project WHERE name LIKE ? ORDER BY name ASC`;
-        return await this.query(sql, [`%${query}%`]);
+        return await this.query(`SELECT * FROM Project WHERE name LIKE ? ORDER BY name ASC`, [`%${query}%`]);
     }
 }

@@ -24,6 +24,44 @@ export const PreferencesDialog = GObject.registerClass({
             modal: true,
             ...params
         });
+        
+        // Store application reference if available from transient_for
+        const parent = this.get_transient_for();
+        if (parent && parent.application) {
+            this.application = parent.application;
+        }
+
+        // Track resources for cleanup
+        this._timerIds = [];
+        this._currencyDialog = null;
+        
+        // Cache currency rows to avoid unnecessary redraws
+        this._currencyRowsMap = new Map(); // currency code -> row widget
+        this._hiddenRowsMap = new Map();   // currency code -> row widget
+        this._lastCurrencyState = null;    // Cache last state to detect changes
+        
+        // Cache extension rows to avoid unnecessary redraws
+        this._extensionRowsMap = new Map(); // extension id -> row widget
+        this._lastExtensionsState = null;   // Cache last extensions state
+        
+        // Set hide_on_close to prevent destruction (reuse window)
+        this.hide_on_close = true;
+        
+        // Connect to close-request to hide instead of destroy
+        this._closeRequestHandlerId = this.connect('close-request', () => {
+            // Cleanup only JS structures (timers, dialogs, references)
+            // GTK widgets will be preserved for reuse
+            this._cleanupTimers();
+            this._clearJSReferences();
+            this.hide();
+            return true; // Prevent default destroy behavior
+        });
+        
+        // Full cleanup only on actual destroy (if window is ever destroyed)
+        this._destroyHandlerId = this.connect('destroy', () => {
+            this._cleanupTimers();
+            this._clearJSReferences();
+        });
 
         this._setupPages();
     }
@@ -52,6 +90,17 @@ export const PreferencesDialog = GObject.registerClass({
         });
         this._setupClientsPage(clientsPage);
         this.add(clientsPage);
+
+        // Integrations Page
+        const integrationsPage = new Adw.PreferencesPage({
+            title: _('Integrations'),
+            icon_name: 'network-server-symbolic',
+        });
+        this._setupIntegrationsPage(integrationsPage);
+        this.add(integrationsPage);
+
+        // Extensions Page (only if extensions are available)
+        this._setupExtensionsPage();
     }
 
     _setupAboutPage(page) {
@@ -158,6 +207,9 @@ export const PreferencesDialog = GObject.registerClass({
     }
 
     _setupGlobalPage(page) {
+        // Get settings for the entire page
+        const settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
+        
         // Appearance Group
         const appearanceGroup = new Adw.PreferencesGroup({
             title: _('Appearance'),
@@ -202,7 +254,6 @@ export const PreferencesDialog = GObject.registerClass({
         appearanceGroup.add(themeRow);
 
         // Load saved theme preference and set initial state
-        const settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
         const savedTheme = settings.get_int('theme-preference');
         
         // Set initial button state
@@ -450,51 +501,34 @@ export const PreferencesDialog = GObject.registerClass({
         pomodoroGroup.add(timerRow);
         page.add(pomodoroGroup);
 
-        // Database Group
-        const databaseGroup = new Adw.PreferencesGroup({
-            title: _('Database'),
-            description: _('Backup and manage your data'),
-        });
+        // Experimental Features Group - DISABLED FOR USERS
+        // const experimentalGroup = new Adw.PreferencesGroup({
+        //     title: _('Experimental'),
+        //     description: _('Enable experimental and unstable features'),
+        // });
 
-        // Export DB button row
-        const exportDbRow = new Adw.ActionRow({
-            title: _('Export Database'),
-            subtitle: _('Save a backup of your database'),
-        });
+        // const experimentalRow = new Adw.SwitchRow({
+        //     title: _('Enable Experimental Features'),
+        //     subtitle: _('Unlock extensions, addons, and other experimental functionality'),
+        // });
 
-        const exportButton = new Gtk.Button({
-            label: _('Export'),
-            valign: Gtk.Align.CENTER,
-            css_classes: ['flat'],
-        });
+        // experimentalRow.set_active(settings.get_boolean('experimental-features') || false);
 
-        exportButton.connect('clicked', () => {
-            this._exportDatabase();
-        });
+        // experimentalRow.connect('notify::active', () => {
+        //     const isEnabled = experimentalRow.get_active();
+        //     settings.set_boolean('experimental-features', isEnabled);
+        //     
+        //     if (!isEnabled) {
+        //         this._deactivateAllExtensions();
+        //     }
+        //     
+        //     this._updateExtensionsPageVisibility();
+        // });
 
-        exportDbRow.add_suffix(exportButton);
-        databaseGroup.add(exportDbRow);
+        // experimentalGroup.add(experimentalRow);
+        // page.add(experimentalGroup);
 
-        // Reset DB button row
-        const resetDbRow = new Adw.ActionRow({
-            title: _('Reset Database'),
-            subtitle: _('Delete all data and start fresh'),
-        });
-
-        const resetButton = new Gtk.Button({
-            label: _('Reset'),
-            valign: Gtk.Align.CENTER,
-            css_classes: ['flat', 'destructive-action'],
-        });
-
-        resetButton.connect('clicked', () => {
-            this._resetDatabase();
-        });
-
-        resetDbRow.add_suffix(resetButton);
-        databaseGroup.add(resetDbRow);
-
-        page.add(databaseGroup);
+        // Database group removed - moved to Integrations page
 
         // Welcome Info Group
         const welcomeGroup = new Adw.PreferencesGroup({
@@ -539,9 +573,10 @@ export const PreferencesDialog = GObject.registerClass({
         });
 
         const commandLabel = new Gtk.Label({
-            label: 'com.odnoyko.valot --compact',
+            label: 'flatpak run\ncom.odnoyko.valot --compact',
             css_classes: ['monospace', 'caption', 'dim-label'],
             selectable: true,
+            justify: Gtk.Justification.LEFT,
         });
 
         const copyButton = new Gtk.Button({
@@ -552,17 +587,18 @@ export const PreferencesDialog = GObject.registerClass({
 
         copyButton.connect('clicked', () => {
             const clipboard = Gdk.Display.get_default().get_clipboard();
-            clipboard.set('com.odnoyko.valot --compact');
+            clipboard.set('flatpak run com.odnoyko.valot --compact');
             
             // Show feedback
             copyButton.icon_name = 'emblem-ok-symbolic';
             copyButton.add_css_class('success');
             
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
+            const timerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
                 copyButton.icon_name = 'edit-copy-symbolic';
                 copyButton.remove_css_class('success');
                 return false;
             });
+            this._timerIds.push(timerId);
         });
 
         commandBox.append(commandLabel);
@@ -995,74 +1031,163 @@ export const PreferencesDialog = GObject.registerClass({
     }
     
     _refreshCurrencyList() {
-        // Completely rebuild the currency group to avoid widget management issues
-        const parent = this.currencyGroup.get_parent();
-        if (parent) {
-            parent.remove(this.currencyGroup);
-        }
-        
-        // Recreate the currency group
-        this.currencyGroup = new Adw.PreferencesGroup({
-            title: _('Currency Settings'),
-            description: _('Manage available currencies for client billing'),
+        // Check if currency state actually changed (avoid unnecessary icon redraws)
+        const currentState = JSON.stringify({
+            visible: [...this.currencySettings.visible].sort(),
+            hidden: [...this.currencySettings.hidden].sort(),
+            custom: this.currencySettings.custom.map(c => ({ code: c.code, hidden: c.hidden }))
         });
         
-        // Add header suffix with Add Currency button
-        const addButton = new Gtk.Button({
-            icon_name: 'list-add-symbolic',
-            css_classes: ['flat'],
-            valign: Gtk.Align.CENTER,
-        });
-        addButton.connect('clicked', () => this._showAddCurrencyDialog());
-        this.currencyGroup.set_header_suffix(addButton);
-        
-        // Re-add to parent
-        if (parent) {
-            parent.insert_child_after(this.currencyGroup, null);
+        // If state hasn't changed, don't redraw icons - just return
+        if (this._lastCurrencyState === currentState) {
+            return;
         }
         
-        // Clear hidden currencies - recreate the expander
-        if (this.hiddenExpanderRow && this.hiddenExpanderRow.get_parent()) {
-            this.hiddenGroup.remove(this.hiddenExpanderRow);
+        this._lastCurrencyState = currentState;
+        
+        // Only recreate widgets if they don't exist (first time or after destroy)
+        if (!this.currencyGroup || !this.currencyGroup.get_parent()) {
+            // First time setup - create groups
+            const clientsPage = this.get_pages().find(p => p.get_title() === _('Clients'));
+            if (clientsPage) {
+                // Setup currency groups (reuse existing or create new)
+                if (!this.currencyGroup) {
+                    this.currencyGroup = new Adw.PreferencesGroup({
+                        title: _('Currency Settings'),
+                        description: _('Manage available currencies for client billing'),
+                    });
+                    
+                    const addButton = new Gtk.Button({
+                        icon_name: 'list-add-symbolic',
+                        css_classes: ['flat'],
+                        valign: Gtk.Align.CENTER,
+                    });
+                    addButton.connect('clicked', () => this._showAddCurrencyDialog());
+                    this.currencyGroup.set_header_suffix(addButton);
+                    
+                    clientsPage.add(this.currencyGroup);
+                }
+                
+                if (!this.hiddenGroup) {
+                    this.hiddenGroup = new Adw.PreferencesGroup({
+                        title: _('Hidden Currencies'),
+                        description: _('Click to unhide currencies'),
+                    });
+                    
+                    this.hiddenExpanderRow = new Adw.ExpanderRow({
+                        title: _('Hidden'),
+                        subtitle: _('0 currencies hidden'),
+                    });
+                    this.hiddenGroup.add(this.hiddenExpanderRow);
+                    clientsPage.add(this.hiddenGroup);
+                }
+            }
         }
-        this.hiddenExpanderRow = new Adw.ExpanderRow({
-            title: _('Hidden'),
-            subtitle: _('0 currencies hidden'),
-        });
-        this.hiddenGroup.add(this.hiddenExpanderRow);
         
         const allCurrencies = getAllCurrencies();
         
-        // Add visible currencies
+        // Collect current currency codes
+        const visibleCodes = new Set([
+            ...this.currencySettings.visible,
+            ...this.currencySettings.custom.filter(c => !c.hidden).map(c => c.code)
+        ]);
+        const hiddenCodes = new Set([
+            ...this.currencySettings.hidden,
+            ...this.currencySettings.custom.filter(c => c.hidden).map(c => c.code)
+        ]);
+        
+        // Remove rows for currencies that are no longer visible/hidden
+        // Collect entries to delete first to avoid modification during iteration
+        const currencyRowsToDelete = [];
+        const hiddenRowsToDelete = [];
+        
+        for (const [code, row] of this._currencyRowsMap.entries()) {
+            if (!visibleCodes.has(code)) {
+                currencyRowsToDelete.push([code, row]);
+            }
+        }
+        
+        for (const [code, row] of this._hiddenRowsMap.entries()) {
+            if (!hiddenCodes.has(code)) {
+                hiddenRowsToDelete.push([code, row]);
+            }
+        }
+        
+        // Remove rows from groups (GTK will handle cleanup)
+        currencyRowsToDelete.forEach(([code, row]) => {
+            try {
+                if (row && !row.is_destroyed?.()) {
+                    // Remove from parent - GTK will handle the rest
+                    const parent = row.get_parent();
+                    if (parent && parent.remove) {
+                        parent.remove(row);
+                    }
+                    // Row will be destroyed by GTK automatically
+                }
+            } catch (e) {
+                // Ignore errors
+            }
+            this._currencyRowsMap.delete(code);
+        });
+        
+        hiddenRowsToDelete.forEach(([code, row]) => {
+            try {
+                if (row && !row.is_destroyed?.()) {
+                    // Remove from parent - GTK will handle the rest
+                    const parent = row.get_parent();
+                    if (parent && parent.remove) {
+                        parent.remove(row);
+                    }
+                    // Row will be destroyed by GTK automatically
+                }
+            } catch (e) {
+                // Ignore errors
+            }
+            this._hiddenRowsMap.delete(code);
+        });
+        
+        // Add new visible currencies (only if not already in map - avoid recreating icons)
         [...this.currencySettings.visible, ...this.currencySettings.custom.filter(c => !c.hidden)].forEach(code => {
-            let currency;
-            if (typeof code === 'string') {
-                currency = allCurrencies.find(c => c.code === code) || { code, symbol: getCurrencySymbol(code), name: code };
-            } else {
-                currency = code; // Custom currency object
+            const currencyCode = typeof code === 'string' ? code : code.code;
+            if (!this._currencyRowsMap.has(currencyCode)) {
+                let currency;
+                if (typeof code === 'string') {
+                    currency = allCurrencies.find(c => c.code === code) || { code, symbol: getCurrencySymbol(code), name: code };
+                } else {
+                    currency = code;
+                }
+                const row = this._createCurrencyRow(currency, false);
+                this._currencyRowsMap.set(currencyCode, row);
             }
-            
-            this._createCurrencyRow(currency, false);
         });
         
-        // Add hidden currencies to expander
+        // Add new hidden currencies (only if not already in map - avoid recreating icons)
         [...this.currencySettings.hidden, ...this.currencySettings.custom.filter(c => c.hidden)].forEach(code => {
-            let currency;
-            if (typeof code === 'string') {
-                currency = allCurrencies.find(c => c.code === code) || { code, symbol: getCurrencySymbol(code), name: code };
-            } else {
-                currency = code; // Custom currency object
+            const currencyCode = typeof code === 'string' ? code : (code.code || code);
+            if (!this._hiddenRowsMap.has(currencyCode)) {
+                let currency;
+                if (typeof code === 'string') {
+                    currency = allCurrencies.find(c => c.code === code) || { code, symbol: getCurrencySymbol(code), name: code };
+                } else {
+                    currency = code;
+                }
+                const row = this._createHiddenCurrencyRow(currency);
+                this._hiddenRowsMap.set(currencyCode, row);
             }
-            
-            this._createHiddenCurrencyRow(currency);
         });
         
-        // Add button is now in the header, no need to add it here
+        // Update hidden count subtitle (only if changed)
+        const hiddenCount = hiddenCodes.size;
+        const expectedSubtitle = _('%d currencies hidden').format(hiddenCount);
+        if (this.hiddenExpanderRow.get_subtitle() !== expectedSubtitle) {
+            this.hiddenExpanderRow.set_subtitle(expectedSubtitle);
+        }
         
-        // Update hidden count
-        const hiddenCount = this.currencySettings.hidden.length + this.currencySettings.custom.filter(c => c.hidden).length;
-        this.hiddenExpanderRow.set_subtitle(_('%d currencies hidden').format(hiddenCount));
-        this.hiddenGroup.set_visible(hiddenCount > 0);
+        // Update visibility (only if changed)
+        const shouldBeVisible = hiddenCount > 0;
+        if (shouldBeVisible !== this.hiddenGroup.get_visible()) {
+            this.hiddenGroup.set_visible(shouldBeVisible);
+        }
     }
     
     _createCurrencyRow(currency, isCustom = false) {
@@ -1107,6 +1232,9 @@ export const PreferencesDialog = GObject.registerClass({
         
         // Add row to group 
         this.currencyGroup.add(row);
+        
+        // Return row for caching
+        return row;
     }
     
     _createHiddenCurrencyRow(currency) {
@@ -1150,10 +1278,24 @@ export const PreferencesDialog = GObject.registerClass({
         }
         
         this.hiddenExpanderRow.add_row(row);
+        
+        // Return row for caching
+        return row;
     }
     
     _showAddCurrencyDialog() {
-        CurrencyDialog.show({
+        // Close previous currency dialog if exists
+        if (this._currencyDialog) {
+            try {
+                if (this._currencyDialog.close) {
+                    this._currencyDialog.close();
+                }
+            } catch (e) {
+                // Already closed
+            }
+        }
+        
+        this._currencyDialog = CurrencyDialog.show({
             mode: 'create',
             transient_for: this,
             onCurrencySave: (currencyData) => {
@@ -1176,7 +1318,18 @@ export const PreferencesDialog = GObject.registerClass({
     }
     
     _editCurrency(currency) {
-        CurrencyDialog.show({
+        // Close previous currency dialog if exists
+        if (this._currencyDialog) {
+            try {
+                if (this._currencyDialog.close) {
+                    this._currencyDialog.close();
+                }
+            } catch (e) {
+                // Already closed
+            }
+        }
+        
+        this._currencyDialog = CurrencyDialog.show({
             mode: 'edit',
             currency: currency,
             transient_for: this,
@@ -1239,10 +1392,337 @@ export const PreferencesDialog = GObject.registerClass({
         }
     }
 
+    /**
+     * Setup Extensions Page (creates page structure if needed)
+     */
+    _setupExtensionsPage() {
+        // Build-time gate: completely hide extensions UI when disabled
+        if (!Config.ENABLE_EXTENSIONS) {
+            return;
+        }
+        // Check if experimental features are enabled
+        const settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
+        const experimentalEnabled = settings.get_boolean('experimental-features');
+        
+        if (!experimentalEnabled) {
+            // Don't create extensions page if experimental features are disabled
+            return;
+        }
+
+        // Use stored application reference or get from transient_for
+        const app = this.application || this.get_transient_for()?.application;
+        
+        // Create extensions page only if it doesn't exist
+        if (!this.extensionsPage) {
+            const extensionsPage = new Adw.PreferencesPage({
+                title: _('Extensions'),
+                icon_name: 'application-x-addon-symbolic',
+            });
+            
+            // Store reference
+            this.extensionsPage = extensionsPage;
+
+            // Create main extensions group with header buttons
+            const extensionsGroup = new Adw.PreferencesGroup({
+                title: _('Installed Extensions'),
+                description: _('Manage addons and plugins'),
+            });
+
+            // Create header box with Reload (left) and Add (right) buttons
+            const headerBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 6,
+            });
+            
+            const reloadButton = new Gtk.Button({
+                icon_name: 'view-refresh-symbolic',
+                css_classes: ['flat'],
+                tooltip_text: _('Reload Extensions'),
+            });
+            
+            reloadButton.connect('clicked', () => {
+                if (app && app.extensionManager) {
+                    this._reloadExtensionsList();
+                }
+            });
+            
+            const addButton = new Gtk.Button({
+                icon_name: 'list-add-symbolic',
+                css_classes: ['flat'],
+                tooltip_text: _('Add Extension'),
+            });
+            
+            addButton.connect('clicked', () => {
+                if (app && app.extensionManager) {
+                    this._showAddExtensionDialog(app);
+                }
+            });
+            
+            headerBox.append(reloadButton);
+            headerBox.append(addButton);
+            
+            extensionsGroup.set_header_suffix(headerBox);
+            extensionsPage.add(extensionsGroup);
+            
+            // Add Available Extensions group (structure only)
+            const availableGroup = new Adw.PreferencesGroup({
+                title: _('Available Extensions'),
+                description: _('Extensions available for download from GitLab'),
+            });
+            
+            extensionsPage.add(availableGroup);
+            this.add(extensionsPage);
+        }
+        
+        // Populate with current data
+        this._populateExtensionsPage(this.extensionsPage, app);
+    }
+    
+    /**
+     * Populate extensions page with current extension data
+     * Updates content without recreating the page structure
+     */
+    _populateExtensionsPage(extensionsPage, app) {
+        if (!app || !app.extensionManager) return;
+        
+        // Find existing groups (keep structure, update content)
+        const extensionsGroup = extensionsPage.get_children().find(child => {
+            if (child instanceof Adw.PreferencesGroup) {
+                const title = child.get_title();
+                return title === _('Installed Extensions');
+            }
+            return false;
+        });
+        
+        const availableGroup = extensionsPage.get_children().find(child => {
+            if (child instanceof Adw.PreferencesGroup) {
+                const title = child.get_title();
+                return title === _('Available Extensions');
+            }
+            return false;
+        });
+        
+        // Remove old extension rows from groups (keep groups, update rows)
+        const allGroups = extensionsPage.get_children().filter(child => child instanceof Adw.PreferencesGroup);
+        allGroups.forEach(group => {
+            // Remove all rows (GTK will handle cleanup)
+            const rows = [];
+            let row = group.get_first_child();
+            while (row) {
+                const next = row.get_next_sibling();
+                rows.push(row);
+                row = next;
+            }
+            rows.forEach(row => {
+                try {
+                    group.remove(row);
+                } catch (e) {
+                    // Already removed
+                }
+            });
+        });
+        
+        // Get current extensions
+        const extensions = app.extensionManager.getAllExtensions();
+        const development = extensions.filter(ext => ext.source && ext.source.includes('development'));
+        const user = extensions.filter(ext => !ext.source || (!ext.source.includes('development') && !ext.source.includes('flatpak')));
+        const flatpak = extensions.filter(ext => ext.source && ext.source.includes('flatpak'));
+        
+        // Add development extensions group if any exist
+        if (development.length > 0) {
+            let devGroup = extensionsPage.get_children().find(child => {
+                if (child instanceof Adw.PreferencesGroup) {
+                    return child.get_title() === _('Development Extensions');
+                }
+                return false;
+            });
+            
+            if (!devGroup) {
+                devGroup = new Adw.PreferencesGroup({
+                    title: _('Development Extensions'),
+                    description: _('Extensions from development environment'),
+                });
+                extensionsPage.add(devGroup);
+            }
+            
+            development.forEach(ext => devGroup.add(this._createExtensionRow(ext, app)));
+        }
+        
+        // Add user extensions to main group
+        if (extensionsGroup) {
+            user.forEach(ext => extensionsGroup.add(this._createExtensionRow(ext, app)));
+        }
+        
+        // Add Flatpak extensions group if any exist
+        if (flatpak.length > 0) {
+            let flatpakGroup = extensionsPage.get_children().find(child => {
+                if (child instanceof Adw.PreferencesGroup) {
+                    return child.get_title() === _('System Extensions');
+                }
+                return false;
+            });
+            
+            if (!flatpakGroup) {
+                flatpakGroup = new Adw.PreferencesGroup({
+                    title: _('System Extensions'),
+                    description: _('Extensions installed via Flatpak'),
+                });
+                extensionsPage.add(flatpakGroup);
+            }
+            
+            flatpak.forEach(ext => flatpakGroup.add(this._createExtensionRow(ext, app)));
+        }
+        
+        // Load available extensions (async)
+        if (availableGroup) {
+            this._loadAndDisplayAvailableExtensions(app, availableGroup);
+        }
+    }
+    
+    /**
+     * Create extension row widget
+     */
+    _createExtensionRow(ext, app) {
+        const row = new Adw.SwitchRow({
+            title: ext.name,
+            subtitle: ext.description,
+            active: ext.active,
+        });
+
+        // Add type badge
+        const typeBadge = new Gtk.Label({
+            label: ext.type === 'addon' ? _('Addon') : _('Plugin'),
+            css_classes: ['caption', 'dim-label'],
+            valign: Gtk.Align.CENTER,
+        });
+        row.add_prefix(typeBadge);
+
+        // Toggle extension on/off
+        row.connect('notify::active', async (switchRow) => {
+            const active = switchRow.get_active();
+            if (active) {
+                await app.extensionManager.activateExtension(ext.id);
+            } else {
+                await app.extensionManager.deactivateExtension(ext.id);
+            }
+        });
+
+        // Add settings button if extension has settings
+        const settingsPageFn = app.extensionManager.getExtensionSettingsPage(ext.id);
+        if (settingsPageFn) {
+            const settingsButton = new Gtk.Button({
+                icon_name: 'emblem-system-symbolic',
+                valign: Gtk.Align.CENTER,
+                css_classes: ['flat'],
+                tooltip_text: _('Extension Settings'),
+            });
+
+            settingsButton.connect('clicked', () => {
+                const settingsPage = settingsPageFn();
+                if (settingsPage) {
+                    this.add(settingsPage);
+                    this.set_visible_page(settingsPage);
+                }
+            });
+
+            row.add_suffix(settingsButton);
+        }
+
+        return row;
+    }
+
+    /**
+     * Setup Integrations Page
+     */
+    _setupIntegrationsPage(page) {
+        // Database Management Group
+        const databaseGroup = new Adw.PreferencesGroup({
+            title: _('Database'),
+            description: _('Backup and manage your data'),
+        });
+
+        // Export DB button row
+        const exportDbRow = new Adw.ActionRow({
+            title: _('Export Database'),
+            subtitle: _('Save a backup of your database'),
+        });
+
+        const exportButton = new Gtk.Button({
+            label: _('Export'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat'],
+        });
+
+        exportButton.connect('clicked', () => {
+            this._exportDatabase();
+        });
+
+        exportDbRow.add_suffix(exportButton);
+        databaseGroup.add(exportDbRow);
+
+        // Import DB button row
+        const importDbRow = new Adw.ActionRow({
+            title: _('Import Database'),
+            subtitle: _('Restore a backup of your database'),
+        });
+
+        const importButton = new Gtk.Button({
+            label: _('Import'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat'],
+        });
+
+        importButton.connect('clicked', () => {
+            this._importDatabase();
+        });
+
+        importDbRow.add_suffix(importButton);
+        databaseGroup.add(importDbRow);
+
+        // Reset DB button row
+        const resetDbRow = new Adw.ActionRow({
+            title: _('Reset Database'),
+            subtitle: _('Delete all data and start fresh'),
+        });
+
+        const resetButton = new Gtk.Button({
+            label: _('Reset'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat', 'destructive-action'],
+        });
+
+        resetButton.connect('clicked', () => {
+            this._resetDatabase();
+        });
+
+        resetDbRow.add_suffix(resetButton);
+        databaseGroup.add(resetDbRow);
+
+        page.add(databaseGroup);
+    }
+
     static show(parent = null) {
+        // Reuse existing dialog if available (prevent memory leaks)
+        // Check if parent window has a cached preferences dialog
+        if (parent && parent._preferencesDialog) {
+            const existingDialog = parent._preferencesDialog;
+            // Check if dialog still exists and is not destroyed
+            if (existingDialog && !existingDialog.is_destroyed?.()) {
+                existingDialog.present();
+                return existingDialog;
+            }
+        }
+        
+        // Create new dialog only if it doesn't exist
         const dialog = new PreferencesDialog({
             transient_for: parent,
         });
+        
+        // Cache dialog reference in parent window
+        if (parent) {
+            parent._preferencesDialog = dialog;
+        }
+        
         dialog.present();
         return dialog;
     }
@@ -1264,38 +1744,330 @@ export const PreferencesDialog = GObject.registerClass({
                 const file = dialog.save_finish(result);
                 if (!file) return;
 
-                // Get database path
-                const dbPath = GLib.get_user_data_dir() + '/valot/valot.db';
-                const sourceFile = Gio.File.new_for_path(dbPath);
-
-                // Copy database to selected location
-                sourceFile.copy(
-                    file,
-                    Gio.FileCopyFlags.OVERWRITE,
-                    null,
-                    null
-                );
-
-                // Show success toast
+                // Delegate export to DataNavigator (data layer)
+                const app = this.get_transient_for().application;
+                app.dataNavigator.exportActiveDatabase(file.get_path())
+                    .then(() => {
                 const toast = new Adw.Toast({
                     title: _('Database exported successfully'),
                     timeout: 3,
                 });
                 this.add_toast(toast);
-            } catch (error) {
-                // User cancelled the dialog - this is normal, don't show error
-                if (error.matches(Gtk.DialogError, Gtk.DialogError.DISMISSED)) {
-                    return;
-                }
-
+                    })
+                    .catch((error) => {
                 console.error('Error exporting database:', error);
                 const toast = new Adw.Toast({
                     title: _('Failed to export database'),
                     timeout: 3,
                 });
                 this.add_toast(toast);
+                    });
+            } catch (error) {
+                // User cancelled the dialog - this is normal, don't show error
+                if (error.matches(Gtk.DialogError, Gtk.DialogError.DISMISSED)) {
+                    return;
+                }
             }
         });
+    }
+
+    /**
+     * Import database from a backup file
+     */
+    _importDatabase() {
+        const fileDialog = new Gtk.FileDialog({
+            title: _('Import Database'),
+            accept_label: _('Select'),
+        });
+
+        // Add file filter for .db files
+        const filter = new Gtk.FileFilter();
+        filter.set_name(_('Database files'));
+        filter.add_pattern('*.db');
+
+        const filterList = new Gio.ListStore({ item_type: Gtk.FileFilter.$gtype });
+        filterList.append(filter);
+        fileDialog.set_filters(filterList);
+        fileDialog.set_default_filter(filter);
+
+        fileDialog.open(this, null, (dialog, result) => {
+            try {
+                const file = dialog.open_finish(result);
+                if (!file) return;
+
+                const importPath = file.get_path();
+
+                // Show Database Migration Dialog with import context
+                this._showImportDialog(importPath);
+
+            } catch (error) {
+                // User cancelled the dialog - this is normal, don't show error
+                if (error.matches(Gtk.DialogError, Gtk.DialogError.DISMISSED)) {
+                    return;
+                }
+
+                console.error('Error selecting file:', error);
+                const toast = new Adw.Toast({
+                    title: _('Failed to select file'),
+                    timeout: 3,
+                });
+                this.add_toast(toast);
+            }
+        });
+    }
+
+    /**
+     * Show import dialog using DatabaseMigrationDialog
+     */
+    async _showImportDialog(importPath) {
+        const { DatabaseMigrationDialog } = await import('resource:///com/odnoyko/valot/ui/components/dialogs/DatabaseMigrationDialog.js');
+
+        // Customize dialog for import context
+        const migrationDialog = new DatabaseMigrationDialog(this, importPath, {
+            title: _('Import Database'),
+            subtitle: _('Choose how to import the database'),
+            deleteButtonLabel: _('Replace Data'),
+            backupButtonLabel: _('Save and Add Data'),
+            showVersion: false, // Don't show version badge for import
+        });
+
+        migrationDialog.show(async (choice) => {
+            if (choice === 'delete') {
+                // Replace Data - delete current and copy imported
+                await this._replaceDatabase(importPath, migrationDialog);
+            } else if (choice === 'backup') {
+                // Save and Add Data - merge databases
+                await this._mergeDatabase(importPath, migrationDialog);
+            }
+        });
+    }
+
+    /**
+     * Replace current database with imported one
+     */
+    async _replaceDatabase(importPath, migrationDialog) {
+        try {
+            const app = this.get_transient_for().application;
+            // Replace via DataNavigator (data layer)
+            const result = await app.dataNavigator.replaceWithDatabaseFile(importPath, (step, total, message) => {
+                migrationDialog.updateProgress(step, total, _(message));
+            });
+
+            migrationDialog.showCompletion();
+
+
+            // Force reload all services from database
+            if (app.coreAPI) {
+                // Clear any caches and force reload
+                try {
+                    if (app.coreAPI.taskService) {
+                        await app.coreAPI.taskService.loadAllTasks?.();
+                    }
+                    if (app.coreAPI.taskInstanceService) {
+                        await app.coreAPI.taskInstanceService.loadAll?.();
+                    }
+                    if (app.coreAPI.clientService) {
+                        await app.coreAPI.clientService.loadAll?.();
+                    }
+                    if (app.coreAPI.projectService) {
+                        await app.coreAPI.projectService.loadAll?.();
+                    }
+                } catch (reloadError) {
+                    console.error('⚠️  Service reload error:', reloadError);
+                }
+
+                // Notify UI directly via CoreBridge to force reload
+                app.coreBridge?.emitUIEvent('client-updated');
+                app.coreBridge?.emitUIEvent('project-updated');
+                app.coreBridge?.emitUIEvent('task-updated');
+
+            }
+
+        } catch (error) {
+            console.error('Error replacing database:', error);
+            migrationDialog.showError(_('Failed to replace database'));
+        }
+    }
+
+    /**
+     * Merge imported database with current one (add new data, check duplicates)
+     */
+    async _mergeDatabase(importPath, migrationDialog) {
+        const { DatabaseImport } = await import('resource:///com/odnoyko/valot/data/providers/gdaDBBridge/DatabaseImport.js');
+
+        try {
+            // Get EXISTING database connection from application's DataNavigator
+            const app = this.get_transient_for().application;
+            const activeProvider = app.dataNavigator?.getActiveProvider();
+            const appDb = activeProvider?.getBridge();
+
+            if (!appDb) {
+                throw new Error('Database bridge not found');
+            }
+
+
+            // Merge via DataNavigator (data layer)
+            const result = await app.dataNavigator.mergeFromDatabaseFile(importPath, (step, total, message) => {
+                migrationDialog.updateProgress(step, total, _(message));
+            });
+
+            // Show summary toast
+            const summaryMessage = _('Import complete: %d clients, %d projects, %d tasks, %d time entries added')
+                .format(result.clientsAdded, result.projectsAdded, result.tasksAdded, result.entriesAdded);
+
+            const toast = new Adw.Toast({
+                title: summaryMessage,
+                timeout: 5,
+            });
+            this.add_toast(toast);
+
+            migrationDialog.showCompletion();
+
+
+            // Force reload all services from database
+            if (app.coreAPI) {
+                // Clear any caches and force reload
+                try {
+                    if (app.coreAPI.taskService) {
+                        await app.coreAPI.taskService.loadAllTasks?.();
+                    }
+                    if (app.coreAPI.taskInstanceService) {
+                        await app.coreAPI.taskInstanceService.loadAll?.();
+                    }
+                    if (app.coreAPI.clientService) {
+                        await app.coreAPI.clientService.loadAll?.();
+                    }
+                    if (app.coreAPI.projectService) {
+                        await app.coreAPI.projectService.loadAll?.();
+                    }
+                } catch (reloadError) {
+                    console.error('⚠️  Service reload error:', reloadError);
+                }
+
+                // Notify UI directly via CoreBridge to force reload
+                app.coreBridge?.emitUIEvent('client-updated');
+                app.coreBridge?.emitUIEvent('project-updated');
+                app.coreBridge?.emitUIEvent('task-updated');
+
+            }
+
+            // Close dialog after 1 second
+            const timerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+                try {
+                migrationDialog.close();
+                } catch (e) {
+                    // Ignore if already closed
+                }
+                return GLib.SOURCE_REMOVE;
+            });
+            this._timerIds.push(timerId);
+
+        } catch (error) {
+            console.error('Error merging database:', error);
+            migrationDialog.showError(_('Failed to merge database: %s').format(error.message));
+        }
+    }
+
+    /**
+     * Load extension from file
+     */
+    _loadExtensionFromFile(app) {
+        const fileDialog = new Gtk.FileDialog({
+            title: _('Select Extension File'),
+            accept_label: _('Load'),
+        });
+
+        // Add file filter for .js files
+        const filter = new Gtk.FileFilter();
+        filter.set_name(_('JavaScript files'));
+        filter.add_pattern('*.js');
+
+        const filterList = new Gio.ListStore({ item_type: Gtk.FileFilter.$gtype });
+        filterList.append(filter);
+        fileDialog.set_filters(filterList);
+        fileDialog.set_default_filter(filter);
+
+        fileDialog.open(this, null, async (dialog, result) => {
+            try {
+                const file = dialog.open_finish(result);
+                if (!file) return;
+
+                const filePath = file.get_path();
+
+                // Load extension
+                const metadata = await app.extensionManager.loadExtensionFromFile(filePath);
+
+                // Show success toast
+                const toast = new Adw.Toast({
+                    title: _('Extension loaded: %s').format(metadata.name),
+                    timeout: 3,
+                });
+                this.add_toast(toast);
+
+                // Refresh extensions page
+                this.close();
+                const newDialog = PreferencesDialog.show(this.get_transient_for());
+                newDialog.set_visible_page_name('extensions');
+
+            } catch (error) {
+                // User cancelled the dialog
+                if (error.matches(Gtk.DialogError, Gtk.DialogError.DISMISSED)) {
+                    return;
+                }
+
+                console.error('Error loading extension:', error);
+                const toast = new Adw.Toast({
+                    title: _('Failed to load extension: %s').format(error.message),
+                    timeout: 5,
+                });
+                this.add_toast(toast);
+            }
+        });
+    }
+
+    /**
+     * Deactivate all active extensions
+     */
+    _deactivateAllExtensions() {
+        const app = this.get_transient_for()?.application;
+        if (!app || !app.extensionManager) return;
+
+        const extensions = app.extensionManager.getAllExtensions();
+        
+        // Deactivate all active extensions
+        for (const ext of extensions) {
+            if (ext.active) {
+                app.extensionManager.deactivateExtension(ext.id).catch(error => {
+                    console.error(`PreferencesDialog: Failed to deactivate ${ext.id}:`, error);
+                });
+            }
+        }
+    }
+
+    /**
+     * Update Extensions page visibility based on experimental features setting
+     */
+    _updateExtensionsPageVisibility() {
+        const settings = new Gio.Settings({ schema: 'com.odnoyko.valot' });
+        const experimentalEnabled = settings.get_boolean('experimental-features');
+
+        if (experimentalEnabled) {
+            // Add extensions page if not already present
+            if (!this.extensionsPage) {
+                this._setupExtensionsPage();
+            }
+        } else {
+            // Hide extensions page if present (don't destroy - preserve for reuse)
+            if (this.extensionsPage) {
+                try {
+                    this.remove(this.extensionsPage);
+                    // Page is hidden but not destroyed - can be reused
+                    // Don't set to null - keep reference for reuse
+                } catch (e) {
+                    // Ignore if already removed
+                }
+            }
+        }
     }
 
     /**
@@ -1313,29 +2085,292 @@ export const PreferencesDialog = GObject.registerClass({
         dialog.set_default_response('cancel');
         dialog.set_close_response('cancel');
 
-        dialog.connect('response', (dlg, response) => {
+        dialog.connect('response', async (dlg, response) => {
             if (response === 'reset') {
+                // Soft reset via DataNavigator
+                const app = this.get_transient_for().application;
                 try {
-                    // Get database path
-                    const dbPath = GLib.get_user_data_dir() + '/valot/valot.db';
-                    const dbFile = Gio.File.new_for_path(dbPath);
-
-                    // Delete database file
-                    if (dbFile.query_exists(null)) {
-                        dbFile.delete(null);
-                    }
-                } catch (error) {
-                    console.error('Error resetting database:', error);
+                    await app.dataNavigator.resetActiveDatabase();
+                } catch (e) {
+                    console.error('Soft reset failed:', e);
                 }
 
-                // Close the app after confirmation regardless of deletion result
-                const window = this.get_transient_for();
-                if (window) {
-                    window.close();
+                // Reload services and emit events so UI updates
+                try {
+                    app.coreBridge?.emitUIEvent('client-updated');
+                    app.coreBridge?.emitUIEvent('project-updated');
+                    app.coreBridge?.emitUIEvent('task-updated');
+                } catch (reloadError) {
+                    console.error('Error emitting refresh events after reset:', reloadError);
                 }
+
+                const toast = new Adw.Toast({ title: _('Database reset complete'), timeout: 3 });
+                this.add_toast(toast);
             }
         });
 
         dialog.present(this);
+    }
+
+    /**
+     * Reload extensions list from GitLab repository
+     */
+    async _reloadExtensionsList() {
+        const app = this.get_transient_for()?.application;
+        if (!app || !app.extensionManager) return;
+        
+        try {
+            await app.extensionManager.loadAvailableExtensionsFromGitLab();
+            // Refresh the extensions page
+            this._refreshExtensionsList();
+        } catch (error) {
+            console.error('Error reloading extensions:', error);
+            const toast = new Adw.Toast({
+                title: _('Failed to reload extensions'),
+                timeout: 3,
+            });
+            this.add_toast(toast);
+        }
+    }
+
+    /**
+     * Show dialog to add extension (file or URL)
+     */
+    _showAddExtensionDialog(app) {
+        const dialog = new Adw.AlertDialog({
+            heading: _('Add Extension'),
+            body: _('Select how to add the extension'),
+        });
+
+        dialog.add_response('cancel', _('Cancel'));
+        dialog.add_response('file', _('From File'));
+        dialog.add_response('url', _('From URL'));
+        
+        dialog.set_response_appearance('file', Adw.ResponseAppearance.SUGGESTED);
+        dialog.set_response_appearance('url', Adw.ResponseAppearance.SUGGESTED);
+
+        dialog.connect('response', async (dlg, response) => {
+            if (response === 'file') {
+                this._loadExtensionFromFile(app);
+            } else if (response === 'url') {
+                this._loadExtensionFromURLInput(app);
+            }
+        });
+
+        dialog.present(this);
+    }
+
+    /**
+     * Load extension from URL with text input
+     */
+    _loadExtensionFromURLInput(app) {
+        // TODO: Show text input dialog for URL
+        console.warn('Load from URL dialog not implemented yet');
+    }
+
+    /**
+     * Refresh extensions list in UI (only if extensions actually changed)
+     */
+    _refreshExtensionsList() {
+        const app = this.get_transient_for()?.application;
+        if (!app || !app.extensionManager) return;
+        
+        // Check if extensions state actually changed
+        const extensions = app.extensionManager.getAllExtensions();
+        const currentState = JSON.stringify(extensions.map(e => ({
+            id: e.id,
+            active: e.active,
+            source: e.source
+        })).sort((a, b) => a.id.localeCompare(b.id)));
+        
+        // If state hasn't changed, don't recreate icons - just return
+        if (this._lastExtensionsState === currentState) {
+            return;
+        }
+        
+        this._lastExtensionsState = currentState;
+        
+        // Only recreate if state actually changed
+        // Don't destroy the page - just update its content
+        if (this.extensionsPage) {
+            // Update existing page content (preserve page structure)
+            this._populateExtensionsPage(this.extensionsPage, app);
+        } else {
+            // Create page only if it doesn't exist
+            this._setupExtensionsPage();
+        }
+    }
+    
+    /**
+     * Load and display available extensions from GitLab
+     */
+    async _loadAndDisplayAvailableExtensions(app, availableGroup) {
+        try {
+            const available = await app.extensionManager.loadAvailableExtensionsFromGitLab();
+            const installed = app.extensionManager.getAllExtensions().map(e => e.id);
+            
+            for (const ext of available) {
+                // Check if already installed
+                const isInstalled = installed.includes(ext.id);
+                
+                const row = new Adw.ActionRow({
+                    title: ext.name,
+                    subtitle: ext.description,
+                    activatable: !isInstalled,
+                });
+
+                // Add type badge
+                const typeBadge = new Gtk.Label({
+                    label: ext.type === 'addon' ? _('Addon') : _('Plugin'),
+                    css_classes: ['caption', 'dim-label'],
+                    valign: Gtk.Align.CENTER,
+                });
+                row.add_prefix(typeBadge);
+
+                if (isInstalled) {
+                    // Already installed - show installed badge
+                    const installedLabel = new Gtk.Label({
+                        label: _('Installed'),
+                        css_classes: ['caption', 'dim-label'],
+                        valign: Gtk.Align.CENTER,
+                    });
+                    row.add_suffix(installedLabel);
+                } else {
+                    // Download button
+                    const downloadButton = new Gtk.Button({
+                        label: _('Install'),
+                        css_classes: ['suggested-action'],
+                        valign: Gtk.Align.CENTER,
+                    });
+                    
+                    downloadButton.connect('clicked', async () => {
+                        try {
+                            await app.extensionManager.loadExtensionFromURL(ext.url);
+                            
+                            // Refresh to show in installed list
+                            this._refreshExtensionsList();
+                            
+                            const toast = new Adw.Toast({
+                                title: _('Extension installed: %s').format(ext.name),
+                                timeout: 3,
+                            });
+                            this.add_toast(toast);
+                        } catch (error) {
+                            console.error('Failed to install extension:', error);
+                            const toast = new Adw.Toast({
+                                title: _('Failed to install extension: %s').format(error.message),
+                                timeout: 5,
+                            });
+                            this.add_toast(toast);
+                        }
+                    });
+                    
+                    row.add_suffix(downloadButton);
+                }
+
+                availableGroup.add(row);
+            }
+        } catch (error) {
+            console.error('Error loading available extensions:', error);
+        }
+    }
+    
+    /**
+     * Cleanup timers (used before destroy)
+     */
+    _cleanupTimers() {
+        // Remove all GLib timers
+        this._timerIds.forEach(timerId => {
+            try {
+                GLib.Source.remove(timerId);
+            } catch (e) {
+                // Timer may already be removed
+            }
+        });
+        this._timerIds = [];
+        
+        // Close currency dialog if open
+        if (this._currencyDialog) {
+            try {
+                if (this._currencyDialog.close) {
+                    this._currencyDialog.close();
+                }
+            } catch (e) {
+                // Already closed
+            }
+            this._currencyDialog = null;
+        }
+    }
+    
+    /**
+     * Clear only JS references (not GTK widgets - they are preserved for reuse)
+     * GTK widgets are managed by GTK itself and will be destroyed automatically when needed
+     */
+    _clearJSReferences() {
+        // Clear only JS Maps - these are just JS-frameworks, not GTK-widgets
+        // GTK widgets (rows, groups, pages) are preserved for reuse
+        this._currencyRowsMap?.clear();
+        this._currencyRowsMap = new Map();
+        
+        this._hiddenRowsMap?.clear();
+        this._hiddenRowsMap = new Map();
+        
+        this._extensionRowsMap?.clear();
+        this._extensionRowsMap = new Map();
+        
+        // Clear state caches
+        this._lastCurrencyState = null;
+        this._lastExtensionsState = null;
+        
+        // Clear currency dialog reference if exists
+        if (this._currencyDialog) {
+            try {
+                if (this._currencyDialog.close) {
+                    this._currencyDialog.close();
+                }
+            } catch (e) {
+                // Already closed
+            }
+            this._currencyDialog = null;
+        }
+        
+        // Note: We DO NOT destroy or clear GTK widgets (currencyGroup, hiddenGroup, etc.)
+        // They will be reused when dialog is shown again via hide()
+    }
+    
+    /**
+     * Disconnect all signal handlers to prevent memory leaks
+     */
+    _disconnectAllSignals() {
+        try {
+            if (this._closeRequestHandlerId) {
+                this.disconnect(this._closeRequestHandlerId);
+                this._closeRequestHandlerId = null;
+            }
+        } catch (e) {}
+        
+        try {
+            if (this._destroyHandlerId) {
+                this.disconnect(this._destroyHandlerId);
+                this._destroyHandlerId = null;
+            }
+        } catch (e) {}
+        
+        // Try to disconnect any other handlers
+        try {
+            // Get all connected handlers (if possible)
+            const handlers = this.list_handlers?.();
+            if (handlers) {
+                handlers.forEach(handlerId => {
+                    try {
+                        this.disconnect(handlerId);
+                    } catch (e) {
+                        // Ignore errors
+                    }
+                });
+            }
+        } catch (e) {
+            // list_handlers might not be available
+        }
     }
 });

@@ -14,6 +14,8 @@ export class ProjectDropdown {
         this.onProjectSelected = onProjectSelected;
         this.isUpdatingSelection = false;
 
+        // Store event handlers for cleanup
+        this._eventHandlers = {};
 
         this.dropdown = this._createSearchableDropdown();
 
@@ -38,9 +40,69 @@ export class ProjectDropdown {
     _subscribeToCore() {
         if (!this.coreBridge) return;
 
-        this.coreBridge.onUIEvent('project-created', () => this._loadProjects());
-        this.coreBridge.onUIEvent('project-updated', () => this._loadProjects());
-        this.coreBridge.onUIEvent('project-deleted', () => this._loadProjects());
+        // Store handlers for cleanup
+        this._eventHandlers['project-created'] = () => this._loadProjects();
+        this._eventHandlers['project-updated'] = () => this._loadProjects();
+        this._eventHandlers['project-deleted'] = () => this._loadProjects();
+
+        // Subscribe with stored handlers
+        Object.keys(this._eventHandlers).forEach(event => {
+            this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
+        });
+    }
+
+    /**
+     * Cleanup: unsubscribe from events
+     * CRITICAL: Must unparent popover BEFORE button is finalized
+     */
+    destroy() {
+        // FIRST: Close and unparent popover from button (prevents GTK warnings)
+        if (this.popover) {
+            try {
+                if (!this.popover.is_destroyed?.()) {
+                    this.popover.popdown();
+                    // CRITICAL: Unparent FIRST to detach from button before any destruction
+                    this.popover.unparent();
+                }
+            } catch (e) {
+                // Popover may already be destroyed or unparented
+            }
+        }
+        
+        // SECOND: Destroy button (now safe, popover is detached)
+        if (this.dropdownButton) {
+            try {
+                if (!this.dropdownButton.is_destroyed?.()) {
+                    this.dropdownButton.destroy();
+                }
+            } catch (e) {
+                // Button may already be destroyed
+            }
+            this.dropdownButton = null;
+        }
+        
+        // THIRD: Now destroy popover widget itself
+        if (this.popover) {
+            try {
+                if (!this.popover.is_destroyed?.()) {
+                    this.popover.destroy();
+                }
+            } catch (e) {
+                // Popover may already be destroyed
+            }
+            this.popover = null;
+        }
+        
+        // Unsubscribe from events
+        if (this.coreBridge && this._eventHandlers) {
+            Object.keys(this._eventHandlers).forEach(event => {
+                this.coreBridge.offUIEvent(event, this._eventHandlers[event]);
+            });
+            this._eventHandlers = {};
+        }
+        
+        // Clear data
+        this.projects = [];
     }
 
     _createSearchableDropdown() {
@@ -56,6 +118,9 @@ export class ProjectDropdown {
             halign: Gtk.Align.CENTER,
             valign: Gtk.Align.CENTER
         });
+
+        // Create icon widget once and reuse it (prevents "snapshot symbolic icon" messages)
+        this._iconWidget = null;
 
         // Update button appearance with current project
         this._updateButtonAppearance();
@@ -147,8 +212,35 @@ export class ProjectDropdown {
             icon: 'folder-symbolic'
         };
 
-        // Create icon widget (can be emoji or symbolic icon)
-        const iconWidget = createProjectIconWidget(currentProject, 16);
+        // Reuse existing icon widget or create it once
+        if (!this._iconWidget || this._iconWidget.is_destroyed?.()) {
+            // First creation: create widget once
+            this._iconWidget = createProjectIconWidget(currentProject, 16);
+            this.dropdownButton.set_child(this._iconWidget);
+        } else {
+            // Update existing widget instead of creating new one
+            const child = this.dropdownButton.get_child();
+            if (child !== this._iconWidget) {
+                // Widget was replaced, restore reference
+                this._iconWidget = child;
+            }
+
+            // Update icon if it's a Gtk.Image (not emoji label)
+            if (this._iconWidget instanceof Gtk.Image) {
+                if (currentProject.icon && !currentProject.icon.startsWith('emoji:')) {
+                    // Update icon using set_from_icon_name (reuses widget, avoids snapshot)
+                    this._iconWidget.set_from_icon_name(currentProject.icon);
+                }
+            } else if (this._iconWidget instanceof Gtk.Label && currentProject.icon?.startsWith('emoji:')) {
+                // Update emoji label
+                const emoji = currentProject.icon.substring(6);
+                this._iconWidget.set_label(emoji);
+            } else {
+                // Type mismatch - need to recreate (rare case: switching between emoji and icon)
+                this._iconWidget = createProjectIconWidget(currentProject, 16);
+                this.dropdownButton.set_child(this._iconWidget);
+            }
+        }
 
         // Get icon color (auto, white, black based on background)
         const iconColor = this._getProjectIconColor(currentProject);
@@ -176,7 +268,6 @@ export class ProjectDropdown {
 
         this.dropdownButton.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
         this.dropdownButton.add_css_class('project-dropdown-button');
-        this.dropdownButton.set_child(iconWidget);
         this.dropdownButton.set_tooltip_text(`Project: ${currentProject.name}`);
     }
 

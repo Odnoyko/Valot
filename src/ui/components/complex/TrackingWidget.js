@@ -22,8 +22,7 @@ export class TrackingWidget {
 
         this.config = { ...defaultConfig, ...config };
 
-        // UI update timer (NOT state!)
-        this.updateTimerId = null;
+        // REMOVED: updateTimerToken - no longer using separate timers
 
         // Build widget
         this.widget = this._createWidget();
@@ -116,17 +115,22 @@ export class TrackingWidget {
             return;
         }
 
+        // Store event handlers for cleanup
+        this._coreEventHandlers = {
+            'tracking-started': (data) => {
+                this._onTrackingStarted(data);
+            },
+            'tracking-stopped': (data) => {
+                this._onTrackingStopped(data);
+            },
+            'tracking-updated': (data) => {
+                this._onTrackingUpdated(data);
+            }
+        };
+
         // Subscribe to Core events for synchronization
-        this.config.coreBridge.onUIEvent('tracking-started', (data) => {
-            this._onTrackingStarted(data);
-        });
-
-        this.config.coreBridge.onUIEvent('tracking-stopped', (data) => {
-            this._onTrackingStopped(data);
-        });
-
-        this.config.coreBridge.onUIEvent('tracking-updated', (data) => {
-            this._onTrackingUpdated(data);
+        Object.keys(this._coreEventHandlers).forEach(event => {
+            this.config.coreBridge.onUIEvent(event, this._coreEventHandlers[event]);
         });
 
     }
@@ -152,8 +156,11 @@ export class TrackingWidget {
                     this.clientButton.set_sensitive(false);
                 }
 
-                this.trackButton.set_icon_name('media-playback-stop-symbolic');
-                this.trackButton.set_tooltip_text(_('Stop tracking'));
+                // OPTIMIZED: Only update icon if needed
+                if (this.trackButton.get_icon_name() !== 'media-playback-stop-symbolic') {
+                    this.trackButton.set_icon_name('media-playback-stop-symbolic');
+                    this.trackButton.set_tooltip_text(_('Stop tracking'));
+                }
                 this.trackButton.add_css_class('destructive-action');
                 this.trackButton.remove_css_class('suggested-action');
 
@@ -163,7 +170,7 @@ export class TrackingWidget {
                 }
 
                 // Start UI update timer
-                this._startUIUpdateTimer();
+                this._subscribeToGlobalTimer();
             } else {
                 // Update UI to idle mode
                 this.taskButton.set_label(this.config.taskPlaceholder);
@@ -176,17 +183,17 @@ export class TrackingWidget {
                     this.clientButton.set_sensitive(true);
                 }
 
-                this.trackButton.set_icon_name('media-playback-start-symbolic');
-                this.trackButton.set_tooltip_text(_('Start tracking'));
+                // OPTIMIZED: Only update icon if needed
+                if (this.trackButton.get_icon_name() !== 'media-playback-start-symbolic') {
+                    this.trackButton.set_icon_name('media-playback-start-symbolic');
+                    this.trackButton.set_tooltip_text(_('Start tracking'));
+                }
                 this.trackButton.remove_css_class('destructive-action');
                 this.trackButton.add_css_class('suggested-action');
 
                 if (this.timeLabel) {
                     this.timeLabel.set_label('00:00:00');
                 }
-
-                // Stop UI update timer
-                this._stopUIUpdateTimer();
             }
         } catch (error) {
             console.error('Error updating UI from Core:', error);
@@ -210,11 +217,17 @@ export class TrackingWidget {
     /**
      * Core event: tracking timer updated
      */
+    /**
+     * Core event: tracking timer updated
+     */
     _onTrackingUpdated(data) {
-        // Update time display (Core increments elapsedSeconds every second)
-        const state = this.config.coreBridge.getTrackingState();
-        if (this.timeLabel) {
-            this.timeLabel.set_label(this._formatDuration(state.elapsedSeconds));
+        // tracking-updated fires every second from Core timer
+        // Core timer calculates elapsedSeconds (currentTime - startTime), we just show it
+        // No calculation in UI, no RAM storage - just display Core timer result
+        
+        // Update time display directly from Core timer data (already calculated, just show it)
+        if (data && data.elapsedSeconds !== undefined && this.timeLabel) {
+            this.timeLabel.set_label(this._formatDuration(data.elapsedSeconds));
         }
     }
 
@@ -255,26 +268,24 @@ export class TrackingWidget {
     /**
      * UI update timer - refreshes display from Core state
      */
-    _startUIUpdateTimer() {
-        if (this.updateTimerId) return;
+    /**
+     * Subscribe to GlobalTimer for real-time tracking display
+     * CRITICAL FIX: Only subscribe once, prevent listener accumulation
+     */
+    _subscribeToGlobalTimer() {
+        // CRITICAL: Check if already subscribed to prevent memory leak
+        if (this._isSubscribedToGlobalTimer) {
+            return;
+        }
 
-        this.updateTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
-            const state = this.config.coreBridge.getTrackingState();
-            if (state.isTracking && this.timeLabel) {
-                this.timeLabel.set_label(this._formatDuration(state.elapsedSeconds));
-                return true; // Continue timer
-            } else {
-                this.updateTimerId = null;
-                return false; // Stop timer
+        this._isSubscribedToGlobalTimer = true;
+
+        this.config.coreBridge.onUIEvent('tracking-updated', (data) => {
+            if (this.timeLabel) {
+                this.timeLabel.set_label(this._formatDuration(data.elapsedSeconds));
             }
         });
-    }
 
-    _stopUIUpdateTimer() {
-        if (this.updateTimerId) {
-            GLib.Source.remove(this.updateTimerId);
-            this.updateTimerId = null;
-        }
     }
 
     _formatDuration(seconds) {
@@ -337,8 +348,6 @@ export class TrackingWidget {
      * Cleanup
      */
     cleanup() {
-        this._stopUIUpdateTimer();
-        // CoreBridge events are cleaned up by CoreBridge itself
     }
 
     /**

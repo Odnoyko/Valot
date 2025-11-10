@@ -38,3 +38,9 @@ __pycache__/
 
 data/*.metainfo.xml
 data/com.odnoyko.valot.desktop
+
+# Development tools (local only)
+devtools/node_modules/
+devtools/.eslintcache
+devtools/coverage/
+devtools/

@@ -13,6 +13,8 @@ export class ClientDropdown {
         this.onClientSelected = onClientSelected;
         this.isUpdatingSelection = false;
 
+        // Store event handlers for cleanup
+        this._eventHandlers = {};
 
         this.dropdown = this._createSearchableDropdown();
 
@@ -37,9 +39,69 @@ export class ClientDropdown {
     _subscribeToCore() {
         if (!this.coreBridge) return;
 
-        this.coreBridge.onUIEvent('client-created', () => this._loadClients());
-        this.coreBridge.onUIEvent('client-updated', () => this._loadClients());
-        this.coreBridge.onUIEvent('client-deleted', () => this._loadClients());
+        // Store handlers for cleanup
+        this._eventHandlers['client-created'] = () => this._loadClients();
+        this._eventHandlers['client-updated'] = () => this._loadClients();
+        this._eventHandlers['client-deleted'] = () => this._loadClients();
+
+        // Subscribe with stored handlers
+        Object.keys(this._eventHandlers).forEach(event => {
+            this.coreBridge.onUIEvent(event, this._eventHandlers[event]);
+        });
+    }
+
+    /**
+     * Cleanup: unsubscribe from events
+     * CRITICAL: Must unparent popover BEFORE button is finalized
+     */
+    destroy() {
+        // FIRST: Close and unparent popover from button (prevents GTK warnings)
+        if (this.popover) {
+            try {
+                if (!this.popover.is_destroyed?.()) {
+                    this.popover.popdown();
+                    // CRITICAL: Unparent FIRST to detach from button before any destruction
+                    this.popover.unparent();
+                }
+            } catch (e) {
+                // Popover may already be destroyed or unparented
+            }
+        }
+        
+        // SECOND: Destroy button (now safe, popover is detached)
+        if (this.dropdownButton) {
+            try {
+                if (!this.dropdownButton.is_destroyed?.()) {
+                    this.dropdownButton.destroy();
+                }
+            } catch (e) {
+                // Button may already be destroyed
+            }
+            this.dropdownButton = null;
+        }
+        
+        // THIRD: Now destroy popover widget itself
+        if (this.popover) {
+            try {
+                if (!this.popover.is_destroyed?.()) {
+                    this.popover.destroy();
+                }
+            } catch (e) {
+                // Popover may already be destroyed
+            }
+            this.popover = null;
+        }
+        
+        // Unsubscribe from events
+        if (this.coreBridge && this._eventHandlers) {
+            Object.keys(this._eventHandlers).forEach(event => {
+                this.coreBridge.offUIEvent(event, this._eventHandlers[event]);
+            });
+            this._eventHandlers = {};
+        }
+        
+        // Clear data
+        this.clients = [];
     }
 
     _createSearchableDropdown() {
@@ -285,10 +347,16 @@ export class ClientDropdown {
      * Set selected client by ID
      */
     setSelectedClient(clientId) {
+        // Only update if value actually changed to avoid unnecessary UI redraws
+        if (clientId === this.currentClientId) return;
+
         this.isUpdatingSelection = true;
         this.currentClientId = clientId;
         this._updateTooltip(this.dropdownButton);
-        this._populateClientList();
+        // Only repopulate list if dropdown is visible (open) - otherwise just update button
+        if (this.popover && this.popover.get_visible()) {
+            this._populateClientList();
+        }
         this.isUpdatingSelection = false;
     }
 
