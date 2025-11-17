@@ -1,4 +1,4 @@
-g<div align="center" margin-bottom="40px;">
+<div align="center" margin-bottom="40px;">
     ![Valot Logotype](data/icons/hicolor/scalable/apps/com.odnoyko.valot.svg)
  <h1>⏱️ Valot</h1>
  <strong>A modern time tracking application built with GTK4 and Adwaita.</strong>
